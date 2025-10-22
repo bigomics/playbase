@@ -91,8 +91,8 @@ merge_annot_table <- function(df, df2, priority = 1) {
 }
 
 
-#' Convert multi-omics probetype. Probe names *must  be prefixed with
-#' data type unless classical transcriptomics/proteomics.
+#' Get probetype annotation for organism and datatype. For multi-omics
+#' probe names must be prefixed with data type.
 #'
 #' @export
 getProbeAnnotation <- function(organism,
@@ -108,7 +108,7 @@ getProbeAnnotation <- function(organism,
   unknown.probetype <- (probetype %in% c("custom", "unkown"))
   annot.unknown <- unknown.organism || unknown.datatype || unknown.probetype
   annot.unknown
-
+  
   ## clean probe names
   probes <- trimws(probes)
   probes[probes == "" | is.na(probes)] <- "NA"
@@ -134,8 +134,9 @@ getProbeAnnotation <- function(organism,
     mx.check
     if (mx.check) {
       ## Directly annotate if probes are recognized
-      genes <- getMetaboliteAnnotation(probes,
-        add_id = TRUE, extra_annot = TRUE,
+      genes <- getMetaboliteAnnotation(
+        probes,
+        extra_annot = TRUE,
         annot_table = NULL
       )
     } else {
@@ -155,7 +156,7 @@ getProbeAnnotation <- function(organism,
     dbg("[getProbeAnnotation] WARNING: fallback to UNKNOWN probes")
     genes <- getCustomAnnotation(probes0, custom_annot = NULL)
   }
-
+  
   ## if annot_table is provided we (priority) override our annotation
   ## and append any extra columns.
   if (!is.null(genes) && !is.null(annot_table)) {
@@ -171,16 +172,14 @@ getProbeAnnotation <- function(organism,
     genes <- merge_annot_table(genes, annot_table, priority = 2)
   }
 
+  ## ensure full dimensions
+  genes <- genes[match(probes, genes$feature),]
+
   ## restore original probe names
-  rownames(genes) <- genes$feature <- probes0
+  rownames(genes) <- probes0
 
   ## cleanup entries and reorder columns
   genes <- cleanupAnnotation(genes)
-
-  #  if (all(c("ortholog", "human_ortholog") %in% colnames(genes))) {
-  #    jj <- which(colnames(genes) == "ortholog")
-  #    genes <- genes[, -jj, drop = FALSE]
-  #  }
 
   return(genes)
 }
@@ -718,6 +717,12 @@ cleanupAnnotation <- function(genes) {
   # add space after ; to conform with playbase <= 1.3.2
   genes$gene_title <- gsub(";[ ]*", "; ", genes$gene_title)
 
+  # trim whitespace
+  char.cols <- which(sapply(genes,class) == "character")
+  for(k in char.cols) {
+    genes[[k]] <- trimws(genes[[k]])
+  }
+  
   # rename protein-coding to protein_coding to confirm with playbase <= v1.3.2
   ## genes$gene_biotype <- sub("protein-coding", "protein_coding", genes$gene_biotype)
 
@@ -740,8 +745,6 @@ cleanupAnnotation <- function(genes) {
 
   genes
 }
-
-
 
 
 #' @title Custom Gene Annotation
@@ -2348,16 +2351,19 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
     info("[getMultiOmicsProbeAnnotation] detected as:", dx)
     dtype <- rep(dx, length(probes))
   }
+
   table(dtype)
   dtype <- tolower(dtype)
   dtype <- ifelse(grepl("ensembl|symbol|hugo|gene|hgnc", dtype), "gx", dtype)
   dtype <- ifelse(grepl("uniprot|protein", dtype), "px", dtype)
-  dtype <- ifelse(grepl("chebi|hmdb|kegg|pubchem", dtype), "mx", dtype)
+  dtype <- ifelse(grepl("chebi|hmdb|kegg|pubchem|lipid|refmet", dtype), "mx", dtype)
   table(dtype)
-  dbg("[getMultiOmicsProbeAnnotation] dtypes =", unique(dtype))
+  dtype[!dtype %in% c("gx","px","mx")] <- "custom"
+  table(dtype)
+  dbg("[getMultiOmicsProbeAnnotation] dtypes = ", unique(dtype))
 
   ## populate with defaults
-  symbol <- toupper(sub("^[a-zA-Z]+:", "", probes))
+  symbol <- sub("^[a-zA-Z]+:", "", probes)
 
   annot <- list()
   if (any(dtype %in% c("gx", "px"))) {
@@ -2368,19 +2374,18 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
     aa$data_type <- sub(":.*", "", probes[ii])
     rownames(aa) <- probes[ii]
     aa$feature <- probes[ii]
-    annot <- c(annot, list(aa))
+    annot[['gx']] <- aa
   }
   if ("mx" %in% dtype) {
     ii <- which(dtype == "mx")
-    hh <- grep("mx:NA$", probes[ii])
-    if (any(hh)) ii <- ii[-hh]
+    #hh <- grep("^[a-zA-Z]+:NA$", probes[ii])
+    #if (length(hh)) ii <- ii[-hh]
     pp <- sub("^[a-zA-Z]+:", "", probes[ii])
     aa <- getMetaboliteAnnotation(pp)
-    head(aa)
     aa$data_type <- "mx"
     rownames(aa) <- probes[ii]
     aa$feature <- probes[ii]
-    annot <- c(annot, list(aa))
+    annot[['mx']] <- aa
   }
   if ("custom" %in% dtype) {
     ii <- which(dtype == "custom")
@@ -2390,20 +2395,29 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
     aa$data_type <- "custom"
     rownames(aa) <- probes[ii]
     aa$feature <- probes[ii]
-    annot <- c(annot, list(aa))
+    annot[['custom']] <- aa
   }
 
-  cols <- Reduce(intersect, lapply(annot, colnames))
+  ## Merge all annotation tables
+  names(annot)
+  ##cols <- Reduce(intersect, lapply(annot, colnames))
+  cols <- Reduce(union, lapply(annot, colnames))  
+  k=1
+  for(k in 1:length(annot)) {
+    missing.cols <- setdiff(cols, colnames(annot[[k]]))
+    for(m in missing.cols) annot[[k]][[m]] <- '-'
+  }
   annot <- lapply(annot, function(a) a[, cols])
   annot <- do.call(rbind, annot)
   annot <- annot[match(probes, annot$feature), ]
-  rownames(annot) <- probes
+  rownames(annot) <- make_unique(probes)
   head(annot)
 
   ## fill NA
+  symbolx <- paste0("{",symbol,"}")
   annot$human_ortholog[which(annot$human_ortholog == "")] <- NA
   annot$feature <- ifelse(is.na(annot$feature), probes, annot$feature)
-  annot$symbol <- ifelse(is.na(annot$symbol), symbol, annot$symbol)
+  annot$symbol <- ifelse(is.na(annot$symbol), symbolx, annot$symbol)
   annot$human_ortholog <- ifelse(is.na(annot$human_ortholog), symbol, annot$human_ortholog)
   annot$gene_name <- ifelse(is.na(annot$gene_name), probes, annot$gene_name)
   annot$data_type <- ifelse(is.na(annot$data_type), dtype, annot$data_type)

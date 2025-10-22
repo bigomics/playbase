@@ -727,7 +727,7 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
   if (!all(colnames(X) %in% names(timeseries))) {
     stop("[ngs.fitContrastsWithLIMMA.timeseries] X and timeseries vector contain different set of samples.")
   }
-
+  
   jj <- match(colnames(X), names(timeseries))
   time0 <- as.character(unname(timeseries[jj]))
   time0 <- gsub("\\D", "", time0)
@@ -756,7 +756,14 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
 
       design <- model.matrix(~ y * time.spline)
       fit <- limma::lmFit(X, design)
-      fit <- limma::eBayes(fit, trend = trend)
+      fit <- try(limma::eBayes(fit, trend = trend, robust = TRUE), silent = TRUE)
+      if ("try-error" %in% class(fit)) {
+        fit <- try(limma::eBayes(fit, trend = trend, robust = FALSE), silent = TRUE)
+        if ("try-error" %in% class(fit)) {
+          fit <- try(limma::eBayes(fit, trend = FALSE, robust = FALSE), silent = TRUE)
+        }
+      }
+      if ("try-error" %in% class(fit)) next()
 
       coefs <- apply(fit$t, 2, function(x) sum(is.na(x)))
       est.coefs <- names(coefs[coefs != nrow(fit$t)])
@@ -1143,7 +1150,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
                                                            timeseries,
                                                            use.spline = NULL,
                                                            robust = TRUE) {
-
+  
   if (!all(colnames(counts) %in% names(timeseries))) {
     message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Counts and timeseries vector contain different set of samples.")
   }
@@ -1161,7 +1168,6 @@ ngs.fitContrastsWithEDGER <- function(counts,
 
   if (use.spline) {
     message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries]: EdgeR timeseries with interaction & spline.")
-    require(splines)
     time0 <- as.numeric(time0)
   } else {
     message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries]: EdgeR timeseries with interaction.")
@@ -1169,7 +1175,9 @@ ngs.fitContrastsWithEDGER <- function(counts,
   }
 
   y <- as.factor(as.character(y))
-
+  dge0 <- dge
+  res <- NULL
+  
   if (use.spline) {
     ## Iterate across df. Pick first valid run.
     idx <- 1:length(unique(time0))
@@ -1183,26 +1191,30 @@ ngs.fitContrastsWithEDGER <- function(counts,
       if ("try-error" %in% class(dge)) next
       sel <- grep("*:splines::ns*", colnames(design))
       if (method == "qlf") {
-        fit <- edgeR::glmQLFit(dge, design, robust = robust)
+        fit <- try(edgeR::glmQLFit(dge, design, robust = robust), silent = TRUE)
         # colnames(stats::coef(fit))[sel]
+        if ("try-error" %in% class(fit)) next
         res <- try(edgeR::glmQLFTest(fit, coef = sel), silent = TRUE)
         if ("try-error" %in% class(res)) next else break
       } else if (method == "lrt") {
-        fit <- edgeR::glmFit(dge, design, robust = robust)
+        fit <- try(edgeR::glmFit(dge, design, robust = robust), silent = TRUE)
+        if ("try-error" %in% class(fit)) next
         res <- try(edgeR::glmLRT(fit, coef = sel), silent = TRUE)
         if ("try-error" %in% class(res)) next else break
       }
     }
-  } else {
+  }
+
+  if (!use.spline | is.null(res)) {
     design <- model.matrix(~ y * time0)
-    dge <- edgeR::estimateDisp(dge, design = design, robust = robust)
+    dge0 <- edgeR::estimateDisp(dge0, design = design, robust = robust)
     # Test interaction terms directly
     sel <- grep("*:time0*", colnames(design)) ## ???? unclear.
     if (method == "qlf") {
-      fit <- edgeR::glmQLFit(dge, design, robust = robust)
+      fit <- edgeR::glmQLFit(dge0, design, robust = robust)
       res <- edgeR::glmQLFTest(fit, coef = sel)
     } else if (method == "lrt") {
-      fit <- edgeR::glmFit(dge, design, robust = robust)
+      fit <- edgeR::glmFit(dge0, design, robust = robust)
       res <- edgeR::glmLRT(fit, coef = sel)
     }
   }
@@ -1561,7 +1573,8 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
         dds <- DESeq2::DESeqDataSetFromMatrix(counts, colData, design)
         dds <- DESeq2::estimateSizeFactors(dds)
         disp.type <- ifelse(test == "glmGamPoi", "glmGamPoi", "DESeq2")
-        dds <- DESeq2::estimateDispersionsGeneEst(dds, type = disp.type)
+        dds <- try(DESeq2::estimateDispersionsGeneEst(dds, type = disp.type), silent = TRUE)
+        if ("try-error" %in% class(dds)) next
         DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
         if (test == "LRT") {
           dds <- try(DESeq2::nbinomLRT(dds, reduced = red.design), silent = TRUE)

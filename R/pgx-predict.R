@@ -57,9 +57,7 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     }
   } else {
     X <- pgx$X ## NB: this will augment
-    if (any(is.na(X))) {
-      X <- pgx$impX
-    }
+    if (any(is.na(X))) X <- playbase::imputeMissing(X, method = "SVD2")
   }
 
   ## ----------- filter with selected features
