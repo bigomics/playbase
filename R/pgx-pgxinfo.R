@@ -55,7 +55,7 @@ pgxinfo.add <- function(pgxinfo, pgx, remove.old = TRUE) {
     description = ifelse(is.null(pgx$description), "", pgx$description),
     organism = organism,
     nsamples = nrow(pgx$samples),
-    ngenes = nrow(pgx$X),
+    nfeatures = nrow(pgx$X),
     nsets = nrow(pgx$gsetX),
     conditions = paste(cond, collapse = " "),
     date = as.character(date),
@@ -151,6 +151,9 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE, use.
     return(NULL)
   }
 
+  if ("ngenes" %in% tolower(colnames(pgxinfo)))
+    colnames(pgxinfo)[tolower(colnames(pgxinfo)) == "ngenes"] <- "nfeatures"
+
   pgxinfo$X <- NULL ## delete first column
   pgxinfo <- pgxinfo[which(!is.na(pgxinfo$dataset)), ] ## remove NA
   if (match && nrow(pgxinfo)) {
@@ -161,7 +164,7 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE, use.
   }
   info.colnames <- c(
     "dataset", "datatype", "description", "nsamples",
-    "ngenes", "nsets", "conditions", "organism", "date",
+    "nfeatures", "nsets", "conditions", "organism", "date",
     "creator"
   )
   if (is.null(pgxinfo)) {
