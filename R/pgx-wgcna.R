@@ -997,7 +997,6 @@ wgcna.computeGeneStats <- function(net, datExpr, datTraits, TOM) {
     geneCentrality <- rep(NA, nrow(adj))
     names(geneCentrality) <- rownames(adj)
     me.genes <- tapply(names(net$colors), net$colors, list)
-    gg <- me.genes[[1]]
     for (gg in me.genes) {
       gr1 <- igraph::subgraph(gr, gg)
       ct <- igraph::page_rank(gr1, weights = NULL)$vector
