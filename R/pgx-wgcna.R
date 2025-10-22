@@ -421,7 +421,6 @@ wgcna.compute_multiomics <- function(dataX,
                                      minKME = 0.3,
                                      deepsplit = 2,
                                      compute.enrichment = TRUE,
-                                     xtop = 100,
                                      annot = NULL,
                                      GMT = NULL,
                                      gsetX = NULL,
@@ -430,6 +429,11 @@ wgcna.compute_multiomics <- function(dataX,
                                      add.gsets = FALSE,
                                      do.consensus = FALSE,
                                      gset.methods = c("fisher","gsetcor","xcor"),
+                                     gset.ntop = 1000,
+                                     gset.xtop = 100,
+                                     ai_summary = FALSE,
+                                     ai_model = "llama3.2:1b",
+                                     ai_experiment = "",
                                      verbose = 1,
                                      progress = NULL
                                      ) {
@@ -443,7 +447,8 @@ wgcna.compute_multiomics <- function(dataX,
     minmodsize = 10
     minKME = 0.3
     compute.enrichment = TRUE
-    xtop = 100
+    gset.ntop = 1000
+    gset.xtop = 100
     annot = pgx$genes
     GMT = pgx$GMT  ##??
     gsetX = pgx$gsetX
@@ -455,13 +460,16 @@ wgcna.compute_multiomics <- function(dataX,
     dataX <- lapply(dataX, function(x) rename_by2(x, annot, "symbol"))    
   }
 
-  ## add phenomatrix??
+  ## add pheno matrix??
   if(add.gsets) {
     if(is.null(GMT)) {
       GMT <- Matrix::t(playdata::GSETxGENE)
     }
     if(is.null(gsetX)) {
       X <- do.call(rbind, dataX)
+      if(!is.null(annot)) {
+          GMT <- rename_by2(GMT, annot, "symbol")
+      }
       kk <- intersect(rownames(X), rownames(GMT))
       if(length(kk)) {
         gsetX <- plaid::plaid(X[kk,], GMT[kk,])
@@ -582,8 +590,8 @@ wgcna.compute_multiomics <- function(dataX,
       wgcna = wgcna,
       multi = TRUE,
       methods = gset.methods,
-      ntop = 400,
-      xtop = xtop,
+      ntop = gset.ntop,
+      xtop = gset.xtop,
       annot = annot,      
       GMT = GMT,
       gsetX = gsetX,
@@ -597,6 +605,23 @@ wgcna.compute_multiomics <- function(dataX,
       wgcna[[k]]$gsea <- gse[mm]
     }
 
+    if(ai_summary) {
+      if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
+      message("Annotating modules using ", ai_model)    
+      for(k in names(wgcna)) {
+        wgcna[[k]]$summary <- wgcna.describeModules(
+          wgcna[[k]],
+          multi = FALSE,
+          ntop = 25,
+          model = ai_model,
+          annot = annot,
+          experiment = ai_experiment,
+          verbose = 0
+        )
+      }
+    }
+
+      
   }
 
   return(wgcna)
@@ -1289,8 +1314,8 @@ wgcna.computeModuleEnrichment <- function(wgcna,
   }
   
   ## collapse features to symbol
-  k <- intersect(c("gx","px"), names(wgcna))[1]
-  geneX <- t(as.matrix(wgcna[[k]]$datExpr))
+  selx <- intersect(c("gx","px"), names(wgcna))[1]
+  geneX <- t(as.matrix(wgcna[[selx]]$datExpr))
   symbol.col <- NULL
   
   if(is.null(annot)) {
@@ -2724,8 +2749,8 @@ wgcna.plotTopModules_multi <- function(multi, trait, nmax=16, collapse=FALSE,
   n <- length(sel)
   nr <- ceiling(sqrt(n))
   nc <- ceiling(n / nr)
-  if(setpar==1) par(mfrow=c(nr,nc), mgp=c(2.6,0.85,0), mar=c(4,4,2.5,1))
-  if(setpar==2) par(mfrow=c(nc,nr), mgp=c(2.6,0.85,0), mar=c(4,4,2.5,1))  
+  if(setpar==1) par(mfrow=c(nr,nc), mgp=c(2.6,0.85,0), mar=c(2.5,4,2.5,1))
+  if(setpar==2) par(mfrow=c(nc,nr), mgp=c(2.6,0.85,0), mar=c(2.5,4,2.5,1))  
   
   yclass <- sapply(as.data.frame(Y), class)
   is.binary <- apply(Y, 2, function(x) all(x %in% c(TRUE,FALSE,0,1,NA)))
