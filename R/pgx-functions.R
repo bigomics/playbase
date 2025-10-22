@@ -10,8 +10,10 @@
 #' rows. Features are union of input matrices.
 #'
 #' @export
-merge_sparse_matrix <- function(m1, m2, margin = NULL, verbose = 1) {
-  cbind_sparse_matrix(m1 = m1, m2 = m2)
+merge_sparse_matrix <- function(m1, m2, margin=NULL, verbose=1) {
+  if(is.null(m1)) return(m2)
+  if(is.null(m2)) return(m1)
+  cbind_sparse_matrix(m1=m1, m2=m2)
 }
 
 #' Merge Sparse Matrix
@@ -1486,7 +1488,8 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   annot_table$rownames <- rownames(annot_table)
   annot_table$rownames2 <- sub("^[A-Za-z]+:", "", rownames(annot_table)) ## strip prefix
 
-  if (is.matrix(counts) || is.data.frame(counts) || !is.null(dim(counts))) {
+  if (is.matrix(counts) || inherits(counts, "Matrix") ||
+        is.data.frame(counts) || !is.null(dim(counts))) {
     type <- "matrix"
     probes <- rownames(counts)
   } else {
@@ -1500,6 +1503,10 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
     return(counts)
   }
 
+  if( type == "vector") {
+    counts <- cbind(counts)
+  }
+
   from_id <- names(which.max(probe_match))
   from_id
 
@@ -1508,6 +1515,9 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
 
   ## dummy do-noting return
   if (new_id == from_id) {
+    sel <- which(probes %in% annot_table[,from_id])
+    counts <- counts[sel, , drop=FALSE]
+    if(type == 'vector') counts <- counts[, 1]
     return(counts)
   }
 
@@ -2539,6 +2549,39 @@ substrmatch <- function(pattern, x) {
   substr(x, matches, matches + attr(matches, "match.length") - 1)
 }
 
+#' matches id to rows on any columns of dataframe df. Generalization
+#' of match().
+#'
+#' @export
+multimatch <- function(id, df, parallel=TRUE) {
+  if(parallel) {
+    df.list <- apply(df, 1, c, simplify=FALSE)
+    jj <- which( parallel::mclapply(df.list, function(x) sum(id %in% x)) > 0)
+  } else {
+    jj <- which( apply(df, 1, function(x) sum(id %in% x)) > 0)    
+  }
+  if(length(jj)==0) {
+    message("WARNING: no match")
+    return(NULL)
+  }
+  ii <- as.vector(sapply(jj, function(i) rep(i,ncol(df))))
+  M <- cbind(as.vector(t(df[jj,])), ii)
+  M <- M[!is.na(M[,1]),,drop=FALSE]
+  idx <- as.integer(M[ match(id, M[,1]), 2])
+  return(idx)
+}
+
+#' Return a matched dataframe by matching id to any of its columns of
+#' df. Returned dataframe has length(id) rows, and ncol(df) columns.
+#'
+#' @export
+match.dataframe <- function(id, df, parallel=TRUE) {
+  ii <- multimatch(id, df, parallel=parallel)
+  if(is.null(ii)) return(NULL)
+  df1 <- df[ii,,drop=FALSE]
+  rownames(df1) <- make_unique(id)
+  return(df1)
+}
 
 ## ==========================================================================
 ## ==================== END OF FILE =========================================
