@@ -844,7 +844,7 @@ wgcna.computeModules <- function(
 
 #' Faster implementation of TOM computation using low-rank SVD
 #' approximation.
-#' 
+#' @export
 fastTOMsimilarity <- function(A, tomtype="signed", lowrank=20) {
   #https://stackoverflow.com/questions/56574729
   #
@@ -4752,7 +4752,7 @@ wgcna.plotPowerAnalysis_multi <- function(exprList,
 
 #' Better (?) method to pick soft threshold (aka power). 
 #'
-#' 
+#' @export
 wgcna.pickSoftThreshold <- function(datExpr, sft=NULL, rcut=0.85,
                                     method = c("sft","iqr")[1],
                                     nmax = -1,  powers = NULL,
