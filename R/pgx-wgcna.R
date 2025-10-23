@@ -48,7 +48,7 @@ pgx.wgcna <- function(
     progress = NULL
     ) {
 
-  ##minmodsize=10;power=NULL;cutheight=0.15;deepsplit=2;ngenes=4000;networktype="signed";tomtype="signed";numericlabels=FALSE;ngenes=2000;gset.filter=NULL;minKME=0.8;maxBlockSize=5000
+  ##minmodsize=10;power=NULL;cutheight=0.15;deepsplit=2;ngenes=4000;networktype="signed";tomtype="signed";numericlabels=FALSE;gset.filter=NULL;minKME=0.8;maxBlockSize=5000;verbose=1
 
   samples <- pgx$samples
   ## no dot pheno
@@ -81,7 +81,7 @@ pgx.wgcna <- function(
   
   if(!is.null(pgx$datatype) && pgx$datatype == "multi-omics") {
     message("[pgx.wgcna] Performing multi-omics ComBat on datatype.")
-    X <- playbase::normalizeMultiOmics(X, method = "combat")
+    X <- normalizeMultiOmics(X, method = "combat")
   }
 
   if(!is.null(progress)) progress$set(message = "Calculating WGCNA...", value=0.2)
@@ -123,7 +123,7 @@ pgx.wgcna <- function(
   ## ----------------------------------------------------
   if(!is.null(progress)) progress$set(message = "Computing enrichment...", value=0.4)
   message("computing module enrichment...")
-  wgcna$gsea <- playbase::wgcna.computeModuleEnrichment(
+  wgcna$gsea <- wgcna.computeModuleEnrichment(
     wgcna,
     annot = pgx$genes,
     # GMT = pgx$GMT,
@@ -495,7 +495,7 @@ wgcna.compute_multiomics <- function(dataX,
     est.power <- rep(NA, length(dataX))    
     i=1
     for(i in 1:length(dataX)) {
-      p <- playbase::wgcna.pickSoftThreshold(
+      p <- wgcna.pickSoftThreshold(
         Matrix::t(dataX[[i]]), sft=NULL, rcut=0.85, powers = NULL,
         method=power[1], nmax=1000, verbose=1)
       if(length(p)==0 || is.null(p) ) p <- NA
@@ -519,7 +519,7 @@ wgcna.compute_multiomics <- function(dataX,
     if (nn < 0.10) {
       message("[wgcna.compute_multiomics] ERROR: gx and px features do not overlap")
     } else {
-      wgcna <- playbase::wgcna.createConsensusLayers(
+      wgcna <- wgcna.createConsensusLayers(
         dataX[c('gx','px')],
         samples = samples,
         prefix = c('GX','PX'),
@@ -540,7 +540,7 @@ wgcna.compute_multiomics <- function(dataX,
     cat("[wgcna.compute_multiomics] computing WGCNA for", dt, "-------------\n")
     minKME <- ifelse(dt=='ph', 0, minKME)
     minmodsize <- ifelse(dt=='ph', 1, minmodsize)      
-    wgcna[[dt]] <- playbase::wgcna.compute(
+    wgcna[[dt]] <- wgcna.compute(
       X = dataX[[dt]],
       samples = samples, 
       ngenes = ngenes,
@@ -573,7 +573,7 @@ wgcna.compute_multiomics <- function(dataX,
       progress$set(message = paste("computing module enrichment..."), value = 0.66)
     }
     
-    gse <- playbase::wgcna.computeModuleEnrichment(
+    gse <- wgcna.computeModuleEnrichment(
       wgcna = wgcna,
       multi = TRUE,
       methods = gset.methods,
@@ -654,7 +654,7 @@ wgcna.computeModules <- function(
     message("[wgcna.compute] estimating optimal power with method = ", power[1])
     powers <- c(c(1:10), seq(from = 12, to = 20, by = 2))
     powers <- c(powers, seq(from = 25, to = 50, by = 5))
-    power <- playbase::wgcna.pickSoftThreshold(datExpr, sft=NULL, rcut=0.85,
+    power <- wgcna.pickSoftThreshold(datExpr, sft=NULL, rcut=0.85,
       method=power[1], nmax=2000, verbose=0) 
     if (is.na(power)) power <- 6
   }
@@ -1385,7 +1385,7 @@ wgcna.computeModuleEnrichment <- function(wgcna,
   gsea <- wgcna.run_enrichment_methods(
     ME = MEx,
     me.genes = me.genes,
-    G = G1,
+    GMT = G1,
     geneX = geneX,
     gsetX = gsetX,
     methods = methods,
@@ -1673,8 +1673,8 @@ wgcna.run_enrichment_methods <- function(ME, me.genes, GMT, geneX, gsetX,
   ## ensure dimensions
   gsets <- Reduce(intersect, lapply( rho.list, rownames))
   modules <- Reduce(intersect, lapply( rho.list, colnames))  
-  rho.list <- lapply( rho.list, function(x) x[gsets,modules])
-  pval.list <- lapply( pval.list, function(x) x[gsets,modules])  
+  rho.list <- lapply( rho.list, function(x) x[gsets,modules,drop=FALSE])
+  pval.list <- lapply( pval.list, function(x) x[gsets,modules,drop=FALSE])  
 
   lapply(rho.list, dim)
   
@@ -2094,7 +2094,7 @@ wgcna.createConsensusLayers <- function(exprList,
     est.power <- rep(NA, length(exprList))    
     i=1
     for(i in 1:length(exprList)) {
-      p <- playbase::wgcna.pickSoftThreshold(
+      p <- wgcna.pickSoftThreshold(
         Matrix::t(exprList[[i]]), sft=NULL, rcut=0.85, powers = NULL,
         method=power, nmax=1000, verbose=0)
       if(length(p)==0 || is.null(p) ) p <- NA
@@ -2449,7 +2449,7 @@ wgcna.runPreservationWGCNA <- function(exprList,
   ## geneset enrichment of reference layer
   if(compute.enrichment) {
     message("[wgcna.runPreservationWGCNA] computing geneset enrichment...")
-    pres$gsea <- playbase::wgcna.computeModuleEnrichment(
+    pres$gsea <- wgcna.computeModuleEnrichment(
       pres$layers[[ref]],
       GMT = NULL,
       gsetX = NULL,
