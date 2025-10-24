@@ -478,7 +478,7 @@ wgcna.compute_enrichment <- function(wgcna, pgx,
 
   W <- as.matrix(wgcna$W)
   if (!is.null(annot)) {
-    W <- rename_by(W, annot, symbol.col)
+    W <- rename_by2(W, annot, symbol.col)
   }
 
   rho.list <- list()
