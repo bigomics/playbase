@@ -17,19 +17,36 @@ if(0) {
 
 ai.ask <- function(question, model=DEFAULT_LLM, prompt=NULL) {
   chat <- NULL
-  if (model %in% OLLAMA_MODELS) {
-    chat <- ellmer::chat_ollama(model = model, system_prompt = prompt)
-  } else if (grepl("^gpt",model) && Sys.getenv("OPENAI_API_KEY")!="") {
-    message("warning: using remote GPT model:", model)
-    chat <- ellmer::chat_openai(
-      model = model, system_prompt = prompt,
-      api_key = Sys.getenv("OPENAI_API_KEY") )
-  } else if (grepl("^grok",model) && Sys.getenv("XAI_API_KEY")!="") {
-    chat <- ellmer::chat_openai(
-      model = model, system_prompt = prompt,
-      api_key = Sys.getenv("XAI_API_KEY"),
-      base_url="https://api.x.ai/v1/")
-  }  
+  if(inherits(model, "Chat")) {
+    chat <- model
+  } else if(is.character(model)) {
+    if (model %in% OLLAMA_MODELS) {
+      chat <- ellmer::chat_ollama(model = model, system_prompt = prompt)
+    } else if (grepl("^gpt",model) && Sys.getenv("OPENAI_API_KEY")!="") {
+      message("warning: using remote GPT model:", model)
+      chat <- ellmer::chat_openai(
+        model = model, system_prompt = prompt,
+        api_key = Sys.getenv("OPENAI_API_KEY") )
+    } else if (grepl("^grok",model) && Sys.getenv("XAI_API_KEY")!="") {
+      chat <- ellmer::chat_openai(
+        model = model, system_prompt = prompt,
+        api_key = Sys.getenv("XAI_API_KEY"),
+        base_url="https://api.x.ai/v1/")
+    } else if (grepl("^groq",model) && Sys.getenv("GROQ_API_KEY")!="") {
+      model <- sub("groq:","",model)
+      chat <- ellmer::chat_groq(
+        model = model, system_prompt = prompt,
+        api_key = Sys.getenv("GROQ_API_KEY")
+      )
+    } else if (grepl("^gemini",model) && Sys.getenv("GEMINI_API_KEY")!="") {
+      chat <- ellmer::chat_google_gemini(
+        model = model, system_prompt = prompt,
+        api_key = Sys.getenv("GEMINI_API_KEY")
+      )
+    }
+
+    
+  }
   
   if(is.null(chat)) {
     message("ERROR. could not create model ", model)
