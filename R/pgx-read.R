@@ -162,9 +162,8 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
 #'
 detect_delim <- function(file, delims = c(",", "\t", " ", "|", ":", ";")) {
   # Code extracted from vroom:::guess_delim (version 1.5.7)
-  lines <- readLines(file, n = 10)[-1]  
-  lines <- paste(lines,collapse='\n')
-  
+  lines <- readLines(file, n = 10)
+
   # blank text within quotes
   lines <- gsub('"[^"]*"', "", lines)
 
