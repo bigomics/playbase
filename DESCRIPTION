@@ -175,5 +175,5 @@ Remotes:
     RefMet=url::https://github.com/metabolomicsworkbench/RefMet/archive/refs/tags/v2.zip,
     grimon=github::https://github.com/mkanai/grimon,
     rliger=url::https://github.com/welch-lab/liger/archive/refs/tags/v2.1.0.zip,
-    rms=url::https://cran.r-project.org/src/contrib/Archive/rms/rms_6.8-0.tar.gz
+    rms=url::https://cran.r-project.org/src/contrib/Archive/rms/rms_6.8-0.tar.gz,
     rgoslin=url::https://www.bioconductor.org/packages/release/bioc/src/contrib/rgoslin_1.12.0.tar.gz
