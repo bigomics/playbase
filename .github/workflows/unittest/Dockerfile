@@ -26,6 +26,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 #------------------------------------------------------------
 # Install de-novo bigomics stuff (as R packages)
 #------------------------------------------------------------
+RUN Rscript -e "BiocManager::install('rgoslin')"
 
 # copy bigomics/playbase code from github checkout
 COPY . /playbase
