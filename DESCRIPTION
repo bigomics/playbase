@@ -123,6 +123,7 @@ Imports:
     reticulate,
     rlang,
     RGCCA,
+    rgoslin,
     rhdf5,
     rliger,
     rpart,
