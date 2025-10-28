@@ -1818,11 +1818,11 @@ wgcna.runConsensusWGCNA <- function(exprList,
   
   ## Align and reduce matrices if needed
   gg <- Reduce(intersect, lapply(exprList,rownames))
-  exprList <- lapply(exprList, function(x) x[gg,])
+  exprList <- lapply(exprList, function(x) x[gg, , drop = FALSE])
   if( length(gg) > ngenes ) {
     sdx <- Reduce('*',lapply(exprList, function(x) matrixStats::rowSds(x)))
     ii <- head(order(-sdx), ngenes)
-    exprList <- lapply(exprList, function(x) x[ii,])
+    exprList <- lapply(exprList, function(x) x[ii,, drop = FALSE])
   }
   
   if(addCombined) {
