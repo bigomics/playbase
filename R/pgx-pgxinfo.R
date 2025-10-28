@@ -446,21 +446,21 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
       sig100.up <- rhdf5::h5read(sigdb.file, "signature/sig100.up")
       sig100.dn <- rhdf5::h5read(sigdb.file, "signature/sig100.dn")
     }
-      ## Check if sig100.up/down are properly formatted (should be character gene names, not numbers)
-      if (is.numeric(sig100.up) || is.numeric(sig100.dn)) {
-        dbg("[pgxinfo.updateDatasetFolder] ***WARNING*** sig100.up/dn are numeric, should be character gene names")
+    ## Check if sig100.up/down are properly formatted (should be character gene names, not numbers)
+    if (is.numeric(sig100.up) || is.numeric(sig100.dn)) {
+      dbg("[pgxinfo.updateDatasetFolder] ***WARNING*** sig100.up/dn are numeric, should be character gene names")
+      file.remove(sigdb.file)
+      has.sigdb <- FALSE ## force recreation
+    } else if (is.character(sig100.up) && is.character(sig100.dn)) {
+      ## Check if they are numbers formatted as characters
+      up.numeric <- suppressWarnings(!is.na(as.numeric(sig100.up[1, 1])))
+      dn.numeric <- suppressWarnings(!is.na(as.numeric(sig100.dn[1, 1])))
+      if (up.numeric || dn.numeric) {
+        dbg("[pgxinfo.updateDatasetFolder] ***WARNING*** sig100.up/dn contain numeric values as characters, should be gene names")
         file.remove(sigdb.file)
-        has.sigdb <- FALSE  ## force recreation
-      } else if (is.character(sig100.up) && is.character(sig100.dn)) {
-        ## Check if they are numbers formatted as characters
-        up.numeric <- suppressWarnings(!is.na(as.numeric(sig100.up[1, 1])))
-        dn.numeric <- suppressWarnings(!is.na(as.numeric(sig100.dn[1, 1])))
-        if (up.numeric || dn.numeric) {
-          dbg("[pgxinfo.updateDatasetFolder] ***WARNING*** sig100.up/dn contain numeric values as characters, should be gene names")
-          file.remove(sigdb.file)
-          has.sigdb <- FALSE  ## force recreation
-        }
+        has.sigdb <- FALSE ## force recreation
       }
+    }
   }
 
   ## ----------------------------------------------------------------------

@@ -8,7 +8,7 @@
 [![R package
 check](https://github.com/bigomics/playbase/actions/workflows/r.yml/badge.svg)](https://github.com/bigomics/playbase/actions/workflows/r.yml)
 [![Codecov test
-coverage](https://codecov.io/gh/bigomics/playbase/branch/master/graph/badge.svg)](https://app.codecov.io/gh/bigomics/playbase?branch=master)
+coverage](https://codecov.io/gh/bigomics/playbase/branch/main/graph/badge.svg)](https://app.codecov.io/gh/bigomics/playbase?branch=main)
 
 <!-- badges: end -->
 

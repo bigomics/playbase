@@ -722,7 +722,6 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
                                                  timeseries,
                                                  trend = TRUE,
                                                  use.spline = NULL) {
-
   message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting Limma with no design; time series analysis...")
   if (!all(colnames(X) %in% names(timeseries))) {
     stop("[ngs.fitContrastsWithLIMMA.timeseries] X and timeseries vector contain different set of samples.")
