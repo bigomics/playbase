@@ -30,9 +30,6 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
 
   ft <- ifelse(is.null(filter_features), "<all>", filter_features)
   sel <- select_features
-  if (!is.null(sel)) {
-    ft <- "<custom>"
-  }
 
   if (!(pheno %in% colnames(pgx$samples))) {
     message("ERROR. pheno not in pgx$samples")
@@ -67,7 +64,8 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
   if (ft == "<custom>" && !is.null(sel) && length(sel) > 0) {
     ## ------------- filter with user selection
     if (sel[1] != "") {
-      pp <- rownames(X)[which(toupper(rownames(X)) %in% toupper(sel))]
+      features <- playbase::filterProbes(pgx$genes, sel)
+      pp <- which(rownames(X) %in% features)
       X <- X[pp, , drop = FALSE]
     }
   } else if (is.family) {

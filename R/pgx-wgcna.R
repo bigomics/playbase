@@ -388,7 +388,7 @@ wgcna.compute_geneStats <- function(net, datExpr, datTraits, TOM) {
   ## Gene Centrality. Compute centrality of gene in Module subgraph
   ## using TOM matrix.
   adj <- TOM
-  diag(adj) <- NA
+#  diag(adj) <- NA
   adj[which(abs(adj) < 0.01)] <- 0
   gr <- igraph::graph_from_adjacency_matrix(
     adj,
@@ -478,7 +478,7 @@ wgcna.compute_enrichment <- function(wgcna, pgx,
 
   W <- as.matrix(wgcna$W)
   if (!is.null(annot)) {
-    W <- rename_by(W, annot, symbol.col)
+    W <- rename_by2(W, annot, symbol.col)
   }
 
   rho.list <- list()
