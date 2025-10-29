@@ -613,7 +613,12 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 
   ## global row clustering if no split
   if (cluster_rows && !do.split) {
-    cluster_rows <- as.dendrogram(hclust(dist(gx)))
+    if (any(is.na(gx))) {
+      gx2 <- imputeMissing(gx, method = "SVD2")
+      cluster_rows <- as.dendrogram(hclust(dist(gx2)))
+    } else {
+      cluster_rows <- as.dendrogram(hclust(dist(gx)))
+    }
   }
 
   hmap <- NULL
