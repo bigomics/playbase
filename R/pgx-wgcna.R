@@ -219,7 +219,7 @@ wgcna.compute <- function(X,
   kk <- intersect(colnames(X),rownames(samples))
   X <- as.matrix(X[,kk])
   samples <- as.data.frame(samples, check.names=FALSE)
-  samples <- samples[kk,,drop=FALSE]
+  samples <- samples[kk, , drop=FALSE]
   
   nmissing <- sum(is.na(X))
   if (nmissing > 0) {
@@ -227,7 +227,7 @@ wgcna.compute <- function(X,
     X <- svdImpute2(X)
   }
 
-  X <- X[!duplicated(rownames(X)), ]
+  X <- X[!duplicated(rownames(X)), , drop = FALSE]
   
   ## restrict number of genes
   if (ngenes > 0 && nrow(X) > ngenes) {
@@ -244,8 +244,6 @@ wgcna.compute <- function(X,
     }
   }
 
-  message("[wgcna.compute] dim(X) = ", paste(dim(X), collapse = " x "))
-  message("[wgcna.compute] dim(samples) = ", paste(dim(samples), collapse = " x "))
   datExpr <- t(X)
 
   ## adapt for small datasets (also done in WGCNA package)
@@ -258,9 +256,10 @@ wgcna.compute <- function(X,
   message("[wgcna.compute] power = ", power)
   message("[wgcna.compute] mergeCutHeight = ", mergeCutHeight)
   message("[wgcna.compute] calcMethod = ", calcMethod)  
-  
+
   ##WGCNA::enableWGCNAThreads()
   if(is.null(net)) {
+    message("[wgcna.compute] wgcna.computeModules....")
     net <- wgcna.computeModules(
       datExpr,
       power = power,
@@ -284,9 +283,10 @@ wgcna.compute <- function(X,
   }
 
   if(!"MEs" %in% names(net)) {
+    message("[wgcna.compute]: running WGCNA::moduleEigengenes")
     net$MEs = WGCNA::moduleEigengenes(datExpr, colors = net$colors)$eigengenes
   }
-  
+
   ## Substitue prefix="ME"
   if(prefix!="ME") names(net$MEs) <- sub("^ME", prefix, names(net$MEs))
   net$labels <- paste0(prefix, net$colors)
@@ -299,8 +299,7 @@ wgcna.compute <- function(X,
 
   ## Expand multi-class discrete phenotypes into binary vectors
   datTraits <- utils::type.convert(datTraits, as.is = TRUE)
-  datTraits <- expandPhenoMatrix(datTraits, keep.numeric=TRUE,
-    drop.ref=drop.ref)
+  datTraits <- expandPhenoMatrix(datTraits, keep.numeric=TRUE, drop.ref=drop.ref)
 
   if(is.null(datTraits)) {
     message("WARNING:: no valid traits. creating random traits.")
@@ -407,7 +406,10 @@ wgcna.compute <- function(X,
     stats = stats
   )
 
+  message("[wgcna.compute] completed. \n\n")
+
   return(results)
+
 }
 
 #' @export
@@ -650,8 +652,7 @@ wgcna.computeModules <- function(
   if(is.null(power)) power <- "sft"
   auto.power <- power[1] %in% c("sft","iqr")
   if (auto.power) {
-    ## Estimate best power
-    message("[wgcna.compute] estimating optimal power with method = ", power[1])
+    message("[wgcna.computeModules] estimating optimal power with method = ", power[1])
     powers <- c(c(1:10), seq(from = 12, to = 20, by = 2))
     powers <- c(powers, seq(from = 25, to = 50, by = 5))
     power <- wgcna.pickSoftThreshold(datExpr, sft=NULL, rcut=0.85,
@@ -660,7 +661,7 @@ wgcna.computeModules <- function(
   }
   
   if(calcMethod == "blockwise") {
-    message("[wgcna.compute] computing blockwiseModules...")
+    message("[wgcna.computeModules] computing blockwiseModules...")
     net <- WGCNA::blockwiseModules(
       datExpr,
       power = power,
@@ -682,19 +683,20 @@ wgcna.computeModules <- function(
   if(is.null(TOM)) {
     adjacency <- WGCNA::adjacency(datExpr, power = power, type = networkType) 
     adjacency[is.na(adjacency)] <- 0
-    if(calcMethod == "fast") {
-      if(verbose>0) message("Computing TOM matrix using fast method...")
-      TOM <- fastTOMsimilarity(adjacency, tomtype=TOMType,
-        lowrank=lowrank)
-    } else if(calcMethod == "adjacency") {
-      if(verbose>0) message("Computing using adjacency as TOM matrix...")    
+    if (calcMethod == "fast") {
+      if(verbose>0)
+        message("[wgcna.computeModules] Computing TOM matrix using fast method...")
+      TOM <- fastTOMsimilarity(adjacency, tomtype=TOMType, lowrank=lowrank)
+    } else if (calcMethod == "adjacency") {
+      if(verbose>0)
+        message("[wgcna.computeModules] Computing using adjacency as TOM matrix...")    
       TOM <- adjacency
-    } else if(calcMethod == "full") {
-      if(verbose>0) message("Computing full TOM matrix...")
+    } else if (calcMethod == "full") {
+      if(verbose>0) message("[wgcna.computeModules] Computing full TOM matrix...")
       ## SLOW!!!
       TOM <- WGCNA::TOMsimilarity(adjacency, TOMType=TOMType, verbose=verbose) 
     } else {
-      stop("ERROR: invalid calcMethod parameter:", calcMethod)
+      stop("[wgcna.computeModules] ERROR: invalid calcMethod parameter:", calcMethod)
     }
     dimnames(TOM) <- dimnames(adjacency)
   }
@@ -758,14 +760,19 @@ wgcna.computeModules <- function(
   ## Eigengenes
   if(verbose>0) message("Calculating eigengenes...")
   colors <- WGCNA::labels2colors(label)
-  MEs = WGCNA::moduleEigengenes(datExpr, colors = colors)$eigengenes
-  table(colors)
-  
+  MEs <- WGCNA::moduleEigengenes(datExpr, colors = colors)$eigengenes
+  nas <- apply(MEs, 2, function(x) sum(is.na(x)))
+  ##if (any(nas > 0) & names(nas)[nas>0] == "MEgrey") {
+  ##  message("[wgcna.computeModules]: MEgrey ('improper genes') contains NAs. Removing module.")
+  ##  MEs <- WGCNA::moduleEigengenes(datExpr, colors = colors, excludeGrey = TRUE)$eigengenes
+  ## }
+
   ## prune using minKME
   if(minKMEtoStay > 0) {
     if(verbose>0) message("Pruning features using minKME = ",minKMEtoStay)
     ngrey <- sum(colors == 'grey')
     for(k in unique(colors)) {
+      if (! paste0("ME",k) %in% colnames(MEs)) next
       ii <- which(colors == k)
       if(length(ii)>1) {
         eg <- MEs[,paste0("ME",k)]
@@ -784,7 +791,6 @@ wgcna.computeModules <- function(
   unmergedColors <- colors
   if(mergeCutHeight>0 && length(MEs)>1) {
     if(verbose>0) message("Merging similar modules: mergeCutHeight = ",mergeCutHeight)
-    #merge <- WGCNA::mergeCloseModules(datExpr, colors, cutHeight=mergeCutHeight, verbose=0)
     merge <- wgcna.mergeCloseModules(datExpr, colors, cutHeight=mergeCutHeight, MEs=MEs)
     unmergedColors <- colors
     colors <- merge$colors
@@ -928,8 +934,8 @@ wgcna.computeGeneStats <- function(net, datExpr, datTraits, TOM) {
 
   ## align
   kk <- intersect(rownames(datExpr), rownames(datTraits))
-  datExpr <- datExpr[kk,]
-  datTraits <- datTraits[kk,]
+  datExpr <- datExpr[kk, , drop = FALSE]
+  datTraits <- datTraits[kk, , drop = FALSE]
 
   ## Define numbers of genes and samples
   nGenes <- ncol(datExpr)
@@ -1809,20 +1815,21 @@ wgcna.runConsensusWGCNA <- function(exprList,
                                     verbose = 1,
                                     progress = NULL
                                     ) {
-  if(0) {
-    power=6;minKME=0.5;cutheight=0.15;deepSplit=2;maxBlockSize=5000;verbose=1;calcMethod="fast";addCombined=0;ngenes=2000;minModuleSize=20;mergeCutHeight=0.15
-    gsea.mingenes=20;gset.methods = c("fisher","gsetcor","xcor")
-  }
+
+  ## if(0) {
+  ##   power=6;minKME=0.5;cutheight=0.15;deepSplit=2;maxBlockSize=5000;verbose=1;calcMethod="fast";addCombined=0;ngenes=2000;minModuleSize=20;mergeCutHeight=0.15
+  ##   gsea.mingenes=20;gset.methods = c("fisher","gsetcor","xcor")
+  ## }
 
   colors <- NULL
-  
+
   ## Align and reduce matrices if needed
   gg <- Reduce(intersect, lapply(exprList,rownames))
   exprList <- lapply(exprList, function(x) x[gg, , drop = FALSE])
   if( length(gg) > ngenes ) {
     sdx <- Reduce('*',lapply(exprList, function(x) matrixStats::rowSds(x)))
     ii <- head(order(-sdx), ngenes)
-    exprList <- lapply(exprList, function(x) x[ii,, drop = FALSE])
+    exprList <- lapply(exprList, function(x) x[ii, , drop = FALSE])
   }
   
   if(addCombined) {
@@ -1842,9 +1849,9 @@ wgcna.runConsensusWGCNA <- function(exprList,
     power <- rep(power, length(multiExpr))
   }
 
-  # run module detection procedure
+  # module detection procedure
   layers <- list()
-  k=names(multiExpr)[1]
+  ## k=names(multiExpr)[1]
   if(!is.null(progress)) progress$inc(0.1, "Computing layers...")
   for (i in 1:length(multiExpr)) {
     k <- names(multiExpr)[i]
@@ -1867,7 +1874,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
       verbose = verbose
     )
   }
-  
+
   # now we run automatic consensus module detection
   message("[wgcna.runConsensusWGCNA] >>> computing CONSENSUS modules...")
   if(!is.null(progress)) progress$inc(0.1, "Computing consensus...")  
@@ -1880,9 +1887,10 @@ wgcna.runConsensusWGCNA <- function(exprList,
   }
   
   sel <- setdiff(names(multiExpr), c("Combined"))
-  cons = WGCNA::blockwiseConsensusModules(
+
+    cons <- WGCNA::blockwiseConsensusModules(
     multiExpr[sel],
-    power = as.numeric(consensusPower), 
+    power = as.numeric(consensusPower),
     networkType = "signed",
     TOMType = "signed",
     minModuleSize = as.integer(minModuleSize),
@@ -1897,14 +1905,12 @@ wgcna.runConsensusWGCNA <- function(exprList,
   cons$power = consensusPower
   
   ## create and match colors
-  i=1
   for(i in 1:length(layers)) {
     layers[[i]] <- wgcna.matchColors(layers[[i]], cons$colors) 
   }
 
-  #
-  layers.colors <- sapply( layers, function(r) r$net$colors )
-  colors <- cbind( Consensus = cons$colors, layers.colors)
+  layers.colors <- sapply(layers, function(r) r$net$colors)
+  colors <- cbind(Consensus = cons$colors, layers.colors)
     
   ## add labels to dendrogram
   for(i in 1:length(cons$dendrograms)) {
