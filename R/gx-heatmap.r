@@ -616,6 +616,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     if (any(is.na(gx))) {
       gx2 <- imputeMissing(gx, method = "SVD2")
       cluster_rows <- as.dendrogram(hclust(dist(gx2)))
+      rm(gx2)
     } else {
       cluster_rows <- as.dendrogram(hclust(dist(gx)))
     }
