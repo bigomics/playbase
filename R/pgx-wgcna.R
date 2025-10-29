@@ -761,11 +761,6 @@ wgcna.computeModules <- function(
   if(verbose>0) message("Calculating eigengenes...")
   colors <- WGCNA::labels2colors(label)
   MEs <- WGCNA::moduleEigengenes(datExpr, colors = colors)$eigengenes
-  nas <- apply(MEs, 2, function(x) sum(is.na(x)))
-  ##if (any(nas > 0) & names(nas)[nas>0] == "MEgrey") {
-  ##  message("[wgcna.computeModules]: MEgrey ('improper genes') contains NAs. Removing module.")
-  ##  MEs <- WGCNA::moduleEigengenes(datExpr, colors = colors, excludeGrey = TRUE)$eigengenes
-  ## }
 
   ## prune using minKME
   if(minKMEtoStay > 0) {
