@@ -3093,7 +3093,7 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=1,
                                       show.traits = FALSE,
                                       use.tree = 0,
                                       rm.na = TRUE,
-                                      marAll = c(0.2, 8, 2, 0.2),
+                                      marAll = c(0.4, 5, 1, 0.2),
                                       setLayout=TRUE, ... ) {
 
   if("net" %in% names(wgcna)) {
@@ -4011,22 +4011,29 @@ wgcna.plotFeatureUMAP <- function(wgcna, nhub = 3, method = "clust",
 
   if (is.null(main)) main <- "Feature UMAP colored by module"
 
-  ## get top hub genes
-  mm <- wgcna$stats$moduleMembership
-  hubgenes <- apply(mm, 2, function(x) head(names(sort(-x)), 3), simplify = FALSE)
-  hubgenes
-  sel <- which(names(hubgenes) != "MEgrey")
-  hubgenes <- unlist(hubgenes[sel])
+  hubgenes <- NULL
+  if(nhub > 0) {
+    ## get top hub genes
+    mm <- wgcna$stats$moduleMembership
+    hubgenes <- apply(mm, 2, function(x) head(names(sort(-x)), nhub), simplify = FALSE)
+    sel <- which(names(hubgenes) != "MEgrey")
+    hubgenes <- unlist(hubgenes[sel])
+  }
+
   col1 <- wgcna$net$colors
   genes1 <- names(which(col1 != "grey"))
   pgx.scatterPlotXY(
     pos,
-    var = col1, col = sort(unique(col1)),
-    hilight = genes1, hilight2 = hubgenes,
-    cex.lab = 1.2, label.clusters = FALSE,
+    var = col1,
+    col = sort(unique(col1)),
+    hilight = genes1,
+    hilight2 = hubgenes,
+    cex.lab = 1.2,
+    label.clusters = FALSE,
     title = main,
     plotlib = plotlib
   )
+  
 }
 
 
