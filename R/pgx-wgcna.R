@@ -3622,7 +3622,9 @@ wgcna.plotEigenGeneClusterDendrogram <- function(wgcna = NULL,
     }
   }
 
-  ME <- WGCNA::orderMEs(ME)
+  impME <- svdImpute2(as.matrix(ME))
+  ME <- WGCNA::orderMEs(impME)
+
   if (NCOL(ME) <= 2) ME <- cbind(ME, ME) ## error if ncol(ME)<=2 !!!!
   if (is.null(main)) main <- "Eigengene Dendrogram"
 
@@ -3635,7 +3637,6 @@ wgcna.plotEigenGeneClusterDendrogram <- function(wgcna = NULL,
       marDendro = c(0, 4, 2, 0),
       plotHeatmaps = FALSE
     )
-
   } else {
     ## plot dendrogram with hclust function
     if(setMargins && horiz) par(mar=c(4,4,4,8))
@@ -3668,7 +3669,7 @@ wgcna.plotEigenGeneAdjacencyHeatmap <- function(wgcna,
                                                 text = FALSE,
                                                 pstar = TRUE,
                                                 setMargins = TRUE,
-                                                mar1 = c(5.5, 5, 1.6, 1),
+                                                mar1 = c(5.6, 4.5, 1.8, 0),
                                                 mar2 = c(8, 10, 4, 2),
                                                 cex.lab = 0.8,
                                                 cex.text = 0.7,
@@ -3734,7 +3735,8 @@ wgcna.plotEigenGeneAdjacencyHeatmap <- function(wgcna,
   if (NCOL(ME) <= 2) ME <- cbind(ME, ME) ## error if ncol(ME)<=2 !!!!
 
   ## eigengene correlation
-  R <- cor(ME, use="pairwise")
+  impME <- svdImpute2(as.matrix(ME))
+  R <- cor(impME, use="pairwise")
   R0 <- R
 
   ## If phenotype is given we condition the heatmap using the
@@ -3797,7 +3799,10 @@ wgcna.plotEigenGeneAdjacencyHeatmap <- function(wgcna,
     hc <- hclust(as.dist(1 - R), method="average")    
   }
   if(plotDendro) {
-    plot( as.dendrogram(hc), horiz = TRUE, ylab="Eigengene dendrogram")
+    par(cex=cex.lab)
+    plot( as.dendrogram(hc), horiz = TRUE,
+      ylab="Eigengene dendrogram")
+    par(cex=1)
   }
   
   if(plotHeatmap) {
@@ -4945,7 +4950,7 @@ wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, nt
 }
 
 wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE, 
-                                  experiment=NULL, verbose=1, model="gpt-5-nano",
+                                  experiment="", verbose=1, model="gpt-5-nano",
                                   modules=NULL)  {
   if(multi) {
     top <- wgcna.getConsensusTopGenesAndSets(wgcna, annot=annot, ntop=ntop)
