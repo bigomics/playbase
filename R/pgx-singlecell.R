@@ -479,6 +479,7 @@ pgx.supercell <- function(counts,
                           meta,
                           group = NULL,
                           gamma = 20,
+                          nvargenes = 1000,
                           log.transform = TRUE) {
   if (log.transform) { ## supercell uses log2 matrix
     X <- logCPM(counts, total = 1e4)
@@ -486,14 +487,21 @@ pgx.supercell <- function(counts,
     X <- counts
   }
 
-  if (!is.null(group) && "group" %in% colnames(meta)) {
-    message("using group detected in meta\n")
+  if (is.null(group) && "group" %in% colnames(meta)) {
+    message("using group column detected in meta\n")
     group <- meta[, "group"]
+  }
+
+  if (!is.null(group) && any(group %in% colnames(meta))) {
+    group <- intersect(group, colnames(meta))
+    message("using groups: ", paste(group,collapse="."))
+    group <- meta[, group]
+    if(NCOL(group) > 1) group <- apply(group, 1, paste, collapse=".")
   }
 
   SC <- SuperCell::SCimplify(X,
     gamma = gamma,
-    n.var.genes = 1000,
+    n.var.genes = nvargenes,
     cell.split.condition = group
   )
   message("[pgx.supercell] SuperCell::SCimplify completed")
@@ -514,7 +522,16 @@ pgx.supercell <- function(counts,
 
   ## Compute metacall expression as sum of counts
   counts <- as.matrix(counts)
-  sc.counts <- SuperCell::supercell_GE(counts, mode = "sum", groups = SC$membership)
+  if(log.transform) {
+    sc.counts <- SuperCell::supercell_GE(
+      counts, mode = "sum",
+      groups = SC$membership)
+  } else {
+    sc.counts <- SuperCell::supercell_GE(
+      counts, mode = "average",
+      groups = SC$membership)
+  }
+  
   message("[pgx.supercell] SuperCell::supercell_GE completed")
   sc.membership <- paste0("mc", SC$membership)
   colnames(sc.counts) <- paste0("mc", 1:ncol(sc.counts))

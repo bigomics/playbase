@@ -500,7 +500,6 @@ pgx.deconvolution <- function(X, ref,
     dbg("WARNING:: pgx.deconvolution: is X really counts? (not logarithmic)\n")
   }
 
-
   ## clean up matrix, remove duplicate names
   mat <- as.matrix(X)
   rownames(mat) <- gsub(".*:", "", rownames(mat)) ## strip prefix
@@ -565,12 +564,14 @@ pgx.deconvolution <- function(X, ref,
       source(CIBERSORT.code)
       stime <- system.time(
         # The f CIBERSORT is likely from CIBERSORT package but better confirm
-        ##        try(ciber.out <- CIBERSORT(ref, mat, perm = 0, QN = FALSE))
+        ## try(ciber.out <- CIBERSORT(ref, mat, perm = 0, QN = FALSE))
+        NULL
       )
     }
     if (has.ciber2) {
       stime <- system.time(
-        ##        try(ciber.out <- CIBERSORT::cibersort(ref, mat, perm = 0, QN = FALSE))
+        ## try(ciber.out <- CIBERSORT::cibersort(ref, mat, perm = 0, QN = FALSE))
+        NULL
       )
     }
     if (!is.null(ciber.out)) {

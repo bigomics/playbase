@@ -17,6 +17,7 @@ gset.fisher(
   method = "fast.fisher",
   check.background = TRUE,
   common.genes = TRUE,
+  no.pass = NA,
   verbose = 1
 )
 }
