@@ -1114,7 +1114,9 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
   graphics::arrows(jj, (y0 - dy), jj, y0, col = col1, lwd = w1 * cex, length = 0)
 
   ## red/blue bar at bottom
-  kk <- c(seq(1, length(rnk) * 0.99, floor(length(rnk) / 20)), length(rnk))
+  by.val <- floor(length(rnk) / 20)
+  if (by.val == 0) by.val <- 1
+  kk <- c(seq(1, length(rnk) * 0.99, by.val), length(rnk))
   length(kk)
   i <- 1
   pal <- grDevices::colorRampPalette(c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")))(32)

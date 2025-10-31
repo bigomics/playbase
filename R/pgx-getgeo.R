@@ -19,14 +19,14 @@
 #' @export
 pgx.getGEOseries <- function(accession,
                              archs.h5 = "human_matrix.h5",
-                             get.info = TRUE
-                             ) {
+                             get.info = TRUE) {
   id <- accession
   is.valid.id <- is.GEO.id.valid(id)
   if (!is.valid.id) stop("[pgx.getGEOseries] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
 
-  meta <- NULL; archs.h5 <- NULL
+  meta <- NULL
+  archs.h5 <- NULL
   geo <- pgx.getGEOcounts(id, archs.h5 = archs.h5)
   source <- geo[["source"]]
   counts <- geo[["expr"]]
@@ -123,11 +123,11 @@ pgx.getGEOcounts <- function(accession, archs.h5) {
   source <- ""
 
   if (!is.null(archs.h5) && is.null(expr)) {
-     message("[pgx.getGEOcounts]: pgx.getGEOcounts.archs4...")
-     expr <- pgx.getGEOcounts.archs4(id, archs.h5)
-     if (!is.null(expr)) source <- "ARCHS4"
+    message("[pgx.getGEOcounts]: pgx.getGEOcounts.archs4...")
+    expr <- pgx.getGEOcounts.archs4(id, archs.h5)
+    if (!is.null(expr)) source <- "ARCHS4"
   }
-  
+
   if (is.null(expr)) {
     message("[pgx.getGEOcounts]: pgx.getGEOcounts.GEOquery...")
     geo <- pgx.getGEOcounts.GEOquery(accession = id)
@@ -314,11 +314,11 @@ pgx.getGEOcounts.GEOquery <- function(accession) {
 
   gse <- try(GEOquery::getGEO(GEO = id, GSEMatrix = TRUE, getGPL = TRUE), silent = TRUE)
   has.expr <- FALSE
-  if (!inherits(gse, "try-error"))
+  if (!inherits(gse, "try-error")) {
     has.expr <- sapply(gse, function(x) nrow(Biobase::exprs(x)) > 0)
+  }
 
   if (inherits(gse, "try-error") | !any(has.expr)) {
-
     gse <- try(GEOquery::getRNASeqData(accession = id), silent = TRUE)
     if (inherits(gse, "try-error")) {
       message("[pgx.getGEOcounts.GEOquery] getGEO failed to retrieve ", id, "\n")
@@ -326,7 +326,6 @@ pgx.getGEOcounts.GEOquery <- function(accession) {
     }
 
     if (class(gse) %in% "SummarizedExperiment") {
-
       counts <- try(SummarizedExperiment::assay(gse), silent = TRUE)
       meta <- try(as.data.frame(SummarizedExperiment::colData(gse)), silent = TRUE)
       if (inherits(counts, "try-error")) {
@@ -341,8 +340,8 @@ pgx.getGEOcounts.GEOquery <- function(accession) {
         cm <- intersect(rownames(features), rownames(counts))
         if (length(cm) > 0) {
           features <- features[cm, , drop = FALSE]
-          counts <- counts [cm, , drop = FALSE]
-        }     
+          counts <- counts[cm, , drop = FALSE]
+        }
         hh1 <- grepl("symbol", colnames(features), ignore.case = TRUE)
         hh2 <- grepl("Ensembl", colnames(features), ignore.case = TRUE)
         ff <- NULL
@@ -350,18 +349,18 @@ pgx.getGEOcounts.GEOquery <- function(accession) {
         if (!any(hh1) && any(hh2)) ff <- features[, hh2]
         if (!is.null(ff)) {
           jj <- which(is.na(ff) | ff == "")
-          if (length(jj) >0 ) ff[jj, hh] <- rownames(features)[jj]
+          if (length(jj) > 0) ff[jj, hh] <- rownames(features)[jj]
           rownames(counts) <- as.character(ff)
         }
-        rm(ff, features); gc()
+        rm(ff, features)
+        gc()
       }
 
       LL <- list(expr = counts, meta = meta)
-      rm(counts, meta); gc()
+      rm(counts, meta)
+      gc()
       return(LL)
-      
     }
-    
   }
 
   supp_file <- NULL
@@ -480,9 +479,10 @@ pgx.getGEOcounts.GEOquery <- function(accession) {
   }
 
   LL <- list(expr = expr, meta = meta)
-  rm(expr, meta); gc()
+  rm(expr, meta)
+  gc()
   return(LL)
-  #return(expr) ## linear intensities
+  # return(expr) ## linear intensities
 }
 
 

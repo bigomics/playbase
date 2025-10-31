@@ -1,7 +1,7 @@
 Package: playbase
 Type: Package
 Title: Core back-end functionality and logic for OmicsPlayground
-Version: 1.0.0
+Version: 1.0.4
 Author: BigOmics Analytics SA
 Maintainer: The package maintainer <ivo.kwee@bigomics.com>
 Description: More about what it does (maybe more than one line)
@@ -113,6 +113,7 @@ Imports:
     playdata,
     qlcMatrix,
     R6,
+    RaMP,
     randomForest,
     randomForestSRC,
     RColorBrewer,
@@ -123,6 +124,7 @@ Imports:
     reticulate,
     rlang,
     RGCCA,
+    rgoslin,
     rhdf5,
     rliger,
     rpart,

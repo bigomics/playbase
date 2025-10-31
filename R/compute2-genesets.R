@@ -62,7 +62,7 @@ compute_testGenesets <- function(pgx,
 
   X <- pgx$X
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
-    X <- rename_by(X, pgx$genes, "symbol", unique = TRUE)
+    X <- rename_by2(X, pgx$genes, "symbol", unique = TRUE)
   }
   
   ## -----------------------------------------------------------

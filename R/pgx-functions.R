@@ -1444,15 +1444,17 @@ filterProbes <- function(annot, genes) {
   ## check probe name, short probe name or gene name for match
   p0 <- (toupper(sub(".*:", "", rownames(annot))) %in% toupper(genes))
   p1 <- (toupper(rownames(annot)) %in% toupper(genes))
-  p2 <- (toupper(as.character(annot$symbol)) %in% toupper(genes))
-  if ("human_ortholog" %in% colnames(annot)) {
-    p3 <- (toupper(as.character(annot$human_ortholog)) %in% toupper(genes))
-  } else {
-    p3 <- rep(FALSE, nrow(annot))
+
+  p_list <- list(p0, p1)
+
+  # Search all columns in the annotation dataframe
+  for (col in colnames(annot)) {
+    col_values <- toupper(as.character(annot[[col]]))
+    col_matches <- col_values %in% toupper(genes)
+    p_list <- c(p_list, list(col_matches))
   }
 
-  # Ensure all p* are valids
-  p_list <- list(p0, p1, p2, p3)
+  # Ensure all p* are valid
   p_list <- p_list[sapply(p_list, length) > 0]
 
   # Combine list using OR operator
