@@ -14,7 +14,7 @@ Suggests:
 Config/testthat/edition: 3
 RoxygenNote: 7.3.2
 Depends: 
-    R (>= 2.10)
+    R (>= 3.5)
 biocViews:
 Imports:
     AnnotationDbi,
