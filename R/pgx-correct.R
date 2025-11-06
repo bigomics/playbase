@@ -8,6 +8,7 @@
 ##
 
 
+
 #' @title Supervised batch correction
 #'
 #' @description Performs supervised batch correction on a gene
@@ -318,7 +319,7 @@ pgx.superBatchCorrect <- function(X, pheno,
       dbg("[pgx.superBatchCorrect] model.par = ", model.par)
       y1 <- pheno[, model.par, drop = FALSE]
       y1 <- apply(y1, 1, paste, collapse = ":")
-      cX <- gx.nnmcorrect(cX, y1, center.x = TRUE, center.m = TRUE)$X
+      cX <- nnmCorrect(cX, y1, center.x = TRUE, center.m = TRUE)
     }
 
     if (bc == "sva") {
@@ -1118,6 +1119,22 @@ removeTechnicalEffects <- function(X, samples, y, p.pheno = 0.05, p.pca = 0.5,
   bX
 }
 
+#' Estimate batch correction vectors from corrected cX and uncorrected
+#' matrix X.
+#'
+#' @export
+estimateBatchCorrectionVectors <- function(cX, X, k = NULL, threshold = 0.8) {
+  res <- svd(X - cX)
+  cumcv <- (cumsum(res$d**2) / sum(res$d**2))
+  cumcv
+  if (is.null(k)) {
+    k <- min(which(cumcv >= threshold))
+  }
+  ## return batch vectors
+  res$V[, 1:k, drop = FALSE]
+}
+
+
 ## =============================================================================
 ## Run/compare multiple batch-correction methods
 ## =============================================================================
@@ -1235,7 +1252,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   }
 
   if ("NPM" %in% methods) {
-    ## xlist[["NNM"]] <- gx.nnmcorrect(X, y)$X
+    ## xlist[["NNM"]] <- nnmCorrect(X, y)
     xlist[["NPM"]] <- nnmCorrect(X, y, use.design = TRUE)
     ## xlist[["NNM2"]] <- nnmCorrect2(X, y, use.design = TRUE)
     ##    xlist[["NNM.no_mod"]] <- nnmCorrect2(X, y, use.design = FALSE)
@@ -1841,10 +1858,84 @@ compare_batchcorrection_methods <- function(X,
 }
 
 ## =============================================================================
-## Single batch-correction methods wrappers
+## Combined/general batch-correction wrappers
 ## =============================================================================
 
+#' @title Blockwise batch correction for large matrices
+#'
+#' @description Performs blockwise (chunked) batch correction on a
+#'   gene expression matrix.
+#'
+#' @param X Gene expression matrix, genes in rows, samples in columns.
+#' @param batch Vector containing batch covariates. Must match colnames of \code{X}.
+#' @param pheno Vector containing sample model covariates. Must match colnames of \code{X}.
+#'
+#' @return The batch corrected gene expression matrix.
+batchCorrect.blockwise <- function(X, batch, pheno, method="sva", blocksize=2000,
+                                   ruv.controls=0.10) {
+  
+  method <- tolower(method)
+  if(method %in% c("combat","limma") && is.null(batch)) {
+    message("missing batch parameter")
+    return(NULL)
+  }
+  if(method %in% c("nnm","npm","ruv","sva") && is.null(pheno)) {
+    message("missing pheno parameter")
+    return(NULL)
+  }
+  
+  if(is.null(blocksize) || blocksize < 0 ) blocksize <- 99*nrow(X)
+  
+  if(method == "ruv" && nrow(X) > blocksize ) {
+    sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+    ii <- which(!duplicated(rownames(X)) & sdx > 0)
+    jj <- which(!is.na(pheno))
+    F <- gx.limmaF(X[ii, jj], pheno[jj], lfc = 0, fdr = 1, method = 1, 
+      sort.by = "none", compute.means = FALSE, verbose = 0)
+    nc <- pmax( min(nrow(X), blocksize) * as.numeric(ruv.controls), 1)  
+    sel <- head(order(-F$P.Value), nc)
+    ruv.controls <- rownames(F)[sel]
+    ruv.controls <- intersect(ruv.controls, rownames(X))
+    length(ruv.controls)
+  }
 
+  ## make indices and process blockwise
+  bX <- X
+  kmax <- ceiling(nrow(X) / blocksize)
+  idx <- head(rep(1:kmax, blocksize), nrow(X))
+  mod <- NULL
+  if(!is.null(pheno))  mod <- model.matrix(~factor(pheno))
+  k=1
+  for(k in unique(idx)) {
+    ii <- which(idx==k)
+    bx <- NULL
+    if(method == "ruv" && length(ruv.controls)>1 ) {
+      jj <- unique(c(ii, match(ruv.controls,rownames(X))))
+      bx <- ruvCorrect(X[jj,,drop=FALSE], y=pheno, controls=ruv.controls)
+      gg <- rownames(X)[ii]
+      bx <- bx[gg,,drop=FALSE]
+    } else if(method == "ruv") {
+      bx <- ruvCorrect(X[ii,,drop=FALSE], y=pheno, controls=ruv.controls)
+    } else if(method == "sva") {
+      bx <- svaCorrect(X[ii,,drop=FALSE], y=pheno)
+    } else if(method %in% c("npm","nnm")) {
+      bx <- nnmCorrect(X[ii,,drop=FALSE], y=pheno)
+    } else if(method %in% c("nnm2")) {
+      bx <- nnmCorrect2(X[ii,,drop=FALSE], y=pheno)
+    } else if(method == "combat") {
+      bx <- sva::ComBat(X[ii,,drop=FALSE], batch=batch, mod=mod)
+    } else if(method == "limma") {
+      bx <- limma::removeBatchEffect(X[ii,,drop=FALSE], batch=batch, design=mod)
+    }
+    if(!is.null(bx)) bX[ii,] <- bx
+  }
+  
+  return(bX)
+}
+
+
+#' Super batch correation. Warning: tends to overcorrect...
+#'
 #' @export
 superBC2 <- function(X, samples, y, batch = NULL,
                      ## methods = c("technical","batch","statistical","pca","sva","npm"),
@@ -1916,17 +2007,21 @@ superBC2 <- function(X, samples, y, batch = NULL,
     }
     if (m == "npm") {
       message("[superBC2] correcting for: NPM")
-      cX <- gx.nnmcorrect(cX, y, use.design = use.design)$X
+      cX <- nnmCorrect(cX, y, use.design = use.design)
     }
     if (m == "npm2") {
       message("[superBC2] correcting for: NPM2")
-      cX <- gx.nnmcorrect2(cX, y, r = 0.35, use.design = use.design)$X
+      cX <- nnmCorrect2(cX, y, r = 0.35, use.design = use.design)
     }
   }
 
   cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
   cX
 }
+
+## =============================================================================
+## Single batch-correction methods 
+## =============================================================================
 
 #' @export
 limmaCorrect <- function(X, B, y = NULL, use.covariates = FALSE,
@@ -2201,12 +2296,11 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
   ruvX
 }
 
+#' PCA correction: remove remaining batch effect using PCA
+#' (iteratively, only SV larger than max correlated SV)
+#'
 #' @export
 pcaCorrect <- function(X, y, k = 10, p.notsig = 0.20) {
-  ## --------------------------------------------------------------------
-  ## PCA correction: remove remaining batch effect using PCA
-  ## (iteratively, only SV larger than max correlated SV)
-  ## --------------------------------------------------------------------
   mod1 <- model.matrix(~ 0 + y)
   k <- min(k, ncol(X) - 1)
   suppressWarnings(suppressMessages({
@@ -2740,23 +2834,6 @@ gx.nnmcorrect <- function(...) nnmCorrect(..., return.B = TRUE)
 
 #' @export
 gx.nnmcorrect2 <- function(...) nnmCorrect2(..., return.B = TRUE)
-
-
-#' Estimate batch correction vectors from corrected cX and uncorrected
-#' matrix X.
-#'
-#' @export
-estimateBatchCorrectionVectors <- function(cX, X, k = NULL, threshold = 0.8) {
-  res <- svd(X - cX)
-  cumcv <- (cumsum(res$d**2) / sum(res$d**2))
-  cumcv
-  if (is.null(k)) {
-    k <- min(which(cumcv >= threshold))
-  }
-  ## return batch vectors
-  res$V[, 1:k, drop = FALSE]
-}
-
 
 
 ## ----------------------------------------------------------------------
