@@ -9,7 +9,6 @@
 #'
 #' @param gmt The gene set matrix.
 #' @param X The gene expression matrix.
-#' @param Y The phenotype data matrix.
 #' @param G The gene annotation matrix.
 #' @param design The experimental design matrix.
 #' @param contr.matrix The contrast matrix.
@@ -23,13 +22,13 @@
 #' @export
 gset.fitContrastsWithAllMethods <- function(gmt,
                                             X,
-                                            Y, ## NOT USED???
                                             G,
                                             design,
                                             contr.matrix,
                                             methods,
                                             mc.threads = 1,
                                             mc.cores = NULL,
+                                            use.replaid = FALSE,
                                             batch.correct = TRUE) {
   ALL.GENESET.METHODS <- c(
     "fisher", "ssgsea", "gsva", "spearman", "camera", "fry", "fgsea"
@@ -65,7 +64,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   } else {
     exp.matrix <- contr.matrix[colnames(X), , drop = FALSE]
   }
-  Y <- Y[colnames(X), , drop = FALSE]
 
   ## some "normalization" for single-sample methods
   my.normalize <- function(zx) {
@@ -125,24 +123,30 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     message("fitting contrasts using GSVA/limma... ")
 
     ## check if we have the new version of GSVA
-    new.gsva <- exists("gsvaParam", where = asNamespace("GSVA"), mode = "function")
-    new.gsva
     tt <- system.time({
-      zx.gsva <- NULL
-      if (new.gsva) {
-        zx.gsva <- try({
-          bpparam <- BiocParallel::MulticoreParam(mc.cores)
-          ## Some genesets will have size = 1. Set minSize=2 ?? (AZ)
-          GSVA::gsva(GSVA::gsvaParam(exprData = as.matrix(X), geneSets = gmt, minSize = 1),
-            BPPARAM = bpparam
-          )
-        })
-      } else {
-        zx.gsva <- try({
-          GSVA::gsva(as.matrix(X), gmt, method = "gsva", parallel.sz = mc.cores, verbose = FALSE)
-        })
-      }
 
+      if(use.replaid) {
+        dbg("using replaid.gsva...")
+        zx.gsva <- try({  plaid::replaid.gsva(as.matrix(X), G, tau=0)  })
+      } else {
+        dbg("using GSVA::gsva...")
+        new.gsva <- exists("gsvaParam", where = asNamespace("GSVA"), mode = "function")
+        zx.gsva <- NULL
+        if (new.gsva) {
+          zx.gsva <- try({
+            bpparam <- BiocParallel::MulticoreParam(mc.cores)
+            ## Some genesets will have size = 1. Set minSize=2 ?? (AZ)
+            GSVA::gsva(GSVA::gsvaParam(exprData = as.matrix(X), geneSets = gmt, minSize = 1),
+              BPPARAM = bpparam
+            )
+          })
+        } else {
+          zx.gsva <- try({
+            GSVA::gsva(as.matrix(X), gmt, method = "gsva", parallel.sz = mc.cores, verbose = FALSE)
+          })
+        }
+      }
+      dbg("gsva computation done!")
       if (!"try-error" %in% class(zx.gsva)) {
         zx.gsva <- my.normalize(zx.gsva)
         jj <- match(names(gmt), rownames(zx.gsva))
@@ -168,12 +172,20 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       if (nmissing > 0) {
         message("Found ", nmissing, " missing values in X. Removing prior to GSVA::ssgsea.")
       }
-      zx.ssgsea <- try(GSVA::gsva(as.matrix(X),
-        gmt,
-        method = "ssgsea",
-        parallel.sz = mc.cores,
-        verbose = FALSE
-      ))
+      if(use.replaid) {
+        dbg("using replaid.ssgsea...")
+        zx.ssgsea <- try({  plaid::replaid.ssgsea(as.matrix(X), G, alpha=0)  })
+      } else {
+        dbg("using GSVA::ssgsea...")
+        zx.ssgsea <- try(GSVA::gsva(as.matrix(X),
+          gmt,
+          method = "ssgsea",
+          parallel.sz = mc.cores,
+          verbose = FALSE
+        ))
+      }
+      dbg("ssgsea computation done!")
+      
       if (!"try-error" %in% class(zx.ssgsea)) {
         zx.ssgsea <- my.normalize(zx.ssgsea)
         kk <- match(names(gmt), rownames(zx.ssgsea))
