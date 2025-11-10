@@ -430,19 +430,29 @@ matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1, reorder = TRUE) {
 #' @export
 rowmean <- function(X, group = rownames(X), reorder = TRUE) {
   if (is.matrix(X) || any(class(X) %in% c("matrix"))) {
-    sumX <- base::rowsum(X, group, na.rm = TRUE, reorder = reorder)
-    nX <- base::rowsum(1 * (!is.na(X)), group, reorder = reorder)
+    ## this handles also NA in dense matrix
+    sumX <- base::rowsum(as.matrix(X), group, na.rm = TRUE)
+    nX <- base::rowsum(1 * (!is.na(as.matrix(X))), group)
     newX <- sumX / nX
+  } else if (sum(is.na(X))==0) {
+    ## for sparse matrix (no NA)
+    group_mat <- Matrix::t(Matrix::sparse.model.matrix(~ 0 + group))
+    rownames(group_mat) <- sub("^group","",rownames(group_mat))
+    group_mat <- group_mat / Matrix::rowSums(group_mat)
+    newX <- group_mat %*% X
   } else {
-    ## slower but safer. also for sparse matrix.
-    newX <- tapply(1:nrow(X), group, function(i) {
-      Matrix::colMeans(X[i, ,drop = FALSE], na.rm = TRUE)
-    })
-    newX <- do.call(rbind, newX)
-    if (reorder) {
-      ii <- match(unique(group), rownames(newX))
-      newX <- newX[ii, , drop = FALSE]
-    }
+    ## safer. also handles NA for sparse matrix (rare case)
+    group_mat <- Matrix::t(Matrix::sparse.model.matrix(~ 0 + group))
+    rownames(group_mat) <- sub("^group","",rownames(group_mat))
+    X0 <- X
+    X0[is.na(X0)] <- 0
+    nc <- group_mat %*% (!is.na(X))
+    newX <- (group_mat %*% X0) / nc
+    newX <- Matrix::Matrix(newX, sparse=TRUE)
+  }
+  if (reorder) {
+    ii <- match(unique(group), rownames(newX))
+    newX <- newX[ii, , drop = FALSE]
   }
   newX
 }
@@ -1499,8 +1509,6 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
     probes <- names(counts)
   }
   probe_match <- apply(annot_table, 2, function(x) sum(probes %in% x))
-  probe_match
-
   if (max(probe_match, na.rm = TRUE) == 0) {
     return(counts)
   }
@@ -1510,8 +1518,6 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   }
 
   from_id <- names(which.max(probe_match))
-  from_id
-
   if(new_id=="symbol" && !"symbol" %in% colnames(annot_table) &&
     "gene_name" %in% colnames(annot_table)) new_id <- "gene_name"
 
