@@ -1,12 +1,12 @@
-
-ai.get_ollama_models <- function() {
-  models <- system("ollama list | tail -n +2 | cut -d' ' -f 1", intern=TRUE)
-  return(models)
+#'
+#' @export
+ai.get_ollama_models <- function(models=NULL) {
+  available.models <- system("ollama list | tail -n +2 | cut -d' ' -f 1", intern=TRUE)
+  if(!is.null(models)) available.models <- intersect(models,available.models)
+  return(available.models)
 }
 
 OLLAMA_MODELS = ai.get_ollama_models()
-OLLAMA_MODELS
-TINY_MODELS = c("llama3.2:1b","granite4:micro","gemma3:1b")
 DEFAULT_LLM = "gpt-5-nano"
 
 if(0) {
@@ -15,6 +15,39 @@ if(0) {
   model="grok-4-fast-non-reasoning";prompt=NULL
 }
 
+#' @export
+ai.get_remote_models <- function(models=NULL) {
+  keys <- c()
+  if (Sys.getenv("OPENAI_API_KEY")!="") keys <- c(keys,"gpt-.*")
+  if (Sys.getenv("XAI_API_KEY")!="") keys <- c(keys,"grok-.*")
+  if (Sys.getenv("GROQ_API_KEY")!="") keys <- c(keys,"groq:.*")
+  if (Sys.getenv("GEMINI_API_KEY")!="") keys <- c(keys,"gemini-.*")
+  if(is.null(models)) {
+    models <- keys
+  } else {
+    models <- grep(paste0("^",keys,collapse="|"),models,value=TRUE)
+  }
+  models
+}
+
+#' @export
+ai.get_models <- function(models=NULL) {
+  local.models <- ai.get_ollama_models(models)
+  remote.models <- ai.get_remote_models(models)   
+  if(!is.null(models)) {
+    models <- models[ models %in% c(local.models, remote.models)]
+  } else {
+    models <- c(local.models, remote.models)
+  }
+  return(models)
+}
+
+#' @export
+ai.model_is_available <- function(model) {
+  model %in% ai.get_models(models=model) 
+}
+
+#' @export
 ai.ask <- function(question, model=DEFAULT_LLM, prompt=NULL) {
   chat <- NULL
   if(inherits(model, "Chat")) {
@@ -43,9 +76,7 @@ ai.ask <- function(question, model=DEFAULT_LLM, prompt=NULL) {
         model = model, system_prompt = prompt,
         api_key = Sys.getenv("GEMINI_API_KEY")
       )
-    }
-
-    
+    }    
   }
   
   if(is.null(chat)) {
@@ -56,6 +87,7 @@ ai.ask <- function(question, model=DEFAULT_LLM, prompt=NULL) {
   chat$last_turn()@text
 }
 
+#' @export
 ai.genesets_summary <- function(gsets, pheno=NULL, model=DEFAULT_LLM,
                                 detail=1, html=FALSE, verbose=1) {
   q <- "Extract the main biological function of this list of gene sets that were found by doing geneset enrichment. Just give the answer. Do not acknowledge."
@@ -74,6 +106,7 @@ ai.genesets_summary <- function(gsets, pheno=NULL, model=DEFAULT_LLM,
 }
 
 num=3
+#' @export
 ai.genesets_keywords <- function(gsets, num=3, pheno=NULL, model=DEFAULT_LLM) {
   ss <- paste(gsets, collapse='; ')
   q <- paste0("Extract ",num," keywords describing the following collection of gene sets. ")
