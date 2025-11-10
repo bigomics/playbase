@@ -20,6 +20,7 @@
 compute_testGenesets <- function(pgx,
                                  custom.geneset = list(gmt = NULL, info = NULL),
                                  test.methods = c("gsva", "camera", "fgsea"),
+                                 use.replaid = TRUE,
                                  remove.outputs = TRUE) {
   if (!"X" %in% names(pgx)) {
     stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
@@ -84,11 +85,11 @@ compute_testGenesets <- function(pgx,
   gset.meta <- gset.fitContrastsWithAllMethods(
     gmt = gmt,
     X = X1,
-    Y = Y,
     G = G,
     design = design,
     contr.matrix = contr.matrix,
     methods = test.methods,
+    use.replaid = use.replaid,
     mc.threads = 1,
     mc.cores = NULL,
     batch.correct = TRUE

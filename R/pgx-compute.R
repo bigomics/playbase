@@ -805,7 +805,8 @@ pgx.computePGX <- function(pgx,
     pgx <- compute_testGenesets(
       pgx = pgx,
       custom.geneset = custom.geneset,
-      test.methods = gset.methods
+      test.methods = gset.methods,
+      use.replaid = TRUE
     )
 
     ## Cluster by genes
