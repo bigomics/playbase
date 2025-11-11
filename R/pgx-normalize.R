@@ -156,42 +156,114 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
   return(X)
 }
 
+#' @title Get prior value for normalization for non-gx data.
+#' For other data types (proteomics, metabolomics, lipidomics) we use min positive.
+#'
+#' @description
+#' Get prior
+#'
+#' @param counts Multiomics data matrix: counts. Features in rows and samples in columns.
+#'
+#' @details
+#' Get prior. Conventionally 1 for logCPM (used for RNAseq)
+#' For other data types (proteomics, metabolomics, lipidomics) we use min positive.
+#' 
+#' @return
+#' prior value
 #'
 #' @export
-normalizeMultiOmics <- function(X, method = "median") {
-  if (!(method %in% c("median", "combat"))) {
-    message("[normalizeMultiOmics] WARNING. skipping normalization. unknown method: ", method)
-    return(X)
+getPrior <- function(counts) {
+  prior <- 0
+  if (min(counts, na.rm = TRUE) == 0 || any(is.na(counts)))  {
+    prior <- min(counts[counts > 0], na.rm = TRUE)
   }
+  return(prior)
+}
 
-  ntype <- NA
-  if (!all(grepl(":", rownames(X)))) {
-    message("[normalizeMultiOmics] WARNING. not multi-omics data.")
-    dtype <- rep("gx", nrow(X))
-    ntype <- 1
-  } else {
-    dtype <- mofa.get_prefix(rownames(X))
-    ntype <- length(unique(dtype))
-  }
 
-  if (ntype == 1 || method == "median") {
-    global.median <- median(X[X > min(X, na.rm = TRUE)], na.rm = TRUE)
-    for (dt in unique(dtype)) {
-      ii <- which(dtype == dt)
-      xx <- X[ii, ]
-      minx <- min(xx, na.rm = TRUE) ## baseline. usually zero.
-      xx[which(xx == minx)] <- NA
-      mx <- matrixStats::colMedians(xx, na.rm = TRUE)
-      X[ii, ] <- t(t(X[ii, ]) - mx) + global.median
+#' @title Normalize multiomics counts
+#'
+#' @description
+#' Normalize each data type independently in a multiomics data matrix (counts)
+#'
+#' @param counts Multiomics data matrix: counts. Features in rows and samples in columns.
+#' @param prior If NULL, computes it.
+#'
+#' @details
+#' This function normalizes each datatype independently.
+#' Default normalization methods are logCPM for gx and maxMedian for non-gx data. 
+#'
+#' @return
+#' Normalized multi-omics data matrix
+#'
+#' @export
+normalizeMultiOmics <- function(X,
+                                prior = NULL,
+                                gx.method = "CPM",
+                                non.gx.method = "maxMedian") {
+
+  dtypes <- unlist(lapply(rownames(X), function(x) strsplit(x, ":")[[1]][1]))
+  dtypes <- unique(dtypes)
+
+  if (is.null(gx.method)) gx.method = "CPM"
+  if (is.null(non.gx.method)) non.gx.method = "maxMedian"
+
+  m <- gx.method
+  prior <- 1
+  
+  for(i in 1:length(dtypes)) {
+    ii <- grep(paste0("^", dtypes[i], ":"), rownames(X))
+    if (any(ii)) {
+      if (dtypes[i] != "gx") {
+        prior <- getPrior(X[ii,])
+        m <- non.gx.method
+      }
+      message("[playbase::normalizeMultiOmics] normalizing ", dtypes[i],
+        " data using ", m, ". Prior = ", prior)
+      X[ii, ] <- playbase::normalizeExpression(X[ii, ], method = m, prior = prior)
     }
   }
 
-  if (ntype > 1 && method == "combat") {
-    X <- t(sva::ComBat(t(X), batch = dtype))
-  }
-
   return(X)
+
 }
+
+## #'
+## #' @export
+## normalizeMultiOmics <- function(X, method = "median") {
+##   if (!(method %in% c("median", "combat"))) {
+##     message("[normalizeMultiOmics] WARNING. skipping normalization. unknown method: ", method)
+##     return(X)
+##   }
+
+##   ntype <- NA
+##   if (!all(grepl(":", rownames(X)))) {
+##     message("[normalizeMultiOmics] WARNING. not multi-omics data.")
+##     dtype <- rep("gx", nrow(X))
+##     ntype <- 1
+##   } else {
+##     dtype <- mofa.get_prefix(rownames(X))
+##     ntype <- length(unique(dtype))
+##   }
+
+##   if (ntype == 1 || method == "median") {
+##     global.median <- median(X[X > min(X, na.rm = TRUE)], na.rm = TRUE)
+##     for (dt in unique(dtype)) {
+##       ii <- which(dtype == dt)
+##       xx <- X[ii, ]
+##       minx <- min(xx, na.rm = TRUE) ## baseline. usually zero.
+##       xx[which(xx == minx)] <- NA
+##       mx <- matrixStats::colMedians(xx, na.rm = TRUE)
+##       X[ii, ] <- t(t(X[ii, ]) - mx) + global.median
+##     }
+##   }
+
+##   if (ntype > 1 && method == "combat") {
+##     X <- t(sva::ComBat(t(X), batch = dtype))
+##   }
+
+##   return(X)
+## }
 
 
 
