@@ -42,7 +42,7 @@ pgx.wgcna <- function(
     ngenes = 2000,
     maxBlockSize = 9999,
     gset.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]",
-    ai_summary = FALSE,
+    summary = TRUE,
     ai_model = DEFAULT_LLM,
     verbose = 1,
     progress = NULL
@@ -134,13 +134,15 @@ pgx.wgcna <- function(
     filter = gset.filter
   )
 
-  if(ai_summary) {
+  if(summary) {
     if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
     message("Annotating modules using ", ai_model)    
     wgcna$summary <- wgcna.describeModules(
-      wgcna, ntop=25, model=ai_model,
+      wgcna,
+      ntop = 25,
+      model = ai_model,
       annot = pgx$genes,
-      experiment=pgx$description,
+      experiment = pgx$description,
       verbose = 0) 
   }
 
@@ -433,8 +435,8 @@ wgcna.compute_multiomics <- function(dataX,
                                      gset.methods = c("fisher","gsetcor","xcor"),
                                      gset.ntop = 1000,
                                      gset.xtop = 100,
-                                     ai_summary = FALSE,
-                                     ai_model = "llama3.2:1b",
+                                     summary = TRUE,
+                                     ai_model = DEFAULT_LLM,
                                      ai_experiment = "",
                                      verbose = 1,
                                      progress = NULL
@@ -594,7 +596,7 @@ wgcna.compute_multiomics <- function(dataX,
       wgcna[[k]]$gsea <- gse[mm]
     }
 
-    if(ai_summary) {
+    if(summary) {
       if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
       message("Annotating modules using ", ai_model)    
       for(k in names(wgcna)) {
@@ -1801,8 +1803,8 @@ wgcna.runConsensusWGCNA <- function(exprList,
                                     drop.ref = FALSE,
                                     compute.stats = TRUE,
                                     compute.enrichment = TRUE,
-                                    ai_summary = FALSE,
-                                    ai_model = "llama3.2:1b",
+                                    summary = TRUE,
+                                    ai_model = DEFAULT_LLM,
                                     ai_experiment = "",
                                     gsea.mingenes = 10,
                                     gsea.ntop = 1000,
@@ -1981,7 +1983,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
       min.genes = gsea.mingenes,
       ntop = gsea.ntop
     )
-    if(ai_summary) {
+    if(summary) {
       if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
       message("Annotating modules using ", ai_model)    
       res$summary <- wgcna.describeModules(
