@@ -8,6 +8,7 @@ compute_testGenesets(
   pgx,
   custom.geneset = list(gmt = NULL, info = NULL),
   test.methods = c("gsva", "camera", "fgsea"),
+  use.replaid = TRUE,
   remove.outputs = TRUE
 )
 }
