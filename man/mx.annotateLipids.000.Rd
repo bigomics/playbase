@@ -5,7 +5,13 @@
 \title{Annotate lipids using RefMet and rgoslin. One-pass method. Only
 annotate with given ID.}
 \usage{
-mx.annotateLipids.000(id, db = c("refmet", "rgoslin", "ramp"), add_id = TRUE)
+mx.annotateLipids.000(
+  name,
+  db = c("rgoslin", "refmet", "ramp"),
+  add_id = TRUE,
+  harmonize = TRUE,
+  verbose = 1
+)
 }
 \description{
 Annotate lipids using RefMet and rgoslin. One-pass method. Only

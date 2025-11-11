@@ -6,7 +6,11 @@
 given 'id' to other ID types (ChEBI, HMDB, LIPIDMAPS, KEGG,
 REFMET).}
 \usage{
-mx.get_metabolite_mapping(id, method = c("refmet", "playdata", "annhub"))
+mx.get_metabolite_mapping(
+  met,
+  method = c("refmet", "playdata", "annhub"),
+  verbose = 1
+)
 }
 \description{
 This uses different databases to create a ID mapping table for

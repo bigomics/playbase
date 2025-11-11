@@ -75,8 +75,8 @@ pgx.wgcna <- function(
   }
 
   if (!is.null(pgx$datatype) && pgx$datatype == "multi-omics") {
-    message("[pgx.wgcna] Performing multi-omics ComBat on datatype.")
-    X <- playbase::normalizeMultiOmics(X, method = "combat")
+    message("[pgx.wgcna] Performing multi-omics normalization")
+    X <- normalizeMultiOmics(X)
   }
 
   message("[pgx.wgcna] start wgcna.compute...")
