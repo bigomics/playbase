@@ -18,17 +18,26 @@ if(0) {
 #' @export
 ai.get_remote_models <- function(models=NULL) {
   keys <- NULL
+
+  dbg("[ai.get_remote_models] models = ",models)
+  dbg("[ai.get_remote_models] len.models = ",length(models))
+  dbg("[ai.get_remote_models] OPENAI_API_KEY = ",Sys.getenv("OPENAI_API_KEY"))
+  dbg("[ai.get_remote_models] XAI_API_KEY = ",Sys.getenv("XAI_API_KEY"))
+  dbg("[ai.get_remote_models] GROQ_API_KEY = ",Sys.getenv("GROQ_API_KEY"))
+  dbg("[ai.get_remote_models] GEMINI_API_KEY = ",Sys.getenv("GEMINI_API_KEY"))  
+
   if (Sys.getenv("OPENAI_API_KEY")!="") keys <- c(keys,"gpt-.*")
   if (Sys.getenv("XAI_API_KEY")!="") keys <- c(keys,"grok-.*")
   if (Sys.getenv("GROQ_API_KEY")!="") keys <- c(keys,"groq:.*")
   if (Sys.getenv("GEMINI_API_KEY")!="") keys <- c(keys,"gemini-.*")
-  if(is.null(models)) {
+
+  if(is.null(models) || length(models)==0 || models[1]=="" ) {
     models <- keys
+  } else if(!is.null(keys)) {
+    regex <- paste0("^",keys,collapse="|")
+    models <- grep(regex,models,value=TRUE)
   } else {
     models <- NULL
-    if(!is.null(keys)) {
-      models <- grep(paste0("^",keys,collapse="|"),models,value=TRUE)
-    }
   }
   models
 }

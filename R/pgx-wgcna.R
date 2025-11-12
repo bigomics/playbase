@@ -331,7 +331,7 @@ wgcna.compute <- function(X,
     message("[wgcna.compute] recomputing TOM matrix...")
     TOM <- WGCNA::TOMsimilarityFromExpr(
       datExpr,
-      power = power,
+      power = net$power,
       TOMType = tomtype,
       networkType = networktype,
       verbose = verbose
@@ -400,7 +400,7 @@ wgcna.compute <- function(X,
     ## TOM = TOM,  ## this can be BIG!!! generally no need, just for plotting
     svTOM = svTOM,  ## smaller singular vectors
     net = net,
-    #power = power,
+    #power = net$power,
     me.genes = me.genes,
     me.colors = me.colors,
     W = MVs,
@@ -493,9 +493,9 @@ wgcna.compute_multiomics <- function(dataX,
     progress$set(message = paste("computing WGCNA modules..."), value = 0.33)
   }
 
-  if(is.null(power)) power <- "sft"
+  if(is.null(power) || is.na(power) ) power <- "sft"
   if(as.character(power[1]) %in% c("sft","iqr")) {
-    message("[wgcna.compute_multiomics] estimating optimal power with method = ", power[1])
+    message("[wgcna.compute_multiomics] estimating power with method = ", power[1])
     est.power <- rep(NA, length(dataX))    
     i=1
     for(i in 1:length(dataX)) {
@@ -507,6 +507,7 @@ wgcna.compute_multiomics <- function(dataX,
     }
     est.power
     power <- ifelse (is.na(est.power), 12, est.power)
+    message("[wgcna.compute_multiomics] estimated power = ", power)
   } else {
     power <- as.numeric(power)
   }
@@ -651,15 +652,16 @@ wgcna.computeModules <- function(
   deepSplit <- as.integer(deepSplit)
   lowrank <- as.integer(lowrank)
 
-  if(is.null(power)) power <- "sft"
+  if(is.null(power) || is.na(power) ) power <- "sft"  ## use iqr?
   auto.power <- power[1] %in% c("sft","iqr")
   if (auto.power) {
-    message("[wgcna.computeModules] estimating optimal power with method = ", power[1])
+    message("[wgcna.computeModules] estimating power with method = ", power[1])
     powers <- c(c(1:10), seq(from = 12, to = 20, by = 2))
     powers <- c(powers, seq(from = 25, to = 50, by = 5))
     power <- wgcna.pickSoftThreshold(datExpr, sft=NULL, rcut=0.85,
       method=power[1], nmax=2000, verbose=0) 
     if (is.na(power)) power <- 6
+    message("[wgcna.compute_multiomics] estimated power = ", power)    
   }
   
   if(calcMethod == "blockwise") {
@@ -675,6 +677,7 @@ wgcna.computeModules <- function(
       numericLabels = numericLabels, ## numeric or 'color' labels
       deepSplit = deepSplit,
       maxBlockSize = maxBlockSize,
+
       verbose = verbose
     )
     return(net)
@@ -875,11 +878,16 @@ fastTOMsimilarity <- function(A, tomtype="signed", lowrank=20) {
   ## Adjacency matrix A can be approximated with SVD. This can make
   ## TOM calculation much faster.
   diag(A) <- 0
-  if(ncol(A) < 2*lowrank) lowrank <- -1
+  if(lowrank > (ncol(A)/2) ) lowrank <- -1
   if(lowrank>0) {
-    res <- irlba::irlba(A, nv=lowrank)
-    U <- res$u %*% diag(sqrt(res$d))
-    L <- U %*% (Matrix::t(U) %*% U) %*% Matrix::t(U)
+    res <- try( irlba::irlba(A, nv=lowrank) )
+    if(!"try-error" %in% class(res)) {
+      U <- res$u %*% diag(sqrt(res$d))
+      L <- U %*% (Matrix::t(U) %*% U) %*% Matrix::t(U)
+    } else {
+      message("[fastTOMsimilarity] Warning: irlba error. nv = ", lowrank)
+      L <- A %*% A  ## full computation
+    }
   } else {
     L <- A %*% A
   }
@@ -2085,7 +2093,7 @@ wgcna.createConsensusLayers <- function(exprList,
   multiExpr = WGCNA::list2multiData(lapply(exprList, Matrix::t))
 
   ## determine power vector
-  if(is.null(power)) power <- "sft"
+  if(is.null(power) || is.na(power) ) power <- "sft"
   if(as.character(power[1]) %in% c("sft","iqr")) {
     ## Estimate best power
     power <- power[1]
