@@ -185,7 +185,7 @@ getLipidAnnotation <- function(probes,
     annot_table = annot_table,
     prefix.symbol = FALSE
   )
-  return(anno)
+  return(annot)
 }
 
 
