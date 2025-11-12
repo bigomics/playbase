@@ -17,7 +17,7 @@ if(0) {
 
 #' @export
 ai.get_remote_models <- function(models=NULL) {
-  keys <- c()
+  keys <- NULL
   if (Sys.getenv("OPENAI_API_KEY")!="") keys <- c(keys,"gpt-.*")
   if (Sys.getenv("XAI_API_KEY")!="") keys <- c(keys,"grok-.*")
   if (Sys.getenv("GROQ_API_KEY")!="") keys <- c(keys,"groq:.*")
@@ -25,7 +25,10 @@ ai.get_remote_models <- function(models=NULL) {
   if(is.null(models)) {
     models <- keys
   } else {
-    models <- grep(paste0("^",keys,collapse="|"),models,value=TRUE)
+    models <- NULL
+    if(!is.null(keys)) {
+      models <- grep(paste0("^",keys,collapse="|"),models,value=TRUE)
+    }
   }
   models
 }

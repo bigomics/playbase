@@ -1832,7 +1832,6 @@ wgcna.runConsensusWGCNA <- function(exprList,
   if(addCombined) {
     exprList[['Combined']] <- do.call(cbind, exprList)
   }
-  names(exprList)
   
   exprsamples <- unlist(lapply(exprList, colnames))
   if(!all(exprsamples %in% rownames(phenoData))) {
@@ -1848,7 +1847,6 @@ wgcna.runConsensusWGCNA <- function(exprList,
 
   # module detection procedure
   layers <- list()
-  ## k=names(multiExpr)[1]
   if(!is.null(progress)) progress$inc(0.1, "Computing layers...")
   for (i in 1:length(multiExpr)) {
     k <- names(multiExpr)[i]
@@ -1884,8 +1882,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
   }
   
   sel <- setdiff(names(multiExpr), c("Combined"))
-
-    cons <- WGCNA::blockwiseConsensusModules(
+  cons <- WGCNA::blockwiseConsensusModules(
     multiExpr[sel],
     power = as.numeric(consensusPower),
     networkType = "signed",
@@ -1897,6 +1894,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
     minKMEtoStay = as.numeric(minKME),
     maxBlockSize = as.integer(maxBlockSize),
     saveTOMs = FALSE,
+    useDiskCache = FALSE,
     verbose = verbose
   )
   cons$power = consensusPower
@@ -2123,6 +2121,7 @@ wgcna.createConsensusLayers <- function(exprList,
     minKMEtoStay = as.numeric(minKME),
     maxBlockSize = as.integer(maxBlockSize),
     saveTOMs = FALSE,
+    useDiskCache = FALSE,    
     verbose = verbose
   )
   
