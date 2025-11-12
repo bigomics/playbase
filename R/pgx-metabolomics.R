@@ -170,6 +170,25 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
   return(ids)
 }
 
+
+#'
+#'
+#' @export
+getLipidAnnotation <- function(probes,
+                               extra_annot = TRUE,
+                               annot_table = NULL
+                               ) {
+  annot <- getMetaboliteAnnotation(
+    probes,
+    db = c("lipids","refmet"),
+    extra_annot = extra_annot,
+    annot_table = annot_table,
+    prefix.symbol = FALSE
+  )
+  return(anno)
+}
+
+
 #'
 #'
 #' @export
@@ -845,11 +864,9 @@ mx.annotateLipids <- function(name, db=c("rgoslin","refmet","ramp"),
   orig.name <- name
   name <- sub("[.][1-9]$","",name)
   names(name) <- orig.name
-
     
   ## First we try annotating with their original IDs.
-  aa <- mx.annotateLipids.000(name, db=db, harmonize=harmonize,
-                              add_id = TRUE)
+  aa <- mx.annotateLipids.000(name, db=db, harmonize=harmonize, add_id = TRUE)
   id.cols <- c("CHEBI_ID","HMDB_ID","LIPIDMAPS_ID","KEGG_ID","REFMET_ID")
 
   ## If there are still unmapped IDs, we try with their synonyms.
@@ -864,15 +881,17 @@ mx.annotateLipids <- function(name, db=c("rgoslin","refmet","ramp"),
     if(nrow(S)>0) {
       synonyms <- S[,"synonymID"]
       db2 <- setdiff(db, "rgoslin")
-      bb <- mx.annotateLipids.000(synonyms, db=db2, harmonize=harmonize,
-                                  add_id = FALSE)    
+      bb <- mx.annotateLipids.000(synonyms, db=db2, harmonize=harmonize, add_id=FALSE)
+
       bb <- cbind( inputID=S[,"inputID"], bb )
       bb <- bb[order(rowSums(bb == '-')),]
       bb <- bb[match(idx, bb$inputID),]
       bb <- bb[,which(colnames(bb) %in% colnames(aa))]
-      kk <- match(colnames(bb),colnames(aa))
+
+      kk <- match(colnames(bb),colnames(aa))      
       jj <- which(aa[ii,kk]=='-' & bb!='-', arr.ind=TRUE)
-      if(length(jj)) {
+
+      if(nrow(jj) > 0) {
         message("filled ", nrow(jj), " entries with synonym IDs")
         aa[ii,kk][jj] <- bb[jj]
       }
@@ -886,14 +905,14 @@ mx.annotateLipids <- function(name, db=c("rgoslin","refmet","ramp"),
 #' annotate with given ID.
 #' 
 mx.annotateLipids.000 <- function(name, db = c("rgoslin","refmet","ramp"),
-                                 add_id=TRUE, harmonize=TRUE, verbose=1) {
-    
+                                  add_id=TRUE, harmonize=TRUE, verbose=1) {
+  
   COLS <- c("Input.name","Standardized.name","Formula","Exact.mass",
     "Super.class","Main.class","Sub.class","Source")
   df <- as.data.frame(matrix('-',nrow=length(name),ncol=length(COLS)))
   colnames(df) <- COLS
   df$Input.name <- name
-    
+  
   for(d in db) {   
 
     missing <- (df$Formula %in% c(NA,"","-") & !name %in% c(NA,"","-"))  
@@ -970,8 +989,6 @@ mx.annotateLipids.000 <- function(name, db = c("rgoslin","refmet","ramp"),
     }      
   }
 
-#  df$Input.name <- orig.name
-    
   missing <- (df$Formula %in% c(NA,"","-"))
   if(verbose>0) message("annotated ",sum(!missing),"/",nrow(df)," features")
 
@@ -982,7 +999,7 @@ mx.annotateLipids.000 <- function(name, db = c("rgoslin","refmet","ramp"),
     df$Main.class <- mx.harmonizeMainclassNames(df$Main.class)
     df$Super.class <- mx.harmonizeSuperclassNames(df$Super.class)
   }
-    
+
   ## Retrieve cross-reference mapping to other IDs
   if(add_id) {
     xref <- mx.get_metabolite_mapping(
@@ -991,7 +1008,7 @@ mx.annotateLipids.000 <- function(name, db = c("rgoslin","refmet","ramp"),
     xref$input_ID <- NULL
     df <- cbind(df, xref)
   }
-    
+  
   return(df)
 }
 
