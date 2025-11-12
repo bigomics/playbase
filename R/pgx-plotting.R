@@ -2514,6 +2514,7 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
   ii <- which(rownames(df) %in% gset)
   unknown_parameter <- round(nrow(df) / 1000)
   if (unknown_parameter == 0) unknown_parameter <- round(nrow(df) / 10)
+  if (unknown_parameter == 0) unknown_parameter <- 1
   ii <- unique(c(ii, seq(1, nrow(df), unknown_parameter)))
   df <- df[ii, ]
   df <- df[order(-df$y), ]

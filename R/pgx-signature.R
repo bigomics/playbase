@@ -539,17 +539,17 @@ pgx.computeGeneSetExpression <- function(X, gmt, method = NULL,
 
   gmt.size <- sapply(gmt, function(x) sum(x %in% rownames(X)))
   gmt <- gmt[gmt.size >= min.size]
+  gg <- rownames(X)
+  G <- gmt2mat(gmt, bg = gg)
 
   S <- list()
   if ("gsva" %in% method) {
-    S[["gsva"]] <- GSVA::gsva(X, gmt, method = "gsva")
+    S[["gsva"]] <- plaid::replaid.gsva(X, G)    
   }
   if ("ssgsea" %in% method) {
-    S[["ssgsea"]] <- GSVA::gsva(X, gmt, method = "ssgsea", min.sz = 1)
+    S[["ssgsea"]] <- plaid::replaid.ssgsea(X, G)        
   }
   if (any(method %in% c("spearman", "average"))) {
-    gg <- rownames(X)
-    G <- gmt2mat(gmt, bg = gg)
     if ("spearman" %in% method) {
       rho <- t(G[gg, ]) %*% scale(apply(X[gg, ], 2, rank)) / sqrt(nrow(X) - 1)
       rho[is.na(rho)] <- 0

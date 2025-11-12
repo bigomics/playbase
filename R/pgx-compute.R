@@ -799,13 +799,15 @@ pgx.computePGX <- function(pgx,
   ## ------------------ gene set tests -----------------------
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
-  if (pgx$organism != "No organism" && !is.null(pgx$GMT) && nrow(pgx$GMT) > 0) {
+  if ((pgx$organism != "No organism" && !is.null(pgx$GMT) && nrow(pgx$GMT) > 0) ||
+      (pgx$organism == "No organism" && !is.null(custom.geneset$gmt))) {
     message("[pgx.computePGX] testing genesets...")
 
     pgx <- compute_testGenesets(
       pgx = pgx,
       custom.geneset = custom.geneset,
-      test.methods = gset.methods
+      test.methods = gset.methods,
+      use.replaid = TRUE
     )
 
     ## Cluster by genes

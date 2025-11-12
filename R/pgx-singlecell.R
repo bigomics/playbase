@@ -1082,6 +1082,9 @@ pgx.createSingleCellPGX <- function(counts,
 
   sc.membership <- NULL
   do.supercells <- sc_compute_settings[["compute_supercells"]]
+  if (is.null(do.supercells)) {
+    do.supercells <- FALSE
+  }
 
   if (do.supercells || ncol(counts) > 10000) {
     if (do.supercells) {
