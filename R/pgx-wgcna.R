@@ -134,7 +134,7 @@ pgx.wgcna <- function(
     filter = gset.filter
   )
 
-  if(summary) {
+  if(summary && ai_model!="") {
     if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
     message("Annotating modules using ", ai_model)    
     wgcna$summary <- wgcna.describeModules(
@@ -4967,18 +4967,44 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
   } else {
     top <- wgcna.getTopGenesAndSets(wgcna, annot=annot, ntop=ntop)
   }
-
+  
   if(is.null(modules)) modules <- names(top$genes)
-  modules <- intersect(modules, names(top$genes))
 
+  modules <- intersect(modules, names(top$genes))
+  modules <- intersect(modules, names(top$sets))
+  ##modules <- intersect(modules, names(top$pheno))  
+
+  if(length(modules)==0) return(NULL)
+
+  ## If no LLM is available we do just a manual summary
+  if(is.null(model) || model == "") {
+    desc <- list()
+    for(m in modules) {
+      ss=gg=pp=NULL
+      gg <- paste( top$genes[[m]], collapse=', ')
+      ss <- paste( sub(".*:","",top$sets[[m]]), collapse='; ')
+      if(m %in% names(top$pheno)) pp <- paste( top$pheno[[m]], collapse='; ')
+
+      d <- ""
+      if(!is.null(pp)) d <- paste(d, "<b>Top correlated phenotypes:</b> ", pp, "<br><br>")
+      d <- paste(d, "<b>Key genes:</b> ", gg, "<br><br>")
+      d <- paste(d, "<b>Top enriched gene sets:</b> ", ss, "<br><br>")
+      
+      desc[[m]] <- d
+    }
+    return(desc)
+  }
+
+  
   prompt <- "Give a short summary of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about <EXPERIMENT>. Use maximum one paragraph. Do not use bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n"
   if(verbose) cat(prompt)
-  
+
   desc <- list()
   for(m in modules) {
+    ss=gg=pp=""
     ss <- paste( top$sets[[m]], collapse=';')
     gg <- paste( top$genes[[m]], collapse=';')
-    pp <- paste( top$pheno[[m]], collapse=';')
+    if(m %in% names(top$pheno)) pp <- paste( top$pheno[[m]], collapse=';')
 
     q <- prompt
     if(length(top$genes[[m]])>0) {
