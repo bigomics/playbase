@@ -9,7 +9,7 @@ getProbeAnnotation(
   organism,
   probes,
   datatype,
-  probetype = NULL,
+  probetype = "",
   annot_table = NULL
 )
 }

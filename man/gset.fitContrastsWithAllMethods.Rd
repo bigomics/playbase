@@ -7,13 +7,13 @@
 gset.fitContrastsWithAllMethods(
   gmt,
   X,
-  Y,
   G,
   design,
   contr.matrix,
   methods,
   mc.threads = 1,
   mc.cores = NULL,
+  use.replaid = FALSE,
   batch.correct = TRUE
 )
 }
@@ -21,8 +21,6 @@ gset.fitContrastsWithAllMethods(
 \item{gmt}{The gene set matrix.}
 
 \item{X}{The gene expression matrix.}
-
-\item{Y}{The phenotype data matrix.}
 
 \item{G}{The gene annotation matrix.}
 

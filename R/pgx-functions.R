@@ -429,6 +429,20 @@ matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1, reorder = TRUE) {
 #'
 #' @export
 rowmean <- function(X, group = rownames(X), reorder = TRUE) {
+
+  ## one row. do nothing
+  if(nrow(X)==1) {
+    return(X)
+  }
+  
+  ## resolve special case if only one group
+  ngroup <- length(unique(group))    
+  if(ngroup == 1) {
+    newX <- matrix( Matrix::colMeans(X, na.rm=TRUE), nrow=1, ncol=ncol(X))
+    dimnames(newX) <- list( group[1], colnames(X))
+    return(newX)
+  }
+
   if (is.matrix(X) || any(class(X) %in% c("matrix"))) {
     ## this handles also NA in dense matrix
     sumX <- base::rowsum(as.matrix(X), group, na.rm = TRUE)

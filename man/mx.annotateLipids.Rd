@@ -7,7 +7,12 @@ two-pass approach where missing annotations are retried using
 synonyms IDs of the original ID. This can improve annotation
 coverage.}
 \usage{
-mx.annotateLipids(id, two.pass = TRUE)
+mx.annotateLipids(
+  name,
+  db = c("rgoslin", "refmet", "ramp"),
+  harmonize = TRUE,
+  two.pass = TRUE
+)
 }
 \description{
 Two-pass annotation of lipids using RefMet and rgoslin. This is a

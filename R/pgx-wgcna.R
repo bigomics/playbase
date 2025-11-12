@@ -78,10 +78,10 @@ pgx.wgcna <- function(
     remove(counts, ct, group, nb, sc)
     gc()
   }
-  
-  if(!is.null(pgx$datatype) && pgx$datatype == "multi-omics") {
-    message("[pgx.wgcna] Performing multi-omics ComBat on datatype.")
-    X <- normalizeMultiOmics(X, method = "combat")
+
+  if (!is.null(pgx$datatype) && pgx$datatype == "multi-omics") {
+    message("[pgx.wgcna] Performing multi-omics normalization")
+    X <- normalizeMultiOmics(X)
   }
 
   if(!is.null(progress)) progress$set(message = "Calculating WGCNA...", value=0.2)
