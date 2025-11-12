@@ -4,7 +4,14 @@
 \alias{pgx.supercell}
 \title{SuperCell down sampling. Uniform down samplsing using gamma = 20.}
 \usage{
-pgx.supercell(counts, meta, group = NULL, gamma = 20, log.transform = TRUE)
+pgx.supercell(
+  counts,
+  meta,
+  group = NULL,
+  gamma = 20,
+  nvargenes = 1000,
+  log.transform = TRUE
+)
 }
 \description{
 SuperCell down sampling. Uniform down samplsing using gamma = 20.

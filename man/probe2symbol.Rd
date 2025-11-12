@@ -7,7 +7,7 @@
 probe2symbol(
   probes,
   annot_table,
-  query = c("symbol", "gene_name"),
+  query = "symbol",
   key = NULL,
   fill_na = FALSE
 )
