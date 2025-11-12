@@ -134,7 +134,7 @@ pgx.wgcna <- function(
     filter = gset.filter
   )
 
-  if(summary && ai_model!="") {
+  if(summary) {
     if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
     message("Annotating modules using ", ai_model)    
     wgcna$summary <- wgcna.describeModules(
