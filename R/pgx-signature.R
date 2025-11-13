@@ -451,6 +451,10 @@ pgx.addEnrichmentSignaturesH5 <- function(h5.file, X = NULL, mc.cores = 0,
   sel <- grep("HALLMARK|C[1-9]|^GO", rownames(G))
   sel <- grep("HALLMARK", rownames(G))
   genes <- intersect(colnames(G), rownames(X))
+  if (length(genes) == 0) {
+    message("[pgx.addEnrichmentSignaturesH5] no genes found in GSETxGENE")
+    return()
+  }
   G <- G[sel, genes, drop = FALSE]
   X <- X[genes, ]
   gmt <- apply(G, 1, function(x) colnames(G)[which(x != 0)])

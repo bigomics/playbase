@@ -461,7 +461,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
         }
       }
     } else {
-      has.sigdb <- FALSE
+      has.sigdb <- FALSE ## force recreation
     }
   }
 
@@ -668,6 +668,9 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
         meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
         ## rownames(meta$fc) <- toupper(rownames(meta$fc)) ## human genes
         F <- collapse_by_humansymbol(meta$fc, pgx$genes)
+        if (nrow(F) == 1 && rownames(F) == "---") {
+          F <- meta$fc
+        }
         missing.FC[[pgxfile]] <- F
         pgxfc.changed <- TRUE
       }
