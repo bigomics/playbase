@@ -137,12 +137,20 @@ getProbeAnnotation <- function(organism,
       genes <- getMetaboliteAnnotation(
         probes,
         extra_annot = TRUE,
-        annot_table = NULL
+        annot_table = annot_table
       )
     } else {
       ## Fallback on custom
       dbg("[getProbeAnnotation] WARNING: not able to map metabolomics probes")
     }
+  } else if (datatype == "lipidomics") {
+    dbg("[getProbeAnnotation] annotating for lipidomics")
+    ## Directly annotate if probes are recognized
+    genes <- getLipidAnnotation(
+      probes,
+      extra_annot = TRUE,
+      annot_table = annot_table
+    )
   } else if (datatype == "multi-omics") {
     dbg("[getProbeAnnotation] annotating for multi-omics")
     genes <- getMultiOmicsProbeAnnotation(organism, probes)

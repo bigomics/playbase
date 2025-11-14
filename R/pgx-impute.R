@@ -206,7 +206,8 @@ imputeMissing <- function(X,
 #' @export
 svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
                        maxSteps = 100, fill.empty = "median",
-                       infinite.na = TRUE, randomize.init = FALSE,
+                       infinite.na = TRUE,
+                       ## randomize.init = FALSE,
                        verbose = FALSE) {
   ## nv=3;threshold=0.001;init=NULL;maxSteps=100;fill.empty="median";verbose=FALSE
 
@@ -221,15 +222,20 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
   }
   nv <- min(nv, round(min(dim(X)) / 3))
 
-  if (is.character(init) && grepl("%", init)) {
+  init.methods <- c("MinDet","MinProb","QRILC","min")
+  
+  if (!is.null(init) && is.character(init) && grepl("%", init)) {
+    ## initialize missing values with quantile fixed value
     q <- as.numeric(sub("%", "", init))
     init <- quantile(X[!is.na(X)], probs = q * 0.01)[1]
     message(paste0("setting initial values to ", q, "%. init=", round(init, 4)))
-  }
-
-  if (!is.null(init)) {
-    ## initialize missing values with fixed value
     X[ind.missing] <- init
+  } else if (!is.null(init) && is.character(init) &&
+               init %in% init.methods ) {
+    ## initialize missing values with other impute method
+    message(paste("setting initial values using", init))
+    initX <- imputeMissing(X, method=init)
+    X[ind.missing] <- initX[ind.missing]
   } else {
     ## initialize missing values with col/row medians
     row.mx <- apply(X, 1, median, na.rm = TRUE)
@@ -242,11 +248,11 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
   }
 
   ## randomize initial values?
-  if (randomize.init) {
-    sdx <- mean(matrixStats::rowSds(X, na.rm = TRUE), na.rm = TRUE)
-    rr <- rnorm(nrow(ind.missing), mean = 0, sd = sdx)
-    X[ind.missing] <- X[ind.missing] + rr
-  }
+  ## if (randomize.init) {
+  ##   sdx <- mean(matrixStats::rowSds(X, na.rm = TRUE), na.rm = TRUE)
+  ##   rr <- rnorm(nrow(ind.missing), mean = 0, sd = sdx)
+  ##   X[ind.missing] <- X[ind.missing] + rr
+  ## }
 
   ## do SVD iterations
   count <- 0
