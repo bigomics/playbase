@@ -1194,25 +1194,40 @@ getHumanOrtholog.biomart <- function(organism, symbols, verbose = 1) {
 #' }
 #' @import data.table
 #' @export
-probe2symbol <- function(probes, annot_table, query = c("symbol", "gene_name"),
+probe2symbol <- function(probes, annot_table, query = "symbol", 
                          key = NULL, fill_na = FALSE) {
-  # Prepare inputs
+
+  # Prepare inputs. add extra matching columns.
   annot_table <- cbind(rownames = rownames(annot_table), annot_table)
+  id.cols <- intersect(c("feature","gene_name","symbol"),colnames(annot_table))
+  if(length(id.cols)>0) {
+    stripped_annot <- apply(annot_table[,id.cols,drop=FALSE],2,function(a) sub("^[A-Za-z]+:","",a))
+    ##colnames(stripped_annot) <- paste0(colnames(stripped_annot),"_stripped")
+    annot_table <- cbind(annot_table, stripped_annot)
+  }
+  
   probes1 <- setdiff(probes, c(NA, ""))
   if (is.null(key) || !key %in% colnames(annot_table)) {
     key <- which.max(apply(annot_table, 2, function(a) sum(probes1 %in% a)))
   }
   if (is.null(key)) {
-    stop("[probe2symbol] FATAL. could not get key column.")
+    message("[probe2symbol] FATAL. could not get key column.")
+    return(NULL)
   }
 
+  query <- head(intersect(query, colnames(annot_table)),1)
+  if (length(query) == 0) {
+    message("ERROR. no symbol column.")
+    return(NULL)
+  }
+
+  # fall back on old gene_name
+  if(query=="symbol" && !"symbol" %in% colnames(annot_table) &&
+       "gene_name" %in% colnames(annot_table)) query <- "gene_name"
+  
   # match query
   ii <- match(probes, annot_table[, key])
-  query <- intersect(query, colnames(annot_table))
-  if (length(query) == 0) {
-    stop("ERROR. no symbol column.")
-  }
-  query_col <- annot_table[ii, query[1]]
+  query_col <- annot_table[ii, query]
 
   # Deal with NA
   if (fill_na) {

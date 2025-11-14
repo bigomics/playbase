@@ -1507,6 +1507,9 @@ filterProbes <- function(annot, genes) {
 #' @export
 rename_by2 <- function(counts, annot_table, new_id = "symbol",
                        na.rm = TRUE, unique = TRUE, keep.prefix = FALSE) {
+
+  ##new_id="symbol";na.rm=TRUE;unique=TRUE;keep.prefix=FALSE
+
   ## add rownames
   annot_table$rownames <- rownames(annot_table)
   annot_table$rownames2 <- sub("^[A-Za-z]+:", "", rownames(annot_table)) ## strip prefix
@@ -1528,8 +1531,11 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
     counts <- cbind(counts)
   }
 
-  ## dummy do-noting return
   from_id <- names(which.max(probe_match))
+  if(new_id=="symbol" && !"symbol" %in% colnames(annot_table) &&
+    "gene_name" %in% colnames(annot_table)) new_id <- "gene_name"
+
+  ## dummy do-noting return
   if (new_id == from_id) {
     sel <- which(probes %in% annot_table[,from_id])
     counts <- counts[sel, , drop=FALSE]
@@ -1544,39 +1550,31 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   keep.prefix <- (keep.prefix && all(grepl(":", probes)))
 
   from <- annot_table[, from_id]
-  if (!any(duplicated(from)) || unique) {
-    ii <- match(probes, from)
-    if (keep.prefix) {
-      dt <- mofa.get_prefix(probes)
-      new.name <- annot_table[ii, new_id]
-      new.name <- paste0(dt, ":", new.name)
-    } else {
-      new.name <- annot_table[ii, new_id]
-    }
+  ##  if (!any(duplicated(from)) || unique) {
+  ii <- match(probes, from)
+  if (keep.prefix) {
+    dt <- mofa.get_prefix(probes)
+    new.name <- annot_table[ii, new_id]
+    new.name <- paste0(dt, ":", new.name)
   } else {
-    ## map probes to 'from' vector but retains duplicated entries in
-    ## 'from'
-    to <- lapply(probes, function(p) which(from == p))
-    ii <- lapply(1:length(to), function(i) rep(i, length(to[[i]])))
-    counts <- counts[unlist(ii), , drop = FALSE]
-    if (keep.prefix) {
-      dt <- mofa.get_prefix(unlist(to))
-      new.name <- annot_table[unlist(to), new_id]
-      new.name <- paste0(dt, ":", new.name)
-    } else {
-      new.name <- annot_table[unlist(to), new_id]
-    }
+    new.name <- annot_table[ii, new_id]
   }
   rownames(counts) <- new.name
 
-  # Take out rows without name
+  # Remove rows with missing name
   if (na.rm) {
     counts <- counts[!rownames(counts) %in% c("", "NA", NA), , drop = FALSE]
   }
-  # Sum columns of rows with the same gene symbol
-  ##  if (unique) rownames(counts) <- make_unique(rownames(counts))
-  if (unique) {
-    counts <- rowmean(counts, rownames(counts))
+
+  # Average columns of rows with the same gene symbol
+  ndup <- sum(duplicated(rownames(counts)))
+  if (unique && ndup>0) {
+    rowdup <- rownames(counts)[which(duplicated(rownames(counts)))]
+    ii <- which( rownames(counts) %in% rowdup )
+    nodup.counts <- rowmean(counts[ii,,drop = FALSE], rownames(counts)[ii])
+    rown <- unique(rownames(counts))
+    counts <- rbind( counts[-ii,,drop=FALSE], nodup.counts )
+    counts <- counts[rown,] 
   }
 
   if (type == "vector") {
@@ -1595,6 +1593,9 @@ rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
   if (is.vector(counts)) {
     probes <- names(counts)
   }
+
+  if(new_id=="symbol" && !"symbol" %in% colnames(annot_table) &&
+    "gene_name" %in% colnames(annot_table)) new_id <- "gene_name"
   symbol <- annot_table[probes, new_id]
 
   # Guard against NA
@@ -2346,6 +2347,29 @@ expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = 
   colnames(m1) <- sub("=#", "", colnames(m1))
   rownames(m1) <- rownames(M)
   return(m1)
+}
+
+
+#' Collapses an expanded (binarized) trait matrix to its original
+#' categorical phenotype with levels. Colnames must be "pheno1=A",
+#' "pheno1=B" etc.
+#'
+#' @export
+collapseTraitMatrix <- function(Y) {
+  if(sum(grepl("=",colnames(Y))) < 2) return(Y)
+  is.cat <- grepl("=",colnames(Y))
+  M <- Y[,which(!is.cat),drop=FALSE]  
+  categories <- unique(sub("=.*","",colnames(Y)[which(is.cat)]))
+  y=categories[1]
+  for(y in categories) {
+    ii <- which(sub("=.*","",colnames(Y)) == y)
+    Y1 <- Y[,ii]
+    colnames(Y1) <- sub(".*=","",colnames(Y1))
+    m1 <- colnames(Y1)[max.col(Y1)]
+    M <- cbind(M, m1)
+    colnames(M)[ncol(M)] <- y
+  }
+  return(M)
 }
 
 
