@@ -224,8 +224,9 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
 
 
 #' @export
-pgx.plotEnrichmentDotPlot <- function(pgx, contrast,
-                                      ntop = 10, filter = NULL, dir = "both",
+pgx.plotEnrichmentDotPlot <- function(pgx, contrast, filter = NULL, 
+                                      ntop = 30, dir = "both",
+                                      ptsize = 6,
                                       main = "Enrichment Analysis") {
   gs <- pgx$gset.meta$meta[[contrast]]
   df <- data.frame(
@@ -234,6 +235,7 @@ pgx.plotEnrichmentDotPlot <- function(pgx, contrast,
   )
   df <- df[order(-df$fx), ]
 
+  sel <- 1:nrow(df)
   if (!is.null(filter)) {
     sel <- grep(filter, df$pathway, ignore.case = TRUE)
     df$pathway <- gsub(filter, "", df$pathway)
@@ -254,20 +256,20 @@ pgx.plotEnrichmentDotPlot <- function(pgx, contrast,
   df$pathway <- substring(df$pathway, 1, 60)
   df$pathway <- factor(df$pathway, levels = rev(unique(df$pathway)))
 
-
   ggplot2::ggplot(df, ggplot2::aes(x = fx, y = pathway)) +
     ggplot2::geom_point(ggplot2::aes(color = pval, size = size)) +
-    ggplot2::scale_size_area(max_size = 12) +
+    ggplot2::scale_size_area(max_size = ptsize) +
     ggplot2::scale_color_gradient(low = "red", high = "blue") +
-    ggplot2::labs(x = "Enrichment score", y = NULL, color = "P-value", size = "Score") +
+    ggplot2::labs(x = "Enrichment score", y = NULL, color = "p-value", size = "score") +
     ggplot2::ggtitle(main) +
     ggplot2::theme(
-      axis.title = ggplot2::element_text(size = 30),
-      axis.text = ggplot2::element_text(size = 30),
-      title = ggplot2::element_text(size = 36),
-      legend.title = ggplot2::element_text(size = 20),
-      legend.text = ggplot2::element_text(size = 14)
+      axis.title = ggplot2::element_text(size = 11),
+      axis.text = ggplot2::element_text(size = 11),
+      title = ggplot2::element_text(size = 14),
+      legend.title = ggplot2::element_text(size = 11),
+      legend.text = ggplot2::element_text(size = 8)
     )
+
 }
 
 #' @export
