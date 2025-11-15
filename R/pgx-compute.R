@@ -200,11 +200,12 @@ pgx.createPGX <- function(counts,
   if (is.null(counts)) stop("[pgx.createPGX] FATAL: counts must be provided")
   if (is.null(samples)) stop("[pgx.createPGX] FATAL: samples must be provided")
   if (is.null(organism)) stop("[pgx.createPGX] FATAL: organism must be provided")
+  
+  message("[pgx.createPGX] dim.counts: ", nrow(counts), "x" ,ncol(counts))
 
-  message("[pgx.createPGX] dim.counts: ", dim(counts)[1], " x ", dim(counts)[2])
-  message("[pgx.createPGX] class.counts: ", class(counts))
-  message("[pgx.createPGX] counts has ", sum(is.na(counts)), " missing values")
-
+  message("-----------------------------------------------MNT1: organism=", length(organism))
+  message("-----------------------------------------------MNT1: organism=", unique(organism))
+  
   ndup <- sum(duplicated(rownames(counts)))
   if (ndup > 0) {
     if (average.duplicated) {
@@ -253,10 +254,8 @@ pgx.createPGX <- function(counts,
     }
   }
 
-  if (sum(is.na(X)) > 0) {
-    message("[pgx.createPGX] X has ", sum(is.na(X)), " missing values")
-  }
-
+  message("[pgx.createPGX] X has ", sum(is.na(X)), " missing values")
+  
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("[pgx.createPGX] dimension of counts and X do not match\n")
   }
@@ -282,9 +281,7 @@ pgx.createPGX <- function(counts,
   contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
   contrasts <- fixContrastMatrix(contrasts)
 
-  ## ---------------------------------------------------------------------
-  ## Time series conducted if user checked the box during upload
-  ## ---------------------------------------------------------------------
+  ## Time series 
   if (dotimeseries) contrasts <- contrasts.addTimeInteraction(contrasts, samples)
   
   ## -------------------------------------------------------------------
@@ -376,7 +373,7 @@ pgx.createPGX <- function(counts,
   pgx <- list(
     name = name,
     organism = organism,
-    version = packageVersion("playbase"), # useless, just keep for back compatibility
+    version = packageVersion("playbase"),
     date = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
     creator = creator,
     datatype = datatype,
@@ -398,9 +395,14 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   pgx$genes <- NULL
   pgx$probe_type <- probe_type
+    
+  message("[createPGX] Annotating genes: getProbeAnnotation")
 
-  message("[createPGX] annotating genes")
-  pgx$genes <- getProbeAnnotation(
+  ##saveRDS(list(organism=pgx$organism, probes=rownames(pgx$counts),
+  ##  datatype=pgx$datatype, probetype=pgx$probe_type, annot_table=annot_table),
+  ##  "~/Desktop/LL.RDS")
+  
+  pgx$genes  <- getProbeAnnotation(
     organism = pgx$organism,
     probes = rownames(pgx$counts),
     datatype = pgx$datatype,
@@ -408,6 +410,8 @@ pgx.createPGX <- function(counts,
     annot_table = annot_table
   )
 
+  playbase::pgx.save(pgx, "~/Desktop/rr.pgx")
+  
   if (is.null(pgx$genes)) stop("[pgx.createPGX] FATAL: Could not build gene annotation")
 
   if (!"symbol" %in% colnames(pgx$genes) && "gene_name" %in% colnames(pgx$genes)) {
