@@ -101,28 +101,17 @@ getProbeAnnotation <- function(organism,
                                probetype = "",
                                annot_table = NULL) {
 
-  ##----------------------------
+  ##------------------------
   source("~/Desktop/BigOmics/playbase/dev/include.R", chdir = TRUE)
   LL <- readRDS("~/Desktop/LL.RDS")
-  probes.human = LL$probes
-  probes.mouse = paste0(toupper(substr(probes, 1, 1)), tolower(substr(probes, 2, nchar(probes))))
-  probes.yeast <- rownames(read_counts("~/Desktop/test-upload/Timeseries/fission-counts.csv"))
-  probes = c(probes.human, probes.mouse, probes.yeast); length(probes)
-  organism <- c(
-    rep("Human", length(probes.human)),
-    rep("Mouse", length(probes.mouse)),
-    rep("Saccharomyces cerevisiae", length(probes.yeast))
-  )
+  probes = LL$probes; length(probes)
   datatype = LL$datatype
   probetype = LL$probetype
   annot_table = LL$annot_table
+  head(annot_table); dim(annot_table)
+  organism = unique(annot_table[, "species"])
   ##-----------------------------
   
-  if (length(organism) != length(probes)) {
-    message ("[playbase::getProbeAnnotation] Error: organism and probes have different length")
-    return(NULL)
-  }
-
   if (is.null(datatype)) datatype <- "unknown"
   if (is.null(probetype)) probetype <- "unknown"
   
@@ -139,15 +128,22 @@ getProbeAnnotation <- function(organism,
   if (!is.null(annot_table)) {
     rownames(annot_table) <- make_unique(rownames(annot_table))
   }
-
-  species <- unique(organism)
+  
+  species <- organism
+  if (!is.null(annot_table)) {
+    kk <- intersect(c("organism", "species"), tolower(colnames(annot_table)))[1]
+    if (length(kk) > 0) species <- as.character(unique(annot_table[,kk]))
+  }
+    
   i=1; annot.list=list()
   for(i in 1:length(species)) {
-
     message("[playbase::getProbeAnnotation] Annotating organism: ", species[i])
-    jj <- which(organism == species[i])
 
+    jj <- 1:length(probes)
+    if (length(species) > 1) jj <- which(as.character(annot_table[,kk]) == species[i])
+    
     genes <- NULL
+
     if (annot.unknown) {
       # annotation table is mandatory for 'No organism' (until server side
       # can handle missing genesets)
@@ -186,28 +182,37 @@ getProbeAnnotation <- function(organism,
       colnames(annot_table) <- cl
       cl <- sub("^Symbol$|^gene$|^gene_name$", "symbol", colnames(annot_table), ignore.case = TRUE)
       colnames(annot_table) <- cl
-      genes <- merge_annot_table(genes, annot_table, priority = 2)
+      genes <- merge_annot_table(genes, annot_table[jj, , drop = FALSE], priority = 2)
     }
 
     ## ensure full dimensions;
     ## restore original probe names;
     ## clean up entries and reorder columns
-    genes <- genes[match(probes[jj], genes$feature), ]
+    genes <- genes[match(probes[jj], genes$feature), , drop = FALSE]
     rownames(genes) <- probes0[jj]
     genes <- cleanupAnnotation(genes)
 
-    genes$ann_org <- species[i]
+    cm <- intersect(c("organism", "species"), tolower(colnames(genes)))[1]
+    if (length(cm) == 0) genes$species <- species[i]
     annot.list[[species[i]]] <- genes
     rm(genes); gc()
 
     message("getProbeAnnotation] Annotation for organism: ", organism[i], " completed\n\n")
 
   }
-
-  ff <- unlist(lapply(annot.list, rownames))
-  kk <- Reduce(intersect, lapply(annot.list, colnames))
-  annot.list <- lapply(annot.list, function(x) x[, kk, drop = FALSE])
+  
+  kk <- lapply(annot.list, colnames)
+  kk <- unique(unlist(unname(kk)))
+  for(i in 1:length(annot.list)) {
+    add <- setdiff(kk, colnames(annot.list[[i]]))
+    if (length(add) > 0) {
+      annot.list[[i]] <- cbind(annot.list[[i]], NA)
+      colnames(annot.list[[i]])[ncol(annot.list[[i]])] <- add
+    }
+  }
+  
   genes <- do.call(rbind, annot.list)
+  head(genes)
   rownames(genes) <- paste0(ff, sep="_", as.character(genes$ann_org))
   head(genes)
   
@@ -296,11 +301,6 @@ getGeneAnnotation <- function(organism,
   return(annot)
 
 }
-
-##A <- annot.list
-##class(A); names(A)
-##head(A[[2]])
-
 
 #' Get gene annotation data using AnnotationHub
 #'
