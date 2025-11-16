@@ -200,12 +200,9 @@ pgx.createPGX <- function(counts,
   if (is.null(counts)) stop("[pgx.createPGX] FATAL: counts must be provided")
   if (is.null(samples)) stop("[pgx.createPGX] FATAL: samples must be provided")
   if (is.null(organism)) stop("[pgx.createPGX] FATAL: organism must be provided")
-  
+
   message("[pgx.createPGX] dim.counts: ", nrow(counts), "x" ,ncol(counts))
 
-  message("-----------------------------------------------MNT1: organism=", length(organism))
-  message("-----------------------------------------------MNT1: organism=", unique(organism))
-  
   ndup <- sum(duplicated(rownames(counts)))
   if (ndup > 0) {
     if (average.duplicated) {
@@ -249,7 +246,7 @@ pgx.createPGX <- function(counts,
     if (nrow(annot_table) != nrow(counts)) {
       message("[pgx.createPGX] WARNING: annot_table has different nrows. forcing dimensions.")
       ii <- match(rownames(counts), rownames(annot_table))
-      annot_table <- annot_table[ii, ]
+      annot_table <- annot_table[ii, , drop = FALSE]
       rownames(annot_table) <- rownames(counts)
     }
   }
@@ -397,11 +394,6 @@ pgx.createPGX <- function(counts,
   pgx$probe_type <- probe_type
     
   message("[createPGX] Annotating genes: getProbeAnnotation")
-
-  ##saveRDS(list(organism=pgx$organism, probes=rownames(pgx$counts),
-  ##  datatype=pgx$datatype, probetype=pgx$probe_type, annot_table=annot_table),
-  ##  "~/Desktop/LL.RDS")
-  
   pgx$genes  <- getProbeAnnotation(
     organism = pgx$organism,
     probes = rownames(pgx$counts),
@@ -409,8 +401,10 @@ pgx.createPGX <- function(counts,
     probetype = pgx$probe_type,
     annot_table = annot_table
   )
+  message("[createPGX] Annotating genes: process completed")
 
-  playbase::pgx.save(pgx, "~/Desktop/rr.pgx")
+  ## Conform feature names
+  rownames(pgx$counts) <- rownames(pgx$X) <- rownames(pgx$genes)
   
   if (is.null(pgx$genes)) stop("[pgx.createPGX] FATAL: Could not build gene annotation")
 
@@ -496,24 +490,62 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
-  info("[createPGX] infer cell cycle")
+  info("[createPGX] infer cell cycle and gender")
   pgx <- compute_cellcycle_gender(pgx, pgx$counts)
+  
+  species <- unique(pgx$organism)
+  norm_cols <- length(species) == 1
+  i=1; LL=list()
+  for (i in 1:length(species)) {
 
-  ## -------------------------------------------------------------------
-  ## Add GMT
-  ## -------------------------------------------------------------------
-  ## If no organism, no custom annotation table and no custom geneset,
-  ## then create empty GMT
-  unknown.organism <- (pgx$organism %in% c("No organism", "custom", "unkown"))
-  unknown.datatype <- (pgx$datatype %in% c("custom", "unkown"))
-  no3 <- unknown.organism && is.null(annot_table) && is.null(custom.geneset)
-  if (no3 || unknown.datatype || !add.gmt) {
-    message("[pgx.createPGX] WARNING: empty GMT matrix. No gene sets. ")
-    pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
-  } else {
-    pgx <- pgx.add_GMT(pgx = pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
+    pgx0 <- pgx
+    jj <- which(pgx0$genes$species == species[i])
+    pgx0$organism <- species[i]
+    pgx0$counts <- pgx0$counts[jj, , drop = FALSE]
+    pgx0$X <- pgx0$X[jj, , drop = FALSE]
+    pgx0$genes <- pgx0$genes[jj, , drop = FALSE]
+    
+    ## -------------------------------------------------------------------
+    ## Add GMT
+    ## -------------------------------------------------------------------
+    ## create empty GMT if: no organism & no custom annot table & no custom geneset.
+    unknown.organism <- (species[i] %in% c("No organism", "custom", "unkown"))
+    unknown.datatype <- (pgx0$datatype %in% c("custom", "unkown"))
+    no3 <- unknown.organism && is.null(annot_table) && is.null(custom.geneset)
+    if (no3 || unknown.datatype || !add.gmt) {
+      message("[pgx.createPGX] WARNING: empty GMT matrix. No gene sets for ", species[i])
+      pgx0$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
+    } else {
+      message("[pgx.createPGX] Adding GMT for ", species[i])
+      pgx0 <- pgx.add_GMT(pgx = pgx0, custom.geneset = custom.geneset,
+        max.genesets = max.genesets, normalize_cols = norm_cols)
+    }
+
+    LL[[species[i]]] <- list(GMT = pgx0$GMT, custom.geneset = pgx0$custom.geneset)
+    rm(pgx0); gc()
+
   }
 
+  GMT <- LL[[1]]$GMT
+  custom.geneset <- LL[[1]]$custom.geneset
+  if (length(LL) > 1) {
+    nfeatures  <- unname(unlist(lapply(LL, function(x) rownames(x$GMT))))
+    ngsets <- unname(unlist(lapply(LL, function(x) colnames(x$GMT))))
+    GMT <- matrix(0, nrow = length(nfeatures), ncol = length(ngsets))
+    rownames(GMT) <- nfeatures
+    colnames(GMT) <- ngsets
+    i=1
+    for(i in 1:length(LL)) {
+      ii <- match(rownames(LL[[i]]$GMT), nfeatures)
+      kk <- match(colnames(LL[[i]]$GMT), ngsets)
+      GMT[ii, kk] <- as.matrix(LL[[i]]$GMT)
+    }
+    GMT <- normalize_cols(as(GMT, "sparseMatrix"))
+  }
+  pgx$GMT <- GMT
+  pgx$custom.geneset <- custom.geneset
+  rm(LL); gc()
+    
   ## --------------------------------
   ## rm NA contrasts
   ## --------------------------------
@@ -593,6 +625,7 @@ pgx.createPGX <- function(counts,
   message("\n\n")
 
   return(pgx)
+
 }
 
 
@@ -659,7 +692,7 @@ pgx.computePGX <- function(pgx,
   message("\n")
   message("[pgx.computePGX] Starting pgx.computePGX")
   message("\n")
-
+  
   if (!"contrasts" %in% names(pgx)) {
     stop("[pgx.computePGX] FATAL:: no contrasts in object")
   }
@@ -803,8 +836,9 @@ pgx.computePGX <- function(pgx,
   ## ------------------ gene set tests -----------------------
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
-  if ((pgx$organism != "No organism" && !is.null(pgx$GMT) && nrow(pgx$GMT) > 0) ||
-      (pgx$organism == "No organism" && !is.null(custom.geneset$gmt))) {
+  c1 <- (any(pgx$organism != "No organism") && !is.null(pgx$GMT) && nrow(pgx$GMT) > 0)
+  c2 <- (any(pgx$organism == "No organism") && !is.null(custom.geneset$gmt))
+  if (c1 || c2) {
     message("[pgx.computePGX] testing genesets...")
 
     pgx <- compute_testGenesets(
@@ -965,7 +999,7 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   pgx$counts <- pgx$counts[keep, , drop = FALSE]
   message("filtering out ", sum(!keep), " low-expressed genes")
   message("keeping ", sum(keep), " expressed genes")
-  if (!is.null(pgx$X)) {
+  if (!is.null(pgx$gX)) {
     ## WARNING: counts and X should match dimensions.
     pgx$X <- pgx$X[which(keep), , drop = FALSE]
   }
@@ -1012,8 +1046,11 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   return(G)
 }
 
-pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
-
+pgx.add_GMT <- function(pgx,
+                        custom.geneset = NULL,
+                        max.genesets = 20000,
+                        normalize_cols = TRUE) {
+    
   if (!"symbol" %in% colnames(pgx$genes)) {
     message(paste(
       "[pgx.add_GMT] ERROR: could not find 'symbol' column.",
@@ -1027,8 +1064,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------
   message("[pgx.add_GMT] Creating GMT matrix... ")
 
-  # Load geneset matrix from playdata. add metabolomics if data.type
-  # is metabolomics
+  # Load geneset matrix from playdata. add metabolomics if data.type==metabolomics
   target <- c("human_ortholog", "symbol", "gene_name", "rownames")
   ortho.col <- intersect(target, colnames(pgx$genes))
   if (length(ortho.col) == 0) {
@@ -1079,9 +1115,11 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   # create a feature list that will be used to filter and reduce dimensions of G
   full_feature_list <- c(
-    pgx$genes$human_ortholog, pgx$genes$symbol,
+    pgx$genes$human_ortholog,
+    pgx$genes$symbol,
     rownames(pgx$genes)
   )
+
   full_feature_list <- full_feature_list[!is.na(full_feature_list)]
   full_feature_list <- full_feature_list[full_feature_list != ""]
   full_feature_list <- unique(full_feature_list)
@@ -1091,7 +1129,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     G <- G[, Matrix::colSums(G != 0) > 0, drop = FALSE]
     if (nrow(G) == 0 || ncol(G) == 0) G <- NULL
   }
-
   
   ## Add organism specific GO gene sets. This is species gene symbol.
   if (has.px2) {
@@ -1099,12 +1136,12 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     go.genesets <- NULL
     info("[pgx.add_GMT] Adding species GO for organism", pgx$organism)
     go.genesets <- tryCatch(
-      {
-        getOrganismGO(pgx$organism)
-      },
-      error = function(e) {
-        message("Error in getOrganismsGO:", e)
-      }
+    {
+      getOrganismGO(pgx$organism)
+    },
+    error = function(e) {
+      message("Error in getOrganismsGO:", e)
+    }
     )
 
     if (!is.null(go.genesets)) {
@@ -1139,6 +1176,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   
   if (is.null(max.genesets)) max.genesets <- 20000
   if (max.genesets < 0) max.genesets <- 20000
+
   if (!is.null(G) && ncol(G) > max.genesets) {
     message("[pgx.add_GMT] Matching gene set matrix...")
     # we use SYMBOL as rownames
@@ -1260,7 +1298,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
 
   # normalize columns (required for some methods downstream)log2foldchange
-  G <- normalize_cols(G)
+  if (normalize_cols) G <- normalize_cols(G)
 
   pgx$GMT <- G
   pgx$custom.geneset <- custom.geneset
@@ -1269,8 +1307,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   gc()
   return(pgx)
-}
 
+}
 
 
 ## ----------------------------------------------------------------------
