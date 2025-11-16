@@ -1092,9 +1092,9 @@ pgx.getOrganism <- function(pgx, capitalise = FALSE) {
     org <- ifelse(is.mouse, "mouse", "human")
   }
 
-  if (capitalise && org %in% c("mouse", "human")) {
-    if (org == "mouse") org <- "Mouse"
-    if (org == "human") org <- "Human"
+  if (capitalise && any(org %in% c("mouse", "human"))) {
+    if (any(org == "mouse")) org[which(org == "mouse")] <- "Mouse"
+    if (any(org == "human")) org[which(org == "human")] <- "Human"
   }
   return(org)
 }

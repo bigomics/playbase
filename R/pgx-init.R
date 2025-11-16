@@ -212,7 +212,7 @@ pgx.initialize <- function(pgx) {
     }
   }
 
-  if (pgx$organism %in% c("Human", "human") | !is.null(pgx$version)) {
+  if (any(pgx$organism %in% c("Human", "human")) | !is.null(pgx$version)) {
     pgx$families <- lapply(playdata::FAMILIES, function(x) {
       intersect(x, genes)
     })
