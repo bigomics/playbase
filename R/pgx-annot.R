@@ -101,17 +101,6 @@ getProbeAnnotation <- function(organism,
                                probetype = "",
                                annot_table = NULL) {
 
-  ##------------------------
-  source("~/Desktop/BigOmics/playbase/dev/include.R", chdir = TRUE)
-  LL <- readRDS("~/Desktop/LL.RDS")
-  probes = LL$probes; length(probes)
-  datatype = LL$datatype
-  probetype = LL$probetype
-  annot_table = LL$annot_table
-  head(annot_table); dim(annot_table)
-  organism = unique(annot_table[, "species"])
-  ##-----------------------------
-  
   if (is.null(datatype)) datatype <- "unknown"
   if (is.null(probetype)) probetype <- "unknown"
   
@@ -134,21 +123,24 @@ getProbeAnnotation <- function(organism,
     kk <- intersect(c("organism", "species"), tolower(colnames(annot_table)))[1]
     if (length(kk) > 0) species <- as.character(unique(annot_table[,kk]))
   }
-    
+
   i=1; annot.list=list()
   for(i in 1:length(species)) {
+
     message("[playbase::getProbeAnnotation] Annotating organism: ", species[i])
 
     jj <- 1:length(probes)
-    if (length(species) > 1) jj <- which(as.character(annot_table[,kk]) == species[i])
-    
+    if (length(species) > 1) {
+      jj <- which(as.character(annot_table[,kk]) == species[i])
+    }
+
     genes <- NULL
 
     if (annot.unknown) {
       # annotation table is mandatory for 'No organism' (until server side
       # can handle missing genesets)
       info("[getProbeAnnotation] annotating with custom annotation")
-      genes <- getCustomAnnotation2(probes0[jj], annot_table)
+      genes <- getCustomAnnotation2(probes0[jj], annot_table[jj, , drop = FALSE])
     } else if (datatype == "metabolomics") {
       dbg("[getProbeAnnotation] annotating for metabolomics")
       all.db <- c("playdata", "annothub", "refmet")
@@ -168,7 +160,7 @@ getProbeAnnotation <- function(organism,
       dbg("[getProbeAnnotation] annotating for transcriptomics")
       genes <- getGeneAnnotation(organism = species[i], probes = probes[jj])
     }
-
+    
     if (is.null(genes)) {
       dbg("[getProbeAnnotation] WARNING: fallback to UNKNOWN probes")
       genes <- getCustomAnnotation(probes0[jj], custom_annot = NULL)
@@ -200,7 +192,8 @@ getProbeAnnotation <- function(organism,
     message("getProbeAnnotation] Annotation for organism: ", organism[i], " completed\n\n")
 
   }
-  
+
+  ## Conform
   kk <- lapply(annot.list, colnames)
   kk <- unique(unlist(unname(kk)))
   for(i in 1:length(annot.list)) {
@@ -212,10 +205,17 @@ getProbeAnnotation <- function(organism,
   }
   
   genes <- do.call(rbind, annot.list)
-  head(genes)
-  rownames(genes) <- paste0(ff, sep="_", as.character(genes$ann_org))
-  head(genes)
+  genes <- genes[, colnames(genes) != "row.names", drop = FALSE]
+  if (length(unique(genes$species)) > 1) {
+    ff <- unname(unlist(lapply(annot.list, rownames)))
+    rownames(genes) <- paste0(ff, sep="_", as.character(genes$species))
+  } else {
+    ss <- paste0(unique(genes$species), ".")
+    rownames(genes) <- sub(ss, "", rownames(genes)) 
+  }
   
+  rm(annot.list); gc()
+
   return(genes)
 
 }
