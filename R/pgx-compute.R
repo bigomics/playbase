@@ -202,7 +202,7 @@ pgx.createPGX <- function(counts,
   if (is.null(organism)) stop("[pgx.createPGX] FATAL: organism must be provided")
 
   message("[pgx.createPGX] dim.counts: ", nrow(counts), "x" ,ncol(counts))
-
+  
   ndup <- sum(duplicated(rownames(counts)))
   if (ndup > 0) {
     if (average.duplicated) {
