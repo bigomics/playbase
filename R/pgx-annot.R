@@ -189,7 +189,7 @@ getProbeAnnotation <- function(organism,
     annot.list[[species[i]]] <- genes
     rm(genes); gc()
 
-    message("getProbeAnnotation] Annotation for organism: ", organism[i], " completed\n\n")
+    message("getProbeAnnotation] Annotation for organism: ", species[i], " completed\n\n")
 
   }
 
