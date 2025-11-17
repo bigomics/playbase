@@ -169,7 +169,7 @@ compute_extra <- function(pgx, extra = c(
     remove(res)
     message("<<< done!")
   }
-
+  
   # This requires libx.dir to be set (or sigdb passed) to find sigdb-.h5 files
   if ("connectivity" %in% extra) {
     # try to find sigdb in libx dir if not specified
@@ -383,33 +383,35 @@ compute_deconvolution <- function(pgx, rna.counts = pgx$counts, full = FALSE) {
 #' }
 #' @export
 compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
+    
   if (!is.null(pgx$organism)) {
-    is.human <- (tolower(pgx$organism) == "human")
+    is.human <- any(tolower(pgx$organism) == "human")
   } else {
-    is.human <- (tolower(pgx.getOrganism(pgx)) == "human")
+    is.human <- any(tolower(pgx.getOrganism(pgx)) == "human")
   }
+
   if (is.human) {
+    
+    species <- unique(pgx$genes$species)
+    jj <- 1:nrow(pgx$counts)
+    if (length(species) > 1) jj <- which(tolower(pgx$genes$species) == "human") 
+    rna.counts <- rna.counts[jj, , drop = FALSE]
+    
     message("estimating cell cycle (using Seurat)...")
     pgx$samples$cell.cycle <- NULL
     pgx$samples$.cell.cycle <- NULL
 
     if (!(".cell_cycle" %in% colnames(pgx$samples))) {
       counts <- rna.counts
-      ## message("length(unique(rownames(counts))): ", length(unique(rownames(counts))))
-      ## message("dim(counts): ", dim(counts))
-      ## In multi-species now use symbol, and deduplicate in case
-      ## use retains feature as "gene_name/rowname"
       rownames(counts) <- toupper(pgx$genes[rownames(counts), "symbol"])
-      counts <- counts[which(!is.na(rownames(counts))), ]
+      counts <- counts[which(!is.na(rownames(counts))), , drop = FALSE]
       if (any(duplicated(rownames(counts)))) {
         message("Deduplicate counts for cell cycle and gender inference")
         counts <- rowmean(counts, group = rownames(counts))
         counts[which(is.nan(counts))] <- NA
       }
-      res <- try(pgx.inferCellCyclePhase(counts))
-      if (!inherits(res, "try-error")) {
-        pgx$samples$.cell_cycle <- res
-      }
+      res <- try(pgx.inferCellCyclePhase(counts), silent = TRUE)
+      if (!inherits(res, "try-error")) pgx$samples$.cell_cycle <- res
     } else {
       message("cell cycle already estimated. skipping...")
     }
@@ -418,13 +420,16 @@ compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
       message("estimating gender...")
       pgx$samples$.gender <- NULL
       X <- log2(1 + rna.counts)
-      gene_symbol <- pgx$genes[rownames(X), "symbol"] # Use gene-symbol also for gender
+      gene_symbol <- pgx$genes[rownames(X), "symbol"]
       pgx$samples$.gender <- pgx.inferGender(X, gene_symbol)
     } else {
       message("gender already estimated. skipping...")
     }
+
   }
+
   return(pgx)
+
 }
 
 
