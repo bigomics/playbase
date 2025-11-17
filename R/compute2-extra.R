@@ -169,7 +169,7 @@ compute_extra <- function(pgx, extra = c(
     remove(res)
     message("<<< done!")
   }
-
+  
   # This requires libx.dir to be set (or sigdb passed) to find sigdb-.h5 files
   if ("connectivity" %in% extra) {
     # try to find sigdb in libx dir if not specified
