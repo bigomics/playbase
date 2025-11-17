@@ -340,12 +340,12 @@ normalizeTMM <- function(counts, log = FALSE, prior = 1,
 #' norm_counts <- normalizeRLE(counts)
 #' }
 #' @export
-normalizeRLE <- function(counts, log = FALSE, use = "deseq2") {
+normalizeRLE <- function(counts, log = FALSE, use = "deseq2", prior=1) {
   outx <- NULL
   if (use == "edger") {
     dge <- edgeR::DGEList(as.matrix(counts), group = NULL)
     dge <- edgeR::calcNormFactors(dge, method = "RLE")
-    outx <- edgeR::cpm(dge, log = log)
+    outx <- edgeR::cpm(dge, log=log, prior.count=prior)
   } else if (use == "deseq2") {
     cts <- round(counts)
     dds <- DESeq2::DESeqDataSetFromMatrix(
@@ -355,6 +355,7 @@ normalizeRLE <- function(counts, log = FALSE, use = "deseq2") {
     )
     disp <- DESeq2::estimateSizeFactors(dds)
     outx <- DESeq2::counts(disp, normalized = TRUE)
+    if(log) outx <- log2(outx + prior)
   } else {
     stop("unknown method")
   }
