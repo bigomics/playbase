@@ -496,13 +496,6 @@ pgx.createPGX <- function(counts,
     rownames(pgx$counts) <- rownames(pgx$X) <- ff
   }
   
-  #playbase::pgx.save(pgx,"~/Desktop/pp.pgx") ## 1 species. fix error below.
-  #pgx <- playbase::pgx.load("~/Desktop/pp.pgx")
-  #pgx$organism; any(c("species","organism") %in% colnames(pgx$genes))
-  #require(playbase); require(playdata)
-  #source("~/Desktop/BigOmics/playbase/dev/include.R", chdir = TRUE)
-  #norm_cols=TRUE; add.gmt=TRUE; max.genesets=2000; custom.geneset=NULL
-  
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
