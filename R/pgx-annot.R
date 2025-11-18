@@ -192,7 +192,7 @@ getProbeAnnotation <- function(organism,
     message("getProbeAnnotation] Annotation for organism: ", species[i], " completed\n\n")
 
   }
-
+  
   ## Conform
   kk <- lapply(annot.list, colnames)
   kk <- unique(unlist(unname(kk)))
@@ -206,16 +206,10 @@ getProbeAnnotation <- function(organism,
   
   genes <- do.call(rbind, annot.list)
   genes <- genes[, colnames(genes) != "row.names", drop = FALSE]
-  if (length(unique(genes$species)) > 1) {
-    ff <- unname(unlist(lapply(annot.list, rownames)))
-    rownames(genes) <- paste0(ff, sep="_", as.character(genes$species))
-  } else {
-    ss <- paste0(unique(genes$species), ".")
-    rownames(genes) <- sub(ss, "", rownames(genes)) 
-  }
-  
+  ss <- paste(paste0(unique(species), "."), collapse = "|")
+  rownames(genes) <- gsub(ss, "", rownames(genes))
   rm(annot.list); gc()
-
+  
   return(genes)
 
 }

@@ -487,6 +487,22 @@ pgx.createPGX <- function(counts,
     rownames(pgx$X) <- new.names
   }
 
+  ##--------------------------------------
+  ## Multispecies data: append species ID
+  ##--------------------------------------
+  if (length(unique(pgx$genes$species)) > 1) {
+    ff <- paste0(rownames(pgx$counts), sep = "_", as.character(pgx$genes$species))
+    rownames(pgx$genes) <- pgx$genes$feature <- pgx$genes$gene_name <- ff
+    rownames(pgx$counts) <- rownames(pgx$X) <- ff
+  }
+  
+  #playbase::pgx.save(pgx,"~/Desktop/pp.pgx") ## 1 species. fix error below.
+  #pgx <- playbase::pgx.load("~/Desktop/pp.pgx")
+  #pgx$organism; any(c("species","organism") %in% colnames(pgx$genes))
+  #require(playbase); require(playdata)
+  #source("~/Desktop/BigOmics/playbase/dev/include.R", chdir = TRUE)
+  #norm_cols=TRUE; add.gmt=TRUE; max.genesets=2000; custom.geneset=NULL
+  
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
@@ -499,7 +515,8 @@ pgx.createPGX <- function(counts,
   for (i in 1:length(species)) {
 
     pgx0 <- pgx
-    jj <- which(pgx0$genes$species == species[i])
+    jj <- 1:nrow(pgx$genes)
+    if (length(species) > 1) jj <- which(pgx0$genes$species == species[i])
     pgx0$organism <- species[i]
     pgx0$counts <- pgx0$counts[jj, , drop = FALSE]
     pgx0$X <- pgx0$X[jj, , drop = FALSE]
@@ -1155,7 +1172,7 @@ pgx.add_GMT <- function(pgx,
       G <- .append_gmt_to_matrix(go.genesets, G, all_genes, minsize=15, maxsize=400)
     } ## end-if go.genesets
   } ## end-if !metabolics
-
+  
   ## Add custom gene sets if provided
   if (!is.null(custom.geneset$gmt)) {
     message("[pgx.add_GMT] Adding custom genesets...")
@@ -1165,7 +1182,7 @@ pgx.add_GMT <- function(pgx,
     all_genes <- unique(pgx$genes$symbol)
     G <- .append_gmt_to_matrix(customG, G, all_genes, minsize=3, maxsize=9999)
   }
-
+  
   ## -----------------------------------------------------------
   ##  Prioritize gene sets by fast rank-correlation
   ## -----------------------------------------------------------
@@ -1178,7 +1195,9 @@ pgx.add_GMT <- function(pgx,
   if (max.genesets < 0) max.genesets <- 20000
 
   if (!is.null(G) && ncol(G) > max.genesets) {
+
     message("[pgx.add_GMT] Matching gene set matrix...")
+
     # we use SYMBOL as rownames
     gX <- pgx$X
     if (!all(rownames(gX) %in% pgx$genes$symbol)) {
@@ -1243,6 +1262,7 @@ pgx.add_GMT <- function(pgx,
     jj <- jj[order(colnames(G)[jj])] ## sort alphabetically
     G <- G[, jj, drop = FALSE]
     rm(gsetX.bygroup, gsetX)
+
   }
 
   ## -----------------------------------------------------------------------
@@ -1251,6 +1271,7 @@ pgx.add_GMT <- function(pgx,
 
   # final check: drop genesets in G based on geneset size
   if (!is.null(G)) {
+
     gmt.size <- Matrix::colSums(G != 0)
     has.metabolites <- sum(grepl("^[0-9]+$|CHEBI|LIPID", rownames(G))) >= 10
     has.metabolites
@@ -1266,16 +1287,20 @@ pgx.add_GMT <- function(pgx,
 
     # add all custom genesets to size.ok
     idx_custom_gmt <- grep("CUSTOM", colnames(G))
+
     # make sure we dont miss CUSTOM genesets due to size.ok exclusion
     if (length(idx_custom_gmt) > 0) {
       names(idx_custom_gmt) <- colnames(G)[idx_custom_gmt]
       size.ok <- union(size.ok, idx_custom_gmt)
     }
+
     G <- G[, size.ok, drop = FALSE]
+
   }
 
   # add random genesets if G is too small
   if (is.null(G) || ncol(G) < 30 || nrow(G) < 3) {
+
     add.gmt <- NULL
     rr <- sample(3:400, 50)
     gg <- pgx$genes$symbol
@@ -1296,16 +1321,15 @@ pgx.add_GMT <- function(pgx,
     )
 
   }
-
+  
   # normalize columns (required for some methods downstream)log2foldchange
   if (normalize_cols) G <- normalize_cols(G)
 
   pgx$GMT <- G
   pgx$custom.geneset <- custom.geneset
   message(glue::glue("[pgx.add_GMT] Final GMT: {nrow(G)} x {ncol(G)}"))
-  rm(G)
+  rm(G); gc()
 
-  gc()
   return(pgx)
 
 }
