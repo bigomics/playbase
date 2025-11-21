@@ -1466,7 +1466,8 @@ mofa.factor_graphs <- function(F, W, X, y, n = 100, ewidth = 1, vsize = 1) {
       if (length(unique(y[ii])) == 2) {
         val <- cor(t(gx[, ii, drop = FALSE]), as.integer(y[ii]))[, 1]
       } else if (length(unique(y[ii])) > 2) {
-        res <- gx.limmaF(gx[, ii, drop = FALSE], y[ii], fdr = 1, lfc = 0, verbose = 0)
+        res <- gx.limma(gx[, ii, drop = FALSE], y[ii], fdr = 1, lfc = 0,
+          f.test = TRUE, verbose = 0)
         val <- res$logFC
       } else {
         val <- NULL
