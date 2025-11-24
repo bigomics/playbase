@@ -2917,6 +2917,8 @@ lasagna.solve <- function(obj, pheno, max_edges = 100, value.type = "rho",
   if (length(ii)) fc[ii] <- rho[ii]
 
   ## set node values
+  igraph::V(graph)$rho <- rho
+  igraph::V(graph)$fc <- fc
   if (value.type == "rho") {
     igraph::V(graph)$value <- rho
   } else {
