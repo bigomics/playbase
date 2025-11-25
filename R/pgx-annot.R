@@ -452,9 +452,12 @@ getGeneAnnotation.ANNOTHUB <- function(
       "[getGeneAnnotation.ANNOTHUB] second pass: retrying missing",
       length(missing.probes), "symbols..."
     )
-    suppressWarnings(suppressMessages(
-      missing.probe_type <- detect_probetype(organism, missing.probes, orgdb = orgdb)
-    ))
+    missing.probe_type <- try(suppressWarnings(suppressMessages(
+      detect_probetype(organism, missing.probes, orgdb = orgdb)
+    )), silent = TRUE)
+    if (inherits(missing.probe_type, "try-error")) {
+      missing.probe_type <- NULL
+    }
     dbg("[getGeneAnnotation.ANNOTHUB] missing.probe_type=", missing.probe_type)
 
     ## only do second try if missing.probetype is different
