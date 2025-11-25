@@ -489,7 +489,7 @@ matrix_twosample_ttest <- function(X, G) {
 #' method. Much faster than doing metap::sumlog() and metap::sumz()
 #'
 #' @export
-matrix_metap <- function(plist, method = "stouffer") {
+matrix_metap <- function(plist, method = c("stouffer","fisher","maxp")[1]) {
   if (inherits(plist, "matrix")) {
     plist <- as.list(data.frame(plist))
   }
@@ -502,11 +502,43 @@ matrix_metap <- function(plist, method = "stouffer") {
     zz <- lapply(plist, qnorm, lower.tail = FALSE)
     zz <- Reduce("+", zz) / sqrt(np)
     pv <- pnorm(zz, lower.tail = FALSE)
+  } else if(method %in% c("maxp","pmax","maximump")) {
+    pv <- Reduce(pmax, plist)    
   } else {
     stop("Invalid method: ", method)
   }
   dimnames(pv) <- dimnames(plist[[1]])
   return(pv)
+}
+
+
+#' Fast one sample z-test for vector object fc (e.g. foldchange) and
+#' grouping matrix G (e.g. gene sets).
+#'
+#' @export
+fc_ztest <- function(fc, G, zmat=FALSE, alpha=0.5) {
+  gg <- intersect(rownames(G),names(fc))
+  sample_size <- Matrix::colSums(G[gg,]!=0)
+  sample_size <- pmax(sample_size, 1) ## avoid div-by-zero
+  sample_mean <- (Matrix::t(G[gg,]!=0) %*% fc[gg]) / sample_size
+  population_mean <- mean(fc, na.rm=TRUE)
+  population_var <- var(fc, na.rm=TRUE)
+  gfc <- (G[gg,]!=0) * fc[gg]
+  sample_var <- sparseMatrixStats::colVars(gfc) * nrow(G) / sample_size
+  alpha <- pmin(pmax(alpha,0), 0.999) ## limit
+  estim_sd <- sqrt( alpha*sample_var + (1-alpha)*population_var )
+  z_statistic <- (sample_mean - population_mean) / (estim_sd / sqrt(sample_size))
+  p_value <- 2 * pnorm(abs(z_statistic[,1]), lower.tail = FALSE)  
+  if(zmat) {
+    zmat <- (Matrix::t(gfc) / estim_sd)
+  } else {
+    zmat = NULL
+  }
+  list(
+    z_statistic = z_statistic[,1],
+    p_value = p_value,
+    zmat = zmat
+  )
 }
 
 
