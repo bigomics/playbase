@@ -1574,7 +1574,7 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
     nodup.counts <- rowmean(counts[ii,,drop = FALSE], rownames(counts)[ii])
     rown <- unique(rownames(counts))
     counts <- rbind( counts[-ii,,drop=FALSE], nodup.counts )
-    counts <- counts[rown,] 
+    counts <- counts[rown,,drop = FALSE] 
   }
 
   if (type == "vector") {
