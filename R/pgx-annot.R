@@ -1019,14 +1019,56 @@ getHumanOrtholog <- function(organism, symbols,
   ortho.found <- FALSE
   i <- 1
   while (i <= length(ortho.methods) && !ortho.found) {
-    ortho.out <- try(orthogene::convert_orthologs(
-      gene_df = c("---", unique(symbols[!is.na(symbols)])),
-      input_species = ortho_organism,
-      output_species = "human",
-      method = ortho.methods[i],
-      non121_strategy = "drop_both_species",
-      verbose = FALSE
-    ), silent = TRUE)
+    genes <- c("---", unique(symbols[!is.na(symbols)]))
+
+    ## Batch processing for large gene lists
+    if (length(genes) > 1500) {
+      batch_size <- 1500
+      n_genes <- length(genes)
+      n_batches <- ceiling(n_genes / batch_size)
+
+      if (verbose > 0) message("[getHumanOrtholog] processing ", n_genes, " genes in ", n_batches, " batches")
+
+      batch_results <- list()
+      for (b in 1:n_batches) {
+        start_idx <- (b - 1) * batch_size + 1
+        end_idx <- min(b * batch_size, n_genes)
+        genes_batch <- genes[start_idx:end_idx]
+
+        batch_out <- try(orthogene::convert_orthologs(
+          gene_df = genes_batch,
+          input_species = ortho_organism,
+          output_species = "human",
+          method = ortho.methods[i],
+          non121_strategy = "drop_both_species",
+          verbose = FALSE
+        ), silent = TRUE)
+
+        ## Only keep successful results
+        if (!"try-error" %in% class(batch_out) && 
+            inherits(batch_out, "data.frame") && 
+            nrow(batch_out) > 0) {
+          batch_results[[length(batch_results) + 1]] <- batch_out
+        }
+      }
+
+      ## Combine all successful batch results
+      if (length(batch_results) > 0) {
+        ortho.out <- do.call(rbind, batch_results)
+      } else {
+        ortho.out <- try(stop("All batches failed"), silent = TRUE)
+      }
+    } else {
+      ## Standard processing for smaller gene lists
+      ortho.out <- try(orthogene::convert_orthologs(
+        gene_df = genes,
+        input_species = ortho_organism,
+        output_species = "human",
+        method = ortho.methods[i],
+        non121_strategy = "drop_both_species",
+        verbose = FALSE
+      ), silent = TRUE)
+    }
     class(ortho.out)
     results.ok <- (!"try-error" %in% class(ortho.out) &&
       inherits(ortho.out, "data.frame") &&
