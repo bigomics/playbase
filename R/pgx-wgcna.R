@@ -123,10 +123,17 @@ pgx.wgcna <- function(
   ## ----------------------------------------------------
   if(!is.null(progress)) progress$set(message = "Computing enrichment...", value=0.4)
   message("computing module enrichment...")
+
+  ## We augment pgx$GMT with original GSETxGENE to get better results
+  ## for all modules.
+  GMT0 <- Matrix::t(playdata::GSETxGENE)
+  GMT0 <- rename_by2(GMT0, pgx$genes, "symbol")
+  GMT <-  merge_sparse_matrix(pgx$GMT, GMT0)
+
   wgcna$gsea <- wgcna.computeModuleEnrichment(
     wgcna,
     annot = pgx$genes,
-    # GMT = pgx$GMT,
+    GMT = GMT,
     # gsetX = pgx$gsetX,
     methods = c("fisher", "gsetcor", "xcor"),
     ntop = 1000,
@@ -576,6 +583,16 @@ wgcna.compute_multiomics <- function(dataX,
 
     if(!is.null(progress)) {
       progress$set(message = paste("computing module enrichment..."), value = 0.66)
+    }
+
+    ## augment geneset matrix with original GSETxGENE
+    if(!is.null(GMT)) {
+      GMT0 <- Matrix::t(playdata::GSETxGENE)
+      if(!is.null(annot)) GMT0 <- rename_by2(GMT0, annot, "symbol")
+      GMT <-  merge_sparse_matrix(GMT, GMT0)
+    } else {
+      GMT <- Matrix::t(playdata::GSETxGENE)
+      if(!is.null(annot)) GMT <- rename_by2(GMT, annot, "symbol")
     }
     
     gse <- wgcna.computeModuleEnrichment(
@@ -1311,6 +1328,7 @@ wgcna.computeModuleEnrichment <- function(wgcna,
     message("ERROR: datasets must have gx or px datatype!")
     return(NULL)
   }
+
   
   ## collapse features to symbol
   selx <- intersect(c("gx","px"), names(wgcna))[1]
@@ -1324,9 +1342,9 @@ wgcna.computeModuleEnrichment <- function(wgcna,
     gg1 <- as.character(unlist(gg1))    
     annot <- data.frame(feature = gg1, symbol = gg)
   }
-    
+
   if(is.null(GMT)) {
-    message("Using playdata GSETxGENE genesets")
+    message("[wgcna.computeModuleEnrichment] Using playdata GSETxGENE genesets")
     GMT <- Matrix::t(playdata::GSETxGENE)
   }
 
@@ -1336,14 +1354,18 @@ wgcna.computeModuleEnrichment <- function(wgcna,
     GMT <- rename_by2( GMT, annot, symbol.col)
   }
   if(length(intersect(rownames(geneX),rownames(GMT)))==0) {
-    message("ERROR: no overlap for geneX and GMT features. Please add annotation.")
+    message("[wgcna.computeModuleEnrichment] ERROR: no overlap for geneX and GMT features. Please add annotation.")
     return(NULL)
   }
-  
+
+  if(is.null(gsetX)) {
+    gsetX <- plaid::plaid( geneX, GMT)
+  }
+
   bg <- rownames(geneX)
   bg <- intersect(bg, rownames(GMT))
   if (length(bg) == 0) {
-    message("FATAL. no overlapping genes")
+    message("[wgcna.computeModuleEnrichment] FATAL. no overlapping genes")
     return(NULL)
   }
   G1 <- GMT[bg, , drop = FALSE]
@@ -1353,11 +1375,7 @@ wgcna.computeModuleEnrichment <- function(wgcna,
   }
   G1 <- G1[, which(Matrix::colSums(G1 != 0) >= 4), drop = FALSE]
 
-  if(is.null(gsetX)) {
-    gsetX <- plaid::plaid( geneX, G1)
-  }
-
-  ## align dimensions
+  ## align dimensions  
   ss <- intersect(rownames(gsetX), colnames(G1))
   G1 <- G1[,ss,drop=FALSE]
   gsetX <- gsetX[ss,]
@@ -1392,7 +1410,7 @@ wgcna.computeModuleEnrichment <- function(wgcna,
 
   ## make single ME matrix
   MEx <- do.call(cbind, ME)
-
+  
   gsea <- wgcna.run_enrichment_methods(
     ME = MEx,
     me.genes = me.genes,
@@ -1980,7 +1998,15 @@ wgcna.runConsensusWGCNA <- function(exprList,
   if(compute.enrichment) {
     if(!is.null(progress)) progress$inc(0.2, "Computing enrichment...")
     message("[wgcna.runConsensusWGCNA] >>> computing module enrichment...")  
-    if(is.null(GMT)) GMT <- Matrix::t(playdata::GSETxGENE)
+    if(!is.null(GMT)) {
+      GMT0 <- Matrix::t(playdata::GSETxGENE)
+      if(!is.null(annot)) GMT0 <- rename_by2(GMT0, annot, "symbol")
+      GMT <-  merge_sparse_matrix(GMT, GMT0)
+    } else {
+      GMT <- Matrix::t(playdata::GSETxGENE)
+      if(!is.null(annot)) GMT <- rename_by2(GMT, annot, "symbol")
+    }
+
     res$gsea <- wgcna.computeConsensusModuleEnrichment(
       res,
       GMT = GMT,
@@ -2344,6 +2370,7 @@ wgcna.runPreservationWGCNA <- function(exprList,
                                        annot = NULL,
                                        compute.stats = TRUE,
                                        compute.enrichment = TRUE,
+                                       GMT = NULL,
                                        gset.methods = c("fisher","gsetcor","xcor")
                                        ) {
 
@@ -2360,8 +2387,8 @@ wgcna.runPreservationWGCNA <- function(exprList,
   pres <- wgcna.runConsensusWGCNA(
     exprList,
     phenoData,
-    GMT = NULL,
-    annot = NULL,
+    GMT = NULL,  ## no enrichment now
+    annot = NULL,  ## no enrichment now
     ngenes = ngenes,
     power = power,
     minModuleSize = minModuleSize,
@@ -2457,9 +2484,19 @@ wgcna.runPreservationWGCNA <- function(exprList,
   ## geneset enrichment of reference layer
   if(compute.enrichment) {
     message("[wgcna.runPreservationWGCNA] computing geneset enrichment...")
+
+    if(!is.null(GMT)) {
+      GMT0 <- Matrix::t(playdata::GSETxGENE)
+      if(!is.null(annot)) GMT0 <- rename_by2(GMT0, annot, "symbol")
+      GMT <-  merge_sparse_matrix(GMT, GMT0)
+    } else {
+      GMT <- Matrix::t(playdata::GSETxGENE)
+      if(!is.null(annot)) GMT <- rename_by2(GMT, annot, "symbol")
+    }
+
     pres$gsea <- wgcna.computeModuleEnrichment(
       pres$layers[[ref]],
-      GMT = NULL,
+      GMT = GMT,
       gsetX = NULL,
       annot = annot,
       methods = gset.methods,
