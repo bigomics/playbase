@@ -4,8 +4,6 @@
 ##
 
 
-
-
 #' Default merge by columns (cbind) with shared features on
 #' rows. Features are union of input matrices.
 #'
@@ -54,7 +52,7 @@ cbind_sparse_matrix <- function(m1, m2) {
   m1 <- m1[gene_vector, , drop = FALSE]
   m2 <- m2[gene_vector, , drop = FALSE]
 
-  # Combine the matrices column-wise
+  # Combine the matrices column-wise  
   combined_gmt <- cbind(m1, m2)
 
   # If duplicated genesets, then keep only the largest one
