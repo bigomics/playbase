@@ -6,7 +6,6 @@
 
 ########################################################################
 ## Compute LIMMA from matrices or from GCT/CLS file
-##
 ########################################################################
 
 #' Differential expression analysis using limma
@@ -26,9 +25,10 @@
 #' @param max.na Max proportion of missing values allowed for a gene.
 #' @param ref Character vector of possible reference levels.
 #' @param trend Logical for fitting a trend model.
+#' @param f.test Logical. Run f test is >2 levels phenotype. Replicates previous playbase::gx.limmaF().
 #' @param verbose Verbosity level.
 #'
-#' @details This function performs differential expression analysis on the gene expression matrix \code{X} using limma.
+#' @details Performs differential expression analysis on the gene expression matrix \code{X} using limma.
 #' It handles filtering, model design matrices, and output formatting.
 #' The phenotype vector \code{pheno} is used to define the linear model.
 #' Batch effects can be accounted for by providing a \code{B} matrix.
@@ -38,18 +38,27 @@
 #' @return Data frame with limma results.
 #'
 #' @export
-gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
-                     fdr = 0.05, compute.means = TRUE, lfc = 0.20,
-                     max.na = 0.20, sort.by = "FC",
+gx.limma <- function(X,
+                     pheno,
+                     B = NULL,
+                     remove.na = TRUE,
+                     fdr = 0.05,
+                     compute.means = TRUE,
+                     lfc = 0.20,
+                     max.na = 0.20,
+                     sort.by = "FC",
                      ref = c(
                        "ctrl", "ctr", "control", "ct", "dmso", "nt", "0", "0h", "0hr",
                        "non", "no", "not", "neg", "negative", "ref", "veh", "vehicle",
                        "wt", "wildtype", "untreated", "normal", "false", "healthy"
                      ),
-                     trend = FALSE, robust = FALSE, method = 1, verbose = 1) {
-  if (sum(duplicated(rownames(X))) > 0) {
-    cat("WARNING:: matrix has duplicated rownames\n")
-  }
+                     trend = FALSE,
+                     robust = FALSE,
+                     method = 1,
+                     f.test = FALSE, ## If TRUE it activates previous gx.limmaF()
+                     verbose = 1) {
+  
+  message("[gx.limma] X contains ", sum(duplicated(rownames(X))))
 
   if (!is.null(B) && NCOL(B) == 1) {
     B <- matrix(B, ncol = 1)
@@ -60,18 +69,18 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
   ## detect single sample case
   is.single <- (max(table(pheno), na.rm = TRUE) == 1)
   if (is.single) {
-    cat("WARNING:: no replicates, duplicating samples...\n")
+    message("[gx.limma] WARNING: no replicates, duplicating samples...")
     X <- cbind(X, X)
     pheno <- c(pheno, pheno)
     if (!is.null(B)) B <- rbind(B, B)
   }
 
-  ## filter probes and samples??
+  ## filter probes and samples
   ii <- which(rowMeans(is.na(X)) <= max.na)
   jj <- 1:ncol(X)
   if (remove.na && any(is.na(pheno))) {
     jj <- which(!is.na(pheno))
-    if (verbose > 0) message(sum(is.na(pheno) > 0), "with missing phenotype\n")
+    if (verbose > 0) message("[gx.limma] ", sum(is.na(pheno) > 0), " with missing phenotype")
   }
   X0 <- X[ii, jj, drop = FALSE]
   pheno0 <- as.character(pheno[jj])
@@ -80,92 +89,157 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
   if (!is.null(B)) B0 <- B[jj, , drop = FALSE]
 
   if (verbose > 0) {
-    cat("analyzing", ncol(X0), "samples\n")
-    cat("table.pheno: ", table(pheno), "samples\n")
-    cat("testing", nrow(X0), "features\n")
-    cat("lfc = ", lfc, "\n")
-    cat("fdr = ", fdr, "\n")
-    cat("max.na = ", max.na, "\n")
-    if (!is.null(B0)) cat("including", ncol(B0), "batch covariates\n")
+    message("[gx.limma] analyzing ", ncol(X0), " samples")
+    message("[gx.limma] table.pheno: ", table(pheno), "samples")
+    message("[gx.limma] testing ", nrow(X0), " features")
+    message("[gx.limma] lfc = ", lfc)
+    message("[gx.limma] fdr = ", fdr)
+    message("[gx.limma] max.na = ", max.na)
+    if (!is.null(B0)) message("[gx.limma] including ", ncol(B0), " batch covariates")
   }
 
   ## auto-detect reference
   pheno.ref <- c()
   ref.detected <- FALSE
   ref <- toupper(ref)
-
-  is.ref <- (toupper(pheno0) %in% toupper(ref))
+  is.ref <- which(toupper(pheno0) %in% toupper(ref))
   is.ref2 <- grepl(paste(paste0("^", ref), collapse = "|"), pheno0, ignore.case = TRUE)
-  if (!any(is.ref) && !all(is.ref2)) {
-    is.ref <- is.ref2
-  }
+  if (!any(is.ref) && !all(is.ref2)) is.ref <- is.ref2
   ref.detected <- (sum(is.ref) > 0 && sum(!is.ref) > 0)
-  ref.detected
-
+  
   if (ref.detected) {
     pheno.ref <- unique(pheno0[is.ref])
-    if (verbose > 0) cat("setting reference to y=", pheno.ref, "\n")
+    if (verbose > 0) message("[gx.limma] setting reference to y=", pheno.ref, "\n")
     levels <- c(pheno.ref, sort(setdiff(unique(pheno0), pheno.ref)))
   } else {
-    if (verbose > 0) cat("WARNING: could not auto-detect reference\n")
+    if (verbose > 0) message("[gx.limma] WARNING: could not auto-detect reference\n")
     levels <- as.character(sort(unique(pheno0)))
-    if (verbose > 0) cat("setting reference to first class:", levels[1], "\n")
+    if (verbose > 0) message("[gx.limma] setting reference to first class:", levels[1], "\n")
   }
-  if (length(levels) != 2) {
-    stop("gx.limma::fatal error:only two class comparisons. Please use gx.limmaF().")
+  
+  if (length(levels) != 2 & !f.test) {
+    stop("[gx.limma] ERROR: only two class comparisons. Please activate F test using f.test=TRUE\n\n")
     return(NULL)
   }
+
+  pheno1 <- stats::relevel(factor(pheno0), ref = levels[1])
 
   ## setup model and perform LIMMA. See LIMMA userguide p41 ("Two groups").
   ## https://bioconductor.org/packages/devel/bioc/vignettes/limma/inst/doc/usersguide.pdf
   if (method == 1) {
-    ## first method without  contrast matrix
+    ## no contrast matrix
     design <- cbind(1, pheno0 == levels[2])
     colnames(design) <- c("intercept", "main_vs_ref")
+    if (f.test) {
+      design <- stats::model.matrix(~pheno1)
+      colnames(design)[2:ncol(design)] <- paste0(levels(pheno1)[-1], "_vs_", levels(pheno1)[1])
+    }
     if (!is.null(B0)) {
-      if (verbose > 0) cat("augmenting design matrix with:", paste(colnames(B0)), "\n")
+      if (verbose > 0)
+        message("[gx.limma] augmenting design matrix with: ", paste(colnames(B0)), "\n")
       sel <- which(colMeans(B0 == 1) < 1) ## take out any constant term
       design <- cbind(design, B0[, sel, drop = FALSE])
     }
     fit <- limma::lmFit(X0, design)
     fit <- limma::eBayes(fit, trend = trend, robust = robust)
-    top <- limma::topTable(fit, coef = "main_vs_ref", number = nrow(X0), sort.by = "none")
+    coef <- if (f.test) NULL else "main_vs_ref"
+    top <- suppressMessages(limma::topTable(fit, coef = coef, number = nrow(X0), sort.by = "none"))
   } else {
-    ## second possible method with explicit contrast matrix
-    design <- cbind(1 * (pheno0 == levels[1]), 1 * (pheno0 == levels[2]))
-    design <- as.matrix(design)
-    colnames(design) <- c("ref", "main")
-    if (!is.null(B0)) {
-      if (verbose > 0) cat("augmenting design matrix with:", paste(colnames(B0)), "\n")
-      sel <- which(colMeans(B0 == 1) < 1) ## take out any constant term
-      design <- cbind(design, B0[, sel, drop = FALSE])
+
+    if (!f.test) {
+      ## second possible method with explicit contrast matrix
+      design <- cbind(1 * (pheno0 == levels[1]), 1 * (pheno0 == levels[2]))
+      design <- as.matrix(design)
+      colnames(design) <- c("ref", "main")
+      if (!is.null(B0)) {
+        if (verbose > 0) message("[gx.limma] augmenting design matrix with: ", paste(colnames(B0)), "\n")
+        sel <- which(colMeans(B0 == 1) < 1) ## take out any constant term
+        design <- cbind(design, B0[, sel, drop = FALSE])
+      }
+      fit <- limma::lmFit(X0, design)
+      contr.matrix <- limma::makeContrasts(main_vs_ref = main - ref, levels = design)
+      fit2 <- limma::contrasts.fit(fit, contr.matrix)
+      fit2 <- limma::eBayes(fit2, trend = trend, robust = robust)
+      top <- limma::topTable(fit2, coef = "main_vs_ref", number = Inf, sort.by = "none")
+    } else {
+
+      design <- stats::model.matrix(~ 0 + pheno1)
+      colnames(design) <- sub("^pheno1", "", colnames(design))
+      if (!is.null(B0)) {
+        if (verbose > 0) message("[gx.limma] augmenting design matrix with: ", paste(colnames(B0)), "\n")
+        sel <- which(colMeans(B0 == 1) < 1) ## take out any constant term
+        design <- cbind(design, B0[, sel, drop = FALSE])
+      }
+
+      ## tests implicitly against the ref level (REF). Uses contrast matrix.
+      if (method == 2) {
+        df <- data.frame(pheno1, check.names = FALSE)
+        ct <- makeDirectContrasts(df, ref = levels(pheno1)[1])
+        contrast.matrix <- ct$contr.matrix
+        grp2pheno.mat <- table(ct$group, pheno1)
+        grp2pheno.mat <- grp2pheno.mat[rownames(contrast.matrix), ]
+        grp2pheno <- colnames(grp2pheno.mat)[max.col(grp2pheno.mat)]
+        rownames(contrast.matrix) <- grp2pheno
+      }
+
+      ## tests implicitly all comparisons. Uses full contrast matrix.
+      if (method == 3) contrast.matrix <- makeFullContrasts(pheno1)
+
+      fit <- limma::lmFit(X0, design)
+      contrast.matrix <- contrast.matrix[colnames(design), ]
+      fit2 <- limma::contrasts.fit(fit, contrast.matrix)
+      fit2 <- limma::eBayes(fit2, trend = trend)
+      suppressMessages(top <- limma::topTable(fit2, number = Inf, sort.by = "none"))
+
     }
-    fit <- limma::lmFit(X0, design)
-    contr.matrix <- limma::makeContrasts(main_vs_ref = main - ref, levels = design)
-    fit2 <- limma::contrasts.fit(fit, contr.matrix)
-    fit2 <- limma::eBayes(fit2, trend = trend, robust = robust)
-    top <- limma::topTable(fit2, coef = "main_vs_ref", number = Inf, sort.by = "none")
+
   }
 
-  ## give rownames
+  if (f.test) {
+    cols <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
+    kk <- intersect(colnames(top), cols)
+    top <- top[, kk]
+    top$B <- NULL
+  }
+
   if ("ID" %in% colnames(top)) {
     rownames(top) <- top$ID
     top$ID <- NULL
   }
-  top <- top[rownames(X0), ]
 
-  ## only significant
+  if (f.test) {
+    kk <- setdiff(colnames(top), colnames(design))
+    top <- top[, kk, drop = FALSE]
+  }
+  
+  top <- top[rownames(X0), , drop = FALSE]
+
+  if (f.test) {
+    ## compute averages
+    avg <- do.call(cbind, tapply(1:ncol(X0), pheno1, function(i) {
+      rowMeans(X0[, i, drop = FALSE], na.rm = TRUE)
+    }))    
+    if (!"logFC" %in% colnames(top)) {
+      maxFC <- apply(avg, 1, max, na.rm = TRUE) - apply(avg, 1, min, na.rm = TRUE)
+      top$logFC <- NULL
+      top <- cbind(logFC = maxFC, top)
+      rownames(top) <- rownames(X0)
+    }
+  }
+  
   if (!is.null(fdr) && !is.null(lfc)) {
-    top <- top[which(top$adj.P.Val <= fdr & abs(top$logFC) >= lfc), ]
-    if (verbose > 0) cat("found", nrow(top), "significant at fdr=", fdr, "and minimal FC=", lfc, "\n")
+    ii <- which(top$adj.P.Val <= fdr & abs(top$logFC) >= lfc)
+    top <- top[ii, ]
+    message("[gx.limma] Found ", nrow(top), " significant at fdr = ", fdr, " and minimal FC = ", lfc, "\n")
   }
 
   if (compute.means && nrow(top) > 0) {
-    avg <- t(apply(
-      X0[rownames(top), ], 1,
-      function(x) tapply(x, pheno0, mean, na.rm = TRUE)
-    ))
-    avg <- avg[, as.character(levels), drop = FALSE]
+    if (f.test) {
+      avg <- avg[rownames(top), ]
+    } else {
+      avg <- t(apply(X0[rownames(top), ], 1, function(x) tapply(x, pheno0, mean, na.rm = TRUE)))
+      avg <- avg[, as.character(levels), drop = FALSE]
+    }
     colnames(avg) <- paste0("AveExpr.", colnames(avg))
     top <- cbind(top, avg)
   }
@@ -175,236 +249,231 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
     top$P.Value <- NA
     top$adj.P.Val <- NA
     top$t <- NA
+    if (f.test) top$F <- NA
   }
 
-  if (sort.by == "FC") {
-    ## reorder on fold change
-    top <- top[order(abs(top$logFC), decreasing = TRUE), ]
-  }
-  if (sort.by == "p") {
-    ## reorder on fold change
-    top <- top[order(top$P.Value), ]
-  }
+  if (sort.by == "FC") top <- top[order(abs(top$logFC), decreasing = TRUE), ]
+  if (sort.by == "p") top <- top[order(top$P.Value), ]
 
-  ## unlist???
   return(top)
+
 }
 
 
-#' Differential expression analysis with limma
-#'
-#' @param X Numeric gene expression matrix with genes in rows and samples in columns.
-#' @param pheno Data frame with phenotype data for samples. Must have column named 'group'.
-#' @param B Data frame with batch data for samples. Default is NULL.
-#' @param fdr FDR threshold for significance. Default is 0.05.
-#' @param compute.means Logical indicating whether to compute group means. Default is TRUE.
-#' @param lfc Log fold change threshold. Default is 0.2.
-#' @param max.na Maximum missing value fraction for gene filtering. Default is 0.2.
-#' @param ref Character vector of reference group names to use as baseline. Default is common control names.
-#' @param trend Logical indicating whether to fit a trend model. Default is FALSE.
-#' @param verbose Verbosity level. Default is 1.
-#'
-#' @return List with differential expression results, including:
-#' \itemize{
-#'   \item tab - Data frame with stats for all genes
-#'   \item top - Data frame with stats for top significant genes
-#'   \item fstats - Data frame with F statistics for all genes
-#'   \item means - Data frame with mean expression by group
-#' }
-#'
-#' @details This function performs differential expression analysis on \code{X} using limma.
-#' It handles filtering, model design matrices, and output formatting.
-#'
-#' @examples
-#' \dontrun{
-#' # TODO
-#' }
-#' @export
-gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc = 0.20,
-                      max.na = 0.20, sort.by = "FC",
-                      ref = c(
-                        "ctrl", "ctr", "control", "dmso", "nt", "0", "0h", "0hr",
-                        "non", "no", "not", "neg", "negative", "ref", "veh", "vehicle",
-                        "wt", "wildtype", "untreated", "normal", "false", "healthy"
-                      ),
-                      trend = FALSE, method = 1, verbose = 1) {
-  if (sum(duplicated(rownames(X))) > 0) {
-    cat("matrix has duplicated rownames. please remove.\n")
-  }
-  ## detect single sample case
-  is.single <- (max(table(pheno), na.rm = TRUE) == 1)
-  if (is.single) {
-    cat("warning: no replicates, no stats. duplicating\n")
-    X <- cbind(X, X)
-    pheno <- c(pheno, pheno)
-    ## add noise???
-  }
-  if (!is.null(B) && NCOL(B) == 1) {
-    ## these are batch or extra model covariates
-    B <- matrix(B, ncol = 1)
-    rownames(B) <- rownames(pheno)
-    colnames(B) <- "batch"
-  }
+## #' Differential expression analysis with limma
+## #'
+## #' @param X Numeric gene expression matrix with genes in rows and samples in columns.
+## #' @param pheno Data frame with phenotype data for samples. Must have column named 'group'.
+## #' @param B Data frame with batch data for samples. Default is NULL.
+## #' @param fdr FDR threshold for significance. Default is 0.05.
+## #' @param compute.means Logical indicating whether to compute group means. Default is TRUE.
+## #' @param lfc Log fold change threshold. Default is 0.2.
+## #' @param max.na Maximum missing value fraction for gene filtering. Default is 0.2.
+## #' @param ref Character vector of reference group names to use as baseline. Default is common control names.
+## #' @param trend Logical indicating whether to fit a trend model. Default is FALSE.
+## #' @param verbose Verbosity level. Default is 1.
+## #'
+## #' @return List with differential expression results, including:
+## #' \itemize{
+## #'   \item tab - Data frame with stats for all genes
+## #'   \item top - Data frame with stats for top significant genes
+## #'   \item fstats - Data frame with F statistics for all genes
+## #'   \item means - Data frame with mean expression by group
+## #' }
+## #'
+## #' @details This function performs differential expression analysis on \code{X} using limma.
+## #' It handles filtering, model design matrices, and output formatting.
+## #'
+## #' @examples
+## #' \dontrun{
+## #' # TODO
+## #' }
+## #' @export
+## gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc = 0.20,
+##                       max.na = 0.20, sort.by = "FC",
+##                       ref = c(
+##                         "ctrl", "ctr", "control", "dmso", "nt", "0", "0h", "0hr",
+##                         "non", "no", "not", "neg", "negative", "ref", "veh", "vehicle",
+##                         "wt", "wildtype", "untreated", "normal", "false", "healthy"
+##                       ),
+##                       trend = FALSE, method = 1, verbose = 1) {
+##   if (sum(duplicated(rownames(X))) > 0) {
+##     cat("matrix has duplicated rownames. please remove.\n")
+##   }
+##   ## detect single sample case
+##   is.single <- (max(table(pheno), na.rm = TRUE) == 1)
+##   if (is.single) {
+##     cat("warning: no replicates, no stats. duplicating\n")
+##     X <- cbind(X, X)
+##     pheno <- c(pheno, pheno)
+##     ## add noise???
+##   }
+##   if (!is.null(B) && NCOL(B) == 1) {
+##     ## these are batch or extra model covariates
+##     B <- matrix(B, ncol = 1)
+##     rownames(B) <- rownames(pheno)
+##     colnames(B) <- "batch"
+##   }
 
-  ## filter probes and samples
-  ii <- 1:nrow(X)
-  jj <- 1:length(pheno)
-  ii <- which(rowMeans(is.na(X)) <= max.na)
-  jj <- which(!is.na(pheno))
-  if (verbose > 0) cat(sum(is.na(pheno) > 0), "with missing phenotype\n")
-  X0 <- X[ii, jj]
-  pheno0 <- as.character(pheno[jj])
-  X0 <- X0[!(rownames(X0) %in% c(NA, "", "NA")), ]
-  B0 <- NULL
-  if (!is.null(B)) B0 <- B[jj, , drop = FALSE]
+##   ## filter probes and samples
+##   ii <- 1:nrow(X)
+##   jj <- 1:length(pheno)
+##   ii <- which(rowMeans(is.na(X)) <= max.na)
+##   jj <- which(!is.na(pheno))
+##   if (verbose > 0) cat(sum(is.na(pheno) > 0), "with missing phenotype\n")
+##   X0 <- X[ii, jj]
+##   pheno0 <- as.character(pheno[jj])
+##   X0 <- X0[!(rownames(X0) %in% c(NA, "", "NA")), ]
+##   B0 <- NULL
+##   if (!is.null(B)) B0 <- B[jj, , drop = FALSE]
 
-  if (verbose > 0) {
-    cat("analyzing", ncol(X0), "samples\n")
-    cat("testing", nrow(X0), "features\n")
-    cat("in", length(unique(pheno0)), "groups\n")
-    if (!is.null(B0)) cat("including", ncol(B0), "batch covariates\n")
-  }
+##   if (verbose > 0) {
+##     cat("analyzing", ncol(X0), "samples\n")
+##     cat("testing", nrow(X0), "features\n")
+##     cat("in", length(unique(pheno0)), "groups\n")
+##     if (!is.null(B0)) cat("including", ncol(B0), "batch covariates\n")
+##   }
 
-  ## auto-detect reference
-  pheno.ref <- c()
-  ref.detected <- FALSE
-  ref <- toupper(ref)
+##   ## auto-detect reference
+##   pheno.ref <- c()
+##   ref.detected <- FALSE
+##   ref <- toupper(ref)
 
-  is.ref <- (toupper(pheno0) %in% toupper(ref))
-  ref.detected <- (sum(is.ref) > 0 && sum(!is.ref) > 0)
-  ref.detected
+##   is.ref <- (toupper(pheno0) %in% toupper(ref))
+##   ref.detected <- (sum(is.ref) > 0 && sum(!is.ref) > 0)
+##   ref.detected
 
-  if (ref.detected) {
-    pheno.ref <- unique(pheno0[which(toupper(pheno0) %in% toupper(ref))])
-    if (verbose > 0) cat("setting reference to y=", pheno.ref, "\n")
-    levels <- c(pheno.ref, sort(setdiff(unique(pheno0), pheno.ref)))
-    pheno1 <- stats::relevel(factor(pheno0), ref = levels[1])
-  } else {
-    if (verbose > 0) cat("WARNING: could not auto-detect reference\n")
-    levels <- as.character(sort(unique(pheno0)))
-    if (verbose > 0) cat("setting reference to first level", levels[1], "\n")
-    pheno1 <- stats::relevel(factor(pheno0), ref = levels[1])
-  }
-  if (0 && length(levels) != 2) {
-    stop("gx.limma::fatal error:only two class comparisons")
-    return(NULL)
-  }
+##   if (ref.detected) {
+##     pheno.ref <- unique(pheno0[which(toupper(pheno0) %in% toupper(ref))])
+##     if (verbose > 0) cat("setting reference to y=", pheno.ref, "\n")
+##     levels <- c(pheno.ref, sort(setdiff(unique(pheno0), pheno.ref)))
+##     pheno1 <- stats::relevel(factor(pheno0), ref = levels[1])
+##   } else {
+##     if (verbose > 0) cat("WARNING: could not auto-detect reference\n")
+##     levels <- as.character(sort(unique(pheno0)))
+##     if (verbose > 0) cat("setting reference to first level", levels[1], "\n")
+##     pheno1 <- stats::relevel(factor(pheno0), ref = levels[1])
+##   }
+##   if (0 && length(levels) != 2) {
+##     stop("gx.limma::fatal error:only two class comparisons")
+##     return(NULL)
+##   }
 
-  if (method == 1) {
-    ## this tests implicitly against the reference level (REF), It
-    ## uses no contrast matrix.
-    design <- stats::model.matrix(~pheno1)
-    colnames(design)
-    colnames(design)[2:ncol(design)] <- paste0(levels(pheno1)[-1], "_vs_", levels(pheno1)[1])
-    if (!is.null(B0)) {
-      if (verbose > 0) cat("augmenting design matrix with:", paste(colnames(B0)), "\n")
-      sel <- which(colMeans(B0 == 1) < 1) ## take out any constant term
-      design <- cbind(design, B0[, sel, drop = FALSE])
-    }
-    fit <- limma::lmFit(X0, design)
-    fit <- limma::eBayes(fit, trend = trend)
-    suppressMessages(top <- limma::topTable(fit, number = Inf, sort.by = "none"))
-  }
-  if (method == 2) {
-    ## this tests implicitly against the reference level (REF), It
-    ## uses explicit contrast matrix.
-    design <- stats::model.matrix(~ 0 + pheno1)
-    colnames(design)
-    colnames(design) <- sub("^pheno1", "", colnames(design))
-    if (!is.null(B0)) {
-      if (verbose > 0) cat("augmenting design matrix with:", paste(colnames(B0)), "\n")
-      sel <- which(colMeans(B0 == 1) < 1) ## take out any constant term
-      design <- cbind(design, B0[, sel, drop = FALSE])
-    }
-    fit <- limma::lmFit(X0, design)
-    ct <- makeDirectContrasts(data.frame(pheno1, check.names = FALSE),
-      ref = levels(pheno1)[1]
-    )
-    contrast.matrix <- ct$contr.matrix
-    grp2pheno.mat <- table(ct$group, pheno1)
-    grp2pheno.mat <- grp2pheno.mat[rownames(contrast.matrix), ]
-    grp2pheno <- colnames(grp2pheno.mat)[max.col(grp2pheno.mat)]
-    rownames(contrast.matrix) <- grp2pheno
-    contrast.matrix <- contrast.matrix[colnames(design), ]
-    fit2 <- limma::contrasts.fit(fit, contrast.matrix)
-    fit2 <- limma::eBayes(fit2, trend = trend)
-    suppressMessages(top <- limma::topTable(fit2, number = Inf, sort.by = "none"))
-  }
-  if (method == 3) {
-    ## this tests implicitly all comparisons, It uses explicit full
-    ## contrast matrix.
-    design <- stats::model.matrix(~ 0 + pheno1)
-    colnames(design)
-    colnames(design) <- sub("^pheno1", "", colnames(design))
-    if (!is.null(B0)) {
-      if (verbose > 0) cat("augmenting design matrix with:", paste(colnames(B0)), "\n")
-      sel <- which(colMeans(B0 == 1) < 1) ## take out any constant term
-      design <- cbind(design, B0[, sel, drop = FALSE])
-    }
-    fit <- limma::lmFit(X0, design)
-    contrast.matrix <- makeFullContrasts(pheno1)
-    contrast.matrix <- contrast.matrix[colnames(design), ]
-    fit2 <- limma::contrasts.fit(fit, contrast.matrix)
-    fit2 <- limma::eBayes(fit2, trend = trend)
-    suppressMessages(top <- limma::topTable(fit2, number = Inf, sort.by = "none"))
-  }
+##   if (method == 1) {
+##     ## this tests implicitly against the reference level (REF), It
+##     ## uses no contrast matrix.
+##     design <- stats::model.matrix(~pheno1)
+##     colnames(design)
+##     colnames(design)[2:ncol(design)] <- paste0(levels(pheno1)[-1], "_vs_", levels(pheno1)[1])
+##     if (!is.null(B0)) {
+##       if (verbose > 0) cat("augmenting design matrix with:", paste(colnames(B0)), "\n")
+##       sel <- which(colMeans(B0 == 1) < 1) ## take out any constant term
+##       design <- cbind(design, B0[, sel, drop = FALSE])
+##     }
+##     fit <- limma::lmFit(X0, design)
+##     fit <- limma::eBayes(fit, trend = trend)
+##     suppressMessages(top <- limma::topTable(fit, number = Inf, sort.by = "none"))
+##   }
+##   if (method == 2) {
+##     ## this tests implicitly against the reference level (REF), It
+##     ## uses explicit contrast matrix.
+##     design <- stats::model.matrix(~ 0 + pheno1)
+##     colnames(design)
+##     colnames(design) <- sub("^pheno1", "", colnames(design))
+##     if (!is.null(B0)) {
+##       if (verbose > 0) cat("augmenting design matrix with:", paste(colnames(B0)), "\n")
+##       sel <- which(colMeans(B0 == 1) < 1) ## take out any constant term
+##       design <- cbind(design, B0[, sel, drop = FALSE])
+##     }
+##     fit <- limma::lmFit(X0, design)
+##     ct <- makeDirectContrasts(data.frame(pheno1, check.names = FALSE),
+##       ref = levels(pheno1)[1]
+##     )
+##     contrast.matrix <- ct$contr.matrix
+##     grp2pheno.mat <- table(ct$group, pheno1)
+##     grp2pheno.mat <- grp2pheno.mat[rownames(contrast.matrix), ]
+##     grp2pheno <- colnames(grp2pheno.mat)[max.col(grp2pheno.mat)]
+##     rownames(contrast.matrix) <- grp2pheno
+##     contrast.matrix <- contrast.matrix[colnames(design), ]
+##     fit2 <- limma::contrasts.fit(fit, contrast.matrix)
+##     fit2 <- limma::eBayes(fit2, trend = trend)
+##     suppressMessages(top <- limma::topTable(fit2, number = Inf, sort.by = "none"))
+##   }
+##   if (method == 3) {
+##     ## this tests implicitly all comparisons, It uses explicit full
+##     ## contrast matrix.
+##     design <- stats::model.matrix(~ 0 + pheno1)
+##     colnames(design)
+##     colnames(design) <- sub("^pheno1", "", colnames(design))
+##     if (!is.null(B0)) {
+##       if (verbose > 0) cat("augmenting design matrix with:", paste(colnames(B0)), "\n")
+##       sel <- which(colMeans(B0 == 1) < 1) ## take out any constant term
+##       design <- cbind(design, B0[, sel, drop = FALSE])
+##     }
+##     fit <- limma::lmFit(X0, design)
+##     contrast.matrix <- makeFullContrasts(pheno1)
+##     contrast.matrix <- contrast.matrix[colnames(design), ]
+##     fit2 <- limma::contrasts.fit(fit, contrast.matrix)
+##     fit2 <- limma::eBayes(fit2, trend = trend)
+##     suppressMessages(top <- limma::topTable(fit2, number = Inf, sort.by = "none"))
+##   }
 
-  ## clean-up
-  cols <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
-  top <- top[, intersect(colnames(top), cols)]
-  top$B <- NULL
-  if ("ID" %in% colnames(top)) {
-    rownames(top) <- top$ID
-    top$ID <- NULL
-  }
-  top <- top[, setdiff(colnames(top), colnames(design)), drop = FALSE]
-  top <- top[rownames(X0), ]
+##   ## clean-up
+##   cols <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
+##   top <- top[, intersect(colnames(top), cols)]
+##   top$B <- NULL
+##   if ("ID" %in% colnames(top)) {
+##     rownames(top) <- top$ID
+##     top$ID <- NULL
+##   }
+##   top <- top[, setdiff(colnames(top), colnames(design)), drop = FALSE]
+##   top <- top[rownames(X0), ]
 
-  ## compute averages
-  avg <- do.call(cbind, tapply(1:ncol(X0), pheno1, function(i) {
-    rowMeans(X0[, i, drop = FALSE], na.rm = TRUE)
-  }))
+##   ## compute averages
+##   avg <- do.call(cbind, tapply(1:ncol(X0), pheno1, function(i) {
+##     rowMeans(X0[, i, drop = FALSE], na.rm = TRUE)
+##   }))
 
-  if (!"logFC" %in% colnames(top)) {
-    maxFC <- apply(avg, 1, max, na.rm = TRUE) - apply(avg, 1, min, na.rm = TRUE)
-    top$logFC <- NULL
-    top <- cbind(logFC = maxFC, top)
-    rownames(top) <- rownames(X0)
-  }
+##   if (!"logFC" %in% colnames(top)) {
+##     maxFC <- apply(avg, 1, max, na.rm = TRUE) - apply(avg, 1, min, na.rm = TRUE)
+##     top$logFC <- NULL
+##     top <- cbind(logFC = maxFC, top)
+##     rownames(top) <- rownames(X0)
+##   }
 
-  ## only significant
-  top <- top[which(top$adj.P.Val <= fdr & abs(top$logFC) >= lfc), ]
-  if (verbose > 0) cat("found", nrow(top), "significant at fdr=", fdr, "and minimal FC=", lfc, "\n")
+##   ## only significant
+##   top <- top[which(top$adj.P.Val <= fdr & abs(top$logFC) >= lfc), ]
+##   if (verbose > 0) cat("found", nrow(top), "significant at fdr=", fdr, "and minimal FC=", lfc, "\n")
 
-  if (compute.means && nrow(top) > 0) {
-    avg1 <- avg[rownames(top), ]
-    colnames(avg1) <- paste0("AveExpr.", colnames(avg1))
-    top <- cbind(top, avg1)
-  }
-  top$B <- NULL
+##   if (compute.means && nrow(top) > 0) {
+##     avg1 <- avg[rownames(top), ]
+##     colnames(avg1) <- paste0("AveExpr.", colnames(avg1))
+##     top <- cbind(top, avg1)
+##   }
+##   top$B <- NULL
 
-  if (is.single) {
-    top$P.Value <- NA
-    top$adj.P.Val <- NA
-    top$t <- NA
-    top$F <- NA
-  }
+##   if (is.single) {
+##     top$P.Value <- NA
+##     top$adj.P.Val <- NA
+##     top$t <- NA
+##     top$F <- NA
+##   }
 
-  ## reorder on fold change
+##   ## reorder on fold change
 
-  if (sort.by == "FC") {
-    ## reorder on fold change
-    top <- top[order(abs(top$logFC), decreasing = TRUE), ]
-  }
-  if (sort.by == "p") {
-    ## reorder on fold change
-    top <- top[order(top$P.Value), ]
-  }
+##   if (sort.by == "FC") {
+##     ## reorder on fold change
+##     top <- top[order(abs(top$logFC), decreasing = TRUE), ]
+##   }
+##   if (sort.by == "p") {
+##     ## reorder on fold change
+##     top <- top[order(top$P.Value), ]
+##   }
 
-  ## unlist
+##   ## unlist
 
-  return(top)
-}
+##   return(top)
+## }
 
 
 #' Differential expression analysis for paired data

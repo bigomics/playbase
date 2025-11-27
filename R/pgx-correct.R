@@ -974,7 +974,7 @@ detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
   ## determine batch covariates
   dY <- scale(dY)
 
-  res <- gx.limmaF(t(dY), pheno, fdr = 1, lfc = 0, compute.means = FALSE, verbose = 0)
+  res <- gx.limma(t(dY), pheno, fdr = 1, lfc = 0, compute.means = FALSE, f.test = TRUE, verbose = 0)
   param <- sub("=.*", "", rownames(res))
   pv.pheno <- tapply(res$P.Value, param, min)
 
@@ -2162,7 +2162,8 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
   if (!is.null(y) && length(controls) == 1 && is.numeric(controls[1])) {
     ii <- which(!duplicated(rownames(X)) & sdx > 0)
     jj <- which(!is.na(y))
-    F <- gx.limmaF(X[ii, jj], y[jj], lfc = 0, fdr = 1, method = 1, sort.by = "none", compute.means = FALSE, verbose = 0)
+    F <- gx.limma(X[ii, jj], y[jj], lfc = 0, fdr = 1, method = 1,
+      sort.by = "none", compute.means = FALSE, f.test = TRUE, verbose = 0)
     nc <- pmax(nrow(X) * as.numeric(controls), 1)
     sel <- head(order(-F$P.Value), nc)
     controls <- rownames(F)[sel]
@@ -2219,7 +2220,7 @@ pcaCorrect <- function(X, y, k = 10, p.notsig = 0.20) {
   }))
   rownames(V) <- colnames(X)
   colnames(V) <- paste0("PC", 1:ncol(V))
-  res <- gx.limmaF(t(V), y, lfc = 0, fdr = 1, sort.by = "none", compute.means = FALSE, verbose = 0)
+  res <- gx.limma(t(V), y, lfc = 0, fdr = 1, sort.by = "none", compute.means = FALSE, f.test = TRUE, verbose = 0)
   res <- res[colnames(V), ]
   round(res$P.Value, 4)
 

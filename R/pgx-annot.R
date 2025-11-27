@@ -137,12 +137,20 @@ getProbeAnnotation <- function(organism,
       genes <- getMetaboliteAnnotation(
         probes,
         extra_annot = TRUE,
-        annot_table = NULL
+        annot_table = annot_table
       )
     } else {
       ## Fallback on custom
       dbg("[getProbeAnnotation] WARNING: not able to map metabolomics probes")
     }
+  } else if (datatype == "lipidomics") {
+    dbg("[getProbeAnnotation] annotating for lipidomics")
+    ## Directly annotate if probes are recognized
+    genes <- getLipidAnnotation(
+      probes,
+      extra_annot = TRUE,
+      annot_table = annot_table
+    )
   } else if (datatype == "multi-omics") {
     dbg("[getProbeAnnotation] annotating for multi-omics")
     genes <- getMultiOmicsProbeAnnotation(organism, probes)
@@ -444,9 +452,12 @@ getGeneAnnotation.ANNOTHUB <- function(
       "[getGeneAnnotation.ANNOTHUB] second pass: retrying missing",
       length(missing.probes), "symbols..."
     )
-    suppressWarnings(suppressMessages(
-      missing.probe_type <- detect_probetype(organism, missing.probes, orgdb = orgdb)
-    ))
+    missing.probe_type <- try(suppressWarnings(suppressMessages(
+      detect_probetype(organism, missing.probes, orgdb = orgdb)
+    )), silent = TRUE)
+    if (inherits(missing.probe_type, "try-error")) {
+      missing.probe_type <- NULL
+    }
     dbg("[getGeneAnnotation.ANNOTHUB] missing.probe_type=", missing.probe_type)
 
     ## only do second try if missing.probetype is different
@@ -1008,14 +1019,56 @@ getHumanOrtholog <- function(organism, symbols,
   ortho.found <- FALSE
   i <- 1
   while (i <= length(ortho.methods) && !ortho.found) {
-    ortho.out <- try(orthogene::convert_orthologs(
-      gene_df = c("---", unique(symbols[!is.na(symbols)])),
-      input_species = ortho_organism,
-      output_species = "human",
-      method = ortho.methods[i],
-      non121_strategy = "drop_both_species",
-      verbose = FALSE
-    ), silent = TRUE)
+    genes <- c("---", unique(symbols[!is.na(symbols)]))
+
+    ## Batch processing for large gene lists
+    if (length(genes) > 1500) {
+      batch_size <- 1500
+      n_genes <- length(genes)
+      n_batches <- ceiling(n_genes / batch_size)
+
+      if (verbose > 0) message("[getHumanOrtholog] processing ", n_genes, " genes in ", n_batches, " batches")
+
+      batch_results <- list()
+      for (b in 1:n_batches) {
+        start_idx <- (b - 1) * batch_size + 1
+        end_idx <- min(b * batch_size, n_genes)
+        genes_batch <- genes[start_idx:end_idx]
+
+        batch_out <- try(orthogene::convert_orthologs(
+          gene_df = genes_batch,
+          input_species = ortho_organism,
+          output_species = "human",
+          method = ortho.methods[i],
+          non121_strategy = "drop_both_species",
+          verbose = FALSE
+        ), silent = TRUE)
+
+        ## Only keep successful results
+        if (!"try-error" %in% class(batch_out) && 
+            inherits(batch_out, "data.frame") && 
+            nrow(batch_out) > 0) {
+          batch_results[[length(batch_results) + 1]] <- batch_out
+        }
+      }
+
+      ## Combine all successful batch results
+      if (length(batch_results) > 0) {
+        ortho.out <- do.call(rbind, batch_results)
+      } else {
+        ortho.out <- try(stop("All batches failed"), silent = TRUE)
+      }
+    } else {
+      ## Standard processing for smaller gene lists
+      ortho.out <- try(orthogene::convert_orthologs(
+        gene_df = genes,
+        input_species = ortho_organism,
+        output_species = "human",
+        method = ortho.methods[i],
+        non121_strategy = "drop_both_species",
+        verbose = FALSE
+      ), silent = TRUE)
+    }
     class(ortho.out)
     results.ok <- (!"try-error" %in% class(ortho.out) &&
       inherits(ortho.out, "data.frame") &&
@@ -1194,25 +1247,40 @@ getHumanOrtholog.biomart <- function(organism, symbols, verbose = 1) {
 #' }
 #' @import data.table
 #' @export
-probe2symbol <- function(probes, annot_table, query = c("symbol", "gene_name"),
+probe2symbol <- function(probes, annot_table, query = "symbol", 
                          key = NULL, fill_na = FALSE) {
-  # Prepare inputs
+
+  # Prepare inputs. add extra matching columns.
   annot_table <- cbind(rownames = rownames(annot_table), annot_table)
+  id.cols <- intersect(c("feature","gene_name","symbol"),colnames(annot_table))
+  if(length(id.cols)>0) {
+    stripped_annot <- apply(annot_table[,id.cols,drop=FALSE],2,function(a) sub("^[A-Za-z]+:","",a))
+    ##colnames(stripped_annot) <- paste0(colnames(stripped_annot),"_stripped")
+    annot_table <- cbind(annot_table, stripped_annot)
+  }
+  
   probes1 <- setdiff(probes, c(NA, ""))
   if (is.null(key) || !key %in% colnames(annot_table)) {
     key <- which.max(apply(annot_table, 2, function(a) sum(probes1 %in% a)))
   }
   if (is.null(key)) {
-    stop("[probe2symbol] FATAL. could not get key column.")
+    message("[probe2symbol] FATAL. could not get key column.")
+    return(NULL)
   }
 
+  query <- head(intersect(query, colnames(annot_table)),1)
+  if (length(query) == 0) {
+    message("ERROR. no symbol column.")
+    return(NULL)
+  }
+
+  # fall back on old gene_name
+  if(query=="symbol" && !"symbol" %in% colnames(annot_table) &&
+       "gene_name" %in% colnames(annot_table)) query <- "gene_name"
+  
   # match query
   ii <- match(probes, annot_table[, key])
-  query <- intersect(query, colnames(annot_table))
-  if (length(query) == 0) {
-    stop("ERROR. no symbol column.")
-  }
-  query_col <- annot_table[ii, query[1]]
+  query_col <- annot_table[ii, query]
 
   # Deal with NA
   if (fill_na) {

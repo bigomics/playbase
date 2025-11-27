@@ -104,7 +104,8 @@ gset.fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
 gset.fisher <- function(genes, genesets, background = NULL,
                         fdr = 0.05, mc = TRUE, sort.by = "zratio", nmin = 3,
                         min.genes = 15, max.genes = 500, method = "fast.fisher",
-                        check.background = TRUE, common.genes = TRUE, verbose = 1) {
+                        check.background = TRUE, common.genes = TRUE,
+                        no.pass=NA, verbose = 1) {
   if (is.null(background)) {
     background <- unique(unlist(genesets))
     if (verbose > 0) {
@@ -221,6 +222,11 @@ gset.fisher <- function(genes, genesets, background = NULL,
     stop("unknown method")
   }
 
+  ## replace NA values
+  if(any(is.na(pv))) {
+    pv[is.na(pv)] <- no.pass
+  }
+  
   ## compute q-value
   qv <- rep(NA, length(pv))
   qv <- stats::p.adjust(pv, method = "fdr")

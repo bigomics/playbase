@@ -9,8 +9,28 @@ eigengenes.}
 wgcna.plotEigenGeneAdjacencyHeatmap(
   wgcna,
   add_traits = TRUE,
+  traits = NULL,
+  add_me = TRUE,
   marx = 1,
   main = NULL,
+  multi = FALSE,
+  phenotype = NULL,
+  colorlabel = TRUE,
+  text = FALSE,
+  pstar = TRUE,
+  setMargins = TRUE,
+  mar1 = c(5.6, 4.5, 1.8, 0),
+  mar2 = c(8, 10, 4, 2),
+  cex.lab = 0.8,
+  cex.text = 0.7,
+  plotDendro = TRUE,
+  plotHeatmap = TRUE,
+  dendro.horiz = TRUE,
+  dendro.width = 0.3,
+  dendro.labels = TRUE,
+  nmax = -1,
+  fixclust = FALSE,
+  mask.intra = FALSE,
   justdata = FALSE
 )
 }

@@ -224,8 +224,9 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
 
 
 #' @export
-pgx.plotEnrichmentDotPlot <- function(pgx, contrast,
-                                      ntop = 10, filter = NULL, dir = "both",
+pgx.plotEnrichmentDotPlot <- function(pgx, contrast, filter = NULL, 
+                                      ntop = 30, dir = "both",
+                                      ptsize = 6,
                                       main = "Enrichment Analysis") {
   gs <- pgx$gset.meta$meta[[contrast]]
   df <- data.frame(
@@ -234,6 +235,7 @@ pgx.plotEnrichmentDotPlot <- function(pgx, contrast,
   )
   df <- df[order(-df$fx), ]
 
+  sel <- 1:nrow(df)
   if (!is.null(filter)) {
     sel <- grep(filter, df$pathway, ignore.case = TRUE)
     df$pathway <- gsub(filter, "", df$pathway)
@@ -254,20 +256,20 @@ pgx.plotEnrichmentDotPlot <- function(pgx, contrast,
   df$pathway <- substring(df$pathway, 1, 60)
   df$pathway <- factor(df$pathway, levels = rev(unique(df$pathway)))
 
-
   ggplot2::ggplot(df, ggplot2::aes(x = fx, y = pathway)) +
     ggplot2::geom_point(ggplot2::aes(color = pval, size = size)) +
-    ggplot2::scale_size_area(max_size = 12) +
+    ggplot2::scale_size_area(max_size = ptsize) +
     ggplot2::scale_color_gradient(low = "red", high = "blue") +
-    ggplot2::labs(x = "Enrichment score", y = NULL, color = "P-value", size = "Score") +
+    ggplot2::labs(x = "Enrichment score", y = NULL, color = "p-value", size = "score") +
     ggplot2::ggtitle(main) +
     ggplot2::theme(
-      axis.title = ggplot2::element_text(size = 30),
-      axis.text = ggplot2::element_text(size = 30),
-      title = ggplot2::element_text(size = 36),
-      legend.title = ggplot2::element_text(size = 20),
-      legend.text = ggplot2::element_text(size = 14)
+      axis.title = ggplot2::element_text(size = 11),
+      axis.text = ggplot2::element_text(size = 11),
+      title = ggplot2::element_text(size = 14),
+      legend.title = ggplot2::element_text(size = 11),
+      legend.text = ggplot2::element_text(size = 8)
     )
+
 }
 
 #' @export
@@ -7132,72 +7134,49 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
     edge.cex <- 1
     edge.alpha <- 0.33
     fc <- "value"
+    xdist = 1
+    normalize.edges = FALSE
+    yheight = 2
+    edge.sign = "both"     
     edge.type <- "both"
     labpos <- NULL
     layout <- c("parallel", "hive")[1]
     normalize.edges <- FALSE
     value.name <- "rho"
     strip.prefix <- FALSE
+    prune = FALSE
   }
+  
+  vattr <- igraph::vertex_attr_names(graph)
+  edgeattr <- igraph::edge_attr_names(graph)
+  if(!"rho" %in% edgeattr) message("WARNING: no rho in edge attributes!")
+  if(!"weight" %in% edgeattr) message("WARNING: no weight in edge attributes!")
+  if(!"value" %in% vattr) stop("ERROR: no value in vertex attributes!")
+  if(!"layer" %in% vattr) stop("ERROR: no layer in vertex attributes!")
+  
+  graph <- lasagna.prune_graph(
+    graph,
+    ntop = ntop,
+    layers = layers,
+    normalize.edges = normalize.edges,
+    min.rho = min.rho,
+    edge.sign = edge.sign,
+    edge.type = edge.type,
+    filter = NULL,
+    prune = prune)
 
-  if (is.null(layers)) layers <- unique(igraph::V(graph)$layer)
-  layers <- setdiff(layers, c("SOURCE", "SINK"))
-  graph <- igraph::subgraph(graph, igraph::V(graph)$layer %in% layers)
-  if (!is.null(labpos) && length(labpos) < length(layers)) {
-    labpos <- head(rep(labpos, 99), length(layers))
-  }
+  layers <- graph$layers
+  layers <- setdiff(layers, c("SOURCE","SINK"))
 
-  if (!"value" %in% names(igraph::vertex_attr(graph))) {
-    stop("vertex must have 'value' attribute")
-  }
   fc <- igraph::V(graph)$value
   names(fc) <- igraph::V(graph)$name
-
-  ## select ntop features
-  if (!is.null(ntop) && ntop > 0) {
-    ii <- tapply(
-      1:length(fc), igraph::V(graph)$layer,
-      function(i) head(i[order(-abs(fc[i]))], ntop)
-    )
-    ii <- unlist(ii[names(ii) %in% layers])
-    fc <- fc[ii]
-    graph <- igraph::subgraph(graph, igraph::V(graph)[ii])
-  }
-
-  if (normalize.edges) {
-    for (e in unique(igraph::E(graph)$connection_type)) {
-      ii <- which(igraph::E(graph)$connection_type == e)
-      max.wt <- max(abs(igraph::E(graph)$weight[ii]), na.rm = TRUE) + 1e-3
-      igraph::E(graph)$weight[ii] <- igraph::E(graph)$weight[ii] / max.wt
-    }
-  }
-
-  if (min.rho > 0) {
-    ii <- which(abs(igraph::E(graph)$weight) < min.rho)
-    if (length(ii)) igraph::E(graph)$weight[ii] <- 0
-  }
-
-  if (edge.sign != "both") {
-    ewt <- igraph::E(graph)$weight
-    if (grepl("pos", edge.sign)) igraph::E(graph)$weight[ewt < 0] <- 0
-    if (grepl("neg", edge.sign)) igraph::E(graph)$weight[ewt > 0] <- 0
-  }
-  if (edge.type != "both") {
-    ic <- grepl("->", igraph::E(graph)$connection_type)
-    if (grepl("intra", edge.type)) igraph::E(graph)$weight[ic] <- 0
-    if (grepl("inter", edge.type)) igraph::E(graph)$weight[!ic] <- 0
-  }
-  graph <- igraph::delete_edges(graph, which(igraph::E(graph)$weight == 0))
-
-  if (prune) {
-    graph <- igraph::subgraph_from_edges(graph, igraph::E(graph))
-  }
-
+  
   ## layout
   vlayer <- igraph::V(graph)$layer
   if (layout == "parallel") {
     if (is.null(xpos)) xpos <- c(0:(length(layers) - 1))
     xpos <- xpos * xdist
+    xpos <- head(rep(xpos,10),length(layers))
     x <- xpos[match(vlayer, layers)]
     y <- fc[igraph::V(graph)$name]
     layout.xy <- cbind(x = x, y = y)
@@ -7233,16 +7212,21 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
   max.wt <- max(ewt, na.rm = TRUE) + 1e-3
   ew <- (ewt / max.wt)**2
 
-  vx <- log(1000 * igraph::page_rank(graph, weights = ewt)$vector)
-  # vx   <-  abs(y)
-  vx <- (0.1 + abs(vx) / max(abs(vx)))**1
-  vcol <- c("blue2", "red2")[1 + 1 * (fc[vv] > 0)]
+  ## vertex size relative to centrality
+  vx <- log(1000*igraph::page_rank(graph, weights=ewt)$vector)
+  vx <- (0.1+abs(vx)/max(abs(vx)))**1
+  vcol <- c("blue2","red2")[ 1+1*(fc[vv] > 0)]
 
-  ecol <- c("darkorange3", "magenta4")[1 + 1 * (igraph::E(graph)$weight >= 0)]
+  ## color edges by sign or correlation. set NA edges to grey
+  ecol <- c("darkorange3","magenta4")[ 1+1*(igraph::E(graph)$rho >= 0)]    
+  ii <- which(is.na(igraph::E(graph)$rho))
+  if(length(ii)) ecol[ii] <- "grey70"
   ecol <- adjustcolor(ecol, edge.alpha)
-  ecurv <- c(-0.25, 0)[1 + 1 * grepl("->", igraph::E(graph)$connection_type)]
-  # ecurv <- c(TRUE,FALSE)[1 + 1*grepl("->",igraph::E(graph)$connection_type)]
-
+  
+  ## add curvature for intra-edges
+  ecurv <- c(-0.25,0)[1 + 1*grepl("->",igraph::E(graph)$connection_type)]
+  #ecurv <- c(TRUE,FALSE)[1 + 1*grepl("->",igraph::E(graph)$connection_type)]
+  
   igraph::V(graph)$label <- ""
   if (is.null(xlim)) {
     xlim <- range(layout.xy[, 1])
@@ -7314,7 +7298,7 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
     labels <- mofa.strip_prefix(labels)
   }
   if (strip.prefix2) {
-    labels <- sub(".*:", "", labels)
+    labels <- sub("^[a-zA-Z]+:", "", labels)
   }
   labels <- gsub("^NA \\(", "(", labels)
   text(x, y, labels, cex = cex.label, pos = labposx, adj = 1, offset = 2.8)
@@ -7365,9 +7349,9 @@ plotHivePlot <- function(X, f, group, groups = NULL,
   gr <- igraph::graph_from_edgelist(ee, directed = FALSE)
   igraph::E(gr)$weight <- abs(R[idx])
   igraph::V(gr)$group <- group[igraph::V(gr)$name]
-
-  if (length(gr) == 0) {
-    message("[plotMultiPartiteGraph] ERROR. empty graph.")
+  
+  if(length(gr)==0) {
+    message("[plotHivePlot] ERROR. empty graph.")
     return(NULL)
   }
 

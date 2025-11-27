@@ -318,10 +318,7 @@ stats.numsig <- function(X, y, lfc = 1, q = 0.05, set.na = NULL,
   X <- X[, sel, drop = FALSE]
 
   ## Genes
-  res <- gx.limmaF(X, y, fdr = 1, lfc = 0, trend = trend, verbose = 0)
-  #  res1 <- gx.limma(X, y, fdr=1, lfc=0, trend=trend, verbose=0)
-  #  res2 <- stats.limma(X, y, ref=NULL, trend=trend)
-
+  res <- gx.limma(X, y, fdr = 1, lfc = 0, trend = trend, f.test = TRUE, verbose = 0)
   res <- res[order(res$P.Value), ]
   avx <- res[, grep("AveExpr", colnames(res))]
   ldiff <- apply(avx, 1, function(x) diff(range(x)))
