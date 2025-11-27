@@ -144,21 +144,25 @@ pgx.wgcna <- function(
   if(summary) {
     if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
     message("Annotating modules using ", ai_model)    
-    wgcna$summary <- wgcna.describeModules(
+    ai <- wgcna.describeModules(
       wgcna,
       ntop = 25,
       model = ai_model,
       annot = pgx$genes,
       experiment = pgx$description,
-      verbose = 0) 
+      verbose = 0
+    )
+    wgcna$summary <- ai$answers
+    wgcna$prompts <- ai$questions
   }
 
-  
   ## add to results object
   wgcna$clust <- clust
   wgcna$networktype <- networktype
   wgcna$tomtype <- tomtype
-
+  wgcna$annot <- pgx$genes
+  wgcna$experiment <- pgx$description
+  
   return(wgcna)
 }
 
@@ -618,7 +622,7 @@ wgcna.compute_multiomics <- function(dataX,
       if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
       message("Annotating modules using ", ai_model)    
       for(k in names(wgcna)) {
-        wgcna[[k]]$summary <- wgcna.describeModules(
+        ai <- wgcna.describeModules(
           wgcna[[k]],
           multi = FALSE,
           ntop = 25,
@@ -627,12 +631,14 @@ wgcna.compute_multiomics <- function(dataX,
           experiment = ai_experiment,
           verbose = 0
         )
+        wgcna[[k]]$summary <- ai$answers
+        wgcna[[k]]$prompts <- ai$questions
       }
     }
-
       
   }
 
+  
   return(wgcna)
 }
 
@@ -2018,11 +2024,13 @@ wgcna.runConsensusWGCNA <- function(exprList,
     if(summary) {
       if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
       message("Annotating modules using ", ai_model)    
-      res$summary <- wgcna.describeModules(
+      ai <- wgcna.describeModules(
         res, multi = TRUE, ntop = 25, model = ai_model,
         annot = annot, experiment = ai_experiment,
         verbose = 0
-      ) 
+      )
+      res$summary <- ai$answers
+      res$prompts <- ai$questions
     }
   }
   
@@ -5003,8 +5011,10 @@ wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, nt
   list( sets = topsets, genes = topgenes, pheno=toppheno )
 }
 
+#' @export
 wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE, 
                                   experiment="", verbose=1, model="gpt-5-nano",
+                                  docstyle = "detailed summary", numpar = 2,
                                   modules=NULL)  {
   if(multi) {
     top <- wgcna.getConsensusTopGenesAndSets(wgcna, annot=annot, ntop=ntop)
@@ -5013,15 +5023,17 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
   }
   
   if(is.null(modules)) modules <- names(top$genes)
+  if(is.null(experiment)) experiment <- ""
 
   modules <- intersect(modules, names(top$genes))
   modules <- intersect(modules, names(top$sets))
   ##modules <- intersect(modules, names(top$pheno))  
 
   if(length(modules)==0) return(NULL)
-
+    
   ## If no LLM is available we do just a manual summary
-  if(is.null(model) || model == "") {
+  model <- setdiff(model, c("",NA))
+  if(is.null(model) || length(model)==0 ) {
     desc <- list()
     for(m in modules) {
       ss=gg=pp=NULL
@@ -5036,36 +5048,60 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
       
       desc[[m]] <- d
     }
-    return(desc)
+
+    res <- list(
+      prompt = NULL,
+      questions = NULL,
+      answers = desc
+    )
+    return(res)
   }
   
-  prompt <- "Give a short summary of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about <EXPERIMENT>. Use maximum one paragraph. Do not use bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n"
-  if(verbose) cat(prompt)
+  prompt <- paste("Give a",docstyle,"of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about \"<EXPERIMENT>\". Use maximum",numpar,"paragraphs. Do not use any bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n")
 
+  if(verbose) cat(prompt)
+  
   desc <- list()
-  for(m in modules) {
+  questions <- list()
+  for(k in modules) {
     ss=gg=pp=""
-    ss <- paste( top$sets[[m]], collapse=';')
-    gg <- paste( top$genes[[m]], collapse=';')
-    if(m %in% names(top$pheno)) pp <- paste( top$pheno[[m]], collapse=';')
+    ss <- sub( ".*:","", top$sets[[k]] ) ## strip prefix
+    ss <- paste( ss, collapse=';')    
+    gg <- paste( top$genes[[k]], collapse=';')
+    if(k %in% names(top$pheno)) {
+      pp <- paste0("'",top$pheno[[k]],"'")
+      pp <- paste( pp, collapse=';')      
+    }
 
     q <- prompt
-    if(length(top$genes[[m]])>0) {
-      q <- paste(q, "\n\nAfter that, shortly discuss if any of these key genes might be involved in the biological function. No need to mention all genes, just a few. Here is list of key genes: <KEYGENES>")
+    if(length(top$genes[[k]])>0) {
+      q <- paste(q, "\nAfter that, shortly discuss if any of these key genes might be involved in the biological function. No need to mention all genes, just a few. Here is the list of key genes: <KEYGENES>\n")
     }
     if(verbose) cat(q)
     
-    q <- sub("<MODULE>", m, q)
+    q <- sub("<MODULE>", k, q)
     q <- sub("<PHENOTYPES>", pp, q)
     q <- sub("<EXPERIMENT>", experiment, q)
     q <- sub("<GENESETS>", ss, q)
     q <- sub("<KEYGENES>", gg, q)    
-    
-    answer <- ai.ask(q, model=model)    
-    answer <- paste0(answer, "\n\n[AI generated using ",model,"]")
-    desc[[m]] <- answer
+
+    answer <- ""
+    for(m in model) {
+      a <- ai.ask(q, model=m)    
+      a <- paste0(a, "\n\n[AI generated using ",m,"]\n")
+      if(length(model)>1) a <- paste0("\n-------------------------------\n\n",a)
+      answer <- paste0(answer, a)
+    }
+
+    desc[[k]] <- answer
+    questions[[k]] <- q
   }
 
-  return(desc)
+  res <- list(
+    prompt = prompt,
+    questions = questions,
+    answers = desc
+  )
+  return(res)
 }
 
