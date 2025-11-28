@@ -19,8 +19,8 @@
 #' @export
 imputeMissing <- function(X,
                           method = c(
-                            "LLS", "bpca", "msImpute", "SVD", "SVD2", "NMF", "RF",
-                            "knn", "QRILC", "MLE", "MinDet", "MinProb",
+                            "LLS", "bpca", "msImpute", "SVD", "SVD2", "NMF", "NMF2",
+                            "RF", "knn", "QRILC", "MLE", "MinDet", "MinProb",
                             "min", "zero", "nbavg", "rowmeans", "Perseus"
                           )[1:3],
                           rf.ntree = 100, nv = 5, keep.limits = FALSE,
@@ -97,7 +97,13 @@ imputeMissing <- function(X,
   if ("NMF" %in% method) {
     minx <- min(X, na.rm = TRUE)
     X1 <- X - minx
-    impX[["NMF"]] <- log(nmfImpute(exp(X1), k = 3)) + minx
+    impX[["NMF"]] <- log(nmfImpute(exp(X1), k = nv)) + minx
+  }
+
+  if ("NMF2" %in% method) {
+    minx <- min(X, na.rm = TRUE)
+    X1 <- X - minx
+    impX[["NMF2"]] <- log(nmfImpute2(exp(X1), k = nv)) + minx
   }
 
   if ("RF" %in% method) {
@@ -328,6 +334,27 @@ nmfImpute <- function(x, k = 5) {
     x[is.na(x)] <- xhat1[is.na(x)]
   }
   x
+}
+
+
+#' @title Impute missing values with iterative NMF
+#'
+#' @description Imputes missing values in matrix with iterative
+#'    non-negative matrix factorization
+#' 
+#' @export
+nmfImpute2 <- function(x, k=5, niter=10, init=0.05) {
+  k <- min(k, dim(x) - 1)
+  impx <- x
+  minx <- min(x,na.rm=TRUE)
+  impx[is.na(impx)] <- quantile(x[x > minx], probs=init, na.rm=TRUE)
+  i=1
+  for(i in 1:niter) {
+    m1 <- RcppML::nmf(impx, k=5)
+    wh <- m1@w %*% diag(m1@d) %*% m1@h
+    impx[ii] <- wh[ii]
+  }
+  impx
 }
 
 
