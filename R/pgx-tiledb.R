@@ -77,6 +77,10 @@ if (!dir.exists(pgx_folder)) {
       }
 
       counts <- pgx$counts
+
+      # Rename genes to human orthologs
+      counts <- rename_by2(counts, pgx$genes, new_id = "human_ortholog", keep.prefix = FALSE)
+
       genes <- rownames(counts)
       samples <- colnames(counts)
 
@@ -165,6 +169,10 @@ if (!dir.exists(pgx_folder)) {
       if (is.null(pgx$counts)) next
 
       counts <- as.matrix(pgx$counts)
+
+      # Rename genes to human orthologs
+      counts <- rename_by2(counts, pgx$genes, new_id = "human_ortholog", keep.prefix = FALSE)
+
       genes <- rownames(counts)
       samples <- colnames(counts)
       file_prefix <- tools::file_path_sans_ext(basename(pgx_file))
@@ -175,8 +183,8 @@ if (!dir.exists(pgx_folder)) {
         sample_name <- paste0(file_prefix, "::", samples[j])
         values <- counts[, j]
 
-        # Filter out zeros and NAs to keep array sparse
-        valid_idx <- which(!is.na(values) & values != 0)
+        # Filter out NAs only - keep zeros to distinguish from missing data
+        valid_idx <- which(!is.na(values))
 
         if (length(valid_idx) > 0) {
           df <- data.frame(
@@ -296,9 +304,6 @@ pgx.queryTileDB <- function(tiledb_path, genes, samples = NULL, as_matrix = TRUE
   # Open array and query
   arr <- tiledb::tiledb_array(tiledb_path, as.data.frame = TRUE)
 
-  # Build query for selected genes
-  qc <- tiledb::tiledb_query_condition_init()
-  
   # TileDB query with gene selection
   # Use selected_ranges for efficient gene-level queries
   result <- tryCatch({
@@ -319,15 +324,15 @@ pgx.queryTileDB <- function(tiledb_path, genes, samples = NULL, as_matrix = TRUE
   if (nrow(result) == 0) {
     warning("No data found for the specified genes")
     if (as_matrix) {
-      # Return empty matrix with proper dimensions
+      # Return empty matrix with proper dimensions (NA for missing data)
       if (!is.null(samples)) {
-        mat <- matrix(0, nrow = length(genes), ncol = length(samples),
+        mat <- matrix(NA_real_, nrow = length(genes), ncol = length(samples),
                       dimnames = list(genes, samples))
       } else if (!is.null(all_samples)) {
-        mat <- matrix(0, nrow = length(genes), ncol = length(all_samples),
+        mat <- matrix(NA_real_, nrow = length(genes), ncol = length(all_samples),
                       dimnames = list(genes, all_samples))
       } else {
-        mat <- matrix(0, nrow = length(genes), ncol = 0,
+        mat <- matrix(NA_real_, nrow = length(genes), ncol = 0,
                       dimnames = list(genes, character(0)))
       }
       return(mat)
@@ -350,8 +355,8 @@ pgx.queryTileDB <- function(tiledb_path, genes, samples = NULL, as_matrix = TRUE
     sample_names <- unique(result$sample)
   }
 
-  # Create matrix
-  mat <- matrix(0, nrow = length(genes), ncol = length(sample_names),
+  # Create matrix (initialize with NA for missing data, zeros are actual values)
+  mat <- matrix(NA_real_, nrow = length(genes), ncol = length(sample_names),
                 dimnames = list(genes, sample_names))
 
   # Fill matrix with values
@@ -405,6 +410,26 @@ pgx.listSamplesTileDB <- function(tiledb_path) {
 }
 
 
+#' @title List datasets in TileDB database
+#'
+#' @description Returns all unique dataset names stored in the TileDB database.
+#'
+#' @param tiledb_path Path to the TileDB database
+#'
+#' @return Character vector of dataset names (sorted alphabetically)
+#'
+#' @export
+pgx.listDatasetsTileDB <- function(tiledb_path) {
+  metadata_path <- paste0(tiledb_path, "_metadata.rds")
+  if (!file.exists(metadata_path)) {
+    stop("Metadata file not found: ", metadata_path)
+  }
+  metadata <- readRDS(metadata_path)
+  datasets <- tools::file_path_sans_ext(basename(metadata$pgx_files))
+  return(sort(datasets))
+}
+
+
 #' @title Get TileDB database info
 #'
 #' @description Returns metadata about the TileDB database.
@@ -434,5 +459,112 @@ pgx.infoTileDB <- function(tiledb_path) {
   }
 
   invisible(metadata)
+}
+
+
+#' @title Extract dataset name from TileDB sample identifiers
+#'
+#' @description Extracts the dataset/file name from sample identifiers
+#' stored in TileDB format ("dataset::sample").
+#'
+#' @param samples Character vector of sample identifiers in format "dataset::sample"
+#'
+#' @return Character vector of dataset names
+#'
+#' @examples
+#' \dontrun{
+#' samples <- c("dataset1::sampleA", "dataset1::sampleB", "dataset2::sampleC")
+#' pgx.getDatasetFromSample(samples)
+#' # Returns: c("dataset1", "dataset1", "dataset2")
+#' }
+#'
+#' @export
+pgx.getDatasetFromSample <- function(samples) {
+  sub("::.*", "", samples)
+}
+
+
+#' @title Extract short sample name from TileDB sample identifiers
+#'
+#' @description Extracts the original sample name from sample identifiers
+#' stored in TileDB format ("dataset::sample").
+#'
+#' @param samples Character vector of sample identifiers in format "dataset::sample"
+#'
+#' @return Character vector of short sample names
+#'
+#' @examples
+#' \dontrun{
+#' samples <- c("dataset1::sampleA", "dataset1::sampleB", "dataset2::sampleC")
+#' pgx.getSampleShortName(samples)
+#' # Returns: c("sampleA", "sampleB", "sampleC")
+#' }
+#'
+#' @export
+pgx.getSampleShortName <- function(samples) {
+  sub(".*::", "", samples)
+}
+
+
+#' @title Convert TileDB query result to plotting data.frame
+#'
+#' @description Converts a TileDB query result (matrix or long format) to a
+#' data.frame suitable for ggplot2 plotting, with dataset and sample columns.
+#'
+#' @param result Matrix or data.frame from pgx.queryTileDB
+#' @param gene_name Optional gene name to include in the data.frame (for matrix input)
+#'
+#' @return A data.frame with columns: sample, count, dataset, sample_short, and optionally gene
+#'
+#' @examples
+#' \dontrun{
+#' counts <- pgx.queryTileDB(tiledb_path, genes = "TP53")
+#' df <- pgx.tiledbToPlotDF(counts, gene_name = "TP53")
+#' ggplot(df, aes(x = dataset, y = count)) + geom_boxplot()
+#' }
+#'
+#' @export
+pgx.tiledbToPlotDF <- function(result, gene_name = NULL) {
+  # Handle matrix input (single or multiple genes)
+  if (is.matrix(result) || inherits(result, "Matrix")) {
+    if (nrow(result) == 1) {
+      # Single gene - convert to long format
+      df <- data.frame(
+        sample = colnames(result),
+        count = as.numeric(result[1, ]),
+        stringsAsFactors = FALSE
+      )
+      if (!is.null(gene_name)) {
+        df$gene <- gene_name
+      } else if (!is.null(rownames(result))) {
+        df$gene <- rownames(result)[1]
+      }
+    } else {
+      # Multiple genes - melt to long format
+      df <- data.frame(
+        gene = rep(rownames(result), ncol(result)),
+        sample = rep(colnames(result), each = nrow(result)),
+        count = as.numeric(result),
+        stringsAsFactors = FALSE
+      )
+    }
+  } else if (is.data.frame(result)) {
+    # Already in long format from pgx.queryTileDB(..., as_matrix = FALSE)
+    df <- result
+    if (!"sample" %in% colnames(df)) {
+      stop("Data frame must have 'sample' column")
+    }
+    if (!"count" %in% colnames(df)) {
+      stop("Data frame must have 'count' column")
+    }
+  } else {
+    stop("Input must be a matrix or data.frame")
+  }
+  
+  # Add dataset and short sample name columns
+  df$dataset <- pgx.getDatasetFromSample(df$sample)
+  df$sample_short <- pgx.getSampleShortName(df$sample)
+  
+  return(df)
 }
 
