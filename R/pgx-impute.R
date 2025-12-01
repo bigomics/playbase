@@ -345,10 +345,19 @@ nmfImpute <- function(x, k = 5) {
 #' @export
 nmfImpute2 <- function(x, k=5, niter=10, init=0.05) {
   k <- min(k, dim(x) - 1)
-  impx <- x
-  minx <- min(x,na.rm=TRUE)
-  ii <- which(is.na(impx), arr.ind=TRUE)
-  impx[ii] <- quantile(x[x > minx], probs=init, na.rm=TRUE)
+  ii <- which(is.na(x), arr.ind=TRUE)
+  impx <- NULL
+  if(is.numeric(init) && length(init)==1) {
+    impx <- x
+    minx <- min(x,na.rm=TRUE)  
+    impx[ii] <- quantile(x[x > minx], probs=init, na.rm=TRUE)
+  } else if(is.character(init) && length(init)==1) {
+    impx <- imputeMissing(x, method=init, nv = k)
+  } else if(is.matrix(init) && all(dim(init)==dim(x))) {
+    impx <- init
+  } 
+  if(is.null(impx)) stop("[nmfImpute2] invalid init:", init)
+  
   i=1
   for(i in 1:niter) {
     m1 <- RcppML::nmf(impx, k=k, verbose=FALSE)
