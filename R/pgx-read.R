@@ -502,6 +502,55 @@ read_Olink_samples <- function(NPX_data) {
 }
 
 
+#' Read scRNA-seq counts matrix in h5 format.
+#' Automatically 'infer' counts;features;cells from the h5 file structure.
+#' Attempts multiple ways.
+#' @export
+read_h5_counts <- function(h5.file) {
+
+  message("[playbase::read_h5_counts] Reading h5 file: ", h5.file)
+  df <- NULL
+  
+  FF <- tryCatch( { rhdf5::h5ls(h5.file) }, error = function(w) { NULL } )
+
+  if (!is.null(FF) && all(c("group","name") %in% colnames(FF))) {
+
+    h5.ems <- paste0(FF[,"group"], "/", FF[,"name"])
+    LL <- lapply(h5.ems, function(ems) rhdf5::h5read(file = h5.file, name = ems))
+
+    dims <- unlist(lapply(LL, function(x) length(dim(x))))
+    ll <- lapply(LL, length)
+    
+    if (any(dims == 2)) df <-  LL[[which(dims == 2)[1]]]
+
+    if (!is.null(df)) {
+      if (is.null(rownames(df)) && any(ll == nrow(df))) {
+        rownames(df) <- as.character(LL[[which(ll == nrow(df))[1]]])
+      }
+      if (is.null(colnames(df)) && any(ll == ncol(df))) {
+        colnames(df) <- as.character(LL[[which(ll == ncol(df))[1]]])
+      }
+    }
+  }
+
+  if (is.null(df))
+    df <- tryCatch({ Seurat::Read10X_h5(h5.file) }, error = function(w) { NULL } )
+
+  if (is.null(df))
+    df <- tryCatch( { playbase::h5.readMatrix(h5.file) }, error = function(w) { NULL } )
+
+  if (!is.null(df) & all(class(df) %in% c("matrix", "array"))) {
+    message("[playbase::read_h5_counts] success!")
+  } else {
+    message("[playbase::read_h5_counts] df is null!")
+  }
+
+  return(df)
+
+}
+
+
+
 #' Read gene/probe annotation file
 #'
 #' @export
