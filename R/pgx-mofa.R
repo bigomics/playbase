@@ -3068,7 +3068,7 @@ lasagna.prune_graph <- function(graph, ntop = 100, layers = NULL,
     v1 <- igraph::as_edgelist(graph)[,1]
     esign <- layersign[ igraph::V(graph)[v1]$layer ]
     vsign <- sign(igraph::V(graph)[v1]$value)
-    igraph::E(graph)$weight <- ewt * (sign(ewt) == esign & vsign == esign)
+    igraph::E(graph)$weight <- ewt * (sign(ewt) == esign)
   }
 
   ## delete intra or inter edges
