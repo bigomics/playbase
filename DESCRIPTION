@@ -179,4 +179,4 @@ Remotes:
     rliger=url::https://github.com/welch-lab/liger/archive/refs/tags/v2.1.0.zip,
     rms=url::https://cran.r-project.org/src/contrib/Archive/rms/rms_6.8-0.tar.gz,
     RaMP=url::https://github.com/ncats/RaMP-DB/archive/refs/tags/v3.0.2.zip,
-    DeconRNASeq=url::https://code.bioconductor.org/browse/DeconRNASeq/tarball/RELEASE_3_18
+    DeconRNASeq=url::https://www.bioconductor.org/packages/release/bioc/bin/windows/contrib/4.5/DeconRNASeq_1.51.0.zip
