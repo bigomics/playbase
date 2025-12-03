@@ -203,6 +203,56 @@ imputeMissing <- function(X,
   metaX
 }
 
+#' @title Impute missing values separately for each omics type in multi-omics data.
+#' @description Generic function to impute missing (NA) value. Input is a matrix.
+#' @description It uses the imputeMissing function.
+#' @param X A multiomics matrix containing the input data.
+#' @return Imputed multi-omics matrix
+#' @export
+imputeMissing.mox <- function(X,
+                              method = c("LLS", "bpca", "msImpute", "SVD", "SVD2",
+                                "NMF", "RF", "knn", "QRILC", "MLE", "MinDet", "MinProb",
+                                "min", "zero", "nbavg", "rowmeans", "Perseus")[1:3],
+                              rf.ntree = 100,
+                              nv = 5,
+                              keep.limits = FALSE,
+                              infinite.na = TRUE,
+                              plot = FALSE) {
+
+
+  impX <- NULL
+  is.mox <- playbase::is.multiomics(rownames(X))
+  
+  if (is.mox) {
+
+    II <- list()
+    dtypes <- unique(sub(":.*", "", rownames(X)))
+
+    for (i in 1:length(dtypes)) {
+      ii <- grep(paste0("^", dtypes[i], ":"), rownames(X))              
+      message("[playbase::imputeMissing.mox]: Multi-omics data. Imputing ", dtypes[i])
+      message("[playbase::imputeMissing.mox]: ", length(ii), " features..\n") 
+      II[[dtypes[i]]] <- playbase::imputeMissing(X = X[ii, ], method = method,
+        rf.ntree = rf.ntree, nv = nv, keep.limits = keep.limits,
+        infinite.na = infinite.na, plot = plot)
+    }
+
+    impX <- do.call(rbind, II)
+    rm(II); gc()
+    
+  } else {
+
+    impX <- playbase::imputeMissing(X = X, method = method,
+      rf.ntree = rf.ntree, nv = nv, keep.limits = keep.limits,
+      infinite.na = infinite.na, plot = plot)
+
+  }
+
+  return(impX)
+
+}
+
+
 #' @export
 svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
                        maxSteps = 100, fill.empty = "median",
