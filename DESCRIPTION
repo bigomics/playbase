@@ -44,6 +44,7 @@ Imports:
     dplyr,
     DT,
     edgeR,
+    ellmer,
     fastcluster,
     fgsea,
     FNN,
