@@ -19,8 +19,8 @@
 #' @export
 imputeMissing <- function(X,
                           method = c(
-                            "LLS", "bpca", "msImpute", "SVD", "SVD2", "NMF", "RF",
-                            "knn", "QRILC", "MLE", "MinDet", "MinProb",
+                            "LLS", "bpca", "msImpute", "SVD", "SVD2", "NMF", "NMF2",
+                            "RF", "knn", "QRILC", "MLE", "MinDet", "MinProb",
                             "min", "zero", "nbavg", "rowmeans", "Perseus"
                           )[1:3],
                           rf.ntree = 100, nv = 5, keep.limits = FALSE,
@@ -97,7 +97,13 @@ imputeMissing <- function(X,
   if ("NMF" %in% method) {
     minx <- min(X, na.rm = TRUE)
     X1 <- X - minx
-    impX[["NMF"]] <- log(nmfImpute(exp(X1), k = 3)) + minx
+    impX[["NMF"]] <- log(nmfImpute(exp(X1), k = nv)) + minx
+  }
+
+  if ("NMF2" %in% method) {
+    minx <- min(X, na.rm = TRUE)
+    X1 <- X - minx
+    impX[["NMF2"]] <- log(nmfImpute2(exp(X1), k = nv)) + minx
   }
 
   if ("RF" %in% method) {
@@ -328,6 +334,43 @@ nmfImpute <- function(x, k = 5) {
     x[is.na(x)] <- xhat1[is.na(x)]
   }
   x
+}
+
+
+#' @title Impute missing values with iterative NMF
+#'
+#' @description Imputes missing values in matrix with iterative
+#'    non-negative matrix factorization
+#' 
+#' @export
+nmfImpute2 <- function(x, k=5, niter=10, init=0.05) {
+  k <- min(k, dim(x) - 1)
+  ii <- which(is.na(x), arr.ind=TRUE)
+  impx <- NULL
+  if(is.numeric(init) && length(init)==1) {
+    impx <- x
+    minx <- min(x,na.rm=TRUE)  
+    impx[ii] <- quantile(x[x > minx], probs=init, na.rm=TRUE)
+  } else if(is.character(init) && length(init)==1) {
+    impx <- imputeMissing(x, method=init, nv = k)
+  } else if(is.matrix(init) && all(dim(init)==dim(x))) {
+    impx <- init
+  } 
+  if(is.null(impx)) stop("[nmfImpute2] invalid init:", init)
+  
+  i=1
+  for(i in 1:niter) {
+    m1 <- RcppML::nmf(impx, k=k, verbose=FALSE)
+    if(all(c("w","d","h") %in% names(m1))) {
+      wh <- m1$w %*% diag(m1$d) %*% m1$h
+    } else if(all(c("w","d","h") %in% slotNames(m1))) {
+      wh <- m1@w %*% diag(m1@d) %*% m1@h
+    } else {
+      stop("[nmfImpute2] Fatal error in RcppML::nmf")
+    }
+    impx[ii] <- wh[ii]
+  }
+  impx
 }
 
 

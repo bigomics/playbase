@@ -2127,7 +2127,7 @@ wgcna.createConsensusLayers <- function(exprList,
   multiExpr = WGCNA::list2multiData(lapply(exprList, Matrix::t))
 
   ## determine power vector
-  if(is.null(power) || is.na(power) ) power <- "sft"
+  if(is.null(power) || all(is.na(power)) ) power <- "sft"
   if(as.character(power[1]) %in% c("sft","iqr")) {
     ## Estimate best power
     power <- power[1]

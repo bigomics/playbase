@@ -7,6 +7,7 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
                              factorizations = TRUE,
                              compute.enrichment = TRUE,
                              compute.lasagna = TRUE) {
+
   has.prefix <- (mean(grepl(":", rownames(pgx$X))) > 0.8)
   is.multiomics <- (pgx$datatype == "multi-omics" && has.prefix)
 
@@ -383,10 +384,7 @@ mofa.compute <- function(xdata,
   colnames(V) <- colnames(W)
 
   ## Covariate x Factor correlation
-  Y <- samples
-  Y$sample <- NULL
-  Y$group <- NULL
-  Y <- expandPhenoMatrix(Y, drop.ref = FALSE)
+  Y <- expandPhenoMatrix(samples, drop.ref = FALSE, keep.numeric=TRUE)
   Y <- as.matrix(Y)
   Z <- cor(Y, F, use = "pairwise")
   Z[is.na(Z)] <- 0
@@ -3068,7 +3066,7 @@ lasagna.prune_graph <- function(graph, ntop = 100, layers = NULL,
     v1 <- igraph::as_edgelist(graph)[,1]
     esign <- layersign[ igraph::V(graph)[v1]$layer ]
     vsign <- sign(igraph::V(graph)[v1]$value)
-    igraph::E(graph)$weight <- ewt * (sign(ewt) == esign & vsign == esign)
+    igraph::E(graph)$weight <- ewt * (sign(ewt) == esign)
   }
 
   ## delete intra or inter edges

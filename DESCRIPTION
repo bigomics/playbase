@@ -44,6 +44,7 @@ Imports:
     dplyr,
     DT,
     edgeR,
+    ellmer,
     fastcluster,
     fgsea,
     FNN,
@@ -176,4 +177,6 @@ Remotes:
     RefMet=url::https://github.com/metabolomicsworkbench/RefMet/archive/refs/tags/v2.zip,
     grimon=github::https://github.com/mkanai/grimon,
     rliger=url::https://github.com/welch-lab/liger/archive/refs/tags/v2.1.0.zip,
-    rms=url::https://cran.r-project.org/src/contrib/Archive/rms/rms_6.8-0.tar.gz
+    rms=url::https://cran.r-project.org/src/contrib/Archive/rms/rms_6.8-0.tar.gz,
+    RaMP=url::https://github.com/ncats/RaMP-DB/archive/refs/tags/v3.0.2.zip,
+    DeconRNASeq=url::https://bioconductor.org/packages/3.18/bioc/src/contrib/DeconRNASeq_1.44.0.tar.gz
