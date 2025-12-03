@@ -80,7 +80,14 @@ compute_testGenesets <- function(pgx,
   gc()
 
   X1 <- X;
-  if (any(is.na(X))) X1 <- playbase::imputeMissing(X, method = "SVD2")
+  is.mox <- playbase::is.multiomics(rownames(X))
+  if (any(is.na(X))) {
+    if (is.mox) {
+      X1 <- imputeMissing.mox(X, method = "SVD2")
+    } else {
+      X1 <- imputeMissing(X, method = "SVD2")
+    }
+  }
 
   gset.meta <- gset.fitContrastsWithAllMethods(
     gmt = gmt,
