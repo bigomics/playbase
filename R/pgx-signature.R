@@ -173,8 +173,8 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   ## --------------------------------------------------
   fc.up <- fc[fc > 0]
   fc.dn <- fc[fc < 0]
-  top.up <- head(names(sort(-fc.up)), 3 * nsig) ## RETHINK!
-  top.dn <- head(names(sort(+fc.dn)), 3 * nsig)
+  top.up <- head(names(sort(-fc.up)), nsig)
+  top.dn <- head(names(sort(+fc.dn)), nsig)
   top.fc <- unique(c(top.up, top.dn))
   bg <- intersect(names(fc), rn)
   system.time({
