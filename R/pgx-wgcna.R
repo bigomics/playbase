@@ -5013,7 +5013,7 @@ wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, nt
 
 #' @export
 wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE, 
-                                  experiment="", verbose=1, model="gpt-5-nano",
+                                  experiment="", verbose=1, model=DEFAULT_LLM,
                                   docstyle = "detailed summary", numpar = 2,
                                   modules=NULL)  {
   if(multi) {
