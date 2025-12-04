@@ -13,26 +13,48 @@ if(!require("remotes")) install.packages("remotes")
 if(!require("devtools")) install.packages("devtools")
 
 source("dev/functions.R")
-pkg <- scan_packages(path='R') 
+pkg <- scan_packages(path=c('R'))
 
-if(file.exists("DESCRIPTION")) {
-  hash <- substring(tempfile(),nchar(tempfile())-3, nchar(tempfile()))
-  file.copy("DESCRIPTION",paste0("DESCRIPTION.save.",hash))
-  message("WARNING: overwriting existing DESCRIPTION file.")
-}
-
-pkg.remotes <- pkg$remotes
-pkg.imports <- pkg$imports
-
-desc.header <- readLines("dev/DESCRIPTION.header")
 desc.file <- "DESCRIPTION"
 
-write(desc.header, file=desc.file)
+if(!file.exists(desc.file)) {
+    stop("DESCRIPTION file not found. Please create one first.")
+}
 
-write("Imports:", file=desc.file, append=TRUE)
-write(paste0("    ",sort(pkg.imports),","), file=desc.file, append=TRUE)
+desc.lines <- readLines(desc.file)
 
-write("Remotes:", file=desc.file, append=TRUE)
-write(paste0("    ",sort(pkg.remotes),","), file=desc.file, append=TRUE)
+imports.start <- grep("^Imports:", desc.lines)
+if(length(imports.start) == 0) {
+    remotes.line <- grep("^Remotes:", desc.lines)
+    if(length(remotes.line) > 0) {
+        imports.start <- remotes.line[1]
+        imports.end <- imports.start - 1
+    } else {
+        imports.start <- length(desc.lines) + 1
+        imports.end <- imports.start - 1
+    }
+} else {
+    imports.start <- imports.start[1]
+    subsequent.fields <- grep("^[A-Za-z]", desc.lines[(imports.start+1):length(desc.lines)])
+    if(length(subsequent.fields) > 0) {
+        imports.end <- imports.start + subsequent.fields[1] - 1
+    } else {
+        imports.end <- length(desc.lines)
+    }
+}
 
+new.desc <- c()
+if(imports.start > 1) {
+    new.desc <- desc.lines[1:(imports.start-1)]
+}
 
+pkg.imports <- sort(pkg$imports)
+new.desc <- c(new.desc, "Imports:")
+new.desc <- c(new.desc, paste0("    ", pkg.imports, ","))
+
+if(imports.end < length(desc.lines)) {
+    new.desc <- c(new.desc, desc.lines[(imports.end+1):length(desc.lines)])
+}
+
+writeLines(new.desc, desc.file)
+message("DESCRIPTION file updated with ", length(pkg.imports), " imports.")
