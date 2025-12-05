@@ -1892,7 +1892,7 @@ heatmap.3 <- function(x,
   }
   if (!missing(cellnote)) {
     graphics::text(
-      x = c(row(cellnote)), y = c(col(cellnote)), labels = c(cellnote),
+      x = c(base::row(cellnote)), y = c(base::col(cellnote)), labels = c(cellnote),
       col = notecol, cex = notecex
     )
   }
