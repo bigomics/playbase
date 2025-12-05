@@ -102,7 +102,7 @@ gx.limma <- function(X,
   pheno.ref <- c()
   ref.detected <- FALSE
   ref <- toupper(ref)
-  is.ref <- which(toupper(pheno0) %in% toupper(ref))
+  is.ref <- (toupper(pheno0) %in% toupper(ref))
   is.ref2 <- grepl(paste(paste0("^", ref), collapse = "|"), pheno0, ignore.case = TRUE)
   if (!any(is.ref) && !all(is.ref2)) is.ref <- is.ref2
   ref.detected <- (sum(is.ref) > 0 && sum(!is.ref) > 0)
