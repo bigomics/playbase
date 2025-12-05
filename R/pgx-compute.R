@@ -543,7 +543,12 @@ pgx.createPGX <- function(counts,
       xlist <- playbase::runBatchCorrectionMethods(X, batch, pheno, methods = mm, ntop = Inf)
       cX <- xlist[[mm]]
     } else {
-      impX <- playbase::imputeMissing(X, method = "SVD2")
+      is.mox <- is.multiomics(rownames(X))
+      if (is.mox) {
+        impX <- imputeMissing.mox(X, method = "SVD2")
+      } else {
+        impX <- imputeMissing(X, method = "SVD2")
+      }
       xlist <- playbase::runBatchCorrectionMethods(impX, batch, pheno, methods = mm, ntop = Inf)
       cX <- xlist[[mm]]
       jj <- which(is.na(X), arr.ind = TRUE)
@@ -872,7 +877,12 @@ counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
 counts.imputeMissing <- function(counts, method = "SVD2") {
   epsx <- min(counts[counts > 0], na.rm = TRUE)
   X <- log2(epsx + counts)
-  impX <- imputeMissing(X, method = method)
+  is.mox <- is.multiomics(rownames(X))
+  if (is.mox) {
+    impX <- imputeMissing.mox(X, method = method)
+  } else {
+    impX <- imputeMissing(X, method = method)
+  }
   pmax(2**impX - epsx, 0)
 }
 

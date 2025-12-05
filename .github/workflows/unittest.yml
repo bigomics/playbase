@@ -48,7 +48,7 @@ jobs:
       - name: Install R dependencies
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::devtools, any::testthat
+          extra-packages: any::devtools, any::testthat, github::bigomics/playdata
 
       - name: Run tests
         run: |
