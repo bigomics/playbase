@@ -1770,7 +1770,7 @@ heatmap.3 <- function(x,
       Matrix::image(rbind(1:nr), col = RowSideColors[rowInd], axes = FALSE)
     } else {
       graphics::par(mar = c(margins[1], 0, 0, 0.5))
-      rsc <- t(RowSideColors[, rowInd, drop = F])
+      rsc <- t(RowSideColors[, rowInd, drop = FALSE])
       rsc.colors <- matrix()
       rsc.names <- names(table(rsc))
       rsc.i <- 1
@@ -1793,7 +1793,7 @@ heatmap.3 <- function(x,
       Matrix::image(cbind(1:nc), col = ColSideColors[colInd], axes = FALSE)
     } else {
       graphics::par(mar = c(0.5, 0, 0, margins[2]))
-      csc <- ColSideColors[colInd, , drop = F]
+      csc <- ColSideColors[colInd, , drop = FALSE]
       csc.colors <- matrix()
       csc.names <- names(table(csc))
       csc.i <- 1
