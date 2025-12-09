@@ -15,6 +15,22 @@ scan_packages <- function(path='R') {
   renv.out <- renv::dependencies(path = path, root = getwd(), errors = "ignored")
   pkg.used <- sort(unique(renv.out$Package))
 
+  ## scan roxygen2 @import and @importFrom directives (renv misses these)
+  r.files <- list.files(path, pattern = "\\.[rR]$", full.names = TRUE, recursive = TRUE)
+  roxygen.pkgs <- c()
+  for(f in r.files) {
+    lines <- readLines(f, warn = FALSE)
+    importfrom.lines <- grep("^#'\\s*@importFrom\\s", lines, value = TRUE)
+    pkgs <- gsub("^#'\\s*@importFrom\\s+(\\S+).*", "\\1", importfrom.lines)
+    roxygen.pkgs <- c(roxygen.pkgs, pkgs)
+    import.lines <- grep("^#'\\s*@import\\s", lines, value = TRUE)
+    import.lines <- grep("@importFrom", import.lines, value = TRUE, invert = TRUE)
+    pkgs <- gsub("^#'\\s*@import\\s+", "", import.lines)
+    pkgs <- unlist(strsplit(pkgs, "\\s+"))
+    roxygen.pkgs <- c(roxygen.pkgs, pkgs)
+  }
+  pkg.used <- unique(c(pkg.used, roxygen.pkgs))
+
   ## manually add some missing packages
   pkg.used <- c(pkg.used, c("sf"))
   pkg.used <- setdiff(pkg.used, "playbase")

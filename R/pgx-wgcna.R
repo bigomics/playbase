@@ -531,7 +531,7 @@ wgcna.compute_multiomics <- function(dataX,
   wgcna <- list()
   has.gxpx <- all(c("gx","px") %in% names(dataX))
   if (do.consensus && has.gxpx) {
-    cat("[wgcna.compute_multiomics] computing consensus WGCNA for GX+PX --------\n")
+    cat("[wgcna.compute_multiomics] computing WGCNA consensus layers for GX+PX \n")
     nn <- mean(rownames(dataX[['gx']]) %in% rownames(dataX[['px']]))
     if (nn < 0.10) {
       message("[wgcna.compute_multiomics] ERROR: gx and px features do not overlap")
@@ -625,7 +625,6 @@ wgcna.compute_multiomics <- function(dataX,
       for(k in names(wgcna)) {
         ai <- wgcna.describeModules(
           wgcna[[k]],
-          multi = FALSE,
           ntop = 25,
           model = ai_model,
           annot = annot,
@@ -1335,7 +1334,6 @@ wgcna.computeModuleEnrichment <- function(wgcna,
     message("ERROR: datasets must have gx or px datatype!")
     return(NULL)
   }
-
   
   ## collapse features to symbol
   selx <- intersect(c("gx","px"), names(wgcna))[1]
@@ -1366,6 +1364,7 @@ wgcna.computeModuleEnrichment <- function(wgcna,
   }
 
   if(is.null(gsetX)) {
+    message("[wgcna.computeModuleEnrichment] computing gsetX using PLAID")
     gsetX <- plaid::plaid( geneX, GMT)
   }
 
@@ -2132,7 +2131,7 @@ wgcna.createConsensusLayers <- function(exprList,
   multiExpr = WGCNA::list2multiData(lapply(exprList, Matrix::t))
 
   ## determine power vector
-  if(is.null(power) || all(is.na(power)) ) power <- "sft"
+  if(is.null(power) || any(is.na(power)) ) power <- "sft"
   if(as.character(power[1]) %in% c("sft","iqr")) {
     ## Estimate best power
     power <- power[1]
@@ -3165,7 +3164,8 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=1,
     net <- wgcna
   }
   dendro <- net$dendrograms
-  
+
+  ## check is consensus object
   if("layers" %in% names(wgcna) && use.tree>0) {
     dendro <- wgcna$layers[[use.tree]]$net$dendrograms
   }
@@ -3187,7 +3187,8 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=1,
     ii <- which(net$goodGenes==TRUE)
     gg <- names(net$color)[ii]
   }
-  colors <- colors[gg,,drop=FALSE]
+  ##colors <- colors[gg,,drop=FALSE]
+  colors <- colors[match(gg,rownames(colors)),,drop=FALSE]
   if(!is.null(extra.colors)) {
     jj <- match(gg, rownames(extra.colors))
     colors <- cbind(colors, 0, extra.colors[jj,])
@@ -3263,6 +3264,52 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=1,
     ...
   )
 }
+
+
+#'
+#'
+#' @export
+wgcna.plotMultiDendroAndColors <- function(multi_wgcna,
+                                           block=1,
+                                           extra.colors=NULL,
+                                           show.kme = FALSE,
+                                           show.traits = FALSE,
+                                           use.tree = 0,
+                                           rm.na = TRUE,
+                                           main = NULL,
+                                           colorHeight = 0.5,
+                                           marAll = c(0.4,5,1,0.2)
+                                           )
+{
+
+  nw <- length(multi_wgcna)
+  nc <- ceiling(sqrt(nw))
+  nr <- nw / nc  
+  hh <- rep(c((1-colorHeight), colorHeight),nr)
+  hh
+  nf <- layout(matrix(1:(2*nr*nc), nrow=2*nr, ncol=nc, byrow=FALSE),
+    heights = hh )
+  ##layout.show(nf)
+
+  if(is.null(main))
+    main <- names(multi_wgcna)
+  
+  for(k in 1:nw) {
+    par(cex=1.3)
+    wgcna.plotDendroAndColors(
+      multi_wgcna[[k]],
+      marAll = marAll,
+      show.traits = show.traits,
+      show.kme = show.kme,
+      use.tree = use.tree,
+      setLayout = FALSE,
+      main = main[k]
+    )
+  }
+  
+}
+
+
 
 #'
 #'
@@ -4933,90 +4980,96 @@ wgcna.scaleTOMs <- function(TOMs, scaleP=0.95) {
 }
 
 #' @export
-wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=25,
-                                     multi = FALSE) {
 
-  if(!multi) {
-    if(!"stats" %in% names(wgcna)) stop("object has no stats")
-    if(!"gsea" %in% names(wgcna)) stop("object has no enrichment results (gsea)")    
-    
-    if("layers" %in% names(wgcna) && class(wgcna$datExpr) == "list") {
-      cons <- wgcna.getConsensusTopGenesAndSets(wgcna, annot=annot,
-        module=module,  ntop=ntop) 
-      return(cons)
-    }
+wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
+                                     level = "gene") {
+
+  ## If consensus results, call consensus routine
+  if("layers" %in% names(wgcna) && class(wgcna$datExpr) == "list") {
+    cons <- wgcna.getConsensusTopGenesAndSets(wgcna, annot=annot, module=module,
+      ntop=ntop, level=level) 
+    return(cons)
   }
-
-  if(!multi) {
-    multiwgcna <- list(tmp = wgcna)
-  } else {
-    multiwgcna <- wgcna
-  }
-
-  browser()
+  if(!"stats" %in% names(wgcna)) stop("object has no stats")
+  #if(!"gsea" %in% names(wgcna)) warning("object has no enrichment results (gsea)")    
   
-  ##-----------------------------------------------
+
   ## get top genes (highest kME)
-  ##-----------------------------------------------
-  topgenes <- list()
-  for(w in multiwgcna) {
-    mm <- w$stats$moduleMembership  
-    if(!is.null(annot)) mm <- rename_by2(mm, annot)
-    gg <- rownames(mm)
-    mm <- as.list(data.frame(mm))
-    if(!is.null(module)) {
-      mm <- mm[intersect(module,names(mm))]
-    }
-    sel.topgenes <- lapply(mm, function(x) head(order(-x),2*ntop) )
-    wtop <- lapply( sel.topgenes, function(i) gg[i])
-    topgenes <- c(topgenes, wtop)
-  }
-  
-  ##-----------------------------------------------
+  mm <- wgcna$stats$moduleMembership  
+  ##mm <- cor( wgcna$datExpr, wgcna$net$MEs )
+  if(!is.null(annot)) mm <- rename_by2(mm, annot)
+  gg <- rownames(mm)
+  mm <- as.list(data.frame(mm))
+  if(!is.null(module)) mm <- mm[which(names(mm) %in% module)]
+  sel.topgenes <- lapply(mm, function(x) head(order(-x),ntop) )
+  topgenes <- lapply( sel.topgenes, function(i) gg[i])
+
   ## top genesets
-  ##-----------------------------------------------
-  topsets <- list()
-  topmembers <- list()  
-  for(w in multiwgcna) {
-    ee <- w$gsea
-    if(is.null(ee)) next
-    if(!is.null(module)) {
-      ee <- ee[intersect(module,names(ee))]
-    }
-    wsets <- lapply(ee,function(x) head(rownames(x),ntop))
-    wmembers <- lapply(ee, function(x) {
+  topsets <- NULL
+  topmembers <- NULL
+  if("gsea" %in% names(wgcna)) {
+    ee <- wgcna$gsea
+    if(!is.null(module)) ee <- ee[which(names(ee) %in% module)]  
+    topsets <- lapply(ee,function(x) head(rownames(x),ntop))
+    topmembers <- lapply(ee, function(x) {
       names(head(sort(-table(unlist(strsplit(x$genes,split="\\|")))),2*ntop))
     })
-    topsets <- c(topsets, wsets)
-    topmembers <- c(topmembers, wmembers)    
   }
+
+  ## top correlated phenotypes
+  M <- wgcna$modTraits
+  toppheno <- apply(M, 1, function(x) names(which(x > 0.8*max(x))))
   
-  ##-----------------------------------------------
-  ## top phenotypes
-  ##-----------------------------------------------
-  toppheno <- list()
-  for(w in multiwgcna) {  
-    M <- w$modTraits
-    if(!is.null(module)) {
-      M <- M[intersect(module,rownames(M)),,drop=FALSE]
-    }
-    wtop <- apply(M, 1, function(x) names(which(x > 0.8*max(x))))
-    toppheno <- c(toppheno, wtop)
+  if(level=="geneset") {
+    topsets <- topgenes
+    topgenes <- NULL
   }
-  
-  ## take intersection (high MM, high set membership)
-  topgenes <- mapply(intersect, topmembers, topgenes, SIMPLIFY=FALSE)
-  topgenes <- lapply(topgenes, head, ntop)
   
   list( sets = topsets, genes = topgenes, pheno = toppheno )
 
 }
 
 #' @export
-wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=20) {
+wgcna.getMultiTopGenesAndSets <- function(multi_wgcna, annot=NULL, module=NULL,
+                                          ntop=40, level = "gene") {
 
+  toplist <- list()
+  k=names(multi_wgcna)[1]
+  for(k in names(multi_wgcna)) {
+    topk <- wgcna.getTopGenesAndSets(multi_wgcna[[k]],
+      module=module, annot=annot, ntop=ntop, level=level)
+    if(!is.null(module)) {
+      topk <- lapply( topk, function(s) s[which(names(s) %in% module)] )
+    }
+    toplist[[k]] <- topk
+  }
+
+  top <- list()
+  
+  top$genes <- lapply(toplist, function(t) t[['genes']])
+  names(top$genes) <- NULL
+  top$genes <- unlist(top$genes, recursive=FALSE)
+  names(top$genes)
+  
+  top$sets <- lapply(toplist, function(t) t[['sets']])
+  names(top$sets) <- NULL
+  top$sets <- unlist(top$sets, recursive=FALSE)
+  names(top$sets)
+  
+  top$pheno <- lapply(toplist, function(t) t[['pheno']])
+  names(top$pheno) <- NULL
+  top$pheno <- unlist(top$pheno, recursive=FALSE)
+  names(top$pheno)
+
+  return(top)
+}
+
+
+#' @export
+wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
+                                              level=c("gene","geneset")[1]) {
   if(!"stats" %in% names(wgcna)) stop("object has no stats")
-  if(!"gsea" %in% names(wgcna)) stop("object has no enrichment results (gsea)")    
+  ## if(!"gsea" %in% names(wgcna)) stop("object has no enrichment results (gsea)")    
   
   ## get top genes (highest kME)
   topgenesx <- list()
@@ -5029,6 +5082,8 @@ wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, nt
     sel.topgenes <- lapply(mm, function(x) head(order(-x), 3*ntop) )
     topgenesx[[i]] <- lapply(sel.topgenes, function(i) gg[i])
   }
+
+  ## intersect topgenes across all datatypes
   topgenes <- topgenesx[[1]]
   k=2
   for(k in 2:length(topgenesx)) {
@@ -5036,24 +5091,39 @@ wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, nt
   }
   
   ## top genesets (as symbol!)
-  ee <- wgcna$gsea
-  if(!is.null(module)) ee <- ee[module]  
-  topsets <- lapply(ee,function(x) head(rownames(x),ntop))
-  topmembers <- lapply(ee, function(x) {
-    names(head(sort(-table(unlist(strsplit(x$genes,split="\\|")))),3*ntop))
-  })
-
+  topsets <- NULL
+  topmembers <- NULL
+  if("gsea" %in% names(wgcna)) {  
+    ee <- wgcna$gsea
+    ee <- ee[match(names(topgenes),names(ee))]
+    if(!is.null(module)) ee <- ee[module]  
+    topsets <- lapply(ee,function(x) head(rownames(x),ntop))
+    topmembers <- lapply(ee, function(x) {
+      if(is.null(x)) return(c())
+      names(head(sort(-table(unlist(strsplit(x$genes,split="\\|")))),3*ntop))
+    })
+  }
+  
   ## module traits
   M <- lapply(wgcna$net$multiMEs, function(x) as.matrix(x$data))
   Y <- lapply(M, function(m) wgcna$datTraits[rownames(m),])
   R <- mapply( function(x,y) abs(cor(x,y,use="pairwise")), M, Y, SIMPLIFY=FALSE)
   R <- Reduce('+', R)
-  toppheno <- apply(R, 1, function(x) names(which(x > 0.9*max(x,na.rm=TRUE))))
+  toppheno <- apply(R, 1, function(x) names(which(x > 0.9*max(x,na.rm=TRUE))),
+    simplify = FALSE)
   toppheno
   
   ## take intersection (high MM, high set membership)
-  topgenes <- mapply(intersect, topmembers, topgenes, SIMPLIFY=FALSE)
+  if(!is.null(topmembers)) {
+    topmembers <- topmembers[match(names(topgenes),names(topmembers))]
+    topgenes <- mapply(intersect, topmembers, topgenes, SIMPLIFY=FALSE)
+  }
   topgenes <- lapply(topgenes, head, ntop)
+
+  if(level=="geneset") {
+    topsets <- topgenes
+    topgenes <- NULL
+  }
   
   list( sets = topsets, genes = topgenes, pheno=toppheno )
 }
@@ -5064,7 +5134,13 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
                                   docstyle = "detailed summary", numpar = 2,
                                   modules=NULL)  {
 
-  top <- wgcna.getTopGenesAndSets(wgcna, annot=annot, ntop=ntop, multi=multi)
+  if(multi) {
+    top <- wgcna.getMultiTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
+      level=level)
+  } else {
+    top <- wgcna.getTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
+      level=level)
+  }
   
   if(is.null(modules)) modules <- names(top$genes)
   if(is.null(experiment)) experiment <- ""
