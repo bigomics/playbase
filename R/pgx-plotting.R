@@ -2237,7 +2237,7 @@ pgx.plotPhenotypeMatrix <- function(annot) {
 pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht = 5, cluster.samples = TRUE) {
   cvar <- pgx.getCategoricalPhenotypes(
     annot,
-    min.ncat = 2, max.ncat = 10, remove.dup = FALSE
+    min.ncat = 2, max.ncat = 10, remove.dup = FALSE, remove.dot = FALSE
   )
   fvar <- pgx.getNumericalPhenotypes(annot)
   annot.cvar <- annot[, cvar, drop = FALSE]
