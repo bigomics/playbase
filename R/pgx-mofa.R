@@ -44,7 +44,7 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
 
   ## MOFA computation
   message("computing MOFA ...")
-  ## samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=8;gpu_mode=FALSE;max_iter=1000
+  ## samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=8;gpu_mode=FALSE;max_iter=1000;numfeatures=100
   mofa <- list()
   mofa <- mofa.compute(
     xdata,
@@ -59,7 +59,8 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
     ntop = ntop,
     gset.ntop = gset.ntop,
     max_iter = 200,
-    numfactors = numfactors
+    numfactors = numfactors,
+    numfeatures = 100
   )
 
   if (factorizations) {
@@ -1446,9 +1447,9 @@ mofa.factor_graphs <- function(F, W, X, y, n = 100, ewidth = 1, vsize = 1) {
   ## cluster-reduced graph
   create_graph <- function(gx, y, min.cor) {
     rho <- cor(t(gx), use = "pairwise")
+    rho[is.na(rho)] <- 0
     gr <- igraph::graph_from_adjacency_matrix(
-      rho,
-      weighted = TRUE, diag = FALSE, mode = "undirected"
+      rho, weighted = TRUE, diag = FALSE, mode = "undirected"
     )
     ew <- igraph::E(gr)$weight
     ew <- (ew - min(ew, na.rm = TRUE)) /
@@ -1486,6 +1487,7 @@ mofa.factor_graphs <- function(F, W, X, y, n = 100, ewidth = 1, vsize = 1) {
     x <- sort(x[x != 0])
     unique(c(names(tail(x, n)), names(head(x, n))))
   }
+
   topff <- apply(W, 2, function(x) topfeatures(x, n = n), simplify = FALSE)
   subgraphs <- list()
   k <- 1
@@ -1495,7 +1497,7 @@ mofa.factor_graphs <- function(F, W, X, y, n = 100, ewidth = 1, vsize = 1) {
       gx <- X[sel, , drop = FALSE]
       subgraphs[[k]] <- create_graph(gx, y, min.cor = 0.33)
     } else {
-      subgraphs[[k]] <- NULL
+      subgraphs[[k]] <- igraph::make_empty_graph()
     }
   }
   names(subgraphs) <- colnames(W)
@@ -2408,9 +2410,9 @@ snf.cluster <- function(xx, pheno = NULL, plot = TRUE) {
   rownames(W) <- colnames(W) <- rownames(posx[[1]])
 
   ## -------------- graph & louvain ----------------
+  W[is.na(W)] <- 0
   gr <- igraph::graph_from_adjacency_matrix(
-    W,
-    mode = "undirected", diag = FALSE, weighted = TRUE
+    W, mode = "undirected", diag = FALSE, weighted = TRUE
   )
   cl <- igraph::cluster_louvain(gr)$membership
   cl <- paste0("SNF", cl)
@@ -2822,6 +2824,7 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
   ## transfer masked zeroes. create graph from 'unweighted'
   ## correlation.
   corrR[which(R==0)] <- 0
+  corrR[is.na(corrR)] <- 0
   gr <- igraph::graph_from_adjacency_matrix(
     corrR, diag = FALSE, weighted = TRUE, mode = "undirected"
   )
