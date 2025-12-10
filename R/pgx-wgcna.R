@@ -5134,7 +5134,7 @@ wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, nt
 wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE, 
                                   experiment="", verbose=1, model=DEFAULT_LLM,
                                   docstyle = "detailed summary", numpar = 2,
-                                  modules=NULL)  {
+                                  level="gene", modules=NULL)  {
 
   if(multi) {
     top <- wgcna.getMultiTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
