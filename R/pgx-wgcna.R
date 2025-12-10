@@ -4952,8 +4952,6 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=25,
   } else {
     multiwgcna <- wgcna
   }
-
-  browser()
   
   ##-----------------------------------------------
   ## get top genes (highest kME)
