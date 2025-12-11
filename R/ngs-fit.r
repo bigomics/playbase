@@ -686,16 +686,24 @@ ngs.fitContrastsWithLIMMA <- function(X,
         if ("try-error" %in% class(efit)) {
           efit <- try(limma::eBayes(vfit, trend = trend, robust = FALSE), silent = TRUE)
           if ("try-error" %in% class(efit)) {
-            efit <- limma::eBayes(vfit, trend = FALSE, robust = FALSE)
+            efit <- try(limma::eBayes(vfit, trend = FALSE, robust = FALSE), silent = TRUE)
           }
         }
-        top <- limma::topTable(efit, coef = 1, sort.by = "none", number = Inf, adjust.method = "BH")
+        top <- try(limma::topTable(efit, coef = 1, sort.by = "none", number = Inf, adjust.method = "BH"), silent = TRUE)
       }
+
       j1 <- which(ct > 0)
       j0 <- which(ct < 0)
       mean1 <- rowMeans(X1[, j1, drop = FALSE], na.rm = TRUE)
       mean0 <- rowMeans(X1[, j0, drop = FALSE], na.rm = TRUE)
-      top <- top[rownames(X1), , drop = FALSE]
+
+      if ("try-error" %in% class(top)) {
+        top <- data.frame(matrix(NA, nrow = nrow(X1), ncol = 6))
+        rownames(top) <- rownames(X1)
+        colnames(top) <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val", "B")
+      } else {
+        top <- top[rownames(X1), , drop = FALSE]        
+      }
       tables[[i]] <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
       names(tables)[i] <- colnames(exp0)[i]
     }
@@ -712,6 +720,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
   }
 
   return(list(tables = tables))
+
 }
 
 
