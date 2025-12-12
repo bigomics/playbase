@@ -5181,11 +5181,13 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
   
   prompt <- paste("Give a",docstyle,"of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about \"<EXPERIMENT>\". Use maximum",numpar,"paragraphs. Do not use any bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n")
 
-  if(verbose) cat(prompt)
+  if(verbose>1) cat(prompt)
   
   desc <- list()
   questions <- list()
   for(k in modules) {
+    if(verbose>0) message("Describing module ",k)
+
     ss=gg=pp=""
     ss <- sub( ".*:","", top$sets[[k]] ) ## strip prefix
     ss <- paste( ss, collapse=';')    
@@ -5199,7 +5201,8 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
     if(length(top$genes[[k]])>0) {
       q <- paste(q, "\nAfter that, shortly discuss if any of these key genes might be involved in the biological function. No need to mention all genes, just a few. Here is the list of key genes: <KEYGENES>\n")
     }
-    if(verbose) cat(q)
+
+    if(verbose>1) cat(q)
     
     q <- sub("<MODULE>", k, q)
     q <- sub("<PHENOTYPES>", pp, q)
@@ -5209,6 +5212,7 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
 
     answer <- ""
     for(m in model) {
+      if(verbose>0) message("  ... asking LLM model ", m)
       a <- ai.ask(q, model=m)    
       a <- paste0(a, "\n\n[AI generated using ",m,"]\n")
       if(length(model)>1) a <- paste0("\n-------------------------------\n\n",a)
@@ -5227,3 +5231,77 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
   return(res)
 }
 
+#' @export
+wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
+                                verbose=1) {
+
+  if(length(ai_model)==1) ai_model <- rep(ai_model,3)
+  if(!multi) {
+    wgcnalist <- list(gx=wgcna)
+  } else {
+    wgcnalist <- wgcna
+  }
+  
+  ## get top modules (most correlated with some phenotype)
+  M <- lapply(wgcnalist, function(w) as.matrix(w$modTraits))
+  top.modules <- c()
+  for(i in 1:length(M)) {
+    mx <- sqrt(rowMeans(M[[i]]**2))
+    tt <- names(which( mx > 0.8 * max(mx)))
+    top.modules <- c(top.modules, tt) 
+  }
+  top.modules
+
+  if(is.null(annot) && !is.null(wgcna$annot)) {
+    annot <- wgcna$annot
+  }
+  
+  ## Describe modules with LLM. We can use one LLM model or more.
+  message("Extracting top modules...")
+  out <- wgcna.describeModules(
+    wgcnalist,
+    modules = top.modules,
+    multi=TRUE, ntop=80,
+    annot = annot, 
+    experiment = wgcna$experiment,
+    verbose = verbose,
+    model=ai_model[[1]]
+  ) 
+  names(out)
+  summaries <- out$answers
+  
+  ## Make consensus conclusion from the description summaries.
+  conclusions <- list()
+  k=1
+  for(k in names(summaries)) {
+    message("Stirring module ",k,"...")
+    ss <- summaries[[k]]
+    qq <-  paste("Following are descriptions of a certain WGCNA module by one or more LLMs. Create a concise consensus conclusion out of the independent summaries. Just answer, no confirmation, in one paragraph. \n\n", ss)
+    cc <- ai.ask(qq, model=ai_model[[2]])
+    conclusions[[k]] <- cc
+  }
+
+  ## Make detailed report. We concatenate all conclusions and ask a
+  ## (better) LLM model to create a report.
+  message("Baking full report...")  
+  conclusions2 <- lapply(names(conclusions), function(me)
+    paste0("================= ",me," =================\n\n", conclusions[[me]],"\n"))
+  conclusions2 <- paste(conclusions2, collapse="\n\n")
+  if(multi) {
+    qq <- "This are the results of a WGCNA multi-omics analysis. There are descriptions of the most relevant modules. Create a detailed report for this entire experiment. Connect multi-omics modules functionally. Give scientific conclusions about the biology referring to key genes, proteins or metabolites and their biological function. Suggest similarity to known diseases and possible therapies."
+  } else {
+    qq <- "This are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed scientific report for this experiment. Give scientific conclusions about the biology referring to key genes, proteins or metabolites and their biological function. Suggest similarity to known diseases and possible therapies."
+  }
+  qq <- paste(qq, "Format response as clean HTML.")
+  qq <- paste(qq, "\n\n",conclusions2)
+  report <- ai.ask(qq, model = ai_model[[3]])
+  report <- gsub("^```html|```$","",report)
+  
+  list(
+    prompt = qq,
+    summaries = summaries,
+    conclusions = conclusions,
+    report = report
+  )
+
+}
