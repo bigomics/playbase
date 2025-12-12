@@ -4992,9 +4992,11 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
       ntop=ntop, level=level) 
     return(cons)
   }
-  if(!"stats" %in% names(wgcna)) stop("object has no stats")
-  #if(!"gsea" %in% names(wgcna)) warning("object has no enrichment results (gsea)")    
-  
+  if(!multi) {
+    multiwgcna <- list(tmp = wgcna)
+  } else {
+    multiwgcna <- wgcna
+  }
 
   ## get top genes (highest kME)
   mm <- wgcna$stats$moduleMembership  

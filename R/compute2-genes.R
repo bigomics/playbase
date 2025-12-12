@@ -153,7 +153,7 @@ compute_testGenes <- function(pgx,
   ## Do the fitting
   ## -----------------------------------------------------------------------------
   methods <- test.methods
-  message("Testing differential expresssion methods: ", paste(methods, collapse = ", "))
+  message("Testing differential expression methods: ", paste(methods, collapse = ", "))
   PRIOR.CPM <- 1
 
   ## Run all test methods
