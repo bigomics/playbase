@@ -186,4 +186,5 @@ Remotes:
     rms=url::https://cran.r-project.org/src/contrib/Archive/rms/rms_6.8-0.tar.gz,
     RaMP=url::https://github.com/ncats/RaMP-DB/archive/refs/tags/v3.0.2.zip,
     DeconRNASeq=url::https://bioconductor.org/packages/3.18/bioc/src/contrib/DeconRNASeq_1.44.0.tar.gz,
-    plaid=url::https://github.com/bigomics/plaid/archive/HEAD.zip
+    plaid=url::https://github.com/bigomics/plaid/archive/HEAD.zip,
+    grr=url::https://cran.r-project.org/src/contrib/Archive/grr/grr_0.9.1.tar.gz
