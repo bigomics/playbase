@@ -67,7 +67,6 @@ Imports:
     graphics,
     grDevices,
     grid,
-    grr,
     gridExtra,
     grimon,
     grr,

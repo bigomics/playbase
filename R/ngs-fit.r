@@ -667,7 +667,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
       y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
       X1 <- X[, kk, drop = FALSE]
       if (grepl("^IA:*", colnames(exp0)[i]) && !is.null(timeseries)) {
-        top <- ngs.fitContrastsWithLIMMA.timeseries(X1, y, timeseries, trend = trend)
+        top <- try(ngs.fitContrastsWithLIMMA.timeseries(X1, y, timeseries, trend = trend), silent = TRUE)
       } else {
         design1 <- stats::model.matrix(~ 0 + y)
         if (method == "voom") {
@@ -731,6 +731,7 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
                                                  timeseries,
                                                  trend = TRUE,
                                                  use.spline = NULL) {
+
   message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting Limma with no design; time series analysis...")
   if (!all(colnames(X) %in% names(timeseries))) {
     stop("[ngs.fitContrastsWithLIMMA.timeseries] X and timeseries vector contain different set of samples.")
@@ -761,9 +762,8 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
       ndf <- length(unique(time0)) - idx[i]
       time.spline <- try(splines::ns(time0, df = ndf), silent = TRUE)
       if ("try-error" %in% class(time.spline)) next
-
       design <- model.matrix(~ y * time.spline)
-      fit <- limma::lmFit(X, design)
+      fit <- try(limma::lmFit(X, design), silent = TRUE)
       fit <- try(limma::eBayes(fit, trend = trend, robust = TRUE), silent = TRUE)
       if ("try-error" %in% class(fit)) {
         fit <- try(limma::eBayes(fit, trend = trend, robust = FALSE), silent = TRUE)
@@ -1518,6 +1518,7 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
                                                             test = "LRT",
                                                             fitType = "mean",
                                                             use.spline = NULL) {
+
   ## ps: EdgeR/Deseq2 tests will not be available for proteomics data.
   ## Therefore, this autoscaling will very rarely be run.
   counts <- playbase::counts.autoScaling(counts)$counts
@@ -1530,19 +1531,24 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
     stop("[.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] DESeq test unrecognized. Must be LRT or Wald.")
   }
 
-  ## use.spline <- FALSE
   jj <- match(colnames(counts), names(timeseries))
   time0 <- as.character(timeseries[jj])
   time0 <- gsub("\\D", "", unname(time0))
+ 
   if (is.null(use.spline)) {
     use.spline <- !(length(unique(time0)) == 1 && unique(time0)[1] == "")
   }
+
+  ## possible ranges
+  if (any(grepl("_", unname(as.character(timeseries[jj]))))) {
+    use.spline <- FALSE 
+  }
+
   if (use.spline) {
-    require(splines)
     time0 <- as.numeric(time0)
     # !!: splines::ns need data in range c(0,60). Else breaks
     # !![AZ]. IK: this is weird.
-    if (max(range(time0)) > 60) time0 <- time0 / 60
+    if (max(range(time0, na.rm = TRUE)) > 60) time0 <- time0 / 60
     message("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries]: DESeq2 timeseries with interaction term & spline.")
   } else {
     time0 <- as.character(timeseries[jj])
@@ -1610,11 +1616,14 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
       stop("[.ngs.fitContrastsWithDESEQ2.nodesign.timeseries] DESeq2::DESeq test unrecognized")
     }
     if ("try-error" %in% class(dds)) {
-      dds <- DESeq2::DESeqDataSetFromMatrix(counts, colData, design)
-      dds <- DESeq2::estimateSizeFactors(dds)
+      dds <- try(DESeq2::DESeqDataSetFromMatrix(counts, colData, design), silent = TRUE)
+      dds <- try(DESeq2::estimateSizeFactors(dds), silent = TRUE)
       disp.type <- ifelse(test == "glmGamPoi", "glmGamPoi", "DESeq2")
-      dds <- DESeq2::estimateDispersionsGeneEst(dds, type = disp.type)
-      DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
+      dds <- try(DESeq2::estimateDispersionsGeneEst(dds, type = disp.type), silent = TRUE)
+      disp.values <- try(GenomicRanges::mcols(dds), silent = TRUE)
+      c1 <- (! "try-error" %in% class(dds))
+      c2 <- (! "try-error" %in% class(disp.values))
+      if (c1 & c2) DESeq2::dispersions(dds) <- disp.values$dispGeneEst
       if (test == "LRT") {
         dds <- try(DESeq2::nbinomLRT(dds, reduced = red.design), silent = TRUE)
       } else if (test == "glmGamPoi") {
@@ -1626,10 +1635,17 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
     }
   }
 
-  resx <- DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE)
-  rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
+  resx <- try(DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE), silent = TRUE)
+  if ("try-error" %in% class(resx)) {
+    resx <- data.frame(matrix(NA, nrow = nrow(counts), ncol = 6))
+    rownames(resx) <- rownames(counts)
+    colnames(resx) <- c("baseMean", "log2FoldChange", "lfcSE", "stat", "pvalue", "padj")
+  } else {
+    rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
+  }
 
   return(resx)
+
 }
 
 ## =====================================================================================
