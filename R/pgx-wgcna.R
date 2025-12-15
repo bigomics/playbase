@@ -134,6 +134,7 @@ pgx.wgcna <- function(
     wgcna,
     annot = pgx$genes,
     GMT = GMT,
+    multi = FALSE,    
     # gsetX = pgx$gsetX,
     methods = c("fisher", "gsetcor", "xcor"),
     ntop = 1000,
@@ -634,9 +635,10 @@ wgcna.compute_multiomics <- function(dataX,
         wgcna[[k]]$summary <- ai$answers
         wgcna[[k]]$prompts <- ai$questions
       }
-    }
-      
+    }      
   }
+
+  
 
   
   return(wgcna)
@@ -4992,15 +4994,13 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
       ntop=ntop, level=level) 
     return(cons)
   }
-  if(!multi) {
-    multiwgcna <- list(tmp = wgcna)
-  } else {
-    multiwgcna <- wgcna
+  if(!"stats" %in% names(wgcna)) {
+    message("[wgcna.getTopGenesAndSets] Error: no stats object")
+    return(NULL)
   }
-
+  
   ## get top genes (highest kME)
   mm <- wgcna$stats$moduleMembership  
-  ##mm <- cor( wgcna$datExpr, wgcna$net$MEs )
   if(!is.null(annot)) mm <- rename_by2(mm, annot)
   gg <- rownames(mm)
   mm <- as.list(data.frame(mm))
@@ -5010,14 +5010,10 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
 
   ## top genesets
   topsets <- NULL
-  topmembers <- NULL
   if("gsea" %in% names(wgcna)) {
     ee <- wgcna$gsea
     if(!is.null(module)) ee <- ee[which(names(ee) %in% module)]  
     topsets <- lapply(ee,function(x) head(rownames(x),ntop))
-    topmembers <- lapply(ee, function(x) {
-      names(head(sort(-table(unlist(strsplit(x$genes,split="\\|")))),2*ntop))
-    })
   }
 
   ## top correlated phenotypes
@@ -5093,19 +5089,15 @@ wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, nt
   for(k in 2:length(topgenesx)) {
     topgenes <- mapply(intersect, topgenes, topgenesx[[k]], SIMPLIFY=FALSE)
   }
+  topgenes <- lapply(topgenes, head, ntop)
   
   ## top genesets (as symbol!)
   topsets <- NULL
-  topmembers <- NULL
   if("gsea" %in% names(wgcna)) {  
     ee <- wgcna$gsea
     ee <- ee[match(names(topgenes),names(ee))]
     if(!is.null(module)) ee <- ee[module]  
     topsets <- lapply(ee,function(x) head(rownames(x),ntop))
-    topmembers <- lapply(ee, function(x) {
-      if(is.null(x)) return(c())
-      names(head(sort(-table(unlist(strsplit(x$genes,split="\\|")))),3*ntop))
-    })
   }
   
   ## module traits
@@ -5116,13 +5108,6 @@ wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, nt
   toppheno <- apply(R, 1, function(x) names(which(x > 0.9*max(x,na.rm=TRUE))),
     simplify = FALSE)
   toppheno
-  
-  ## take intersection (high MM, high set membership)
-  if(!is.null(topmembers)) {
-    topmembers <- topmembers[match(names(topgenes),names(topmembers))]
-    topgenes <- mapply(intersect, topmembers, topgenes, SIMPLIFY=FALSE)
-  }
-  topgenes <- lapply(topgenes, head, ntop)
 
   if(level=="geneset") {
     topsets <- topgenes
@@ -5132,6 +5117,10 @@ wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, nt
   list( sets = topsets, genes = topgenes, pheno=toppheno )
 }
 
+##----------------------------------------------------------------------
+##----------------------------------------------------------------------
+##----------------------------------------------------------------------
+
 #' @export
 wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE, 
                                   experiment="", verbose=1, model=DEFAULT_LLM,
@@ -5139,21 +5128,29 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
                                   level="gene", modules=NULL)  {
 
   if(multi) {
+    dbg("[wgcna.describeModules] calling getMultiTopGenesAndSets")
     top <- wgcna.getMultiTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
       level=level)
   } else {
+    dbg("[wgcna.describeModules] calling getTopGenesAndSets")
     top <- wgcna.getTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
       level=level)
   }
+
+  dbg("[wgcna.describeModules] names.top = ", names(top))
   
   if(is.null(modules)) modules <- names(top$genes)
+  if(is.null(modules)) modules <- names(top$sets)
   if(is.null(experiment)) experiment <- ""
 
-  modules <- intersect(modules, names(top$genes))
-  modules <- intersect(modules, names(top$sets))
+  if(!is.null(top$genes)) modules <- intersect(modules, names(top$genes))
+  if(!is.null(top$sets)) modules <- intersect(modules, names(top$sets))
   ##modules <- intersect(modules, names(top$pheno))  
 
-  if(length(modules)==0) return(NULL)
+  if(length(modules)==0) {
+    dbg("[wgcna.describeModules] warning: empty module list!")    
+    return(NULL)
+  }
     
   ## If no LLM is available we do just a manual summary
   model <- setdiff(model, c("",NA))
@@ -5167,9 +5164,12 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
 
       d <- ""
       if(!is.null(pp)) d <- paste(d, "<b>Correlated phenotypes:</b> ", pp, "<br><br>")
-      d <- paste(d, "<b>Key genes:</b> ", gg, "<br><br>")
-      d <- paste(d, "<b>Top enriched gene sets:</b> ", ss, "<br><br>")
-      
+      if(!is.null(gg) && gg!="") {
+        d <- paste(d, "<b>Key genes:</b> ", gg, "<br><br>")
+      }
+      if(!is.null(ss) && ss!="") {
+        d <- paste(d, "<b>Top enriched gene sets:</b> ", ss, "<br><br>")
+      }
       desc[[m]] <- d
     }
 
@@ -5193,7 +5193,6 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
     ss=gg=pp=""
     ss <- sub( ".*:","", top$sets[[k]] ) ## strip prefix
     ss <- paste( ss, collapse=';')    
-    gg <- paste( top$genes[[k]], collapse=';')
     if(k %in% names(top$pheno)) {
       pp <- paste0("'",top$pheno[[k]],"'")
       pp <- paste( pp, collapse=';')      
@@ -5201,10 +5200,9 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
 
     q <- prompt
     if(length(top$genes[[k]])>0) {
+      gg <- paste( top$genes[[k]], collapse=';')
       q <- paste(q, "\nAfter that, shortly discuss if any of these key genes might be involved in the biological function. No need to mention all genes, just a few. Here is the list of key genes: <KEYGENES>\n")
     }
-
-    if(verbose>1) cat(q)
     
     q <- sub("<MODULE>", k, q)
     q <- sub("<PHENOTYPES>", pp, q)
@@ -5214,7 +5212,7 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
 
     answer <- ""
     for(m in model) {
-      if(verbose>0) message("  ... asking LLM model ", m)
+      if(verbose>0) message("  ...asking LLM model ", m)
       a <- ai.ask(q, model=m)    
       a <- paste0(a, "\n\n[AI generated using ",m,"]\n")
       if(length(model)>1) a <- paste0("\n-------------------------------\n\n",a)
@@ -5235,7 +5233,7 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
 
 #' @export
 wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
-                                verbose=1) {
+                                format="markdown", verbose=1) {
 
   if(length(ai_model)==1) ai_model <- rep(ai_model,3)
   if(!multi) {
@@ -5263,46 +5261,60 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
   out <- wgcna.describeModules(
     wgcnalist,
     modules = top.modules,
-    multi=TRUE, ntop=80,
+    multi = TRUE,  ## always true
+    ntop = 80,
     annot = annot, 
     experiment = wgcna$experiment,
     verbose = verbose,
-    model=ai_model[[1]]
+    model = ai_model[[1]]
   ) 
   names(out)
-  summaries <- out$answers
+  descriptions_prompts <- out$questions
+  descriptions <- out$answers
   
   ## Make consensus conclusion from the description summaries.
-  conclusions <- list()
+  summaries <- list()
+  summaries_prompts <- list()
   k=1
-  for(k in names(summaries)) {
-    message("Stirring module ",k,"...")
-    ss <- summaries[[k]]
-    qq <-  paste("Following are descriptions of a certain WGCNA module by one or more LLMs. Create a concise consensus conclusion out of the independent summaries. Just answer, no confirmation, in one paragraph. \n\n", ss)
+  for(k in names(descriptions)) {
+    message("Condensating module ",k,"...")
+    ss <- descriptions[[k]]
+    qq <-  paste("Following are descriptions of a certain WGCNA module by one or more LLMs. Create a concise consensus conclusion out of the independent descriptions. Just answer, no confirmation, in one paragraph. \n\n", ss)
     cc <- ai.ask(qq, model=ai_model[[2]])
-    conclusions[[k]] <- cc
+    summaries[[k]] <- cc
+    summaries_prompts[[k]] <- qq
   }
 
-  ## Make detailed report. We concatenate all conclusions and ask a
+  ## Make detailed report. We concatenate all summaries and ask a
   ## (better) LLM model to create a report.
   message("Baking full report...")  
-  conclusions2 <- lapply(names(conclusions), function(me)
-    paste0("================= ",me," =================\n\n", conclusions[[me]],"\n"))
-  conclusions2 <- paste(conclusions2, collapse="\n\n")
+  all.summaries <- lapply(names(summaries), function(me)
+    paste0("================= ",me," =================\n\n", summaries[[me]],"\n"))
+  all.summaries <- paste(all.summaries, collapse="\n\n")
   if(multi) {
-    qq <- "This are the results of a WGCNA multi-omics analysis. There are descriptions of the most relevant modules. Create a detailed report for this entire experiment. Connect multi-omics modules functionally. Give scientific conclusions about the biology referring to key genes, proteins or metabolites and their biological function. Suggest similarity to known diseases and possible therapies."
+    qq <- "These are the results of a WGCNA multi-omics analysis. There are descriptions of the most relevant modules. Create a detailed report for this entire experiment. Give conclusions about the underlying biology by connecting multi-omics modules functionally and referring to key genes, proteins or metabolites. Suggest similarity to known diseases and possible therapies.\n\n"
   } else {
-    qq <- "This are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed scientific report for this experiment. Give scientific conclusions about the biology referring to key genes, proteins or metabolites and their biological function. Suggest similarity to known diseases and possible therapies."
+    qq <- "These are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed report for this experiment. Give conclusion about the underlying biology by connecting modules functionally and referring to key genes, proteins or metabolites. Suggest similarity to known diseases and possible therapies.\n\n"
   }
-  qq <- paste(qq, "Format response as clean HTML.")
-  qq <- paste(qq, "\n\n",conclusions2)
+  xx <- wgcna$experiment
+  pp <- paste("You are a biologist interpreting results from a WGCNA analysis for this experiment:",  xx, ".\n\n")
+  qq <- paste(pp, qq, "Write in descriptive prose as much as possible. Only write if there was evidence in the source text. Omit future directions.")
+  if(format=="markdown") {
+    qq <- paste(qq, "Format response as markdown.")
+  }
+  if(tolower(format)=="html") {
+    qq <- paste(qq, "Format response as HTML.")
+  }
+  qq <- paste(qq, "\n\n",all.summaries)
   report <- ai.ask(qq, model = ai_model[[3]])
   report <- gsub("^```html|```$","",report)
   
   list(
-    prompt = qq,
+    descriptions_prompts = descriptions_prompts,
+    descriptions = descriptions,
+    summaries_prompts = summaries_prompts,
     summaries = summaries,
-    conclusions = conclusions,
+    report_prompt = qq,
     report = report
   )
 
