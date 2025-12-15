@@ -4102,7 +4102,7 @@ wgcna.plotMDS <- function(wgcna, main = NULL, scale = FALSE) {
 #' @export
 wgcna.plotFeatureUMAP <- function(wgcna, nhub = 3, method = "clust",
                                   scale = FALSE, main = NULL,
-                                  plotlib = "base") {
+                                  plotlib = "base", annot = NULL) {
   if (method == "clust" && "clust" %in% names(wgcna)) {
     pos <- wgcna$clust[["umap2d"]]
   } else if (method == "umap") {
@@ -4130,6 +4130,14 @@ wgcna.plotFeatureUMAP <- function(wgcna, nhub = 3, method = "clust",
 
   col1 <- wgcna$net$colors
   genes1 <- names(which(col1 != "grey"))
+  if (!is.null(annot)) {
+    rownames(pos) <- probe2symbol(rownames(pos), annot, "gene_name", fill_na = TRUE)
+    names(col1) <- probe2symbol(names(col1), annot, "gene_name", fill_na = TRUE)
+    genes1 <- probe2symbol(genes1, annot, "gene_name", fill_na = TRUE)
+    if (nhub > 0) {
+      hubgenes <- setNames(probe2symbol(hubgenes, annot, "gene_name", fill_na = TRUE), names(hubgenes))  
+    }
+  }
   pgx.scatterPlotXY(
     pos,
     var = col1,

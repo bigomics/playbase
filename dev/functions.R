@@ -31,8 +31,8 @@ scan_packages <- function(path='R') {
   }
   pkg.used <- unique(c(pkg.used, roxygen.pkgs))
 
-  ## manually add some missing packages
-  pkg.used <- c(pkg.used, c("sf"))
+  ## manually add some missing packages (indirect dependencies needed for remotes)
+  pkg.used <- c(pkg.used, c("sf", "grr"))
   pkg.used <- setdiff(pkg.used, "playbase")
 
   ## Define remote locations or versions
