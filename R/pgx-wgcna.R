@@ -51,6 +51,7 @@ pgx.wgcna <- function(
   ##minmodsize=10;power=NULL;cutheight=0.15;deepsplit=2;ngenes=4000;networktype="signed";tomtype="signed";numericlabels=FALSE;ngenes=2000;gset.filter=NULL;minKME=0.8;maxBlockSize=5000
 
   samples <- pgx$samples
+  contrasts <- pgx$contrasts
   ## no dot pheno
   samples <- samples[, grep("^[.]", colnames(samples), invert = TRUE), drop = FALSE]
   X <- pgx$X
@@ -89,6 +90,7 @@ pgx.wgcna <- function(
   wgcna <- wgcna.compute(
     X = X,
     samples = samples,
+    contrasts = contrasts,
     minmodsize = minmodsize, # default: min(20,...)
     power = power, # default: 12 (for signed)
     mergeCutHeight = cutheight, # default: 0.15
@@ -172,6 +174,7 @@ pgx.wgcna <- function(
 #' @export
 wgcna.compute <- function(X,
                           samples,
+                          contrasts = NULL,
                           ngenes = 2000,
                           minmodsize = 20,
                           power = 12,
@@ -235,6 +238,9 @@ wgcna.compute <- function(X,
   X <- as.matrix(X[,kk])
   samples <- as.data.frame(samples, check.names=FALSE)
   samples <- samples[kk, , drop=FALSE]
+  if(!is.null(contrasts)) {
+    contrasts <- contrasts[kk,,drop=FALSE]
+  }
   
   nmissing <- sum(is.na(X))
   if (nmissing > 0) {
@@ -315,7 +321,15 @@ wgcna.compute <- function(X,
   ## Expand multi-class discrete phenotypes into binary vectors
   datTraits <- utils::type.convert(datTraits, as.is = TRUE)
   datTraits <- expandPhenoMatrix(datTraits, keep.numeric=TRUE, drop.ref=drop.ref)
-
+  
+  if(!is.null(contrasts)) {
+    message("[wgcna.compute] adding contrasts to datTraits")
+    ctx <- makeContrastsFromLabelMatrix(contrasts)
+    ctx <- sign(ctx)
+    ctx[ctx==0] <- NA
+    datTraits <- cbind( datTraits, ctx)
+  }
+  
   if(is.null(datTraits)) {
     message("WARNING:: no valid traits. creating random traits.")
     ##random.trait <- sample(c(0,1), nrow(samples), replace=TRUE)
@@ -1823,6 +1837,7 @@ wgcna.merge_block_dendrograms <- function(net, X, method = 1) {
 #' @export
 wgcna.runConsensusWGCNA <- function(exprList,
                                     phenoData,
+                                    contrasts = NULL,
                                     GMT = NULL,
                                     annot = NULL,
                                     ngenes = 2000,
@@ -1835,6 +1850,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
                                     addCombined = FALSE,
                                     calcMethod = "fast",
                                     drop.ref = FALSE,
+                                    cons.psig = 0.05,
                                     compute.stats = TRUE,
                                     compute.enrichment = TRUE,
                                     summary = TRUE,
@@ -1889,6 +1905,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
     layers[[k]] <- wgcna.compute(    
       X = X,
       samples = phenoData,
+      contrasts = contrasts,
       ngenes = ngenes,
       power = power[i],
       minmodsize = minModuleSize,
@@ -1965,6 +1982,14 @@ wgcna.runConsensusWGCNA <- function(exprList,
     drop.ref = drop.ref,
     keep.numeric = TRUE 
   )
+  if(!is.null(contrasts)) {
+    message("[wgcna.runConsensusWGCNA] adding contrasts to datTraits")
+    ctx <- makeContrastsFromLabelMatrix(contrasts)
+    ctx <- sign(ctx)
+    ctx[ctx==0] <- NA
+    datTraits <- cbind( datTraits, ctx)
+  }
+  
   zlist <- list()
   k=1
   for(k in names(cons$multiME)) {
@@ -1978,7 +2003,8 @@ wgcna.runConsensusWGCNA <- function(exprList,
 
   ## create consensus module-trait matrix
   ydim <- sapply(exprList, ncol) 
-  consZ <- wgcna.computeConsensusMatrix(zlist, ydim=ydim, psig=0.05) 
+  consZ <- wgcna.computeConsensusMatrix(zlist, ydim=ydim, psig=cons.psig)
+  avgZ <- Reduce("+", zlist) / length(zlist)
   
   ## add slots
   datExpr <- lapply(exprList, Matrix::t)
@@ -1988,7 +2014,8 @@ wgcna.runConsensusWGCNA <- function(exprList,
     layers = layers,
     datExpr = datExpr,
     datTraits = datTraits,
-    modTraits = consZ,
+    modTraits = avgZ,
+    consModTraits = consZ,
     dendro = cons$merged_dendro,    
     colors = colors,
     zlist = zlist,
@@ -2014,7 +2041,6 @@ wgcna.runConsensusWGCNA <- function(exprList,
       GMT <- Matrix::t(playdata::GSETxGENE)
       if(!is.null(annot)) GMT <- rename_by2(GMT, annot, "symbol")
     }
-
     res$gsea <- wgcna.computeConsensusModuleEnrichment(
       res,
       GMT = GMT,
@@ -2210,8 +2236,16 @@ wgcna.createConsensusLayers <- function(exprList,
 #' @export
 wgcna.computeConsensusMatrix <- function(matlist, ydim, psig = 0.05, consfun="min") {
 
+  if(length(ydim) == 1) ydim <- rep(ydim[1], length(matlist))
+  pv <- mapply(function(z, n)
+    WGCNA::corPvalueStudent(z, n), matlist, ydim, SIMPLIFY = FALSE)
+  for(i in 1:length(pv)) pv[[i]][is.na(pv[[i]])] <- 1 ## missing???
+
   ## create consensus module-trait matrix
-  matsign <- lapply(matlist, sign)
+  matsign <- list()
+  for(i in 1:length(matlist)) {
+    matsign[[i]] <- sign( matlist[[i]] ) * (pv[[i]] <= psig)
+  }
   matsign <- lapply(matsign, function(x) {x[is.na(x)]=0; x})
   all.pos <- Reduce("*", lapply(matsign, function(z) (z >= 0) ))
   all.neg <- Reduce("*", lapply(matsign, function(z) (z <= 0) )) 
@@ -2236,10 +2270,8 @@ wgcna.computeConsensusMatrix <- function(matlist, ydim, psig = 0.05, consfun="mi
   consZ[!concordant] <- NA
 
   if(psig < 1) {
-    if(length(ydim) == 1) ydim <- rep(ydim[1], length(matlist))
-    pv <- mapply(function(z, n)
-      WGCNA::corPvalueStudent(z, n), matlist, ydim, SIMPLIFY = FALSE)
-    for(i in 1:length(pv)) pv[[i]][is.na(pv[[i]])] <- 0 ## missing???
+    ## enforce strong consensus. All layers must be strictly
+    ## significant.
     all.sig <- Reduce("*", lapply(pv, function(p) 1 * (p < psig)))
     consZ[!all.sig] <- NA
   }
@@ -4050,7 +4082,9 @@ wgcna.plotEigenGeneGraph <- function(wgcna, add_traits = TRUE, main = NULL,
   if (any(sdx == 0)) ME <- ME + runif(length(ME), 0, 1e-5)
   
   ## Recalculate MEs with color as labels
-  clust <- hclust(dist(t(scale(ME))))
+  corx <- cor(ME, use="pairwise")
+  corx[is.na(corx)] <- 0
+  clust <- hclust(as.dist(1 - corx))
   phylo <- ape::as.phylo(clust)
   gr <- igraph::as.igraph(phylo, directed = FALSE)
 
@@ -4245,12 +4279,16 @@ wgcna.plotSampleDendroAndColors <- function(wgcna, input.type="wgcna",
   
   ## Recalculate MEs with color as labels
   if (clust.expr) {
-    sampleTree <- hclust(as.dist(1 - cor(t(datExpr))), method = "average")
+    corx <- cor(t(datExpr), use="pairwise")
   } else {
-    sampleTree <- hclust(as.dist(1 - cor(t(ME0))), method = "average")
+    corx <- cor(t(ME0), use="pairwise")
   }
-  ii <- sampleTree$order
-  jj <- hclust(dist(t(scale(ME))))$order
+  corx[is.na(corx)] <- 0
+  sampleTree <- hclust(as.dist(1 - corx), method = "average")  
+
+  corx <- cor(ME, use="pairwise")
+  corx[is.na(corx)] <- 0
+  jj <- hclust(as.dist(1 - corx))$order
   colors <- WGCNA::numbers2colors(ME[, jj])
 
   if (justdata) {
@@ -4993,19 +5031,21 @@ wgcna.scaleTOMs <- function(TOMs, scaleP=0.95) {
 
 #' @export
 
+
 wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
                                      level = "gene") {
 
-  ## If consensus results, call consensus routine
   if("layers" %in% names(wgcna) && class(wgcna$datExpr) == "list") {
-    cons <- wgcna.getConsensusTopGenesAndSets(wgcna, annot=annot, module=module,
-      ntop=ntop, level=level) 
+    cons <- wgcna.getConsensusTopGenesAndSets(wgcna, annot=annot,
+      module=module,  ntop=ntop) 
     return(cons)
   }
+
   if(!"stats" %in% names(wgcna)) {
     message("[wgcna.getTopGenesAndSets] Error: no stats object")
     return(NULL)
   }
+  if(!"gsea" %in% names(wgcna)) warning("object has no enrichment results (gsea)")
   
   ## get top genes (highest kME)
   mm <- wgcna$stats$moduleMembership  
@@ -5077,7 +5117,7 @@ wgcna.getMultiTopGenesAndSets <- function(multi_wgcna, annot=NULL, module=NULL,
 wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
                                               level=c("gene","geneset")[1]) {
   if(!"stats" %in% names(wgcna)) stop("object has no stats")
-  ## if(!"gsea" %in% names(wgcna)) stop("object has no enrichment results (gsea)")    
+  if(!"gsea" %in% names(wgcna)) warning("object has no enrichment results (gsea)")    
   
   ## get top genes (highest kME)
   topgenesx <- list()

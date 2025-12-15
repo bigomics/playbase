@@ -5744,10 +5744,10 @@ plotlyCytoplot <- function(pgx,
 #' }
 #'
 #' @export
-corclust <- function(x) {
-  dd <- stats::as.dist(1 - stats::cor(t(x), use = "pairwise"))
-  hc <- fastcluster::hclust(dd, method = "ward.D2")
-  hc
+corclust <- function(x, method="ward.D2") {
+  cx <- stats::cor(t(x), use = "pairwise")
+  cx[is.na(cx)] <- 0
+  hclust(stats::as.dist(1 - cx), method = method)
 }
 
 ## Override add_col_annotation to be able to suppress titles
