@@ -3183,6 +3183,7 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=1,
                                       extra.colors=NULL,
                                       show.kme = FALSE,
                                       show.traits = FALSE,
+                                      show.contrasts = FALSE,
                                       use.tree = 0,
                                       rm.na = TRUE,
                                       marAll = c(0.4, 5, 1, 0.2),
@@ -3242,10 +3243,24 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=1,
     if(show.traits) {
       X <- wgcna$datExpr
       Y <- wgcna$datTraits
-      kme <- cor(X, Y, use="pairwise")
-      kmeColors <- rho2bluered(kme)
-      kmeColors <- kmeColors[gg,,drop=FALSE]
-      colors <- cbind(colors, 0, kmeColors)
+      Y <- Y[,grep("_vs_",colnames(Y),invert=TRUE),drop=FALSE]
+      if(NCOL(Y)>0) {
+        kme <- cor(X, Y, use="pairwise")
+        kmeColors <- rho2bluered(kme)
+        kmeColors <- kmeColors[gg,,drop=FALSE]
+        colors <- cbind(colors, 0, kmeColors)
+      }
+    }
+    if(show.contrasts) {
+      X <- wgcna$datExpr
+      Y <- wgcna$datTraits
+      Y <- Y[,grep("_vs_",colnames(Y)),drop=FALSE]
+      if(NCOL(Y)>0) {
+        kme <- cor(X, Y, use="pairwise")
+        kmeColors <- rho2bluered(kme)
+        kmeColors <- kmeColors[gg,,drop=FALSE]
+        colors <- cbind(colors, 0, kmeColors)
+      }
     }
   }
 
@@ -3266,13 +3281,32 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=1,
       Y <- wgcna$datTraits
       for(i in 1:length(X)) {
         Y1 <- Y[rownames(X[[i]]),]
-        kme <- cor(X[[i]], Y1, use="pairwise")
-        kmeColors <- rho2bluered(kme)
-        kmeColors <- kmeColors[gg,]
-        colnames(kmeColors) <- paste0(names(X)[i],":",colnames(kmeColors))
-        colors <- cbind(colors, 0, kmeColors)
+        Y1 <- Y1[,grep("_vs_",colnames(Y1),invert=TRUE),drop=FALSE]
+        if(NCOL(Y1)) {
+          kme <- cor(X[[i]], Y1, use="pairwise")
+          kmeColors <- rho2bluered(kme)
+          kmeColors <- kmeColors[gg,]
+          colnames(kmeColors) <- paste0(names(X)[i],":",colnames(kmeColors))
+          colors <- cbind(colors, 0, kmeColors)
+        }
       }
     }
+    if(show.contrasts) {
+      X <- wgcna$datExpr
+      Y <- wgcna$datTraits
+      for(i in 1:length(X)) {
+        Y1 <- Y[rownames(X[[i]]),]
+        Y1 <- Y1[,grep("_vs_",colnames(Y1)),drop=FALSE]
+        if(NCOL(Y1)) {
+          kme <- cor(X[[i]], Y1, use="pairwise")
+          kmeColors <- rho2bluered(kme)
+          kmeColors <- kmeColors[gg,]
+          colnames(kmeColors) <- paste0(names(X)[i],":",colnames(kmeColors))
+          colors <- cbind(colors, 0, kmeColors)
+        }
+      }
+    }
+    
   }
 
   if(rm.na) {
@@ -3308,6 +3342,7 @@ wgcna.plotMultiDendroAndColors <- function(multi_wgcna,
                                            extra.colors=NULL,
                                            show.kme = FALSE,
                                            show.traits = FALSE,
+                                           show.contrasts = FALSE,
                                            use.tree = 0,
                                            rm.na = TRUE,
                                            main = NULL,
@@ -3334,6 +3369,7 @@ wgcna.plotMultiDendroAndColors <- function(multi_wgcna,
       multi_wgcna[[k]],
       marAll = marAll,
       show.traits = show.traits,
+      show.contrasts = show.contrasts,
       show.kme = show.kme,
       use.tree = use.tree,
       setLayout = FALSE,
@@ -3351,6 +3387,7 @@ wgcna.plotMultiDendroAndColors <- function(multi_wgcna,
 wgcna.plotDendroAndTraitCorrelation <- function(wgcna,
                                                 traits = NULL,
                                                 show.traits = TRUE,
+                                                show.contrasts = TRUE,
                                                 show.kme = FALSE,
                                                 main=NULL,
                                                 block=NULL,
@@ -3372,6 +3409,7 @@ wgcna.plotDendroAndTraitCorrelation <- function(wgcna,
       main = main,
       rm.na = rm.na,
       show.traits = show.traits,
+      show.contrasts = show.contrasts,
       marAll = marAll,
       use.tree = use.tree,
       setLayout = setLayout,
@@ -3387,7 +3425,20 @@ wgcna.plotDendroAndTraitCorrelation <- function(wgcna,
   if(show.traits) {
     X <- wgcna$datExpr
     Y <- wgcna$datTraits
-    traitSig <- cor(X, Y, use="pairwise")
+    sel <- grep("_vs_",colnames(Y),invert=TRUE)
+    traitSig <- cor(X, Y[,sel], use="pairwise")
+    if(rm.na) {
+      sel <- colMeans(is.na(traitSig)) < 1
+      traitSig <- traitSig[, sel, drop=FALSE]
+    }
+    traitColors <- rho2bluered(traitSig)
+    colors <- cbind(moduleColors, 0, traitColors)
+  }
+  if(show.contrasts) {
+    X <- wgcna$datExpr
+    Y <- wgcna$datTraits
+    sel <- grep("_vs_",colnames(Y))
+    traitSig <- cor(X, Y[,sel], use="pairwise")
     if(rm.na) {
       sel <- colMeans(is.na(traitSig)) < 1
       traitSig <- traitSig[, sel, drop=FALSE]
@@ -3423,6 +3474,7 @@ wgcna.plotDendroAndTraitCorrelation <- function(wgcna,
 #'
 wgcna.plotDendroAndTraitCorrelation_cons <- function(cons,
                                                      show.traits = TRUE,
+                                                     show.contrasts = TRUE,
                                                      traits = NULL,
                                                      main = NULL,
                                                      rm.na = TRUE,
@@ -3460,6 +3512,7 @@ wgcna.plotDendroAndTraitCorrelation_cons <- function(cons,
   wgcna.plotDendroAndTraitCorrelation_multi(
     multi,
     show.traits = show.traits,
+    show.contrasts = show.contrasts,
     traits = traits,
     main = main,
     rm.na = rm.na,
@@ -3475,6 +3528,7 @@ wgcna.plotDendroAndTraitCorrelation_cons <- function(cons,
 #' @export
 wgcna.plotDendroAndTraitCorrelation_multi <- function(multi,
                                                       show.traits = TRUE,
+                                                      show.contrasts = TRUE,
                                                       traits = NULL,
                                                       main = NULL,
                                                       rm.na = TRUE,
@@ -3487,7 +3541,7 @@ wgcna.plotDendroAndTraitCorrelation_multi <- function(multi,
   ## module colors  
   colors <- sapply( multi, function(m) m$net$colors )
   
-  if(show.traits) {
+  if(show.traits || show.contrasts) {
 
     traitSig <- list()
     nsets <- length(multi)
@@ -3496,7 +3550,10 @@ wgcna.plotDendroAndTraitCorrelation_multi <- function(multi,
       if( k == "Consensus") next
       w <- multi[[k]]
       Y <- w$datTraits
-      sel <- colnames(Y)
+      sel1=sel2=NULL
+      if(show.traits) sel1 <- grep("_vs_",colnames(Y),invert=TRUE)
+      if(show.contrasts) sel2 <- grep("_vs_",colnames(Y))
+      sel <- c(sel1, sel2)
       if(!is.null(traits)) sel <- intersect(sel, traits)
       X <- w$datExpr
       kk <- intersect(rownames(X), rownames(Y))
@@ -3514,7 +3571,7 @@ wgcna.plotDendroAndTraitCorrelation_multi <- function(multi,
     for(k in names(traitSig)) {
       colnames(traitSig[[k]]) <- paste0(k,":",colnames(traitSig[[k]]))
     }
-
+    
     traitSig2 <- c()
     for(i in 1:length(traitSig)) {
       traitSig2 <- cbind(traitSig2, traitSig[[i]])
@@ -4216,6 +4273,8 @@ wgcna.plotModuleSignificance <- function(wgcna, trait, main = NULL, abs = FALSE)
 #' @export
 wgcna.plotConsensusSampleDendroAndColors <- function(cons, i,
                                                      what = c("both","me","traits")[1],
+                                                     show.me = TRUE, show.traits = TRUE,
+                                                     show.contrasts = TRUE,
                                                      clust.expr = TRUE,
                                                      setLayout = TRUE,
                                                      marAll = c(0.2, 7, 1.5, 0.5),
@@ -4230,6 +4289,9 @@ wgcna.plotConsensusSampleDendroAndColors <- function(cons, i,
     datTraits = cons$datTraits,
     datME = cons$net$multiME[[i]]$data,
     what = what,
+    show.me = show.me,
+    show.traits = show.traits,
+    show.contrasts = show.contrasts,
     marAll = marAll,
     clust.expr = clust.expr,
     setLayout = setLayout,
@@ -4243,6 +4305,8 @@ wgcna.plotConsensusSampleDendroAndColors <- function(cons, i,
 #' @export
 wgcna.plotSampleDendroAndColors <- function(wgcna, input.type="wgcna",
                                             what = c("me", "traits", "both")[3],
+                                            show.me = TRUE, show.traits = TRUE,
+                                            show.contrasts = TRUE,
                                             datTraits = NULL, datExpr = NULL, datME = NULL, 
                                             clust.expr = TRUE, setLayout = TRUE,
                                             marAll = c(0.2, 7, 1.5, 0.5),
@@ -4265,12 +4329,16 @@ wgcna.plotSampleDendroAndColors <- function(wgcna, input.type="wgcna",
   
   ME <- ME0[, 0]
   samples <- rownames(ME)
-  if (any(what %in% c("me", "both"))) {
+  if (show.me) {
     ME <- cbind(ME, ME0)
   }
-  
-  if (any(what %in% c("traits", "both"))) {
-    ME <- cbind(ME, datTraits[samples,,drop=FALSE])
+  if (show.traits) {
+    sel <- grep("_vs_",colnames(datTraits),invert=TRUE)
+    ME <- cbind(ME, datTraits[samples,sel,drop=FALSE])
+  }
+  if (show.contrasts) {
+    sel <- grep("_vs_",colnames(datTraits))
+    ME <- cbind(ME, datTraits[samples,sel,drop=FALSE])
   }
   
   if (NCOL(ME) <= 2) ME <- cbind(ME, ME) ## error if ncol(ME)<=2 !!!!  
@@ -5030,14 +5098,12 @@ wgcna.scaleTOMs <- function(TOMs, scaleP=0.95) {
 }
 
 #' @export
-
-
 wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
-                                     level = "gene") {
+                                     level="gene", rename="symbol") {
 
   if("layers" %in% names(wgcna) && class(wgcna$datExpr) == "list") {
     cons <- wgcna.getConsensusTopGenesAndSets(wgcna, annot=annot,
-      module=module,  ntop=ntop) 
+      module=module,  ntop=ntop, rename=rename) 
     return(cons)
   }
 
@@ -5049,7 +5115,7 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
   
   ## get top genes (highest kME)
   mm <- wgcna$stats$moduleMembership  
-  if(!is.null(annot)) mm <- rename_by2(mm, annot)
+  if(!is.null(annot)) mm <- rename_by2(mm, annot, new_id=rename)
   gg <- rownames(mm)
   mm <- as.list(data.frame(mm))
   if(!is.null(module)) mm <- mm[which(names(mm) %in% module)]
@@ -5079,13 +5145,14 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
 
 #' @export
 wgcna.getMultiTopGenesAndSets <- function(multi_wgcna, annot=NULL, module=NULL,
-                                          ntop=40, level = "gene") {
+                                          ntop=40, level="gene", rename="symbol") {
 
   toplist <- list()
   k=names(multi_wgcna)[1]
   for(k in names(multi_wgcna)) {
-    topk <- wgcna.getTopGenesAndSets(multi_wgcna[[k]],
-      module=module, annot=annot, ntop=ntop, level=level)
+    topk <- wgcna.getTopGenesAndSets(
+      multi_wgcna[[k]],  module=module,  annot=annot,
+      ntop=ntop, level=level, rename=rename)
     if(!is.null(module)) {
       topk <- lapply( topk, function(s) s[which(names(s) %in% module)] )
     }
@@ -5115,7 +5182,8 @@ wgcna.getMultiTopGenesAndSets <- function(multi_wgcna, annot=NULL, module=NULL,
 
 #' @export
 wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
-                                              level=c("gene","geneset")[1]) {
+                                              level=c("gene","geneset")[1],
+                                              rename="symbol" ) {
   if(!"stats" %in% names(wgcna)) stop("object has no stats")
   if(!"gsea" %in% names(wgcna)) warning("object has no enrichment results (gsea)")    
   
@@ -5123,7 +5191,7 @@ wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, nt
   topgenesx <- list()
   for(i in 1:length(wgcna$stats)) {
     mm <- wgcna$stats[[i]]$moduleMembership
-    if(!is.null(annot)) mm <- rename_by2(mm, annot, "symbol")
+    if(!is.null(annot)) mm <- rename_by2(mm, annot, rename)
     gg <- rownames(mm)
     mm <- as.list(data.frame(mm))
     if(!is.null(module)) mm <- mm[module]
@@ -5178,11 +5246,11 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
   if(multi) {
     dbg("[wgcna.describeModules] calling getMultiTopGenesAndSets")
     top <- wgcna.getMultiTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
-      level=level)
+      level=level, rename="gene_title")
   } else {
     dbg("[wgcna.describeModules] calling getTopGenesAndSets")
     top <- wgcna.getTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
-      level=level)
+      level=level, rename="gene_title")
   }
 
   dbg("[wgcna.describeModules] names.top = ", names(top))
@@ -5249,7 +5317,7 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
     q <- prompt
     if(length(top$genes[[k]])>0) {
       gg <- paste( top$genes[[k]], collapse=';')
-      q <- paste(q, "\nAfter that, shortly discuss if any of these key genes might be involved in the biological function. No need to mention all genes, just a few. Here is the list of key genes: <KEYGENES>\n")
+      q <- paste(q, "\nAfter that, shortly discuss if any of these key genes/proteins/metabolites might be involved in the biological function. No need to mention all, just a few. Here is the list of key genes/proteins/metabolites: <KEYGENES>\n")
     }
     
     q <- sub("<MODULE>", k, q)
@@ -5281,7 +5349,7 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
 
 #' @export
 wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
-                                format="markdown", verbose=1) {
+                                format="markdown", ntop=100, verbose=1) {
 
   if(length(ai_model)==1) ai_model <- rep(ai_model,3)
   if(!multi) {
@@ -5310,7 +5378,7 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
     wgcnalist,
     modules = top.modules,
     multi = TRUE,  ## always true
-    ntop = 80,
+    ntop = ntop,
     annot = annot, 
     experiment = wgcna$experiment,
     verbose = verbose,
