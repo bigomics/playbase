@@ -1849,6 +1849,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
                                     addCombined = FALSE,
                                     calcMethod = "fast",
                                     drop.ref = FALSE,
+                                    cons.psig = 0.05,
                                     compute.stats = TRUE,
                                     compute.enrichment = TRUE,
                                     summary = TRUE,
@@ -2001,7 +2002,8 @@ wgcna.runConsensusWGCNA <- function(exprList,
 
   ## create consensus module-trait matrix
   ydim <- sapply(exprList, ncol) 
-  consZ <- wgcna.computeConsensusMatrix(zlist, ydim=ydim, psig=0.05) 
+  consZ <- wgcna.computeConsensusMatrix(zlist, ydim=ydim, psig=cons.psig)
+##  consZ <- Reduce("+", zlist) / length(zlist)
   
   ## add slots
   datExpr <- lapply(exprList, Matrix::t)
@@ -2232,8 +2234,16 @@ wgcna.createConsensusLayers <- function(exprList,
 #' @export
 wgcna.computeConsensusMatrix <- function(matlist, ydim, psig = 0.05, consfun="min") {
 
+  if(length(ydim) == 1) ydim <- rep(ydim[1], length(matlist))
+  pv <- mapply(function(z, n)
+    WGCNA::corPvalueStudent(z, n), matlist, ydim, SIMPLIFY = FALSE)
+  for(i in 1:length(pv)) pv[[i]][is.na(pv[[i]])] <- 1 ## missing???
+
   ## create consensus module-trait matrix
-  matsign <- lapply(matlist, sign)
+  matsign <- list()
+  for(i in 1:length(matlist)) {
+    matsign[[i]] <- sign( matlist[[i]] ) * (pv[[i]] <= psig)
+  }
   matsign <- lapply(matsign, function(x) {x[is.na(x)]=0; x})
   all.pos <- Reduce("*", lapply(matsign, function(z) (z >= 0) ))
   all.neg <- Reduce("*", lapply(matsign, function(z) (z <= 0) )) 
@@ -2258,10 +2268,6 @@ wgcna.computeConsensusMatrix <- function(matlist, ydim, psig = 0.05, consfun="mi
   consZ[!concordant] <- NA
 
   if(psig < 1) {
-    if(length(ydim) == 1) ydim <- rep(ydim[1], length(matlist))
-    pv <- mapply(function(z, n)
-      WGCNA::corPvalueStudent(z, n), matlist, ydim, SIMPLIFY = FALSE)
-    for(i in 1:length(pv)) pv[[i]][is.na(pv[[i]])] <- 0 ## missing???
     all.sig <- Reduce("*", lapply(pv, function(p) 1 * (p < psig)))
     consZ[!all.sig] <- NA
   }
