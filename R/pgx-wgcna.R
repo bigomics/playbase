@@ -51,6 +51,7 @@ pgx.wgcna <- function(
   ##minmodsize=10;power=NULL;cutheight=0.15;deepsplit=2;ngenes=4000;networktype="signed";tomtype="signed";numericlabels=FALSE;ngenes=2000;gset.filter=NULL;minKME=0.8;maxBlockSize=5000
 
   samples <- pgx$samples
+  contrasts <- pgx$contrasts
   ## no dot pheno
   samples <- samples[, grep("^[.]", colnames(samples), invert = TRUE), drop = FALSE]
   X <- pgx$X
@@ -89,6 +90,7 @@ pgx.wgcna <- function(
   wgcna <- wgcna.compute(
     X = X,
     samples = samples,
+    contrasts = contrasts,
     minmodsize = minmodsize, # default: min(20,...)
     power = power, # default: 12 (for signed)
     mergeCutHeight = cutheight, # default: 0.15
@@ -171,6 +173,7 @@ pgx.wgcna <- function(
 #' @export
 wgcna.compute <- function(X,
                           samples,
+                          contrasts = NULL,
                           ngenes = 2000,
                           minmodsize = 20,
                           power = 12,
@@ -234,6 +237,9 @@ wgcna.compute <- function(X,
   X <- as.matrix(X[,kk])
   samples <- as.data.frame(samples, check.names=FALSE)
   samples <- samples[kk, , drop=FALSE]
+  if(!is.null(contrasts)) {
+    contrasts <- contrasts[kk,,drop=FALSE]
+  }
   
   nmissing <- sum(is.na(X))
   if (nmissing > 0) {
@@ -314,7 +320,15 @@ wgcna.compute <- function(X,
   ## Expand multi-class discrete phenotypes into binary vectors
   datTraits <- utils::type.convert(datTraits, as.is = TRUE)
   datTraits <- expandPhenoMatrix(datTraits, keep.numeric=TRUE, drop.ref=drop.ref)
-
+  
+  if(!is.null(contrasts)) {
+    message("[wgcna.compute] adding contrasts to datTraits")
+    ctx <- makeContrastsFromLabelMatrix(contrasts)
+    ctx <- sign(ctx)
+    ctx[ctx==0] <- NA
+    datTraits <- cbind( datTraits, ctx)
+  }
+  
   if(is.null(datTraits)) {
     message("WARNING:: no valid traits. creating random traits.")
     ##random.trait <- sample(c(0,1), nrow(samples), replace=TRUE)
@@ -1822,6 +1836,7 @@ wgcna.merge_block_dendrograms <- function(net, X, method = 1) {
 #' @export
 wgcna.runConsensusWGCNA <- function(exprList,
                                     phenoData,
+                                    contrasts = NULL,
                                     GMT = NULL,
                                     annot = NULL,
                                     ngenes = 2000,
@@ -1888,6 +1903,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
     layers[[k]] <- wgcna.compute(    
       X = X,
       samples = phenoData,
+      contrasts = contrasts,
       ngenes = ngenes,
       power = power[i],
       minmodsize = minModuleSize,
@@ -1964,6 +1980,14 @@ wgcna.runConsensusWGCNA <- function(exprList,
     drop.ref = drop.ref,
     keep.numeric = TRUE 
   )
+  if(!is.null(contrasts)) {
+    message("[wgcna.runConsensusWGCNA] adding contrasts to datTraits")
+    ctx <- makeContrastsFromLabelMatrix(contrasts)
+    ctx <- sign(ctx)
+    ctx[ctx==0] <- NA
+    datTraits <- cbind( datTraits, ctx)
+  }
+  
   zlist <- list()
   k=1
   for(k in names(cons$multiME)) {
@@ -2013,7 +2037,6 @@ wgcna.runConsensusWGCNA <- function(exprList,
       GMT <- Matrix::t(playdata::GSETxGENE)
       if(!is.null(annot)) GMT <- rename_by2(GMT, annot, "symbol")
     }
-
     res$gsea <- wgcna.computeConsensusModuleEnrichment(
       res,
       GMT = GMT,
@@ -4946,7 +4969,7 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=25,
 
   if(!multi) {
     if(!"stats" %in% names(wgcna)) stop("object has no stats")
-    if(!"gsea" %in% names(wgcna)) stop("object has no enrichment results (gsea)")    
+    if(!"gsea" %in% names(wgcna)) warning("object has no enrichment results (gsea)")
     
     if("layers" %in% names(wgcna) && class(wgcna$datExpr) == "list") {
       cons <- wgcna.getConsensusTopGenesAndSets(wgcna, annot=annot,
@@ -5022,7 +5045,7 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=25,
 wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=20) {
 
   if(!"stats" %in% names(wgcna)) stop("object has no stats")
-  if(!"gsea" %in% names(wgcna)) stop("object has no enrichment results (gsea)")    
+  if(!"gsea" %in% names(wgcna)) warning("object has no enrichment results (gsea)")    
   
   ## get top genes (highest kME)
   topgenesx <- list()
