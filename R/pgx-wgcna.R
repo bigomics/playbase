@@ -3549,7 +3549,7 @@ wgcna.plotDendroAndTraitCorrelation_multi <- function(multi,
                                                       ... )
 {
 
-  message("DEPRECATED: please use wgcna.plotMultiDendroAndColors")
+  message("DEPRECATED: please use wgcna.plotDendroAndColors")
   
   ## module colors  
   colors <- sapply( multi, function(m) m$net$colors )
@@ -3590,7 +3590,6 @@ wgcna.plotDendroAndTraitCorrelation_multi <- function(multi,
       traitSig2 <- cbind(traitSig2, traitSig[[i]])
       if(i < length(traitSig)) traitSig2 <- cbind(traitSig2, 0)
     }
-
     traitColors <- rho2bluered(traitSig2, f=0.95)
     ii <- which(colnames(traitColors)=='')
     if(length(ii)) traitColors[,ii] <- "#FFFFFF"
