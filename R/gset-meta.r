@@ -99,15 +99,15 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       zx.rnkcorr <- cor_sparse_matrix(G, xx1)
       rownames(zx.rnkcorr) <- colnames(G)
       colnames(zx.rnkcorr) <- colnames(X)
-      zx.rnkcorr <- my.normalize(zx.rnkcorr)
+      zx.rnkcorr.norm <- try(my.normalize(zx.rnkcorr), silent = TRUE)
+      if (! "try-error" %in% class(zx.rnkcorr.norm)) zx.rnkcorr <- zx.rnkcorr.norm
+      rm(zx.rnkcorr.norm)
       cm1 <- intersect(names(gmt), rownames(zx.rnkcorr))
       cm2 <- intersect(colnames(X), colnames(zx.rnkcorr))
-      zx.rnkcorr <- zx.rnkcorr[cm1, cm2, drop = FALSE] ## make sure..
+      zx.rnkcorr <- zx.rnkcorr[cm1, cm2, drop = FALSE]
       nas <- apply(zx.rnkcorr, 1, function(x) sum(is.na(x)))
       jj <- which(nas < ncol(zx.rnkcorr))
       zx.rnkcorr <- zx.rnkcorr[jj, , drop = FALSE]
-
-      ## compute LIMMA
       all.results[["spearman"]] <- gset.fitContrastsWithLIMMA(
         zx.rnkcorr,
         contr.matrix,
