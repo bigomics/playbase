@@ -555,6 +555,7 @@ wgcna.compute_multiomics <- function(dataX,
       wgcna <- wgcna.createConsensusLayers(
         dataX[c('gx','px')],
         samples = samples,
+        contrasts = contrasts,
         prefix = c('GX','PX'),
         ngenes = ngenes,
         power = power[c('gx','px')],
@@ -3080,9 +3081,6 @@ wgcna.plotTraitCorrelationBarPlots <- function(res, trait, multi=FALSE,
         title(tt, cex.main = cex.main)
       }
     }
-
-    
-
     
   }
 }
@@ -3288,7 +3286,7 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=1,
         if(NCOL(Y1)) {
           kme <- cor(X[[i]], Y1, use="pairwise")
           kmeColors <- rho2bluered(kme)
-          kmeColors <- kmeColors[gg,]
+          kmeColors <- kmeColors[gg,,drop=FALSE]
           colnames(kmeColors) <- paste0(names(X)[i],":",colnames(kmeColors))
           colors <- cbind(colors, 0, kmeColors)
         }
@@ -3303,7 +3301,7 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=1,
         if(NCOL(Y1)) {
           kme <- cor(X[[i]], Y1, use="pairwise")
           kmeColors <- rho2bluered(kme)
-          kmeColors <- kmeColors[gg,]
+          kmeColors <- kmeColors[gg,,drop=FALSE]
           colnames(kmeColors) <- paste0(names(X)[i],":",colnames(kmeColors))
           colors <- cbind(colors, 0, kmeColors)
         }
@@ -3356,7 +3354,7 @@ wgcna.plotMultiDendroAndColors <- function(multi_wgcna,
 
   nw <- length(multi_wgcna)
   nc <- ceiling(sqrt(nw))
-  nr <- nw / nc  
+  nr <- ceiling(nw / nc)  
   hh <- rep(c((1-colorHeight), colorHeight),nr)
   hh
   nf <- layout(matrix(1:(2*nr*nc), nrow=2*nr, ncol=nc, byrow=FALSE),
@@ -3401,6 +3399,8 @@ wgcna.plotDendroAndTraitCorrelation <- function(wgcna,
                                                 ... )
 {
 
+  message("DEPRECATED: please use wgcna.plotDendroAndColors")
+  
   ## if consensus output do this
   is.cons <- ("class" %in% names(wgcna) && wgcna$class == "cons")
   is.cons2 <- (all(c("layers","zlist") %in% names(wgcna)))
@@ -3429,25 +3429,29 @@ wgcna.plotDendroAndTraitCorrelation <- function(wgcna,
     X <- wgcna$datExpr
     Y <- wgcna$datTraits
     sel <- grep("_vs_",colnames(Y),invert=TRUE)
-    traitSig <- cor(X, Y[,sel], use="pairwise")
-    if(rm.na) {
-      sel <- colMeans(is.na(traitSig)) < 1
-      traitSig <- traitSig[, sel, drop=FALSE]
+    if(length(sel)) {
+      traitSig <- cor(X, Y[,sel], use="pairwise")
+      if(rm.na) {
+        sel <- colMeans(is.na(traitSig)) < 1
+        traitSig <- traitSig[, sel, drop=FALSE]
+      }
+      traitColors <- rho2bluered(traitSig)
+      colors <- cbind(colors, 0, traitColors)
     }
-    traitColors <- rho2bluered(traitSig)
-    colors <- cbind(colors, 0, traitColors)
   }
   if(show.contrasts) {
     X <- wgcna$datExpr
     Y <- wgcna$datTraits
     sel <- grep("_vs_",colnames(Y))
-    traitSig <- cor(X, Y[,sel], use="pairwise")
-    if(rm.na) {
-      sel <- colMeans(is.na(traitSig)) < 1
-      traitSig <- traitSig[, sel, drop=FALSE]
+    if(length(sel)) {
+      traitSig <- cor(X, Y[,sel], use="pairwise")
+      if(rm.na) {
+        sel <- colMeans(is.na(traitSig)) < 1
+        traitSig <- traitSig[, sel, drop=FALSE]
+      }
+      traitColors <- rho2bluered(traitSig)
+      colors <- cbind(colors, 0, traitColors)
     }
-    traitColors <- rho2bluered(traitSig)
-    colors <- cbind(colors, 0, traitColors)
   }
   
   geneTree <- wgcna$net$dendrograms[[1]]
@@ -3487,6 +3491,8 @@ wgcna.plotDendroAndTraitCorrelation_cons <- function(cons,
                                                      ... )
 {
 
+  message("DEPRECATED: please use wgcna.plotDendroAndColors")
+  
   if(0) {
     show.traits = TRUE
     traits = NULL
@@ -3541,6 +3547,8 @@ wgcna.plotDendroAndTraitCorrelation_multi <- function(multi,
                                                       ... )
 {
 
+  message("DEPRECATED: please use wgcna.plotMultiDendroAndColors")
+  
   ## module colors  
   colors <- sapply( multi, function(m) m$net$colors )
   
@@ -3632,6 +3640,7 @@ rho2bluered <- function(R, a=1, f=0.95) {
   if(f < 1) {
     col <- apply(col, 2, adjustcolor, red.f=f, green.f=f, blue.f=f)
   }
+  if(NCOL(col)==1) col <- cbind(col)
   dimnames(col) <- dimnames(R)
   col
 }
