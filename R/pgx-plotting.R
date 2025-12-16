@@ -1315,7 +1315,7 @@ ggVolcano <- function(x,
                       title = "Volcano plot",
                       colors = c(
                         up = "#f23451",
-                        notsig = "#8F8F8F",
+                        notsig = "#cccccc88",
                         notsel = "#cccccc88",
                         down = "#3181de"
                       ),
@@ -1355,20 +1355,14 @@ ggVolcano <- function(x,
     hyperbola_sig <- (df$y - psig_transformed) * (abs(df$fc) - lfc) > hyperbola_k
     hyperbola_sig[abs(df$fc) <= lfc] <- FALSE # Points inside vertical asymptotes are not significant
 
-    ## Determine which points are highlighted (in selected geneset)
-    is_highlighted <- (names %in% highlight | label.names %in% highlight)
-
-    ## For hyperbolic mode:
-    ## - Highlighted + significant → Up/Down (colored)
-    ## - Highlighted + not significant → Not significant (darker grey, shows selection)
-    ## - Not highlighted → Not selected (soft grey)
+    ## Classify by significance # RPA1
     df$category <- ifelse(
-      !is_highlighted, "Not selected",
-      ifelse(hyperbola_sig & df$fc > 0, "Up",
-             ifelse(hyperbola_sig & df$fc < 0, "Down", "Not significant"))
+      hyperbola_sig & df$fc > 0, "Up",
+      ifelse(hyperbola_sig & df$fc < 0, "Down", "Not significant")
     )
-
     df$label <- ifelse(names %in% label | label.names %in% label, label.names, NA)
+    highlight <- c(highlight, names[hyperbola_sig])
+    df$category[!(names %in% highlight | label.names %in% highlight)] <- "Not selected"
   } else {
     ## Traditional rectangular cutoff
     df$category <- ifelse(
