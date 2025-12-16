@@ -1319,6 +1319,10 @@ ggVolcano <- function(x,
                         notsel = "#cccccc88",
                         down = "#3181de"
                       ),
+                      box.padding = 0.1,
+                      min.segment.length = 0,
+                      label.box = TRUE,
+                      segment.linetype = 1,
                       girafe = FALSE) {
   if (is.null(highlight)) highlight <- names
   if (showlegend) {
@@ -1422,11 +1426,23 @@ ggVolcano <- function(x,
       )
   }
 
-  plt <- plt +
-    ggrepel::geom_label_repel(
-      ggplot2::aes(label = label, color = category),
-      size = label.cex, family = "lato", box.padding = 0.1, max.overlaps = 20, show.legend = FALSE
-    )
+  if (label.box) {
+    plt <- plt +
+      ggrepel::geom_label_repel(
+        ggplot2::aes(label = label, color = category),
+        size = label.cex, family = "lato", box.padding = box.padding,
+        min.segment.length = min.segment.length, segment.linetype = segment.linetype,
+        max.overlaps = 20, show.legend = FALSE
+      )
+  } else {
+    plt <- plt +
+      ggrepel::geom_text_repel(
+        ggplot2::aes(label = label, color = category),
+        size = label.cex, family = "lato", box.padding = box.padding,
+        min.segment.length = min.segment.length, segment.linetype = segment.linetype,
+        max.overlaps = 20, show.legend = FALSE
+      )
+  }
 
   plt <- plt +
     ggplot2::geom_hline(yintercept = -log10(psig), linetype = "dashed", color = "gray") +
