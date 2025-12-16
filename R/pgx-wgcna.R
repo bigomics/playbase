@@ -444,6 +444,7 @@ wgcna.compute <- function(X,
 #' @export
 wgcna.compute_multiomics <- function(dataX,
                                      samples,
+                                     contrasts = NULL,
                                      power = 12,
                                      ngenes = 2000,
                                      clustMethod = "average",
@@ -574,7 +575,8 @@ wgcna.compute_multiomics <- function(dataX,
     minmodsize <- ifelse(dt=='ph', 1, minmodsize)      
     wgcna[[dt]] <- wgcna.compute(
       X = dataX[[dt]],
-      samples = samples, 
+      samples = samples,
+      contrasts = contrasts,
       ngenes = ngenes,
       calcMethod = "fast",
       power = power[dt],
@@ -650,10 +652,7 @@ wgcna.compute_multiomics <- function(dataX,
         wgcna[[k]]$prompts <- ai$questions
       }
     }      
-  }
-
-  
-
+  } 
   
   return(wgcna)
 }
@@ -2118,6 +2117,7 @@ wgcna.matchColors <- function(wgcna, refcolors) {
 #' @export
 wgcna.createConsensusLayers <- function(exprList,
                                         samples,
+                                        contrasts = NULL,
                                         ngenes = 2000,
                                         power = 12,
                                         minModuleSize = 20,
@@ -2212,7 +2212,8 @@ wgcna.createConsensusLayers <- function(exprList,
     X = exprList[[i]]
     w <- wgcna.compute(
       X = exprList[[i]],
-      samples,
+      samples = samples,
+      contrasts = contrasts,
       prefix = prefix[i],
       ngenes = -1,
       net = net,
@@ -2407,6 +2408,7 @@ wgcna.plotConsensusOverlapHeatmap <- function(net1, net2,
 #' @export
 wgcna.runPreservationWGCNA <- function(exprList,
                                        phenoData,
+                                       contrasts = NULL,
                                        power = 12,
                                        reference = 1,
                                        add.merged=FALSE,
@@ -2432,7 +2434,8 @@ wgcna.runPreservationWGCNA <- function(exprList,
   ## multiset WGCNA
   pres <- wgcna.runConsensusWGCNA(
     exprList,
-    phenoData,
+    phenoData = phenoData,
+    contrasts = contrasts,
     GMT = NULL,  ## no enrichment now
     annot = NULL,  ## no enrichment now
     ngenes = ngenes,
@@ -3432,7 +3435,7 @@ wgcna.plotDendroAndTraitCorrelation <- function(wgcna,
       traitSig <- traitSig[, sel, drop=FALSE]
     }
     traitColors <- rho2bluered(traitSig)
-    colors <- cbind(moduleColors, 0, traitColors)
+    colors <- cbind(colors, 0, traitColors)
   }
   if(show.contrasts) {
     X <- wgcna$datExpr
@@ -3444,7 +3447,7 @@ wgcna.plotDendroAndTraitCorrelation <- function(wgcna,
       traitSig <- traitSig[, sel, drop=FALSE]
     }
     traitColors <- rho2bluered(traitSig)
-    colors <- cbind(moduleColors, 0, traitColors)
+    colors <- cbind(colors, 0, traitColors)
   }
   
   geneTree <- wgcna$net$dendrograms[[1]]
@@ -4113,11 +4116,9 @@ wgcna.plotMultiEigengeneCorrelation <- function(wgcna, addtraits = TRUE,
       cex.lab = cex.lab
     )
     
-  }
-  
+  }  
   
 }
-
 
 
 #' @export
