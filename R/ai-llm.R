@@ -8,6 +8,7 @@ ai.get_ollama_models <- function(models=NULL) {
 
 OLLAMA_MODELS = ai.get_ollama_models()
 DEFAULT_LLM = "gpt-5-nano"
+DEFAULT_LLM = NULL
 
 if(0) {
   model="gpt-5-nano";prompt=NULL

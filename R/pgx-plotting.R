@@ -2237,7 +2237,7 @@ pgx.plotPhenotypeMatrix <- function(annot) {
 pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht = 5, cluster.samples = TRUE) {
   cvar <- pgx.getCategoricalPhenotypes(
     annot,
-    min.ncat = 2, max.ncat = 10, remove.dup = FALSE
+    min.ncat = 2, max.ncat = 10, remove.dup = FALSE, remove.dot = FALSE
   )
   fvar <- pgx.getNumericalPhenotypes(annot)
   annot.cvar <- annot[, cvar, drop = FALSE]
@@ -6781,10 +6781,15 @@ plotTimeSeries.modules <- function(time, xx, modules, main = "",
 
 #' Plots time series facetted by module/colors with groups. X is an
 #' expression matrix. Time is a vector of times for each sample.
-#'
 #' @export
-plotTimeSeries.groups <- function(time, y, group = NULL, main = "",
-                                  lwd = 3, xlab = "time", time.factor = TRUE) {
+plotTimeSeries.groups <- function(time,
+                                  y,
+                                  group = NULL,
+                                  main = "",
+                                  lwd = 3,
+                                  xlab = "time",
+                                  time.factor = TRUE) {
+
   if (is.null(group)) group <- rep(1, length(time))
   groups <- sort(unique(group))
   ngroup <- length(groups)
@@ -6793,7 +6798,8 @@ plotTimeSeries.groups <- function(time, y, group = NULL, main = "",
   time[grepl("ctrl|co|control|bl", time, ignore.case = TRUE)] <- "0"
   is.number <- all(grepl("[0-9]", time))
   if (!is.number || time.factor) {
-    ctime <- factor(time, levels = sort(unique(time)))
+    oo <- order(as.numeric(gsub("[^0-9]", "", time)))
+    ctime <- factor(time, levels = unique(time[oo]))
     ntime <- length(unique(ctime))
     xlim <- c(0, ntime) + 0.5
     time.factor <- TRUE
@@ -6815,7 +6821,7 @@ plotTimeSeries.groups <- function(time, y, group = NULL, main = "",
     if (time.factor) x1pos <- 1:ntime
     boxplot(y1 ~ x1,
       col = klr1, boxwex = 0.25,
-      add = i > 1, at = x1pos,
+      add = i > 1, at = x1pos, las = 1,
       xlab = xlab, ylab = "expression",
       xlim = xlim, ylim = range(y)
     )
@@ -6837,9 +6843,9 @@ plotTimeSeries.groups <- function(time, y, group = NULL, main = "",
   }
 
   title(main = main)
-  if (ngroup > 1) {
+  if (ngroup > 1)
     legend("bottomright", legend = groups, fill = 2:99, y.intersp = 0.8, cex = 0.9)
-  }
+
 }
 
 

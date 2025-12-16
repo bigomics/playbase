@@ -52,7 +52,14 @@ pgx.clusterGenes <- function(pgx,
   } else if (!is.null(pgx$X) && level == "gene") {
     message("[pgx.clusterGenes] Using normalized X matrix detected in pgx...")
     X <- pgx$X
-    if (any(is.na(X))) X <- playbase::imputeMissing(X, method = "SVD2")  ## just for safety
+    is.mox <- is.multiomics(rownames(X))
+    if (any(is.na(X))) {
+      if (is.mox) {
+        X <- imputeMissing.mox(X, method = "SVD2")
+      } else {
+        X <- imputeMissing(X, method = "SVD2")
+      }
+    }
   } else if (!is.null(pgx$gsetX) && level == "geneset") {
     message("[pgx.clusterGenes] Using expression geneset X matrix detected in pgx...")
     X <- pgx$gsetX
@@ -189,7 +196,14 @@ pgx.clusterSamples <- function(pgx,
     X <- logCPM(pgx$counts, total = NULL)
   }
 
-  if (any(is.na(X))) X <- playbase::imputeMissing(X, method = "SVD2")
+  is.mox <- is.multiomics(rownames(X))
+  if (any(is.na(X))) {
+    if (is.mox) {
+      X <- imputeMissing.mox(X, method = "SVD2")
+    } else {
+      X <- imputeMissing(X, method = "SVD2")
+    }
+  }
   
   clust.pos <- pgx.clusterBigMatrix(
     X,

@@ -529,21 +529,26 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
     names(tables) <- colnames(contr.matrix)
   } else {
     message("fitting gset.LIMMA contrasts without design.... ")
-    tables <- list()
-    i <- 1
+    i=1; tables=list()
     for (i in 1:ncol(contr.matrix)) {
       design0 <- cbind(1, contr.matrix[, i])
       colnames(design0) <- c("ref", colnames(contr.matrix)[i])
-      vfit <- limma::lmFit(gsetX, design0)
-      efit <- limma::eBayes(vfit, trend = trend, robust = TRUE)
-      top <- limma::topTable(efit, coef = 2, sort.by = "none", number = Inf, adjust.method = "BH")
+      vfit <- try(limma::lmFit(gsetX, design0), silent = TRUE)
+      efit <- try(limma::eBayes(vfit, trend = trend, robust = TRUE), silent = TRUE)
+      top <- try(limma::topTable(efit, coef = 2, sort.by = "none", number = Inf, adjust.method = "BH"),
+        silent = TRUE)
       j1 <- which(contr.matrix[, i] > 0)
       j0 <- which(contr.matrix[, i] < 0)
       mean1 <- rowMeans(gsetX[, j1, drop = FALSE], na.rm = TRUE)
       mean0 <- rowMeans(gsetX[, j0, drop = FALSE], na.rm = TRUE)
-      top <- top[rownames(gsetX), ]
+      if (! "try-error" %in% class(top)) {
+        top <- top[rownames(gsetX), , drop = FALSE]
+      } else {
+        top <- data.frame(matrix(NA, nrow = nrow(gsetX), ncol = 6))
+        rownames(top) <- rownames(gsetX)
+        colnames(top) <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val", "B")
+      }
       top <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
-      Matrix::head(top, 10)
       tables[[i]] <- top
     }
     names(tables) <- colnames(contr.matrix)

@@ -26,8 +26,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 #------------------------------------------------------------
 # Install de-novo bigomics stuff (as R packages)
 #------------------------------------------------------------
-RUN Rscript -e "remotes::install_github('lifs-tools/rgoslin')"
-RUN Rscript -e "remotes::install_github('ncats/RAMP-DB')"
+# RUN Rscript -e "remotes::install_github('lifs-tools/rgoslin')"
+# RUN Rscript -e "remotes::install_github('ncats/RAMP-DB')"
 
 # copy bigomics/playbase code from github checkout
 COPY . /playbase

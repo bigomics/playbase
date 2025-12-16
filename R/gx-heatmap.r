@@ -613,8 +613,13 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 
   ## global row clustering if no split
   if (cluster_rows && !do.split) {
+    is.mox <- is.multiomics(rownames(gx))
     if (any(is.na(gx))) {
-      gx2 <- imputeMissing(gx, method = "SVD2")
+      if (is.mox) {
+        gx2 <- imputeMissing.mox(gx, method = "SVD2")
+      } else {
+        gx2 <- imputeMissing(gx, method = "SVD2")
+      }
       cluster_rows <- as.dendrogram(hclust(dist(gx2)))
       rm(gx2)
     } else {
@@ -1765,7 +1770,7 @@ heatmap.3 <- function(x,
       Matrix::image(rbind(1:nr), col = RowSideColors[rowInd], axes = FALSE)
     } else {
       graphics::par(mar = c(margins[1], 0, 0, 0.5))
-      rsc <- t(RowSideColors[, rowInd, drop = F])
+      rsc <- t(RowSideColors[, rowInd, drop = FALSE])
       rsc.colors <- matrix()
       rsc.names <- names(table(rsc))
       rsc.i <- 1
@@ -1788,7 +1793,7 @@ heatmap.3 <- function(x,
       Matrix::image(cbind(1:nc), col = ColSideColors[colInd], axes = FALSE)
     } else {
       graphics::par(mar = c(0.5, 0, 0, margins[2]))
-      csc <- ColSideColors[colInd, , drop = F]
+      csc <- ColSideColors[colInd, , drop = FALSE]
       csc.colors <- matrix()
       csc.names <- names(table(csc))
       csc.i <- 1
@@ -1892,7 +1897,7 @@ heatmap.3 <- function(x,
   }
   if (!missing(cellnote)) {
     graphics::text(
-      x = c(row(cellnote)), y = c(col(cellnote)), labels = c(cellnote),
+      x = c(base::row(cellnote)), y = c(base::col(cellnote)), labels = c(cellnote),
       col = notecol, cex = notecex
     )
   }
