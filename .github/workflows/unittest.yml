@@ -1,65 +1,79 @@
 name: Playbase unittest
-
-on:
+on: 
   pull_request:
   workflow_dispatch:
-
 permissions:
   contents: write
-
 env:
-  GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-  CI: true
-
+  DOCKER_TAG: bigomics/omicsplayground:devel
 jobs:
   unittest:
-    runs-on: ubuntu-latest
-
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      -
+        name: Checkout
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.head_ref || github.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up R
-        uses: r-lib/actions/setup-r@v2
-        with:
-          use-public-rspm: true
-
-      - name: Install system dependencies
+      -
+        name: Update DESCRIPTION imports
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libgit2-dev libglpk-dev libgmp-dev libhdf5-dev
-
-      - name: Update DESCRIPTION imports
-        run: |
-          Rscript -e "install.packages('renv', repos='https://cloud.r-project.org')"
-          Rscript -e "source('dev/write_description.R')"
-
-      - name: Commit updated DESCRIPTION
+          docker run --rm -v "$PWD":/playbase -w /playbase rocker/tidyverse:4.3 \
+            Rscript -e "install.packages('renv', repos='https://cloud.r-project.org'); source('dev/write_description.R')"
+      -
+        name: Commit updated DESCRIPTION
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add DESCRIPTION
           git diff --staged --quiet || git commit -m "chore: update DESCRIPTION imports [skip ci]"
           git push
-
-      - name: Install R dependencies
-        uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-packages: any::devtools, any::testthat, github::bigomics/playdata
-
-      - name: Run tests
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      # - 
+      #   name: Setup upterm session
+      #   uses: lhotari/action-upterm@v1
+      #   with:
+      #     ## limits ssh access and adds the ssh public key for the user which triggered the workflow
+      #     limit-access-to-actor: true
+      #     ## limits ssh access and adds the ssh public keys of the listed GitHub users
+      #     limit-access-to-users: mauromiguelm
+      #     wait-timeout-minutes: 120
+      -
+        name: Build OPG docker
+        id: build-opg-docker
         run: |
-          Rscript -e "devtools::test(quiet=TRUE)" > test_result.txt 2>&1 || true
-          cat test_result.txt
-          if grep -q -i "Failed tests" test_result.txt; then
-            echo "::error::There are failed tests, please download artifacts for more details."
+          docker build --build-arg DOCKER_TAG=$DOCKER_TAG -t $DOCKER_TAG -f ./.github/workflows/unittest/Dockerfile .
+      # - 
+      #   name: Setup upterm session
+      #   uses: lhotari/action-upterm@v1
+      #   with:
+      #     ## limits ssh access and adds the ssh public key for the user which triggered the workflow
+      #     limit-access-to-actor: true
+      #     ## limits ssh access and adds the ssh public keys of the listed GitHub users
+      #     limit-access-to-users: mauromiguelm
+      #     wait-timeout-minutes: 120
+
+      -
+        name: Unittest docker
+        id: test-snapshot
+        run: |
+          docker run --name run_tests -e CI=true $DOCKER_TAG
+          docker cp run_tests:/test_result.txt .
+      
+      - 
+        name: Check workflow result
+        id: check-workflow-result
+        run: |
+          if [[ "${{ steps.test-snapshot.outputs.workflow_result }}" == "false" ]]; then
+            echo "Workflow failed."
             exit 1
           fi
-
-      - name: Upload test log
+      - 
+        name: Upload error log
         if: always()
         uses: actions/upload-artifact@v4
         with:
