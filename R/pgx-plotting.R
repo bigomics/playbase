@@ -1323,7 +1323,9 @@ ggVolcano <- function(x,
                       min.segment.length = 0,
                       label.box = TRUE,
                       segment.linetype = 1,
-                      girafe = FALSE) {
+                      girafe = FALSE,
+                      use_hyperbola = FALSE,
+                      hyperbola_k = 1) {
   if (is.null(highlight)) highlight <- names
   if (showlegend) {
     legend <- "right"
@@ -1339,12 +1341,43 @@ ggVolcano <- function(x,
   if (!is.null(facet)) {
     df$facet <- facet
   }
-  df$category <- ifelse(
-    df$y > -log10(psig) & df$fc > lfc, "Up",
-    ifelse(df$y > -log10(psig) & df$fc < -lfc, "Down", "Not significant")
-  )
-  df$label <- ifelse(names %in% label | label.names %in% label, label.names, NA)
-  df$category[!(names %in% highlight | label.names %in% highlight)] <- "Not selected"
+  ## Significance classification
+
+  psig_transformed <- -log10(psig)
+
+  if (use_hyperbola) {
+    ## Hyperbolic significance criterion:
+    ## A point is significant if: (y - psig_transformed) * (|fc| - lfc) > k
+    ## This creates a hyperbola with:
+    ##   - Horizontal asymptote at y = psig_transformed
+    ##   - Vertical asymptotes at x = ±lfc
+    ## The curvature parameter k controls how "tight" the hyperbola is
+    hyperbola_sig <- (df$y - psig_transformed) * (abs(df$fc) - lfc) > hyperbola_k
+    hyperbola_sig[abs(df$fc) <= lfc] <- FALSE # Points inside vertical asymptotes are not significant
+
+    ## Determine which points are highlighted (in selected geneset)
+    is_highlighted <- (names %in% highlight | label.names %in% highlight)
+
+    ## For hyperbolic mode:
+    ## - Highlighted + significant → Up/Down (colored)
+    ## - Highlighted + not significant → Not significant (darker grey, shows selection)
+    ## - Not highlighted → Not selected (soft grey)
+    df$category <- ifelse(
+      !is_highlighted, "Not selected",
+      ifelse(hyperbola_sig & df$fc > 0, "Up",
+             ifelse(hyperbola_sig & df$fc < 0, "Down", "Not significant"))
+    )
+
+    df$label <- ifelse(names %in% label | label.names %in% label, label.names, NA)
+  } else {
+    ## Traditional rectangular cutoff
+    df$category <- ifelse(
+      df$y > psig_transformed & df$fc > lfc, "Up",
+      ifelse(df$y > psig_transformed & df$fc < -lfc, "Down", "Not significant")
+    )
+    df$label <- ifelse(names %in% label | label.names %in% label, label.names, NA)
+    df$category[!(names %in% highlight | label.names %in% highlight)] <- "Not selected"
+  }
 
   df$tooltip <- gsub("[\\'\\`-]", "", df$tooltip)
   df$name <- gsub("[\\'\\`-]", "", df$name)
@@ -1444,10 +1477,55 @@ ggVolcano <- function(x,
       )
   }
 
+  ## Add threshold lines or hyperbola curve
+  if (use_hyperbola) {
+    ## Create hyperbola curve data (separate branches to avoid connecting line)
+    ## Right branch: y = psig_transformed + k / (x - lfc) for x > lfc
+    ## Left branch: y = psig_transformed + k / (-x - lfc) for x < -lfc
+    x_max <- max(abs(df$fc), na.rm = TRUE) * 1.2
+
+    ## Right branch
+    x_right <- seq(lfc + 0.01, x_max, length.out = 200)
+    y_right <- psig_transformed + hyperbola_k / (x_right - lfc)
+    hyperbola_right <- data.frame(x = x_right, y = y_right)
+
+    ## Left branch
+    x_left <- seq(-x_max, -lfc - 0.01, length.out = 200)
+    y_left <- psig_transformed + hyperbola_k / (-x_left - lfc)
+    hyperbola_left <- data.frame(x = x_left, y = y_left)
+
+    ## Clip to ylim
+    if (!is.null(ylim)) {
+      hyperbola_right <- hyperbola_right[hyperbola_right$y <= ylim, ]
+      hyperbola_left <- hyperbola_left[hyperbola_left$y <= ylim, ]
+    }
+
+    plt <- plt +
+      ggplot2::geom_line(
+        data = hyperbola_right,
+        ggplot2::aes(x = x, y = y),
+        linetype = "dashed",
+        color = "gray",
+        linewidth = 0.7
+      ) +
+      ggplot2::geom_line(
+        data = hyperbola_left,
+        ggplot2::aes(x = x, y = y),
+        linetype = "dashed",
+        color = "gray",
+        linewidth = 0.7
+      ) +
+      ggplot2::geom_vline(xintercept = c(-lfc, lfc), linetype = "dotted", color = "gray", alpha = 0.5) +
+      ggplot2::geom_hline(yintercept = psig_transformed, linetype = "dotted", color = "gray", alpha = 0.5) +
+      ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey")
+  } else {
+    plt <- plt +
+      ggplot2::geom_hline(yintercept = psig_transformed, linetype = "dashed", color = "gray") +
+      ggplot2::geom_vline(xintercept = c(-lfc, lfc), linetype = "dashed", color = "gray") +
+      ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey")
+  }
+
   plt <- plt +
-    ggplot2::geom_hline(yintercept = -log10(psig), linetype = "dashed", color = "gray") +
-    ggplot2::geom_vline(xintercept = c(-lfc, lfc), linetype = "dashed", color = "gray") +
-    ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey") +
     ggplot2::scale_y_continuous(
       limits = c(0, ylim),
       expand = ggplot2::expansion(mult = c(0, 0))
