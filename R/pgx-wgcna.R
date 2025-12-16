@@ -2544,6 +2544,7 @@ wgcna.runPreservationWGCNA <- function(exprList,
       if(!is.null(annot)) GMT <- rename_by2(GMT, annot, "human_ortholog")
     }
 
+    ## we should check here if GMT and X overlap....
     pres$gsea <- wgcna.computeModuleEnrichment(
       pres$layers[[ref]],
       GMT = GMT,
@@ -2554,6 +2555,7 @@ wgcna.runPreservationWGCNA <- function(exprList,
       xtop = 100,
       filter = NULL
     )
+
   }
   
   pres$modulePreservation <- mp
