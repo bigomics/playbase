@@ -2537,11 +2537,11 @@ wgcna.runPreservationWGCNA <- function(exprList,
 
     if(!is.null(GMT)) {
       GMT0 <- Matrix::t(playdata::GSETxGENE)
-      if(!is.null(annot)) GMT0 <- rename_by2(GMT0, annot, "symbol")
+      if(!is.null(annot)) GMT0 <- rename_by2(GMT0, annot, "human_ortholog")
       GMT <-  merge_sparse_matrix(GMT, GMT0)
     } else {
       GMT <- Matrix::t(playdata::GSETxGENE)
-      if(!is.null(annot)) GMT <- rename_by2(GMT, annot, "symbol")
+      if(!is.null(annot)) GMT <- rename_by2(GMT, annot, "human_ortholog")
     }
 
     pres$gsea <- wgcna.computeModuleEnrichment(
