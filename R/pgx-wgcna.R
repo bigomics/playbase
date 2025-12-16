@@ -2517,7 +2517,7 @@ wgcna.runPreservationWGCNA <- function(exprList,
     Y <-Y[names(MEx)]
   }
   kk <- Reduce( union, lapply(Y, colnames))
-  Y <- lapply(Y, function(y) y[,match(kk,colnames(y))])
+  Y <- lapply(Y, function(y) y[,match(kk,colnames(y)),drop=FALSE])
   for(i in 1:length(Y)) colnames(Y[[i]]) <- kk
   R <- mapply(cor, MEx, Y, use="pairwise", SIMPLIFY=FALSE)
   ##for(i in 1:length(R)) colnames(R[[i]]) <- paste0(names(R)[i],":",colnames(R[[i]]))
