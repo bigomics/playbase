@@ -42,6 +42,7 @@ pgx.wgcna <- function(
     ngenes = 2000,
     maxBlockSize = 9999,
     gset.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]",
+    compute.enrichment = TRUE,
     summary = TRUE,
     ai_model = DEFAULT_LLM,
     verbose = 1,
@@ -123,25 +124,28 @@ pgx.wgcna <- function(
   ## ----------------------------------------------------
   ## Do geneset analysis
   ## ----------------------------------------------------
-  if(!is.null(progress)) progress$set(message = "Computing enrichment...", value=0.4)
-  message("computing module enrichment...")
+  if(compute.enrichment) {
+    if(!is.null(progress)) progress$set(message = "Computing enrichment...", value=0.4)
+    message("computing module enrichment...")
+    
+    ## We augment pgx$GMT with original GSETxGENE to get better results
+    ## for all modules.
+    GMT0 <- Matrix::t(playdata::GSETxGENE)
+    GMT0 <- rename_by2(GMT0, pgx$genes, "symbol")
+    GMT <-  merge_sparse_matrix(pgx$GMT, GMT0)
+    
+    wgcna$gsea <- wgcna.computeModuleEnrichment(
+      wgcna,
+      annot = pgx$genes,
+      GMT = GMT,
+      # gsetX = pgx$gsetX,
+      methods = c("fisher", "gsetcor", "xcor"),
+      ntop = 1000,
+      xtop = 100,
+      filter = gset.filter
+    )
 
-  ## We augment pgx$GMT with original GSETxGENE to get better results
-  ## for all modules.
-  GMT0 <- Matrix::t(playdata::GSETxGENE)
-  GMT0 <- rename_by2(GMT0, pgx$genes, "symbol")
-  GMT <-  merge_sparse_matrix(pgx$GMT, GMT0)
-
-  wgcna$gsea <- wgcna.computeModuleEnrichment(
-    wgcna,
-    annot = pgx$genes,
-    GMT = GMT,
-    # gsetX = pgx$gsetX,
-    methods = c("fisher", "gsetcor", "xcor"),
-    ntop = 1000,
-    xtop = 100,
-    filter = gset.filter
-  )
+  }
 
   if(summary) {
     if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
@@ -1349,7 +1353,6 @@ wgcna.computeModuleEnrichment <- function(wgcna,
     message("ERROR: datasets must have gx or px datatype!")
     return(NULL)
   }
-
   
   ## collapse features to symbol
   selx <- intersect(c("gx","px"), names(wgcna))[1]
@@ -1401,14 +1404,15 @@ wgcna.computeModuleEnrichment <- function(wgcna,
   G1 <- G1[,ss,drop=FALSE]
   gsetX <- gsetX[ss,]
   
-  ME <- lapply(wgcna, function(w) as.matrix(w$net$MEs))
+  ## get eigengene members
   me.genes <- lapply(wgcna, function(w) w$me.genes)
   names(me.genes) <- NULL
-  me.genes <- do.call(c, me.genes)
+  me.genes <- unlist(me.genes,recursive=FALSE)
   me.genes <- lapply(me.genes, function(g) probe2symbol(g, annot, query = symbol.col))
 
   ## compute most correlated gx/px genes. limit xtop if geneX is too
   ## small
+  ME <- lapply(wgcna, function(w) as.matrix(w$net$MEs))
   xtop <- min(xtop, round(nrow(geneX)/4))
   nbx.genes <- list()
   for(i in 1:length(wgcna)) {
