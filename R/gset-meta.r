@@ -247,11 +247,16 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       }
 
       tt <- system.time({
-        output <- gset.fisher2(genes.up, genes.dn,
-          genesets = gmt, fdr = 1.0,
-          background = rownames(X), check.background = FALSE,
-          min.genes = 0, max.genes = 99999,
-          report.genes = FALSE, verbose = 0
+        output <- gset.fisher2(
+          genes.up, genes.dn,
+          genesets = G,
+          fdr = 1.0,
+          background = rownames(X),
+          check.background = FALSE,
+          min.genes = 0,
+          max.genes = 99999,
+          report.genes = FALSE,
+          verbose = 0
         )
       })
 
