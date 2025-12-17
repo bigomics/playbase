@@ -58,28 +58,16 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     design <- NULL
   }
 
-  ## experiment matrix
   if (!is.null(design)) {
     exp.matrix <- (design %*% contr.matrix)[colnames(X), , drop = FALSE]
   } else {
     exp.matrix <- contr.matrix[colnames(X), , drop = FALSE]
   }
 
-  ## some "normalization" for single-sample methods
-  my.normalize <- function(zx) {
-    if (nrow(zx) <= 10) {
-      return(zx)
-    }
-    zx <- scale(limma::normalizeQuantiles(zx))
-    return(zx)
-  }
-
   all.results <- list()
-  ## pre-compute matrices
   zx.gsva <- zx.ssgsea <- zx.rnkcorr <- NULL
   res.gsva <- res.ssgsea <- res.rnkcorr <- NULL
 
-  ## align. gg are symbols.
   gg <- setdiff(rownames(X), c("", NA))
   gg <- intersect(rownames(G), rownames(X))
   G <- G[gg, names(gmt), drop = FALSE]
@@ -99,15 +87,17 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       zx.rnkcorr <- cor_sparse_matrix(G, xx1)
       rownames(zx.rnkcorr) <- colnames(G)
       colnames(zx.rnkcorr) <- colnames(X)
-      zx.rnkcorr <- my.normalize(zx.rnkcorr)
+      if (nrow(zx.rnkcorr) > 10) {
+        zx.rnkcorr.norm <- try(scale(limma::normalizeQuantiles(zx.rnkcorr)), silent = TRUE)
+        if (! "try-error" %in% class(zx.rnkcorr.norm)) zx.rnkcorr <- zx.rnkcorr.norm
+        rm(zx.rnkcorr.norm)
+      }
       cm1 <- intersect(names(gmt), rownames(zx.rnkcorr))
       cm2 <- intersect(colnames(X), colnames(zx.rnkcorr))
-      zx.rnkcorr <- zx.rnkcorr[cm1, cm2, drop = FALSE] ## make sure..
+      zx.rnkcorr <- zx.rnkcorr[cm1, cm2, drop = FALSE]
       nas <- apply(zx.rnkcorr, 1, function(x) sum(is.na(x)))
       jj <- which(nas < ncol(zx.rnkcorr))
       zx.rnkcorr <- zx.rnkcorr[jj, , drop = FALSE]
-
-      ## compute LIMMA
       all.results[["spearman"]] <- gset.fitContrastsWithLIMMA(
         zx.rnkcorr,
         contr.matrix,
@@ -148,7 +138,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       }
       dbg("gsva computation done!")
       if (!"try-error" %in% class(zx.gsva)) {
-        zx.gsva <- my.normalize(zx.gsva)
+        if (nrow(zx.gsva) > 10) zx.gsva <- scale(limma::normalizeQuantiles(zx.gsva))
         jj <- match(names(gmt), rownames(zx.gsva))
         zx.gsva <- zx.gsva[jj, colnames(X), drop = FALSE] ## make sure..
         rownames(zx.gsva) <- names(gmt)
@@ -187,7 +177,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       dbg("ssgsea computation done!")
       
       if (!"try-error" %in% class(zx.ssgsea)) {
-        zx.ssgsea <- my.normalize(zx.ssgsea)
+        if (nrow(zx.ssgsea) > 10) zx.ssgsea <- scale(limma::normalizeQuantiles(zx.ssgsea))
         kk <- match(names(gmt), rownames(zx.ssgsea))
         zx.ssgsea <- zx.ssgsea[kk, colnames(X), drop = FALSE]
         rownames(zx.ssgsea) <- names(gmt)
