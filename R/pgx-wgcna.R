@@ -805,6 +805,14 @@ wgcna.computeModules <- function(
   colors <- WGCNA::labels2colors(label)
   MEs <- WGCNA::moduleEigengenes(datExpr, colors = colors)$eigengenes
 
+  # Control MEgrey, if less than 200 features on data, remove it. Also, check that its not full of NaNs
+  if (ncol(datExpr) < 200 && "MEgrey" %in% colnames(MEs)) {
+    MEs$MEgrey <- NULL
+  }
+  if ("MEgrey" %in% colnames(MEs) && all(is.na(MEs$MEgrey))) {
+    MEs$MEgrey <- NULL
+  }
+
   ## prune using minKME
   if(minKMEtoStay > 0) {
     if(verbose>0) message("Pruning features using minKME = ",minKMEtoStay)
