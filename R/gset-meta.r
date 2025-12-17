@@ -251,7 +251,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
           genesets = gmt, fdr = 1.0,
           background = rownames(X), check.background = FALSE,
           min.genes = 0, max.genes = 99999,
-          common.genes = FALSE, verbose = 0
+          report.genes = FALSE, verbose = 0
         )
       })
 

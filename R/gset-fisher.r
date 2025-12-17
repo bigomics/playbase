@@ -32,8 +32,7 @@
 #' @param method The method used for computing p-values. Defaults to "fast.fisher".
 #' @param check.background A logical value indicating whether to check the presence of genes in
 #'                         the background set. Defaults to `TRUE`.
-#' @param common.genes A logical value indicating whether to use only genes common to both the
-#'                     input gene sets and the background set. Defaults to `TRUE`.
+#' @param report.genes A logical value indicating whether to report genes in genesets. Defaults to `FALSE`.
 #'
 #' @export
 #'
@@ -44,18 +43,19 @@
 gset.fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
                          fdr = 0.05, mc = TRUE, sort.by = "zratio", nmin = 3, verbose = 1,
                          min.genes = 15, max.genes = 500, method = "fast.fisher",
-                         check.background = TRUE, common.genes = TRUE) {
+                         check.background = TRUE, report.genes = FALSE) {
+
   ft.up <- gset.fisher(
     genes = genes.up, genesets = genesets, background = background,
     fdr = 1, mc = mc, sort.by = sort.by, nmin = nmin, verbose = verbose,
     min.genes = min.genes, max.genes = max.genes, method = method,
-    check.background = check.background, common.genes = common.genes
+    check.background = check.background, report.genes = report.genes
   )
   ft.dn <- gset.fisher(
     genes = genes.dn, genesets = genesets, background = background,
     fdr = 1, mc = mc, sort.by = sort.by, nmin = nmin, verbose = verbose,
     min.genes = min.genes, max.genes = max.genes, method = method,
-    check.background = check.background, common.genes = common.genes
+    check.background = check.background, report.genes = report.genes
   )
   ft.up <- ft.up[rownames(ft.dn), ]
   ft.sign <- c(-1, 1)[1 + 1 * (ft.up$p.value < ft.dn$p.value)]
@@ -64,6 +64,7 @@ gset.fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
   ft.res <- rbind(ft1, ft2)
   ft.res$sign <- ft.res$sign * ft.res$odd.ratio
   ft.res <- ft.res[which(ft.res$q.value <= fdr), , drop = FALSE]
+
   return(ft.res)
 }
 
@@ -90,8 +91,7 @@ gset.fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
 #' @param method The method used for computing p-values. Defaults to "fast.fisher".
 #' @param check.background A logical value indicating whether to check the presence of genes in
 #'                         the background set. Defaults to `TRUE`.
-#' @param common.genes A logical value indicating whether to use only genes common to both the
-#'                     input gene set and the background set. Defaults to `TRUE`.
+#' @param report.genes A logical value indicating whether to report genes in gene sets. Defaults to `TRUE`.
 #' @param verbose A numeric value indicating the level of verbosity. Defaults to 1.
 #'
 #' @export
@@ -104,16 +104,59 @@ gset.fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
 gset.fisher <- function(genes, genesets, background = NULL,
                         fdr = 0.05, mc = TRUE, sort.by = "zratio", nmin = 3,
                         min.genes = 15, max.genes = 500, method = "fast.fisher",
-                        check.background = TRUE, common.genes = TRUE,
+                        check.background = TRUE, report.genes = FALSE,
                         no.pass=NA, verbose = 1) {
-  if (is.null(background)) {
-    background <- unique(unlist(genesets))
-    if (verbose > 0) {
-      cat("setting background to ", length(background), "genes covered\n")
-    }
+
+
+  if(0) {
+    fdr = 0.05; mc = TRUE; sort.by = "zratio"; nmin = 3;
+    min.genes = 15; max.genes = 500; method = "fast.fisher";
+    check.background = TRUE; report.genes = TRUE;
+    no.pass=NA; verbose = 1; background=NULL
   }
 
-  if (check.background) {
+  inherits(genesets, "Matrix")  
+  ## switch according to geneset class
+  if(class(genesets) == "list") {
+    res <- gset.fisherLIST(
+      genes = genes, genesets = genesets, background = background,
+      fdr = fdr, mc = mc, sort.by = sort.by, nmin = nmin,
+      min.genes = min.genes, max.genes = max.genes, method = method,
+      check.background = check.background, report.genes = report.genes,
+      no.pass = no.pass, verbose = verbose
+    )
+  } else if(inherits(genesets, "Matrix")) {
+    G <- genesets
+    res1 <- gset.fastFET(genes, G = G, bg = background,
+      report.genes = report.genes) 
+    
+  } else {
+    stop("[gset.fisher] FATAL ERROR")
+  }
+
+
+  
+  return(res)
+}
+
+
+gset.fisherLIST <- function(genes, genesets, background = NULL,
+                        fdr = 0.05, mc = TRUE, sort.by = "zratio", nmin = 3,
+                        min.genes = 15, max.genes = 500, method = "fast.fisher",
+                        check.background = TRUE, report.genes = FALSE,
+                        no.pass=NA, verbose = 1) {
+
+  bgNULL <- FALSE
+  if (is.null(background)) {
+    message("[gset.fisher] note: it is recommended to specify background")
+    background <- unique(unlist(genesets))
+    if (verbose > 0) {
+      cat("setting background to ", length(background), "genes covered in genesets\n")
+    }
+    bgNULL <- TRUE
+  }
+
+  if (check.background && !bgNULL) {
     ## restrict on background
     genes <- intersect(genes, background)
     genesets <- lapply(genesets, function(s) intersect(s, background))
@@ -161,10 +204,10 @@ gset.fisher <- function(genes, genesets, background = NULL,
   d <- (nbackground1 - b)
   odd.ratio <- (a / c) / (b / d) ## note: not exactly same as from fishertest
 
-  ## intersection genes (slow..)
-  commongenes <- NULL
-  if (common.genes) {
-    commongenes <- unlist(lapply(genesets, function(x) paste(sort(intersect(genes, x)), collapse = "|")))
+  ## report intersection genes (slow..) like leading edge list.
+  gsgenes <- NULL
+  if (report.genes) {
+    gsgenes <- unlist(lapply(genesets, function(x) paste(sort(intersect(genes, x)), collapse = "|")))
   }
 
   ## compute fisher-test (should be one-sided?)
@@ -201,7 +244,9 @@ gset.fisher <- function(genes, genesets, background = NULL,
       message("[playbase::gset.fisher] fast.fisher failed. Testing with standard fisher.")
       method <- "fisher"
     }
-  } else if (method == "fisher") {
+  }
+
+  if (method == "fisher") {
     if (mc) {
       pv <- unlist(lapply(genesets, test.fisher))
     } else {
@@ -218,6 +263,8 @@ gset.fisher <- function(genes, genesets, background = NULL,
         pv[i] <- test.chisq(genesets[[i]])
       }
     }
+  } else if (method == "fast.fisher") {
+    ## done
   } else {
     stop("unknown method")
   }
@@ -234,8 +281,8 @@ gset.fisher <- function(genes, genesets, background = NULL,
   ## results
   v1 <- as.character(paste0(a, "/", n.size))
   rr <- data.frame(p.value = pv, q.value = qv, odd.ratio = odd.ratio, overlap = v1)
-  if (!is.null(commongenes)) {
-    rr <- cbind(rr, genes = commongenes)
+  if (!is.null(gsgenes)) {
+    rr <- cbind(rr, genes = gsgenes)
   }
   rownames(rr) <- names(genesets)
 
@@ -254,3 +301,140 @@ gset.fisher <- function(genes, genesets, background = NULL,
   dim(rr)
   rr
 }
+
+
+#' Calculate fast Fisher exact test.  
+#'
+#' @param genes Vector of significant genes
+#' @param G    Sparse matrix containing gene sets
+#' @param bg   Vector of genes as background
+#' @param report.genes  Logical to report gene set genes in output
+#'
+#' @export
+gset.fastFET <- function(genes, G, bg, report.genes=FALSE) {
+  bgnull <- FALSE
+  if(is.null(bg)) {
+    message("[gset.fisher] note: it is recommended to specify background")
+    bg <- unique(c(genes,rownames(G)))
+    bgnull <- TRUE
+  }
+  if(length(bg)>1 && !bgnull) {
+    genes <- intersect(genes, bg)
+    G <- G[intersect(bg,rownames(G)),,drop=FALSE]
+  }  
+  length.bg <- NULL
+  if(length(bg)==1 && is.integer(bg)) {
+    length.bg <- as.integer(bg)
+  } else if(length(bg)>1) {
+    length.bg <- length(bg)
+  }
+
+  if(is.null(length.bg)) stop("error: invalid background. bg:", head(bg))
+  if(length(genes)==0) stop("error: zero genes length")
+  if(nrow(G)==0) stop("error: empty gene set matrix G")
+  
+  genes <- intersect(genes, rownames(G))  
+  gsize <- Matrix::colSums(G!=0)
+  genes <- intersect(genes, rownames(G))
+  a <- Matrix::colSums(G[genes,]!=0)
+  b <- length(genes) - a
+  c <- gsize - a
+  d <- length.bg - (a+b+c) 
+  pv <- corpora.fastFET(a,b,c,d)
+
+  names(pv) <- colnames(G)
+  odd.ratio <- (a/b)/(c/d)
+  qv <- p.adjust(pv, method="fdr")
+  overlap <- paste0(a,"/",gsize)
+
+  gsgenes <- NULL
+  if(report.genes) {
+    gsgenes <- apply( G[genes,], 2, function(x) paste(sort(genes[which(x!=0)]),collapse="|") )
+  }
+
+  df <- data.frame(p.value=pv, q.value=qv, odd.ratio=odd.ratio, overlap=overlap)
+  if(!is.null(gsgenes)) df <- cbind(df, genes=gsgenes)
+  return(df)
+}
+
+
+
+#' Wrapper superfast version of Fisher Exact Test from 'corpora' R
+#' package. This is the fastest implementation currently
+#' available. Uses phyper inside.
+#' 
+#'            setAn ¬setA
+#'        setB  a     b | a+b
+#'       ¬setB  c     d | c+d
+#'          ------------|-----
+#'             a+c   b+d| a+b+c+d
+#' 
+corpora.fastFET <- function(a, b, c, d, alternative = c("two.sided", "less", 
+    "greater")[3], log.p = FALSE) {
+  ## this is really-really-really fast...
+  pv <- rep(NA, length(a))
+  ii <- 1:length(a)
+  ii <- which((a + b) > 0)
+  d1 <- d + 1 * (d == 0) ## hack to avoid crash...
+  c1 <- c + 1 * (c == 0) ## hack to avoid crash...
+
+  k1 <- a[ii]
+  n1 <- (a + c1)[ii]
+  k2 <- b[ii]
+  n2 <- (b + d1)[ii]
+  
+  .match.len <-  function (vars, len = NULL, adjust = FALSE, check.numeric = TRUE, 
+                           envir = parent.frame()) {
+    vecs <- setNames(lapply(vars, get, envir = envir), vars)
+    ok <- sapply(vecs, is.numeric)
+    if (check.numeric && any(!ok)) 
+      stop("argument(s) ", paste(vars[!ok], collapse = ", "), 
+        " must be numeric vector(s)")
+    if (is.null(len)) 
+      len <- max(sapply(vecs, length))
+    for (v in vars) {
+      if (length(vecs[[v]]) == 1) {
+        if (adjust) 
+          assign(v, rep(vecs[[v]], len), envir = envir)
+      }
+      else if (length(vecs[[v]]) != len) {
+        stop(sprintf("argument %s should be of length %d or a scalar (%s must have same length)", 
+          v, len, paste(vars, collapse = ", ")))
+      }
+    }
+    invisible(len)
+  }
+  
+  alternative <- match.arg(alternative)
+  l <- .match.len(c("k1", "n1", "k2", "n2"), adjust = TRUE)
+  if (any(k1 < 0) || any(k1 > n1) || any(n1 <= 0)) 
+    stop("k1 and n1 must be integers with 0 <= k1 <= n1")
+  if (any(k2 < 0) || any(k2 > n2) || any(n2 <= 0)) 
+    stop("k2 and n2 must be integers with 0 <= k2 <= n2")
+  if (any(k1 + k2 <= 0)) 
+    stop("either k1 or k2 must be non-zero")
+  k <- k1 + k2
+  if (alternative == "two.sided") {
+    if (log.p) {
+      pval <- pmin(phyper(k1 - 1, n1, n2, k, lower.tail = FALSE, 
+        log.p = TRUE), phyper(k1, n1, n2, k, lower.tail = TRUE, 
+          log.p = TRUE)) + log(2)
+      pval <- pmin(pval, 0)
+    }
+    else {
+      pval <- 2 * pmin(phyper(k1 - 1, n1, n2, k, lower.tail = FALSE), 
+        phyper(k1, n1, n2, k, lower.tail = TRUE))
+      pval <- pmax(0, pmin(1, pval))
+    }
+  }
+  else if (alternative == "greater") {
+    pval <- phyper(k1 - 1, n1, n2, k, lower.tail = FALSE, 
+      log.p = log.p)
+  }
+  else if (alternative == "less") {
+    pval <- phyper(k1, n1, n2, k, lower.tail = TRUE, log.p = log.p)
+  }
+  pval
+}
+
+
