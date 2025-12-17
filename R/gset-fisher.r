@@ -41,7 +41,7 @@
 #'         "p.value" (p-value), "q.value" (adjusted p-value), and others.
 #'
 gset.fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
-                         fdr = 0.05, mc = TRUE, sort.by = "zratio", nmin = 3, verbose = 1,
+                         fdr = 0.05, mc = TRUE, sort.by = "p.value", nmin = 3, verbose = 1,
                          min.genes = 15, max.genes = 500, method = "fast.fisher",
                          check.background = TRUE, report.genes = FALSE) {
 
@@ -64,7 +64,7 @@ gset.fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
   ft.res <- rbind(ft1, ft2)
   ft.res$sign <- ft.res$sign * ft.res$odd.ratio
   ft.res <- ft.res[which(ft.res$q.value <= fdr), , drop = FALSE]
-
+  head(ft.res)
   return(ft.res)
 }
 
@@ -84,7 +84,7 @@ gset.fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
 #'            Defaults to 0.05.
 #' @param mc A logical value indicating whether to perform multiple testing adjustment
 #'           using Monte Carlo simulation. Defaults to `TRUE`.
-#' @param sort.by The statistic used to sort the results. Defaults to "zratio".
+#' @param sort.by The statistic used to sort the results. Defaults to "p.value".
 #' @param nmin The minimum number of genes required in a gene set for the test to be performed.
 #' @param min.genes The minimum number of genes in a gene set to be considered. Defaults to 15.
 #' @param max.genes The maximum number of genes in a gene set to be considered. Defaults to 500.
@@ -102,22 +102,14 @@ gset.fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
 #'         (common genes).
 #'
 gset.fisher <- function(genes, genesets, background = NULL,
-                        fdr = 0.05, mc = TRUE, sort.by = "zratio", nmin = 3,
+                        fdr = 0.25, mc = TRUE, sort.by = "p.value", nmin = 3,
                         min.genes = 15, max.genes = 500, method = "fast.fisher",
                         check.background = TRUE, report.genes = FALSE,
                         no.pass=NA, verbose = 1) {
 
-
-  if(0) {
-    fdr = 0.05; mc = TRUE; sort.by = "zratio"; nmin = 3;
-    min.genes = 15; max.genes = 500; method = "fast.fisher";
-    check.background = TRUE; report.genes = TRUE;
-    no.pass=NA; verbose = 1; background=NULL
-  }
-
-  inherits(genesets, "Matrix")  
   ## switch according to geneset class
   if(class(genesets) == "list") {
+    gsnames <- names(genesets)
     res <- gset.fisherLIST(
       genes = genes, genesets = genesets, background = background,
       fdr = fdr, mc = mc, sort.by = sort.by, nmin = nmin,
@@ -126,22 +118,37 @@ gset.fisher <- function(genes, genesets, background = NULL,
       no.pass = no.pass, verbose = verbose
     )
   } else if(inherits(genesets, "Matrix")) {
-    G <- genesets
-    res1 <- gset.fastFET(genes, G = G, bg = background,
-      report.genes = report.genes) 
-    
+    gsnames <- colnames(genesets)
+    res <- gset.fastFET(genes, G = genesets, bg = background,
+      report.genes = report.genes)
   } else {
     stop("[gset.fisher] FATAL ERROR")
   }
+  
+  ## filter results
+  if (nrow(res) > 0) {
+    size.ok <- res$size >= min.genes & res$size <= max.genes
+    jj <- which(res$q.value <= fdr & res$N >= nmin & size.ok)
+    res <- res[jj, ]
+  }
 
-
+  ## sort results
+  if (nrow(res) > 0) {
+    if (sort.by %in% colnames(res)) {
+      order.sign <- ifelse(sort.by %in% c("p.value","q.value"),+1,-1)
+      res <- res[order(order.sign*res[,sort.by]), ]
+    } else {
+      gsnames <- intersect(gsnames, rownames(res))
+      res <- res[gsnames,]
+    }
+  }
   
   return(res)
 }
 
 
 gset.fisherLIST <- function(genes, genesets, background = NULL,
-                        fdr = 0.05, mc = TRUE, sort.by = "zratio", nmin = 3,
+                        fdr = 0.05, mc = TRUE, sort.by = "p.value", nmin = 3,
                         min.genes = 15, max.genes = 500, method = "fast.fisher",
                         check.background = TRUE, report.genes = FALSE,
                         no.pass=NA, verbose = 1) {
@@ -182,8 +189,8 @@ gset.fisherLIST <- function(genes, genesets, background = NULL,
     if (length(genesets) == 0) {
       cat("warning: no gene sets passed size filter\n")
       rr <- data.frame(
-        p.value = NA, q.value = NA, ratio0 = NA, ratio1 = NA,
-        zratio = NA, n.size = NA, n.overlap = NA, genes = NA
+        p.value = NA, q.value = NA, odd.ratio = NA, N = NA, size = NA,
+        n.overlap = NA, genes = NA
       )
       rownames(rr) <- NULL
       return(rr[0, ])
@@ -280,7 +287,9 @@ gset.fisherLIST <- function(genes, genesets, background = NULL,
 
   ## results
   v1 <- as.character(paste0(a, "/", n.size))
-  rr <- data.frame(p.value = pv, q.value = qv, odd.ratio = odd.ratio, overlap = v1)
+  rr <- data.frame(p.value = pv, q.value = qv, odd.ratio = odd.ratio,
+    N=a, size=n.size, overlap=v1 )
+
   if (!is.null(gsgenes)) {
     rr <- cbind(rr, genes = gsgenes)
   }
@@ -352,7 +361,9 @@ gset.fastFET <- function(genes, G, bg, report.genes=FALSE) {
     gsgenes <- apply( G[genes,], 2, function(x) paste(sort(genes[which(x!=0)]),collapse="|") )
   }
 
-  df <- data.frame(p.value=pv, q.value=qv, odd.ratio=odd.ratio, overlap=overlap)
+  df <- data.frame(p.value=pv, q.value=qv, odd.ratio=odd.ratio,
+    N=a, size=gsize, overlap=overlap )
+  
   if(!is.null(gsgenes)) df <- cbind(df, genes=gsgenes)
   return(df)
 }
