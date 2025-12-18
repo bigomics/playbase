@@ -363,7 +363,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   if (!is.null(cmax) && cmax < ncol(gx) && cmax > 0) {
     jj2 <- Matrix::head(order(-apply(gx, 2, stats::sd, na.rm = TRUE)), cmax)
   }
-  gx <- gx[jj1, jj2]
+  gx <- gx[jj1, jj2, drop = FALSE]
   if (!is.null(row.annot)) {
     row.annot <- row.annot[jj1, , drop = FALSE]
   }
@@ -612,7 +612,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   ## ------------- draw heatmap
 
   ## global row clustering if no split
-  if (cluster_rows && !do.split) {
+  if (cluster_rows && !do.split && nrow(gx) > 1) {
     is.mox <- is.multiomics(rownames(gx))
     if (any(is.na(gx))) {
       if (is.mox) {
