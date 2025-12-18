@@ -3367,7 +3367,6 @@ wgcna.plotMultiDendroAndColors <- function(multi_wgcna,
     main <- names(multi_wgcna)
   
   for(k in 1:nw) {
-    par(cex=1.3)
     wgcna.plotDendroAndColors(
       multi_wgcna[[k]],
       marAll = marAll,
