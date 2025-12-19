@@ -172,13 +172,6 @@ write.gmt <- function(gmt, file, source = NA) {
 }
 
 
-
-
-
-
-
-
-
 #' Run Gene Set Enrichment Analysis (GSEA)
 #'
 #' This function performs Gene Set Enrichment Analysis (GSEA) on the given gene expression data.

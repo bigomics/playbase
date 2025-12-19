@@ -452,6 +452,7 @@ read_Olink_NPX <- function(NPX_data) {
   counts.df <- reshape2::dcast(NPX, fm, value.var = npx.id, fun.aggregate = mean)
   counts <- as.matrix(counts.df[sapply(counts.df, is.numeric)])
   rownames(counts) <- counts.df[, feature.id]
+  counts <- counts[!is.na(rownames(counts)), ]
 
   return(counts)
 }

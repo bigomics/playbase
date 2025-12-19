@@ -107,7 +107,7 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     sample(c(ii, ii), size = 100, replace = TRUE)
   })
   y <- y[unlist(ii)]
-  X <- X[, names(y)]
+  X <- X[, names(y), drop = FALSE]
 
   ## -------------------------------------------
   ## compute importance values
@@ -365,9 +365,9 @@ pgx.variableImportance <- function(X, y,
   ## variables
   imp <- list()
   runtime <- list()
-  xnames <- rownames(X)
 
   if (nrow(X) == 1) X <- rbind(X, X)
+  xnames <- rownames(X)
 
   ## drop missing??
   sel <- which(!is.na(y) & y != "")
@@ -512,6 +512,7 @@ pgx.variableImportance <- function(X, y,
   if ("splsda" %in% methods) {
     n <- min(25, nrow(X))
     colnames(X) <- names(y) <- paste0("sample", 1:length(y))
+    rownames(X) <- make.unique(rownames(X))
     runtime[["splsda"]] <- system.time({
       res <- mixOmics::splsda(t(X), y, keepX = c(n, n))
     })
