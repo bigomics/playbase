@@ -1711,7 +1711,7 @@ wgcna.run_enrichment_methods <- function(ME, me.genes, GMT, geneX, gsetX,
     for (i in 1:ncol(rho)) {
       k <- colnames(rho)[i]
       gg <- me.genes[[k]]      
-      rr <- try(gset.fisher(gg, gmt, background = bg, fdr = 1,
+      rr <- try(gset.fisher(gg, GMT, background = bg, fdr = 1,
         min.genes = -1, verbose = 0, sort.by='none', no.pass=1))
 
       if (!"try-error" %in% class(rr)) {        
