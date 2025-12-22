@@ -1368,7 +1368,7 @@ ramp.get_metabolite_sets <- function(id, db=c("pathway","onto","class"),
   ## Query RaMP for patways
   gmt.pathway <- list()
   if("pathway" %in% db) {
-    suppressMessages(pw <- RaMP::getPathwayFromAnalyte(
+    suppressMessages(pw <- try(RaMP::getPathwayFromAnalyte(
       analytes = idx,
       findSynonym = FALSE,
       namesOrIds = "ids",
@@ -1376,8 +1376,9 @@ ramp.get_metabolite_sets <- function(id, db=c("pathway","onto","class"),
       includeSmpdb = FALSE,
       minPathwaySize = (metmin+gmin),
       maxPathwaySize = 400,
-    ))
-    if(!is.null(pw) && nrow(pw)>0) {
+    )))
+
+    if(!inherits(pw,"try-error") && !is.null(pw) && nrow(pw)>0) {
       pathway_id <- paste0(pw$pathwayName, " [", pw$pathwayId, "]")
       gmt.pathway <- tapply(pw$inputId, pathway_id, c) 
       names(gmt.pathway) <- paste0("METABOLITE_PATHWAY:",names(gmt.pathway))
@@ -1387,8 +1388,8 @@ ramp.get_metabolite_sets <- function(id, db=c("pathway","onto","class"),
   ## Query RaMP for Ontology
   gmt.onto <- list()
   if("onto" %in% db) {
-    suppressMessages(onto <- RaMP::getOntoFromMeta(mets = idx))
-    if(!is.null(onto) && nrow(onto)) {
+    suppressMessages(onto <- try(RaMP::getOntoFromMeta(mets = idx)))
+    if(!inherits(onto,"try-error") && !is.null(onto) && nrow(onto)) {
       onto_id <- paste0(onto$Ontology, " [", onto$HMDBOntologyType, "]")
       gmt.onto <- tapply(onto$sourceId, onto_id, function(s) unique(s)) 
       names(gmt.onto) <- paste0("METABOLITE_ONTOLOGY:",names(gmt.onto))
@@ -1399,27 +1400,29 @@ ramp.get_metabolite_sets <- function(id, db=c("pathway","onto","class"),
   gmt.class <- list()
   if("class" %in% db) {
     suppressMessages(
-      chem <- RaMP::getChemClass(
+      chem <- try(RaMP::getChemClass(
         mets = idx,
         inferIdMapping = TRUE
-      )
+      ))
     )
-    metclass <- chem$met_classes
-    dim(metclass)
-    if(!is.null(metclass) && nrow(metclass)) {
-      levels <- unique(metclass$class_level_name)
-      levels
-      gmt.class <- list()
-      for(lev in levels) {
-        ii <- which( metclass$class_level_name == lev )
-        levclass <- metclass[ii,]
-        levgmt <- tapply( levclass$sourceId, levclass$class_name, function(s) unique(s))
-        lev <- sub("ClassyFire_","CF ",lev)
-        lev <- sub("LipidMaps_","LM ",lev)
-        names(levgmt) <- paste0(names(levgmt), " (",lev,")")
-        gmt.class <- c(gmt.class, levgmt)
+    if(!inherits(chem,"try-error")) {
+      metclass <- chem$met_classes
+      dim(metclass)
+      if(!is.null(metclass) && nrow(metclass)) {
+        levels <- unique(metclass$class_level_name)
+        levels
+        gmt.class <- list()
+        for(lev in levels) {
+          ii <- which( metclass$class_level_name == lev )
+          levclass <- metclass[ii,]
+          levgmt <- tapply( levclass$sourceId, levclass$class_name, function(s) unique(s))
+          lev <- sub("ClassyFire_","CF ",lev)
+          lev <- sub("LipidMaps_","LM ",lev)
+          names(levgmt) <- paste0(names(levgmt), " (",lev,")")
+          gmt.class <- c(gmt.class, levgmt)
+        }
+        names(gmt.class) <- paste0("METABOLITE_CHEMCLASS:",names(gmt.class))
       }
-      names(gmt.class) <- paste0("METABOLITE_CHEMCLASS:",names(gmt.class))
     }
   }
   
