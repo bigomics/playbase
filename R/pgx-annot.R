@@ -555,6 +555,10 @@ getGeneAnnotation.ANNOTHUB <- function(
 getOrthoSpecies <- function(organism, use = c("table", "map")[1]) {
   if (use == "map") {
     species <- try(orthogene::map_species(organism, method = "gprofiler", verbose = FALSE))
+    if(inherits(species,"try-error") || is.null(species)) {
+      species <- NULL
+      use <- "table"  ## try again using table
+    }
   }
   if (use == "table") {
     S <- playbase::SPECIES_TABLE
