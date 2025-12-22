@@ -7,6 +7,7 @@
 wgcna.plotDendroAndTraitCorrelation_cons(
   cons,
   show.traits = TRUE,
+  show.contrasts = TRUE,
   traits = NULL,
   main = NULL,
   rm.na = TRUE,
