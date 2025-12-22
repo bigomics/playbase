@@ -898,8 +898,9 @@ mx.annotateLipids <- function(name, db=c("rgoslin","refmet","ramp"),
     mxmap <- aa[ii, id.cols]
     S <- cbind(idx, unlist(mxmap))
     colnames(S) <- c("inputID","synonymID")
-    S <- S[S[,"synonymID"]!='-',]
-    S <- S[which(!S[,"synonymID"] %in% S[,"inputID"]),,drop=FALSE ]
+    jj <- which(S[, "synonymID"] != '-')
+    if (length(jj) > 0) S <- S[jj, , drop = FALSE]
+    S <- S[which(!S[,"synonymID"] %in% S[,"inputID"]), , drop = FALSE]
     if(nrow(S)>0) {
       synonyms <- S[,"synonymID"]
       db2 <- setdiff(db, "rgoslin")
