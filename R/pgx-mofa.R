@@ -44,7 +44,8 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
 
   ## MOFA computation
   message("computing MOFA ...")
-  ## samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=8;gpu_mode=FALSE;max_iter=1000;numfeatures=100
+  ##samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=8;gpu_mode=FALSE;max_iter=1000;numfeatures=100;scale_views=1;pheno=NULL
+
   mofa <- list()
   mofa <- mofa.compute(
     xdata,
@@ -223,7 +224,14 @@ mofa.compute <- function(xdata,
 
   if (kernel == "mofa") {
     message("[mofa.compute] computing MOFA factorization")
-    obj <- MOFA2::create_mofa(xdata, groups = NULL)
+
+    ## MOFA does not like non-ascii names
+    xdata.names <- lapply(xdata, rownames)
+    safe.names <- lapply(xdata.names, iconv2ascii)
+    xdata2 <- xdata
+    for(i in 1:length(xdata2)) rownames(xdata2[[i]]) <- safe.names[[i]]
+    obj <- MOFA2::create_mofa(xdata2, groups = NULL)
+
     ## 'group' is used by MOFA
     samples1 <- samples
     samples1$group <- NULL
@@ -266,8 +274,10 @@ mofa.compute <- function(xdata,
     model <- MOFA2::impute(model)
     factors <- MOFA2::get_factors(model, factors = "all")
     weights <- MOFA2::get_weights(model, views = "all", factors = "all")
+    for(i in 1:length(weights)) rownames(weights[[i]]) <- xdata.names[[i]]      
     W <- do.call(rbind, weights)
     F <- do.call(rbind, factors)
+
   } else if (tolower(kernel) %in% c("pca", "svd")) {
     message("[mofa.compute] computing PCA factorization")
     model <- irlba::irlba(X, nv = numfactors, maxit = max_iter, work = 100)
@@ -584,16 +594,14 @@ mofa.compute_enrichment <- function(W, GMT, filter = NULL, ntop = 1000) {
   info("[pgx.add_GMT] Performing rankcor")
   gse <- gset.rankcor(normW, GMT1, compute.p = TRUE)
 
-  # Select top genesets by ranking each factor
+  # Select top genesets by ranking each factor to accelerate fGSEA
   topsel <- apply(abs(gse$rho), 2, function(r) head(order(-r), ntop))
   topsel <- head(unique(as.vector(t(topsel))), ntop)
-  length(topsel)
   topsets <- rownames(gse$rho)[topsel]
 
-  ## prioritize top genesets to accelerate GSEA
+  ## compute fGSEA. This could be replaced by faster implementation
   topGMT <- GMT1[, topsets]
   gmt <- mat2gmt(topGMT)
-  length(gmt)
   info("[pgx.add_GMT] Performing fGSEA...")
   gsea <- list()
   k <- colnames(W)[1]
@@ -606,11 +614,10 @@ mofa.compute_enrichment <- function(W, GMT, filter = NULL, ntop = 1000) {
     rownames(enr) <- enr$pathway
     gsea[[k]] <- enr
   }
-  # alignr esults
+  # align results
   gsea <- lapply(gsea, function(x) x[rownames(gsea[[1]]), ])
 
   ## make table
-  dim(topGMT)
   dtype <- sub(":.*", "", rownames(topGMT))
   sizes <- tapply(1:nrow(topGMT), dtype, function(ii) Matrix::colSums(topGMT[ii, , drop = FALSE] != 0))
   sizes <- do.call(cbind, sizes)
