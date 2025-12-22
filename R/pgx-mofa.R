@@ -228,9 +228,8 @@ mofa.compute <- function(xdata,
     ## MOFA does not like non-ascii names
     xdata.names <- lapply(xdata, rownames)
     safe.names <- lapply(xdata.names, iconv2ascii)
-    xdata2 <- xdata
-    for(i in 1:length(xdata2)) rownames(xdata2[[i]]) <- safe.names[[i]]
-    obj <- MOFA2::create_mofa(xdata2, groups = NULL)
+    for(i in 1:length(xdata)) rownames(xdata[[i]]) <- safe.names[[i]]
+    obj <- MOFA2::create_mofa(xdata, groups = NULL)
 
     ## 'group' is used by MOFA
     samples1 <- samples
