@@ -477,13 +477,13 @@ pgx.variableImportance <- function(X, y,
 
   if ("xgboost" %in% methods) {
     ny <- length(table(y))
-    yy <- as.integer(factor(y)) - 1
+    yy <- as.character(y) 
     runtime[["xgboost"]] <- system.time({
       bst <- xgboost::xgboost(
-        data = t(X), label = yy, booster = "gbtree",
-        max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
-        num_class = ny,
-        verbose = 0, objective = "multi:softmax"
+        t(X), yy, booster = "gbtree",
+        max_depth = 2, 
+        nthread = 2, nrounds = 2,
+        objective = "multi:softprob"
       )
     })
 
@@ -496,10 +496,10 @@ pgx.variableImportance <- function(X, y,
     ## linear model
     runtime[["xgboost.lin"]] <- system.time({
       bst2 <- xgboost::xgboost(
-        data = t(X), label = yy, booster = "gblinear",
-        max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
-        num_class = ny,
-        verbose = 0, objective = "multi:softmax"
+        t(X), yy, booster = "gblinear",
+        max_depth = 2, 
+        nthread = 2, nrounds = 2,
+        objective = "multi:softprob"
       )
     })
     xgmat <- xgboost::xgb.importance(model = bst2)
