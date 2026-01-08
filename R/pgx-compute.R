@@ -786,7 +786,7 @@ pgx.computePGX <- function(pgx,
   ## ------------------ gene level tests ---------------------
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
 
-  timeseries <- any(grepl("IA:*", colnames(pgx$contrasts)))
+  timeseries <- any(grepl("^IA:*", colnames(pgx$contrasts)))
 
   message("[pgx.computePGX] testing genes...")
   pgx <- compute_testGenes(
