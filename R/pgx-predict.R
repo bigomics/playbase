@@ -107,7 +107,7 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     sample(c(ii, ii), size = 100, replace = TRUE)
   })
   y <- y[unlist(ii)]
-  X <- X[, names(y)]
+  X <- X[, names(y), drop = FALSE]
 
   ## -------------------------------------------
   ## compute importance values
@@ -365,9 +365,9 @@ pgx.variableImportance <- function(X, y,
   ## variables
   imp <- list()
   runtime <- list()
-  xnames <- rownames(X)
 
   if (nrow(X) == 1) X <- rbind(X, X)
+  xnames <- rownames(X)
 
   ## drop missing??
   sel <- which(!is.na(y) & y != "")
@@ -477,13 +477,13 @@ pgx.variableImportance <- function(X, y,
 
   if ("xgboost" %in% methods) {
     ny <- length(table(y))
-    yy <- as.integer(factor(y)) - 1
+    yy <- as.character(y) 
     runtime[["xgboost"]] <- system.time({
       bst <- xgboost::xgboost(
-        data = t(X), label = yy, booster = "gbtree",
-        max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
-        num_class = ny,
-        verbose = 0, objective = "multi:softmax"
+        t(X), yy, booster = "gbtree",
+        max_depth = 2, 
+        nthread = 2, nrounds = 2,
+        objective = "multi:softprob"
       )
     })
 
@@ -496,10 +496,10 @@ pgx.variableImportance <- function(X, y,
     ## linear model
     runtime[["xgboost.lin"]] <- system.time({
       bst2 <- xgboost::xgboost(
-        data = t(X), label = yy, booster = "gblinear",
-        max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
-        num_class = ny,
-        verbose = 0, objective = "multi:softmax"
+        t(X), yy, booster = "gblinear",
+        max_depth = 2, 
+        nthread = 2, nrounds = 2,
+        objective = "multi:softprob"
       )
     })
     xgmat <- xgboost::xgb.importance(model = bst2)
@@ -512,6 +512,7 @@ pgx.variableImportance <- function(X, y,
   if ("splsda" %in% methods) {
     n <- min(25, nrow(X))
     colnames(X) <- names(y) <- paste0("sample", 1:length(y))
+    rownames(X) <- make.unique(rownames(X))
     runtime[["splsda"]] <- system.time({
       res <- mixOmics::splsda(t(X), y, keepX = c(n, n))
     })
