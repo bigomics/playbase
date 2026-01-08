@@ -1325,7 +1325,27 @@ ggVolcano <- function(x,
                       segment.linetype = 1,
                       girafe = FALSE,
                       use_hyperbola = FALSE,
-                      hyperbola_k = 1) {
+                      hyperbola_k = 1,
+                      use_ggprism = FALSE,
+                      ggprism_palette = "black_and_white",
+                      ggprism_colors = FALSE,
+                      ggprism_border = FALSE,
+                      ggprism_axis_guide = "default",
+                      ggprism_show_legend = FALSE,
+                      ggprism_legend_x = 0.95,
+                      ggprism_legend_y = 0.95,
+                      ggprism_legend_border = FALSE) {
+  ## Handle ggprism colors if enabled
+  if (isTRUE(use_ggprism) && isTRUE(ggprism_colors)) {
+    prism_cols <- ggprism::prism_colour_pal(palette = ggprism_palette)(4)
+    colors <- c(
+      up = prism_cols[1],
+      down = prism_cols[2],
+      notsig = prism_cols[3],
+      notsel = paste0(prism_cols[4], "88")
+    )
+  }
+
   if (is.null(highlight)) highlight <- names
   if (showlegend) {
     legend <- "right"
@@ -1539,6 +1559,63 @@ ggVolcano <- function(x,
       axis.text = ggplot2::element_text(family = "lato"),
       plot.margin = ggplot2::margin(l = 9, b = 3, t = 9, r = 9)
     )
+
+  ## Apply ggprism theme if enabled
+  if (isTRUE(use_ggprism)) {
+    plt <- plt +
+      ggprism::theme_prism(
+        palette = ggprism_palette,
+        base_size = axis.text.size,
+        border = ggprism_border
+      )
+
+    ## Apply axis guides
+    if (ggprism_axis_guide == "prism_minor") {
+      plt <- plt + ggplot2::guides(
+        x = ggprism::guide_prism_minor(),
+        y = ggprism::guide_prism_minor()
+      )
+    } else if (ggprism_axis_guide == "prism_offset") {
+      plt <- plt + ggplot2::guides(
+        x = ggprism::guide_prism_offset(),
+        y = ggprism::guide_prism_offset()
+      )
+    } else if (ggprism_axis_guide == "prism_offset_minor") {
+      plt <- plt + ggplot2::guides(
+        x = ggprism::guide_prism_offset_minor(),
+        y = ggprism::guide_prism_offset_minor()
+      )
+    }
+
+    ## Legend positioning
+    if (isTRUE(ggprism_show_legend)) {
+      ## Calculate justification based on position (corners anchor properly)
+      just_x <- if (ggprism_legend_x > 0.5) 1 else 0
+      just_y <- if (ggprism_legend_y > 0.5) 1 else 0
+
+      ## Legend background with optional border
+      legend_bg <- if (isTRUE(ggprism_legend_border)) {
+        ggplot2::element_rect(fill = "white", colour = "black", linewidth = 0.5)
+      } else {
+        ggplot2::element_rect(fill = "white", colour = NA)
+      }
+
+      plt <- plt + ggplot2::theme(
+        legend.position = "inside",
+        legend.position.inside = c(ggprism_legend_x, ggprism_legend_y),
+        legend.justification = c(just_x, just_y),
+        legend.title = ggplot2::element_blank(),
+        legend.background = legend_bg
+      )
+    } else {
+      plt <- plt + ggplot2::theme(legend.position = "none")
+    }
+
+    if (isTRUE(ggprism_border)) {
+      plt <- plt + ggplot2::coord_cartesian(clip = "off")
+    }
+  }
+
   if (!is.null(facet)) {
     ncol_row <- ceiling(sqrt(length(unique(facet))))
     plt <- plt +
