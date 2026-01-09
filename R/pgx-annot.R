@@ -1252,7 +1252,7 @@ getHumanOrtholog.biomart <- function(organism, symbols, verbose = 1) {
 #' @import data.table
 #' @export
 probe2symbol <- function(probes, annot_table, query = "symbol", 
-                         key = NULL, fill_na = FALSE) {
+                         key = NULL, fill_na = FALSE, add_datatype = FALSE) {
 
   # Prepare inputs. add extra matching columns.
   annot_table <- cbind(rownames = rownames(annot_table), annot_table)
@@ -1292,6 +1292,16 @@ probe2symbol <- function(probes, annot_table, query = "symbol",
       yes = probes,
       no = query_col
     )
+  }
+
+  # Prepend datatype if requested and available
+  if (add_datatype && "data_type" %in% colnames(annot_table)) {
+    datatype_col <- annot_table[ii, "data_type"]
+    has_datatype <- !is.na(datatype_col) & datatype_col != ""
+    # Check if query_col already has the datatype prefix
+    already_has_prefix <- startsWith(query_col, paste0(datatype_col, ":"))
+    should_add <- has_datatype & !already_has_prefix
+    query_col <- ifelse(should_add, paste0(datatype_col, ":", query_col), query_col)
   }
 
   # Return queryed col
