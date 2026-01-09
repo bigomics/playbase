@@ -1552,7 +1552,11 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
       species = organism, method = "gprofiler",
       output_format = "id", verbose = FALSE
     )
-    gp.out <- gprofiler2::gconvert(probesx, organism = gp.organism, target = "UNIPROT_GN_ACC")
+    gp.out <- tryCatch({
+      gprofiler2::gconvert(probesx, organism = gp.organism, target = "UNIPROT_GN_ACC")
+    }, error = function(e) {
+      return(NULL)
+    })
     if (!is.null(gp.out)) {
       key_matches["GPROFILER"] <- length(unique(gp.out$input)) / length(probesx)
     }
