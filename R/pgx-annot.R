@@ -108,6 +108,11 @@ getProbeAnnotation <- function(organism,
   unknown.probetype <- (probetype %in% c("custom", "unkown"))
   annot.unknown <- unknown.organism || unknown.datatype || unknown.probetype
   annot.unknown
+
+  if (tolower(organism) == "human") organism <- "Homo sapiens"
+  if (tolower(organism) == "mouse") organism <- "Mus musculus"
+  if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
+  if (grepl("canis.*familiaris|^dog$",tolower(organism))) organism <- "Canis familiaris"  
   
   ## clean probe names
   probes <- trimws(probes)
@@ -204,8 +209,9 @@ getGeneAnnotation <- function(
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
-  if (tolower(organism) == "dog") organism <- "Canis familiaris"
+  if (grepl("canis.*familiaris|^dog$",tolower(organism))) organism <- "Canis familiaris"  
 
+  probes0 <- probes
   probes <- trimws(probes)
   probes[probes == "" | is.na(probes)] <- "NA"
 
@@ -213,9 +219,9 @@ getGeneAnnotation <- function(
     message("[getGeneAnnotation] WARNING. stripping multi-omics prefix")
     probes <- sub("^[a-zA-Z0-9]+:", "", probes)
   }
-
+  
   # init empty (all missings)
-  annot <- data.frame(feature = probes, stringsAsFactors = FALSE)
+  annot <- data.frame(feature = probes0, stringsAsFactors = FALSE)
   missing <- rep(TRUE, length(probes))
 
   for (method in methods) {
@@ -1140,7 +1146,7 @@ getHumanOrtholog.biomart <- function(organism, symbols, verbose = 1) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
-  if (tolower(organism) %in% c("dog", "canis familiaris")) organism <- "Canis LFamiliaris"
+  if (grepl("^dog$|canis.*familiaris",tolower(organism))) organism <- "Canis LFamiliaris"
 
   if (verbose > 0) message("[getHumanOrtholog.biomart] Mapping ", organism, " genes with biomart.")
   require(biomaRt)
