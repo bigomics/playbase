@@ -5484,7 +5484,7 @@ wgcna.describeModules <- function(wgcna, ntop=50, annot=NULL, multi=FALSE,
 }
 
 #' @export
-wgcna.getTopModules <- function(wgcna, topratio=0.9, kx=4, rm.grey=TRUE) {
+wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE) {
   if(class(wgcna) == "list") {
     M <- lapply(wgcna, function(w) as.matrix(w$modTraits))
   } else {
@@ -5507,7 +5507,7 @@ wgcna.getTopModules <- function(wgcna, topratio=0.9, kx=4, rm.grey=TRUE) {
 
 #' @export
 wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
-                                ntop=100, topratio=0.9, format="markdown",
+                                ntop=100, topratio=0.85, format="markdown",
                                 verbose=1, progress=NULL) {
 
   if(length(ai_model)==1) ai_model <- rep(ai_model,3)
@@ -5579,10 +5579,17 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
   if(tolower(format)=="html") {
     qq <- paste(qq, "Format response as HTML.")
   }
-
   qq <- paste(qq, "\n\n",all.summaries)
   report <- ai.ask(qq, model = ai_model[[3]])
   report <- gsub("^```html|```$","",report)
+
+  ## Step 4: Create diagram from report
+  message("Mashing up diagram...")
+  qq <- paste0("Create a compact diagram of the modules of the following WGCNA report. Suggest cause and effect relations to the phenotype. Group modules with same biological functions. Give just the code in DOT format. Use solid lines for positive regulation, use dashed lines for negative regulation. Slightly color modules according to module.\n\n<report>", report, "</report>")
+  aa <- ai.ask_tidyprompt(qq, model=ai_model[[3]], verbose=0)
+  aa <- gsub("```","",aa)
+  diagram <- gsub("mermaid\n|dot\n","",aa)
+  ##diagram <- sub("rankdir=LR","rankdir=TB",diagram)
   
   list(
     descriptions_prompts = descriptions_prompts,
@@ -5590,7 +5597,8 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
     summaries_prompts = summaries_prompts,
     summaries = summaries,
     report_prompt = qq,
-    report = report
+    report = report,
+    diagram = diagram
   )
 
 }
