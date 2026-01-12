@@ -482,7 +482,7 @@ getGeneAnnotation.ANNOTHUB <- function(
         })
       })
       missing.annot <- data.frame(dfA, check.names = FALSE)
-      missing.annot <- missing.annot[match(missing.probes1, rownames(missing.annot)), ]
+      missing.annot <- missing.annot[match(missing.probes1, rownames(missing.annot)), , drop = FALSE]
       rownames(missing.annot) <- names(missing.probes)
       missing.annot$PROBE <- names(missing.probes)
 
