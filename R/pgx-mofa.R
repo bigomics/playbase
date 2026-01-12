@@ -1159,7 +1159,7 @@ mofa.plot_heatmap <- function(mofa,
   rownames(aa) <- colnames(topX)
 
   if (!is.null(gene_table)) {
-    rownames(topX) <- probe2symbol(rownames(topX), gene_table, "gene_name", fill_na = TRUE)
+    rownames(topX) <- probe2symbol(rownames(topX), gene_table, "gene_name", fill_na = TRUE, add_datatype = TRUE)
   }
 
   if (type == "heatmap") {
