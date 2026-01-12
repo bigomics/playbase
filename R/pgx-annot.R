@@ -2294,10 +2294,10 @@ check_species_probetype <- function(
 #'
 #' @export
 annotate_phospho_residue <- function(features, detect.only = FALSE) {
-  valid_name <- mean(grepl("[_][1-9]+", features), na.rm = TRUE) > 0.9
+  valid_name <- mean(grepl("[_][A-Z]?[0-9]+", features), na.rm = TRUE) > 0.9
   valid_name
   uniprot <- sub("[_].*", "", features)
-  positions <- gsub(".*[_]|[.].*", "", features)
+  positions <- gsub(".*[_][A-Za-z]?|[.].*", "", features)
   positions <- strsplit(positions, split = "[;/,]")
 
   P <- playdata::PHOSPHOSITE
