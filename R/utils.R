@@ -251,6 +251,46 @@ compute_CV <- function(counts) {
   return(cv)
 }
 
+#' Sum up tech replicates of a linear count matrix 
+#' This function combines (sums up) features of technical replicates
+#' It does so in the linear space.
+#' @param counts Numeric matrix
+#' @param trep_var Character vector indicating tech rep info for each sample
+#' @return counts matrix with technical replicates combined
+#' @export
+sum_treps <- function(counts, trep_var = "") {
+
+  if (is.null(trep_var)) {
+    return(counts)
+  } else if (length(trep_var) != ncol(counts)) {
+    message("[playbase::sum_treps] trep_var must have same length as ncol of counts")
+    return(counts)
+  } else {
+    if (playbase::is_logged(counts)) {
+      prior <- min(counts[which(counts > 0)], na.rm = TRUE)
+      counts <- pmax(2**counts - prior, 0)
+    }
+    trep_var <- as.character(trep_var)
+    names(trep_var) <- colnames(counts)
+    treps <- unique(trep_var)
+    for(i in 1:length(treps)) {
+      jj <- which(trep_var == treps[i])
+      if (length(jj) <= 1) next
+      kk <- names(jj)
+      counts1 <- counts[, kk, drop = FALSE]
+      mat <- rowSums(counts1, na.rm = TRUE)
+      mat[rowSums(is.na(counts1)) == length(kk)] <- NA
+      counts[, kk[1]] <- mat
+      jx  <- match(kk, colnames(counts))
+      counts <- counts[, -jx[-1], drop = FALSE]
+    }
+  }
+  
+  return(counts)
+  
+}
+
+
 iconv2utf8 <- function(s) {
   iconv(s, to = "UTF-8//TRANSLIT", sub = "")
 }
