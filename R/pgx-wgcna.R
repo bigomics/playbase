@@ -1707,6 +1707,47 @@ wgcna.matchColors <- function(wgcna, refcolors) {
   return(wgcna)
 }
 
+#'
+#'
+#' @export
+wgcna.getModuleCrossGenes <-  function(wgcna, ref=NULL, ngenes = 100,
+                                       multi=TRUE, modules=NULL)
+{
+
+  if(!multi) {
+    wgcna <- list(gx = wgcna)
+    ref <- 'gx'
+  }
+      
+  if(is.null(ref)) ref <- head(intersect(names(wgcna),c("gx","px")),1)
+  if(is.null(ref) || !ref %in% names(wgcna)) ref <- names(wgcna)[1]
+
+  W <- wgcna[[ref]]
+  geneX <- W$datExpr
+
+  MEx <- sapply(wgcna, function(w) as.matrix(w$net$MEs))
+  MEx <- do.call(cbind, MEx)
+
+  if(!is.null(modules)) {
+    modules <- intersect(modules, colnames(MEx))
+    MEx <- MEx[,modules,drop=FALSE]
+  }
+  
+  nbx.cor <- cor(geneX, MEx)
+
+  nbx.list <- list()
+  for(k in colnames(nbx.cor)) {
+    ii <- head(order(-nbx.cor[,k]), ngenes)
+    rho <- nbx.cor[ii,k]
+    gene <- rownames(nbx.cor)[ii]
+    me <- W$net$labels[gene]
+    nbx.list[[k]] <- data.frame( gene = gene, rho = rho, module = me)
+  }
+
+  ##if(length(nbx.list)==1) nbx.list <- nbx.list[[1]]
+  return(nbx.list)
+}
+
 
 ##=========================================================================
 ## CONSENSUS WGCNA
@@ -2216,7 +2257,7 @@ wgcna.computeConsensusMatrix <- function(matlist, ydim, psig = 0.05, consfun="mi
   if(psig < 1) {
     ## enforce strong consensus. All layers must be strictly
     ## significant.
-    all.sig <- Reduce("*", lapply(pv, function(p) 1 * (p < psig)))
+    all.sig <- Reduce("*", lapply(pv, function(p) 1 * (p <= psig)))
     consZ[!all.sig] <- NA
   }
   return(consZ)
@@ -5215,8 +5256,8 @@ wgcna.scaleTOMs <- function(TOMs, scaleP=0.95) {
 
 #' @export
 wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
-                                     level="gene", rename="symbol") {
-
+                                     psig = 0.05, level="gene", rename="symbol") {
+  
   if("layers" %in% names(wgcna) && class(wgcna$datExpr) == "list") {
     cons <- wgcna.getConsensusTopGenesAndSets(wgcna, annot=annot,
       module=module,  ntop=ntop, rename=rename) 
@@ -5227,12 +5268,13 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
     message("[wgcna.getTopGenesAndSets] Error: no stats object")
     return(NULL)
   }
-  if(!"gsea" %in% names(wgcna)) warning("object has no enrichment results (gsea)")
+  if(!"gsea" %in% names(wgcna)) warning("object has no enrichment results (gsea)")  
   
   ## get top genes by centrality-weighted-meanFC2
   mm <- wgcna$stats$moduleMembership  
+  mm.sig <- 1*(wgcna$stats$MMPvalue <= psig) 
   ff <- sqrt(rowMeans(wgcna$stats$foldChange**2, na.rm=TRUE))
-  mm <- mm * ff
+  mm <- mm * mm.sig * ff
   if(!is.null(annot)) {
     annot$gene_title <- paste0(annot$gene_title," (",annot$symbol,")")
     mm <- rename_by2(mm, annot, new_id=rename)
@@ -5240,14 +5282,16 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
   gg <- rownames(mm)
   mm <- as.list(data.frame(mm))
   if(!is.null(module)) mm <- mm[which(names(mm) %in% module)]
-  sel.topgenes <- lapply(mm, function(x) head(order(-x),ntop) )
-  topgenes <- lapply( sel.topgenes, function(i) gg[i])
+  for(i in 1:length(mm)) names(mm[[i]]) <- gg
+  mm <- lapply(mm, function(x) x[x!=0])
+  topgenes <- lapply(mm, function(x) names(head(sort(-x),ntop)))
 
   ## top genesets
   topsets <- NULL
   if("gsea" %in% names(wgcna)) {
     ee <- wgcna$gsea
     if(!is.null(module)) ee <- ee[which(names(ee) %in% module)]  
+    ee <- lapply(ee, function(x) x[which(x$p.value <= psig),] )
     topsets <- lapply(ee,function(x) head(rownames(x),ntop))
   }
 
@@ -5266,14 +5310,14 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
 
 #' @export
 wgcna.getMultiTopGenesAndSets <- function(multi_wgcna, annot=NULL, module=NULL,
-                                          ntop=40, level="gene", rename="symbol") {
+                                          psig=0.05, ntop=40, level="gene", rename="symbol") {
 
   toplist <- list()
   k=names(multi_wgcna)[1]
   for(k in names(multi_wgcna)) {
     topk <- wgcna.getTopGenesAndSets(
       multi_wgcna[[k]],  module=module,  annot=annot,
-      ntop=ntop, level=level, rename=rename)
+      ntop=ntop, psig=psig, level=level, rename=rename)
     if(!is.null(module)) {
       topk <- lapply( topk, function(s) s[which(names(s) %in% module)] )
     }
@@ -5370,10 +5414,11 @@ wgcna.getConsensusTopGenesAndSets <- function(cons, annot=NULL, module=NULL, nto
 ##----------------------------------------------------------------------
 
 #' @export
-wgcna.describeModules <- function(wgcna, ntop=50, annot=NULL, multi=FALSE, 
+wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
+                                  annot=NULL, multi=FALSE, modules=NULL,
                                   experiment="", verbose=1, model=DEFAULT_LLM,
                                   docstyle = "detailed summary", numpar = 2,
-                                  level="gene", modules=NULL)  {
+                                  level="gene")  {
 
   if(is.null(annot)) {
     message("[wgcna.describeModules] WARNING. user annot table is recommended.")
@@ -5382,11 +5427,11 @@ wgcna.describeModules <- function(wgcna, ntop=50, annot=NULL, multi=FALSE,
   if(multi) {
     dbg("[wgcna.describeModules] calling getMultiTopGenesAndSets")
     top <- wgcna.getMultiTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
-      level=level, rename="gene_title")
+      psig=psig, level=level, rename="gene_title")
   } else {
     dbg("[wgcna.describeModules] calling getTopGenesAndSets")
     top <- wgcna.getTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
-      level=level, rename="gene_title")
+      psig=psig, level=level, rename="gene_title")
   }
 
   dbg("[wgcna.describeModules] names.top = ", names(top))
@@ -5415,12 +5460,12 @@ wgcna.describeModules <- function(wgcna, ntop=50, annot=NULL, multi=FALSE,
       if(m %in% names(top$pheno)) pp <- paste( top$pheno[[m]], collapse='; ')
 
       d <- ""
-      if(!is.null(pp)) d <- paste(d, "<b>Correlated phenotypes:</b> ", pp, "<br><br>")
+      if(!is.null(pp)) d <- paste(d, "\n\n<b>Correlated phenotypes:</b> ", pp, "<br><br>")
       if(!is.null(gg) && gg!="") {
-        d <- paste(d, "<b>Key genes:</b> ", gg, "<br><br>")
+        d <- paste(d, "\n\n<b>Key genes:</b> ", gg, "<br><br>")
       }
       if(!is.null(ss) && ss!="") {
-        d <- paste(d, "<b>Top enriched gene sets:</b> ", ss, "<br><br>")
+        d <- paste(d, "\n\n<b>Top enriched gene sets:</b> ", ss, "<br><br>")
       }
       desc[[m]] <- d
     }
@@ -5507,8 +5552,9 @@ wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE) {
 
 #' @export
 wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
-                                ntop=100, topratio=0.85, format="markdown",
-                                verbose=1, progress=NULL) {
+                                ntop=100, topratio=0.85, psig=0.05,
+                                format="markdown", verbose=1,
+                                progress=NULL) {
 
   if(length(ai_model)==1) ai_model <- rep(ai_model,3)
   if(!multi) {
@@ -5536,7 +5582,8 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
     modules = top.modules,
     multi = TRUE,  ## always true (we use list)
     ntop = ntop,  ## number of top genes or sets
-    annot = annot, 
+    annot = annot,
+    psig = psig,
     experiment = wgcna$experiment,
     verbose = verbose,
     model = ai_model[[1]]
@@ -5553,10 +5600,10 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
   for(k in names(descriptions)) {
     message("Simmering module ",k,"...")
     ss <- descriptions[[k]]
-    qq <-  paste("Following are descriptions of a certain WGCNA module by one or more LLMs. Create a consensus conclusion out of the independent descriptions. Describe the underlying biology, relate correlated phenotypes and mention key genes, proteins or metabolites. Just answer, no confirmation, use 1-2 paragraphs.\n\n", ss)
-    cc <- ai.ask(qq, model=ai_model[[2]])
+    q2 <-  paste("Following are descriptions of a certain WGCNA module by one or more LLMs. Create a consensus conclusion out of the independent descriptions. Describe the underlying biology, relate correlated phenotypes and mention key genes, proteins or metabolites. Just answer, no confirmation, use 1-2 paragraphs.\n\n", ss)
+    cc <- ai.ask(q2, model=ai_model[[2]])
     summaries[[k]] <- cc
-    summaries_prompts[[k]] <- qq
+    summaries_prompts[[k]] <- q2
   }
 
   ## Step 3: Make detailed report. We concatenate all summaries and
@@ -5567,28 +5614,25 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
     paste0("================= ",m," =================\n\n", summaries[[m]],"\n")
   )
   all.summaries <- paste0(paste(all.summaries, collapse="\n\n"),"\n")  
-  qq <- "These are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed report for this experiment. Give a detailed interpretation of the underlying biology by connecting modules into biological functional programs, referring to key genes, proteins or metabolites. Build an cross-module integrative narrative. Suggest similarity to known diseases and possible therapies.\n\n"
+  q3 <- "These are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed report for this experiment. Give a detailed interpretation of the underlying biology by connecting modules into biological functional programs, referring to key genes, proteins or metabolites. Build an cross-module integrative narrative. Suggest similarity to known diseases and possible therapies.\n\n"
 
   xx <- wgcna$experiment
   pp <- paste("You are a biologist interpreting results from a WGCNA analysis for this experiment:",  xx, ".\n\n")
-  qq <- paste(pp, qq, "Only write if there was evidence in the source text. Omit future directions.")
-  qq <- paste(qq, "Write in prose, no tables, no bullet points.") 
+  q3 <- paste(pp, q3, "Only write if there was evidence in the source text. Omit future directions.")
+  q3 <- paste(q3, "Write in prose, no tables, no bullet points.") 
   if(format=="markdown") {
-    qq <- paste(qq, "Format response as markdown.")
+    q3 <- paste(q3, "Format response as markdown.")
   }
   if(tolower(format)=="html") {
-    qq <- paste(qq, "Format response as HTML.")
+    q3 <- paste(q3, "Format response as HTML.")
   }
-  qq <- paste(qq, "\n\n",all.summaries)
-  report <- ai.ask(qq, model = ai_model[[3]])
+  q3 <- paste(q3, "\n\n",all.summaries)
+  report <- ai.ask(q3, model = ai_model[[3]])
   report <- gsub("^```html|```$","",report)
 
   ## Step 4: Create diagram from report
   message("Mashing up diagram...")
-  qq <- paste0("Create a compact diagram of the modules of the following WGCNA report. Suggest cause and effect relations to the phenotype. Group modules with same biological functions. Give just the code in DOT format. Use solid lines for positive regulation, use dashed lines for negative regulation. Slightly color modules according to module.\n\n<report>", report, "</report>")
-  aa <- ai.ask_tidyprompt(qq, model=ai_model[[3]], verbose=0)
-  aa <- gsub("```","",aa)
-  diagram <- gsub("mermaid\n|dot\n","",aa)
+  diagram <- wgcna.create_diagram(report, ai_model=ai_model[[3]]) 
   ##diagram <- sub("rankdir=LR","rankdir=TB",diagram)
   
   list(
@@ -5596,9 +5640,22 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
     descriptions = descriptions,
     summaries_prompts = summaries_prompts,
     summaries = summaries,
-    report_prompt = qq,
+    report_prompt = q3,
     report = report,
     diagram = diagram
   )
 
+}
+
+#' @export
+wgcna.create_diagram <- function(wgcna_report, ai_model, rankdir="LR") {
+  q4 <- paste0("Create a diagram connecting modules in the following WGCNA report. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add phenotype nodes. Suggest cause and effect relations that explain the phenotypes. Group modules with same biological functions. Give just the code in DOT format. Use solid lines for positive regulation, use dashed lines for negative regulation. Slightly color fill modules according to module names. Do not use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow.")
+  q4 <- paste(q4, "\n\n<report>", wgcna_report, "</report>")
+  aa <- ai.ask(q4, model = ai_model)
+  aa <- gsub("```","",aa)
+  diagram <- gsub("mermaid\n|dot\n","",aa)
+  diagram <- gsub("&","and",diagram)
+  if(rankdir=="TB") diagram <- sub("rankdir=LR","rankdir=TB",diagram)
+  if(rankdir=="LR") diagram <- sub("rankdir=TB","rankdir=LR",diagram)  
+  diagram
 }
