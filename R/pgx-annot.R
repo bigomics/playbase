@@ -155,8 +155,14 @@ getProbeAnnotation <- function(organism,
     dbg("[getProbeAnnotation] annotating for multi-omics")
     genes <- getMultiOmicsProbeAnnotation(organism, probes)
   } else {
-    dbg("[getProbeAnnotation] annotating for transcriptomics")
-    genes <- getGeneAnnotation(organism = organism, probes = probes)
+    if (datatype == "proteomics") {
+      dbg("[getProbeAnnotation] annotating for proteomics")
+      is.phospho <- annotate_phospho_residue(probes, detect.only = TRUE)
+      genes <- getGeneAnnotation(organism = organism, probes = probes, is.phospho = is.phospho)
+    } else {
+      dbg("[getProbeAnnotation] annotating for transcriptomics")
+      genes <- getGeneAnnotation(organism = organism, probes = probes)
+    }
   }
 
   ## final fallback is genes==NULL
@@ -198,6 +204,7 @@ getProbeAnnotation <- function(organism,
 getGeneAnnotation <- function(
     organism,
     probes,
+    is.phospho = FALSE,
     use.ah = NULL,
     verbose = TRUE,
     methods = c("annothub", "gprofiler")) {
@@ -212,6 +219,11 @@ getGeneAnnotation <- function(
   if (mean(grepl("[:]", probes)) > 0.98) {
     message("[getGeneAnnotation] WARNING. stripping multi-omics prefix")
     probes <- sub("^[a-zA-Z0-9]+:", "", probes)
+  }
+
+  if (is.phospho) {
+    old_probes <- probes
+    probes <- sub("[_].*", "", probes)
   }
 
   # init empty (all missings)
@@ -260,6 +272,11 @@ getGeneAnnotation <- function(
   ## clean up
   if (!is.null(annot)) {
     annot <- cleanupAnnotation(annot)
+  }
+
+  ## restore original phospho probe names
+  if (is.phospho && !is.null(annot)) {
+    annot$feature <- old_probes
   }
 
   return(annot)
@@ -482,7 +499,7 @@ getGeneAnnotation.ANNOTHUB <- function(
         })
       })
       missing.annot <- data.frame(dfA, check.names = FALSE)
-      missing.annot <- missing.annot[match(missing.probes1, rownames(missing.annot)), ]
+      missing.annot <- missing.annot[match(missing.probes1, rownames(missing.annot)), , drop = FALSE]
       rownames(missing.annot) <- names(missing.probes)
       missing.annot$PROBE <- names(missing.probes)
 
@@ -2298,10 +2315,10 @@ check_species_probetype <- function(
 #'
 #' @export
 annotate_phospho_residue <- function(features, detect.only = FALSE) {
-  valid_name <- mean(grepl("[_][1-9]+", features), na.rm = TRUE) > 0.9
+  valid_name <- mean(grepl("[_][A-Z]?[0-9]+", features), na.rm = TRUE) > 0.9
   valid_name
   uniprot <- sub("[_].*", "", features)
-  positions <- gsub(".*[_]|[.].*", "", features)
+  positions <- gsub(".*[_][A-Za-z]?|[.].*", "", features)
   positions <- strsplit(positions, split = "[;/,]")
 
   P <- playdata::PHOSPHOSITE
