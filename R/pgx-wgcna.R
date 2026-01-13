@@ -612,9 +612,6 @@ wgcna.compute_multiomics <- function(dataX,
     }
   }
    
-  dbg("[wgcna.compute_multiomics] 3: minKME = ", minKME)
-  dbg("[wgcna.compute_multiomics] 3: names.minKME = ", names(minKME))
-
   dtlist <- setdiff(names(dataX), names(wgcna))
   for(dt in dtlist) {
     cat("[wgcna.compute_multiomics] computing WGCNA for", dt, "-------------\n")
@@ -5425,17 +5422,13 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
   }
   
   if(multi) {
-    dbg("[wgcna.describeModules] calling getMultiTopGenesAndSets")
     top <- wgcna.getMultiTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
       psig=psig, level=level, rename="gene_title")
   } else {
-    dbg("[wgcna.describeModules] calling getTopGenesAndSets")
     top <- wgcna.getTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
       psig=psig, level=level, rename="gene_title")
   }
 
-  dbg("[wgcna.describeModules] names.top = ", names(top))
-  
   if(is.null(modules)) modules <- names(top$genes)
   if(is.null(modules)) modules <- names(top$sets)
   if(is.null(experiment)) experiment <- ""
@@ -5445,7 +5438,7 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
   ##modules <- intersect(modules, names(top$pheno))  
 
   if(length(modules)==0) {
-    dbg("[wgcna.describeModules] warning: empty module list!")    
+    info("[wgcna.describeModules] warning: empty module list!")    
     return(NULL)
   }
     
@@ -5596,9 +5589,8 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
   summaries <- list()
   summaries_prompts <- list()
   k=1
-  if(!is.null(progress)) progress$set(message = "Simmering modules...", value=0.4)  
+  if(!is.null(progress)) progress$set(message = "Simmering modules...", value=0.3)  
   for(k in names(descriptions)) {
-    message("Simmering module ",k,"...")
     ss <- descriptions[[k]]
     q2 <-  paste("Following are descriptions of a certain WGCNA module by one or more LLMs. Create a consensus conclusion out of the independent descriptions. Describe the underlying biology, relate correlated phenotypes and mention key genes, proteins or metabolites. Just answer, no confirmation, use 1-2 paragraphs.\n\n", ss)
     cc <- ai.ask(q2, model=ai_model[[2]])
@@ -5608,8 +5600,7 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
 
   ## Step 3: Make detailed report. We concatenate all summaries and
   ## ask a (better) LLM model to create a report.
-  message("Baking full report...")  
-  if(!is.null(progress)) progress$set(message = "Baking full report...", value=0.8)
+  if(!is.null(progress)) progress$set(message = "Baking full report...", value=0.6)
   all.summaries <- lapply(names(summaries), function(m)
     paste0("================= ",m," =================\n\n", summaries[[m]],"\n")
   )
@@ -5631,9 +5622,8 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
   report <- gsub("^```html|```$","",report)
 
   ## Step 4: Create diagram from report
-  message("Mashing up diagram...")
+  if(!is.null(progress)) progress$set(message = "Mashing up diagram...", value=0.8)  
   diagram <- wgcna.create_diagram(report, ai_model=ai_model[[3]]) 
-  ##diagram <- sub("rankdir=LR","rankdir=TB",diagram)
   
   list(
     descriptions_prompts = descriptions_prompts,

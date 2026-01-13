@@ -754,6 +754,7 @@ cleanupAnnotation <- function(genes) {
   # replace NA or empty symbol by "{feature}" so there is always a readable name
   ii <- which( genes$symbol %in% c(NA,"","-"))
   genes$symbol[ii] <- paste0("{",genes$feature[ii],"}")
+  genes$gene_title[ii] <- "Uknown feature"
 
   # if organism is human, human_ortholog should be NA (matching old
   # playbase annot). NEED RETHINK (this is not very consistent).
