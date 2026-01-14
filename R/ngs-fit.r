@@ -118,6 +118,18 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     timeseries <- NULL
   }
 
+  ## -----------------------------------------------------------------
+  ## Covariates
+  ## -----------------------------------------------------------------
+  if (!is.null(covariates)) {
+    kk <- intersect(covariates, colnames(samples))
+    if (length(kk) > 0) {
+      covariates <- samples[, kk, drop = FALSE]
+    } else {
+      covariates <- NULL
+    }
+  }
+  
   ## ------------------------------------------------------------------
   ## define transformation methods: log2CPM for counts
   ## ------------------------------------------------------------------
@@ -182,7 +194,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
       )
     )
   }
-
+  
   ## ---------------- LIMMA methods -------------------
   limma.mtds <- c("trend.limma", "notrend.limma", "voom.limma")
   limma.mdls <- c("limma", "limma", "voom")
@@ -515,9 +527,8 @@ ngs.fitContrastsWithTTEST <- function(X,
                                       contr.matrix,
                                       design, method = "welch",
                                       conform.output = 0) {
-  tables <- list()
-  i <- 1
 
+  tables <- list()
   exp.matrix <- contr.matrix
   if (!is.null(design)) exp.matrix <- (design %*% contr.matrix)
   for (i in 1:ncol(exp.matrix)) {
@@ -536,7 +547,6 @@ ngs.fitContrastsWithTTEST <- function(X,
   }
   names(tables) <- colnames(contr.matrix)
   if (conform.output == TRUE) {
-    i <- 1
     for (i in 1:length(tables)) {
       k1 <- c("mean.diff", "mean.value", "statistic", "pvalue", "qvalue", "mean.y", "mean.x")
       k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
@@ -554,7 +564,6 @@ ngs.fitContrastsWithWILCOXON <- function(X, contr.matrix, design, conform.output
   exp.matrix <- contr.matrix
   if (!is.null(design)) exp.matrix <- (design %*% contr.matrix)
 
-  i <- 1
   tables <- list()
   for (i in 1:ncol(exp.matrix)) {
     j1 <- which(exp.matrix[, i] > 0)
@@ -582,7 +591,6 @@ ngs.fitContrastsWithWILCOXON <- function(X, contr.matrix, design, conform.output
 
   names(tables) <- colnames(contr.matrix)
   if (conform.output == TRUE) {
-    i <- 1
     for (i in 1:length(tables)) {
       k1 <- c("mean.diff", "mean.value", "statistic", "pvalue", "qvalue", "mean.y", "mean.x")
       k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
@@ -620,22 +628,11 @@ ngs.fitContrastsWithLIMMA <- function(X,
   if (!is.null(X)) X <- X[which(rowMeans(is.na(X)) < 1), ]
   method <- method[1]
 
-  ##----------------------------
-  ##if (!is.null(covariates)) covariates <- as.character(covariates)
-  ## check if numeric or categorical....
-  ##counts <- counts[!is.na(rownames(counts)) & rownames(counts) != "", , drop = FALSE]
-  ##if (!any(is.na(suppressWarnings(as.numeric(rownames(counts)))))) {
-  ##  rownames(counts) <- paste0("P", 1:nrow(counts))
-  ##}
-  ##------------------------------
-  
   if (!is.null(design)) {
     message("[ngs.fitContrastsWithLIMMA] fitting LIMMA contrasts using design matrix")
     exp0 <- design %*% contr.matrix
     kk <- rownames(exp0)
-    if (prune.samples) {
-      kk <- rownames(exp0)[which(rowSums(abs(exp0), na.rm = TRUE) > 0)]
-    }
+    if (prune.samples) kk <- rownames(exp0)[which(rowSums(abs(exp0), na.rm = TRUE) > 0)]
     design1 <- design[kk, , drop = FALSE]
     X1 <- X[, kk, drop = FALSE]
     contr1 <- contr.matrix
@@ -669,9 +666,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
     tables <- list()
     for (i in 1:ncol(exp0)) {
       kk <- 1:nrow(exp0)
-      if (prune.samples) {
-        kk <- which(!is.na(exp0[, i]) & exp0[, i] != 0)
-      }
+      if (prune.samples) kk <- which(!is.na(exp0[, i]) & exp0[, i] != 0)
       ct <- exp0[kk, i]
       y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
       X1 <- X[, kk, drop = FALSE]
@@ -710,14 +705,19 @@ ngs.fitContrastsWithLIMMA <- function(X,
         ##------------------------------new
         cov.pval <- list()
         if (!is.null(covariates)) {
-
-          covariates <- samples[kk, covariates, drop = FALSE]
-
-          for (i in 1:ncol(covariates)) {
-            cov.name <- colnames(covariates)[i]
-            cov.val <- covariates[, i]
-            if (is.character(cov.val)) cov.val <- factor(cov.val)
-            if (is.factor(cov.val)) cov.val <- droplevels(cov.val)
+          message("-------------M1: class(covariates) = ", class(covariates))
+          message("-------------M2: colnames(covariates) = ", paste0(colnames(covariates), collapse="; "))
+          covariates1 <- covariates[kk, , drop = FALSE]
+          k=1
+          for (k in 1:ncol(covariates1)) {
+            cov.name <- colnames(covariates1)[k]
+            message("-------------M3: cov.name = ", cov.name, "\n")
+            cov.val <- covariates1[, k]
+            if (is.character(cov.val)) {
+              cov.val <- factor(cov.val)
+            } else if (is.numeric(cov.val)) {
+              cov.val <- as.numeric(cov.val) ## temp. bin into low vs high ???
+            }
             model_data <- data.frame(y = y, cov = cov.val)
             design1_cov <- stats::model.matrix(~ 0 + y + cov, data = model_data)
             if (method == "voom") {
@@ -732,7 +732,6 @@ ngs.fitContrastsWithLIMMA <- function(X,
             colnames(contr1_cov) <- "pos_vs_neg"
             y_cols <- intersect(c("yneg", "yo", "ypos"), colnames(design1_cov))
             contr1_cov[y_cols, 1] <- c(-1, 0, 1)[match(y_cols, c("yneg", "yo", "ypos"))]
-
             vfit_cov <- limma::contrasts.fit(vfit_cov, contrasts = contr1_cov)
             efit_cov <- try(limma::eBayes(vfit_cov, trend = trend_cov, robust = robust), silent = TRUE)
             if ("try-error" %in% class(efit_cov)) {
@@ -741,15 +740,15 @@ ngs.fitContrastsWithLIMMA <- function(X,
                 efit_cov <- try(limma::eBayes(vfit_cov, trend = FALSE, robust = FALSE), silent = TRUE)
               }
             }
-            
-            top_cov <- try(limma::topTable(efit_cov, coef = 1, sort.by = "none", number = Inf, adjust.method = "BH"), silent = TRUE)
+            top_cov <- try(limma::topTable(efit_cov, coef = 1, sort.by = "none", number = Inf), silent = TRUE)
             if ("try-error" %in% class(top_cov)) {
               cov.pval[[cov.name]] <- rep(NA, nrow(X1))
-              names(cov.pva[[cov.name]]) <- rownames(X1)
+              names(cov.pval[[cov.name]]) <- rownames(X1)
             } else {
               top_cov <- top_cov[rownames(X1), , drop = FALSE]
-              cov.pva[[cov.name]] <- top_cov$P.Value
+              cov.pval[[cov.name]] <- top_cov$P.Value
             }
+
           }
 
         }
