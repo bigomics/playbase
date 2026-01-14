@@ -5640,14 +5640,46 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
 }
 
 #' @export
-wgcna.create_diagram <- function(wgcna_report, ai_model, rankdir="LR") {
-  q4 <- paste0("Create a diagram connecting modules in the following WGCNA report. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add phenotype nodes. Suggest cause and effect relations that explain the phenotypes. Group modules with same biological functions. Give just the code in DOT format. Use solid lines for positive regulation, use dashed lines for negative regulation. Slightly color fill modules according to module names. Do not use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow.")
+wgcna.create_diagram <- function(wgcna_report, ai_model, rankdir="LR", format="dot",
+                                 correct=TRUE) {
+
+  q4 <- paste0("Create a simple diagram connecting modules in the following WGCNA report. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add phenotype nodes. Suggest cause and effect relations that explain the phenotypes. Group modules with same biological functions. Give just the code in DOT format, do not use any special characters, without headers or footer text. Do not use subgraphs. Do not use hexadecimal color coding. Use solid lines for positive regulation, use dashed lines for negative regulation. Slightly color fill modules according to module names. Do not use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow.")
+
+  if(grepl("mermaid",format,ignore.case=TRUE)) q4 <- sub("DOT","MERMAID",q4)
   q4 <- paste(q4, "\n\n<report>", wgcna_report, "</report>")
   aa <- ai.ask(q4, model = ai_model)
   aa <- gsub("```","",aa)
+
   diagram <- gsub("mermaid\n|dot\n","",aa)
   diagram <- gsub("&","and",diagram)
-  if(rankdir=="TB") diagram <- sub("rankdir=LR","rankdir=TB",diagram)
-  if(rankdir=="LR") diagram <- sub("rankdir=TB","rankdir=LR",diagram)  
+
+  is.dot <- grepl("dot",tolower(format))
+  if(is.dot) {    
+    if(rankdir=="TB") diagram <- sub("rankdir=LR","rankdir=TB",diagram)
+    if(rankdir=="LR") diagram <- sub("rankdir=TB","rankdir=LR",diagram)  
+  }
+
+  if(is.dot && correct) {
+
+    ## force as digraph
+    diagram <- sub("^graph","digraph",diagram)
+
+    ## crazy arrows
+    diagram <- gsub("-x->","->",diagram)
+    
+    ## remove anything after DOT last curly bracket  
+    diagram <- sub("\\}\n.*","}\n",diagram)
+    diagram <- gsub("\\[solid\\]","[style=solid]",diagram)
+    diagram <- gsub("\\[dashed\\]","[style=dashed]",diagram)
+    
+    # match 3- or 6-digit hex color with replace with quoted version
+    diagram <- gsub("#000000","#AAAAAA",diagram)  ## no black
+    diagram <- gsub(
+      "(?<!['\"])\\b(#(?:[0-9A-Fa-f]{3}){1,2})\\b(?!['\"])",
+      "\"\\1\"",
+      diagram, perl = TRUE )
+      ##DiagrammeR::grViz(diagram)
+  }
+  
   diagram
 }
