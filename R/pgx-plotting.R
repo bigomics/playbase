@@ -1305,8 +1305,7 @@ ggVolcano <- function(x,
                       ylab = "significance (-log10q)",
                       lfc = 1,
                       psig = 0.05,
-                      xlim = NULL,
-                      ylim = NULL,                      
+                      ylim = NULL,
                       showlegend = TRUE,
                       marker.size = 2.5,
                       marker.alpha = 0.7,
@@ -1320,7 +1319,6 @@ ggVolcano <- function(x,
                         notsel = "#cccccc88",
                         down = "#3181de"
                       ),
-                      ggrepel.padding = 0.1,
                       girafe = FALSE) {
   if (is.null(highlight)) highlight <- names
   if (showlegend) {
@@ -1348,7 +1346,6 @@ ggVolcano <- function(x,
   df$name <- gsub("[\\'\\`-]", "", df$name)
 
   if (is.null(ylim)) ylim <- max(y, na.rm = TRUE) * 1.1
-  if (is.null(xlim)) xlim <- range(x, na.rm = TRUE)  
 
   plt <- ggplot2::ggplot(df, ggplot2::aes(x = fc, y = y)) +
     ggplot2::geom_point(
@@ -1428,8 +1425,7 @@ ggVolcano <- function(x,
   plt <- plt +
     ggrepel::geom_label_repel(
       ggplot2::aes(label = label, color = category),
-      size = label.cex, family = "lato", box.padding = ggrepel.padding,
-      max.overlaps = Inf, show.legend = FALSE
+      size = label.cex, family = "lato", box.padding = 0.1, max.overlaps = 20, show.legend = FALSE
     )
 
   plt <- plt +
@@ -1438,12 +1434,9 @@ ggVolcano <- function(x,
     ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey") +
     ggplot2::scale_y_continuous(
       limits = c(0, ylim),
-      expand = ggplot2::expansion(mult = c(0, 0.05))
+      expand = ggplot2::expansion(mult = c(0, 0))
     ) +
-    ggplot2::scale_x_continuous(
-      limits = xlim,
-      expand = ggplot2::expansion(mult = c(0.07, 0.07))
-    ) +
+    ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = c(0.1, 0))) +
     ggplot2::labs(x = xlab, y = ylab) +
     guides(colour = guide_legend(reverse = T)) +
     ggplot2::theme_minimal(base_size = 15) +
@@ -7127,8 +7120,7 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
                                    xpos = NULL, xlim = NULL, justgraph = FALSE,
                                    edge.cex = 1, edge.alpha = 0.33, xdist = 1,
                                    normalize.edges = FALSE, yheight = 2,
-                                   edge.sign = c("both","pos","neg","consensus")[1],
-                                   edge.type = c("both","inter","intra","both2")[1],
+                                   edge.sign = "both", edge.type = "both",
                                    labpos = NULL, value.name = NULL,
                                    strip.prefix = FALSE, strip.prefix2 = FALSE,
                                    prune = FALSE,

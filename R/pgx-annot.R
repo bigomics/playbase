@@ -108,11 +108,6 @@ getProbeAnnotation <- function(organism,
   unknown.probetype <- (probetype %in% c("custom", "unkown"))
   annot.unknown <- unknown.organism || unknown.datatype || unknown.probetype
   annot.unknown
-
-  if (tolower(organism) == "human") organism <- "Homo sapiens"
-  if (tolower(organism) == "mouse") organism <- "Mus musculus"
-  if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
-  if (grepl("canis.*familiaris|^dog$",tolower(organism))) organism <- "Canis familiaris"  
   
   ## clean probe names
   probes <- trimws(probes)
@@ -216,9 +211,8 @@ getGeneAnnotation <- function(
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
-  if (grepl("canis.*familiaris|^dog$",tolower(organism))) organism <- "Canis familiaris"  
+  if (tolower(organism) == "dog") organism <- "Canis familiaris"
 
-  probes0 <- probes
   probes <- trimws(probes)
   probes[probes == "" | is.na(probes)] <- "NA"
 
@@ -233,7 +227,7 @@ getGeneAnnotation <- function(
   }
 
   # init empty (all missings)
-  annot <- data.frame(feature = probes0, stringsAsFactors = FALSE)
+  annot <- data.frame(feature = probes, stringsAsFactors = FALSE)
   missing <- rep(TRUE, length(probes))
 
   for (method in methods) {
@@ -764,14 +758,10 @@ cleanupAnnotation <- function(genes) {
   # rename protein-coding to protein_coding to confirm with playbase <= v1.3.2
   ## genes$gene_biotype <- sub("protein-coding", "protein_coding", genes$gene_biotype)
 
-  # replace NA in gene_ortholog by "" to conform with old
+  # replace NA in symbol and gene_ortholog by "" to conform with old
   # pgx objects. For collapsing to symbol this is important.
   genes$human_ortholog[is.na(genes$human_ortholog)] <- ""
-
-  # replace NA or empty symbol by "{feature}" so there is always a readable name
-  ii <- which( genes$symbol %in% c(NA,"","-"))
-  genes$symbol[ii] <- paste0("{",genes$feature[ii],"}")
-  genes$gene_title[ii] <- "Uknown feature"
+  genes$symbol[is.na(genes$symbol)] <- ""
 
   # if organism is human, human_ortholog should be NA (matching old
   # playbase annot). NEED RETHINK (this is not very consistent).
@@ -1167,7 +1157,7 @@ getHumanOrtholog.biomart <- function(organism, symbols, verbose = 1) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
-  if (grepl("^dog$|canis.*familiaris",tolower(organism))) organism <- "Canis LFamiliaris"
+  if (tolower(organism) %in% c("dog", "canis familiaris")) organism <- "Canis LFamiliaris"
 
   if (verbose > 0) message("[getHumanOrtholog.biomart] Mapping ", organism, " genes with biomart.")
   require(biomaRt)
@@ -1359,22 +1349,20 @@ probe2symbol <- function(probes, annot_table, query = "symbol",
   }
 
   ah <- AnnotationHub::AnnotationHub()
-#  all_species <- allSpecies()
-#  if (!tolower(organism) %in% tolower(all_species)) {
-#    message("WARNING: organism '", organism, "' not in AnnotationHub")
-#    return(NULL)
-#  }
+  all_species <- allSpecies()
+  if (!tolower(organism) %in% tolower(all_species)) {
+    message("WARNING: organism '", organism, "' not in AnnotationHub")
+    return(NULL)
+  }
+
+  ## correct capitalization
+  species <- all_species[which(tolower(all_species) == tolower(organism))]
 
   message("querying AnnotationHub for '", organism, "'\n")
   suppressMessages({
-    ahDb <- try(AnnotationHub::query(ah, pattern = c(organism, "OrgDb")))
+    ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
   })
 
-  if (length(ahDb) == 0 || inherits(ahDb, "try-error")) {
-    message("WARNING: organism '", organism, "' not in AnnotationHub.")
-    return(NULL)
-  }
-  
   ## select on exact organism name
   ahDb <- ahDb[which(tolower(ahDb$species) == tolower(organism))]
   k <- length(ahDb) ## latest of multiple
