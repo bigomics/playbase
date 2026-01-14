@@ -156,6 +156,7 @@ Imports:
     SummarizedExperiment,
     survival,
     sva,
+    tidyprompt,
     tidyr,
     TileDBArray,
     tools,
