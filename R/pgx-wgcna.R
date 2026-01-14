@@ -1694,7 +1694,9 @@ wgcna.matchColors <- function(wgcna, refcolors) {
   wgcna$me.colors <- newcol(wgcna$me.colors)
   names(wgcna$me.colors) <- newcol(names(wgcna$me.colors))
   colnames(wgcna$W) <- newcol(colnames(wgcna$W))
-  rownames(wgcna$modTraits) <- newcol(rownames(wgcna$modTraits))
+  if(!is.null(wgcna$modTraits)) {
+    rownames(wgcna$modTraits) <- newcol(rownames(wgcna$modTraits))
+  }
 
   ## rename everything in stats object  
   if("stats" %in% names(wgcna) && !is.null(wgcna$stats)) {
@@ -4092,7 +4094,6 @@ wgcna.plotEigenGeneAdjacencyHeatmap <- function(wgcna,
     ff <- list()
     for(k in names(wgcna)) {
       rho <- cor(ME, Y[,phenotype], use="pairwise")[,1]
-      ##rho <- wgcna[[k]]$modTraits[,phenotype]      
       ff[[k]] <- layersign[k] * rho
     }
     names(ff) <- NULL
@@ -5295,7 +5296,11 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
   }
 
   ## top correlated phenotypes
-  M <- wgcna$modTraits
+  if(!is.null(wgcna$modTraits)) {
+    M <- wgcna$modTraits
+  } else {
+    M <- cor( wgcna$net$MEs, wgcna$datTraits, use="pairwise")
+  }
   toppheno <- apply(M, 1, function(x) names(which(x > 0.8*max(x))))
   
   if(level=="geneset") {
@@ -5524,21 +5529,31 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
 }
 
 #' @export
-wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE) {
+wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
+                                multi=FALSE) {
 
-  if(class(wgcna) == "list") {
-    M <- lapply(wgcna, function(w) as.matrix(w$modTraits))
+  if(!multi) {    
+    ww <- list(gx = wgcna)  ## single-omics wgcna object
   } else {
-    M <- list(gx = wgcna$modTraits)
+    ww <- wgcna
   }
+  
+  M <- list()
+  i=1
+  for(i in 1:length(ww)) {    
+    me <- ww[[i]]$net$MEs
+    dt <- ww[[i]]$datTraits    
+    M[[i]] <- cor(me, dt, use="pairwise")
+  } 
+  
   top.modules <- c()
   i=1
   for(i in 1:length(M)) {
     mx <- rowMeans(abs(M[[i]]**kx),na.rm=TRUE)**(1/kx)
-
     tt <- names(which( mx > topratio * max(mx)))
     top.modules <- c(top.modules, tt) 
   }
+
   if(rm.grey) {
     sel.grey <- grepl("[A-Z]{2}grey$",top.modules)
     top.modules <- top.modules[!sel.grey]
@@ -5553,17 +5568,17 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
                                 progress=NULL) {
 
   if(length(ai_model)==1) ai_model <- rep(ai_model,3)
-  #if(!multi) {
-  if(!is.list(wgcna)) {
+  if(!multi) {
     wgcnalist <- list(gx=wgcna)
   } else {
     wgcnalist <- wgcna
   }
   
   ## get top modules (most correlated with some phenotype)
-  top.modules <- wgcna.getTopModules(wgcnalist, topratio=topratio, kx=4) 
+  top.modules <- wgcna.getTopModules(wgcnalist, topratio=topratio, kx=4,
+    multi=TRUE) ## always multi format
   top.modules
-
+  
   if(is.null(annot) && !is.null(wgcnalist[[1]]$annot)) {
     annot <- wgcnalist[[1]]$annot
   }
