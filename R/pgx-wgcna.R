@@ -5290,9 +5290,11 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
   topsets <- NULL
   if("gsea" %in% names(wgcna)) {
     ee <- wgcna$gsea
-    if(!is.null(module)) ee <- ee[which(names(ee) %in% module)]  
-    ee <- lapply(ee, function(x) x[which(x$p.value <= psig),] )
-    topsets <- lapply(ee,function(x) head(rownames(x),ntop))
+    if(!all(sapply(ee,is.null))) {
+      if(!is.null(module)) ee <- ee[which(names(ee) %in% module)]  
+      ee <- lapply(ee, function(x) x[which(x$p.value <= psig),] )
+      topsets <- lapply(ee,function(x) head(rownames(x),ntop))
+    }
   }
 
   ## top correlated phenotypes
@@ -5328,8 +5330,7 @@ wgcna.getMultiTopGenesAndSets <- function(multi_wgcna, annot=NULL, module=NULL,
     toplist[[k]] <- topk
   }
 
-  top <- list()
-  
+  top <- list()  
   top$genes <- lapply(toplist, function(t) t[['genes']])
   names(top$genes) <- NULL
   top$genes <- unlist(top$genes, recursive=FALSE)
@@ -5436,12 +5437,13 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
       psig=psig, level=level, rename="gene_title")
   }
 
-  if(is.null(modules)) modules <- names(top$genes)
-  if(is.null(modules)) modules <- names(top$sets)
-  if(is.null(experiment)) experiment <- ""
+  if(is.null(modules)) {
+    modules <- union(names(top$genes), names(top$sets))
+  }
 
-  if(!is.null(top$genes)) modules <- intersect(modules, names(top$genes))
-  if(!is.null(top$sets)) modules <- intersect(modules, names(top$sets))
+  if(is.null(experiment)) experiment <- ""
+  ##if(!is.null(top$genes)) modules <- intersect(modules, names(top$genes))
+  ##if(!is.null(top$sets)) modules <- intersect(modules, names(top$sets))
   ##modules <- intersect(modules, names(top$pheno))  
 
   if(length(modules)==0) {
@@ -5455,10 +5457,16 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
     desc <- list()
     for(m in modules) {
       ss=gg=pp=NULL
-      gg <- paste( top$genes[[m]], collapse=', ')
-      ss <- paste( sub(".*:","",top$sets[[m]]), collapse='; ')
-      if(m %in% names(top$pheno)) pp <- paste( top$pheno[[m]], collapse='; ')
-
+      
+      if(!is.null(top$genes[[m]])) {
+        gg <- paste( top$genes[[m]], collapse=', ')
+      }
+      if(!is.null(top$sets[[m]])) {
+        ss <- paste( sub(".*:","",top$sets[[m]]), collapse='; ')
+      }
+      if(m %in% names(top$pheno)) {
+        pp <- paste( top$pheno[[m]], collapse='; ')
+      }
       d <- ""
       if(!is.null(pp)) d <- paste(d, "\n\n<b>Correlated phenotypes:</b> ", pp, "<br><br>")
       if(!is.null(gg) && gg!="") {
@@ -5660,7 +5668,7 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
 wgcna.create_diagram <- function(wgcna_report, ai_model, rankdir="LR", format="dot",
                                  correct=TRUE) {
 
-  q4 <- paste0("Create a simple diagram connecting modules in the following WGCNA report. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add phenotype nodes. Suggest cause and effect relations that explain the phenotypes. Group modules with same biological functions. Give just the code in DOT format, LR direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Do not use hexadecimal color coding. Use solid lines for positive regulation, use dashed lines for negative regulation. Slightly color fill modules according to module names. Do not use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow.")
+  q4 <- paste0("Create a diagram connecting modules in the following WGCNA report. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add phenotype nodes. Suggest cause and effect relations that explain the phenotypes. Group modules with same biological functions. Give just the code in DOT format, LR direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Do not use hexadecimal color coding. Use solid lines for positive regulation, use dashed lines for negative regulation. Slightly color fill modules according to module names. Do not use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow.")
 
   if(grepl("mermaid",format,ignore.case=TRUE)) q4 <- sub("DOT","MERMAID",q4)
   q4 <- paste(q4, "\n\n<report>", wgcna_report, "</report>")
@@ -5690,6 +5698,8 @@ wgcna.create_diagram <- function(wgcna_report, ai_model, rankdir="LR", format="d
     diagram <- gsub("\\[dashed\\]","[style=dashed]",diagram)
     
     # match 3- or 6-digit hex color with replace with quoted version
+    diagram <- gsub("lightgreen","limegreen", diagram)  ## avoid
+    diagram <- gsub("fillcolor=black","fillcolor=lightgrey", diagram)  ## avoid    
     diagram <- gsub("#000000","#AAAAAA",diagram)  ## no black
     diagram <- gsub(
       "(?<!['\"])\\b(#(?:[0-9A-Fa-f]{3}){1,2})\\b(?!['\"])",
