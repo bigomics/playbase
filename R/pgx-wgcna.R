@@ -5525,6 +5525,7 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
 
 #' @export
 wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE) {
+
   if(class(wgcna) == "list") {
     M <- lapply(wgcna, function(w) as.matrix(w$modTraits))
   } else {
@@ -5552,7 +5553,8 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
                                 progress=NULL) {
 
   if(length(ai_model)==1) ai_model <- rep(ai_model,3)
-  if(!multi) {
+  #if(!multi) {
+  if(!is.list(wgcna)) {
     wgcnalist <- list(gx=wgcna)
   } else {
     wgcnalist <- wgcna
