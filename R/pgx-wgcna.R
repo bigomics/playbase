@@ -1376,27 +1376,29 @@ wgcna.computeModuleEnrichment <- function(wgcna,
       if (length(sel)) G1 <- G1[, sel, drop = FALSE]
     }
     G1 <- G1[, which(Matrix::colSums(G1 != 0) >= min.genes), drop = FALSE]
-    
-    ## get eigengene members. convert to symbols.
-    me.genes <- wgcna[[dtype]]$me.genes
-    me.genes <- lapply(me.genes, function(g) probe2symbol(g, annot, query = symbol.col))
-    
-    ## Get eigengene matrix
-    ME <- as.matrix(wgcna[[dtype]]$net$MEs)
-    
-    dt.gsea <- wgcna.run_enrichment_methods(
-      ME = ME,
-      me.genes = me.genes,
-      GMT = G1,
-      geneX = geneX,
-      methods = methods,
-      ntop = ntop,
-      xtop = xtop,
-      min.rho = min.rho
-    )
 
-    ## add to results
-    gsea <- c(gsea, dt.gsea)
+    if(nrow(G1)>=3 && ncol(G1)>=3 ) {
+      ## get eigengene members. convert to symbols.
+      me.genes <- wgcna[[dtype]]$me.genes
+      me.genes <- lapply(me.genes, function(g) probe2symbol(g, annot, query = symbol.col))
+      
+      ## Get eigengene matrix
+      ME <- as.matrix(wgcna[[dtype]]$net$MEs)
+      
+      dt.gsea <- wgcna.run_enrichment_methods(
+        ME = ME,
+        me.genes = me.genes,
+        GMT = G1,
+        geneX = geneX,
+        methods = methods,
+        ntop = ntop,
+        xtop = xtop,
+        min.rho = min.rho
+      )
+      
+      ## add to results
+      gsea <- c(gsea, dt.gsea)
+    }    
   }
   
   return(gsea)
