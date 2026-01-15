@@ -5666,9 +5666,9 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
 
 #' @export
 wgcna.create_diagram <- function(wgcna_report, ai_model, rankdir="LR", format="dot",
-                                 correct=TRUE) {
+                                 correct=TRUE, double.check=TRUE) {
 
-  q4 <- paste0("Create a diagram connecting modules in the following WGCNA report. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add phenotype nodes. Suggest cause and effect relations that explain the phenotypes. Group modules with same biological functions. Give just the code in DOT format, LR direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Do not use hexadecimal color coding. Use solid lines for positive regulation, use dashed lines for negative regulation. Slightly color fill modules according to module names. Do not use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow.")
+  q4 <- paste0("Create a diagram connecting modules in the following WGCNA report. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add phenotype nodes. Suggest cause and effect relations that explain the phenotypes. Group modules with same biological functions. Give just the code in DOT format, LR direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Do not use hexadecimal color coding. Use solid lines for positive regulation, use dashed lines for negative regulation. Color fill nodes matching the module names with light palette so we can still read well the text. Never use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow.")
 
   if(grepl("mermaid",format,ignore.case=TRUE)) q4 <- sub("DOT","MERMAID",q4)
   q4 <- paste(q4, "\n\n<report>", wgcna_report, "</report>")
@@ -5705,7 +5705,12 @@ wgcna.create_diagram <- function(wgcna_report, ai_model, rankdir="LR", format="d
       "(?<!['\"])\\b(#(?:[0-9A-Fa-f]{3}){1,2})\\b(?!['\"])",
       "\"\\1\"",
       diagram, perl = TRUE )
-      ##DiagrammeR::grViz(diagram)
+  }
+
+  ## second pass: double check
+  if(double.check) {
+    diagram <- ai.ask(paste("Please double check the following code that draws a diagram using the DOT format and correct if needed. If the code is correct, do not change anything. Just return the corrected code:",diagram),
+      model = ai_model)
   }
   
   diagram
