@@ -60,7 +60,6 @@ ggVolcano(
   ylab = "significance (-log10q)",
   lfc = 1,
   psig = 0.05,
-  xlim = NULL,
   ylim = NULL,
   showlegend = TRUE,
   marker.size = 2.5,
@@ -70,7 +69,6 @@ ggVolcano(
   label = NULL,
   title = "Volcano plot",
   colors = c(up = "#f23451", notsig = "#8F8F8F", notsel = "#cccccc88", down = "#3181de"),
-  ggrepel.padding = 0.1,
   girafe = FALSE
 )
 
