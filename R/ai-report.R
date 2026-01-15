@@ -1,0 +1,197 @@
+
+##---------------------------------------------------------------------
+##----------------------- CONTENT CREATION ----------------------------
+##---------------------------------------------------------------------
+
+table_to_content <- function(df) {
+  if(is.null(df)) return(NULL)
+  paste(as.character(knitr::kable(df,format="markdown")),collapse="\n")
+}
+
+list_to_content <- function(a) {
+  if(is.null(a)) return("")
+  aa <- sapply(a, function(s) paste(unlist(s), collapse='; '))
+  cc <- paste(paste0("- **",names(a),"**: ",aa), collapse='\n')
+  paste(cc,'\n')
+}
+
+collate_as_sections <- function(a, level=2) {
+  if(is.null(a)) return("")
+  hdr <- paste(rep("#",level),collapse="")
+  for(i in 1:length(a)) {
+    a[[i]] <- paste(hdr,names(a)[i],"\n\n",a[[i]],'\n')
+  }
+  paste(a, collapse="\n\n")
+}
+
+#'
+#'
+#' @export
+ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
+
+  dbg("[CopilotModule] *** createContentAllContrasts() **** ")
+  dbg("[CopilotModule] pgx$name =  ", pgx$name)
+  
+  contrasts <- playbase::pgx.getContrasts(pgx)
+  samples <- rownames(pgx$samples)
+  ct <- contrasts[1]  ## FOR NOW!!!!
+
+  all.sections <- c("description", "dataset_info","compute_settings",
+    "differential_expression", "geneset_enrichment",
+    "drug_similarity","hub_genes","wgcna_report")
+  if(is.null(sections)) {
+    sections <- all.sections
+  } else {
+    sections <- intersect(all.sections, sections)
+  }
+  dbg("[CopilotModule] sections =  ", sections)
+  
+  dbg("[CopilotModule] adding pgx info...")  
+  description <- NULL
+  if("description" %in% sections) {
+    description <- list(
+      name = pgx$name,
+      title = pgx$description,
+      description = pgx$description
+    )
+  }
+
+  dataset_info <- NULL
+  if("dataset_info" %in% sections) {
+    dbg("[CopilotModule] createContent : adding pgx metadata...")  
+    dataset_info <- list(
+      name = pgx$name,
+      organism = pgx$organism,
+      datatype = pgx$datatype,
+      creation_date = pgx$date,
+      num_samples = ncol(pgx$X),
+      num_features = nrow(pgx$X),
+      num_genesets = nrow(pgx$gsetX),
+      num_comparisons = length(contrasts),
+      samples = samples,
+      comparisons = contrasts
+      # features = c(head(rownames(pgx$counts),40),ifelse(nrow(pgx$counts)>40,"...",""))
+    )
+  }
+
+  compute_settings <- NULL
+  if("compute_settings" %in% sections) {
+    dbg("[CopilotModule] createContent : compute settings...")  
+    compute_settings <- list(
+      gene_tests = colnames(pgx$gx.meta$meta[[1]]$p),
+      geneset_tests = colnames(pgx$gset.meta$meta[[1]]$p),
+      pgx_slots = sort(names(pgx))
+    )
+  }
+  
+  ##-------------------------------------------------------------------
+  differential_expression <- NULL
+  if("differential_expression" %in% sections) {
+    dbg("[CopilotModule] createContent : adding differential_expression results")
+    F <- playbase::pgx.getMetaMatrix(pgx)$fc
+    F <- playbase::rename_by2(F, pgx$genes, "symbol")
+    ii <- match(rownames(F),pgx$genes$symbol)
+    rownames(F) <- paste0(pgx$genes$gene_title[ii]," (",rownames(F),")")
+    F.up <- head( F[order(-rowMeans(F)),,drop=FALSE], 2*ntop )
+    F.dn <- head( F[order(rowMeans(F)),,drop=FALSE], 2*ntop )
+    
+    differential_expression <- list(
+      "Up-regulated genes (top hits). The top most most positively differentially expressed genes are:" = F.up,
+      "Down-regulated genes (top hits). The top most negatively differentially expressed genes are:" = F.dn
+    )
+    differential_expression <- lapply(differential_expression, table_to_content)
+  }
+  
+  ##-------------------------------------------------------------------
+  geneset_enrichment <- NULL
+  if("geneset_enrichment" %in% sections) {
+    dbg("[CopilotModule] createContent : get geneset enrichment....")  
+    G <- playbase::pgx.getMetaMatrix(pgx, level = "geneset")$fc
+    G <- G[order(-rowMeans(G)),,drop=FALSE]
+    revtail <- function(A,n) head(A[nrow(A):1,,drop=FALSE],n)
+    BP.up <- head( G[grep("GOBP|GO_BP",rownames(G)),,drop=FALSE], ntop)
+    BP.dn <- revtail( G[grep("GOBP|GO_BP",rownames(G)),,drop=FALSE], ntop)
+    MF.up <- head( G[grep("GOMF|GO_MF",rownames(G)),,drop=FALSE], ntop)
+    MF.dn <- revtail( G[grep("GOMF|GO_MF",rownames(G)),,drop=FALSE], ntop)
+    CC.up <- head( G[grep("GOCC|GO_CC",rownames(G)),,drop=FALSE], ntop)
+    CC.dn <- revtail( G[grep("GOCC|GO_CC",rownames(G)),,drop=FALSE], ntop)
+    PW.up <- head( G[grep("PATHWAY",rownames(G)),,drop=FALSE], ntop)
+    PW.dn <- revtail( G[grep("PATHWAY",rownames(G)),,drop=FALSE], ntop)
+    
+    geneset_enrichment <- list(
+      "Top most positively enriched GO biological process (BP) gene sets:" = BP.up,
+      "Top most negatively enriched GO biological process (BP) gene sets:" = BP.dn,
+      "Top most positively enriched GO molecular function (MF) gene sets:" = MF.up,
+      "Top most negatively enriched GO molecular function (MF) gene sets:" = MF.dn,
+      "Top most positively enriched GO cellular component (CC) gene sets:" = CC.up,
+      "Top most negatively enriched GO cellulare component (CC) gene sets:" = CC.dn,
+      "Top most positively enriched pathways:" = PW.up,
+      "Top most negatively enriched pathways:" = PW.dn
+    )
+    geneset_enrichment <- lapply(geneset_enrichment, table_to_content)
+  }
+  
+  ##-------------------------------------------------------------------
+  drug_similarity <- NULL
+  if("drug_similarity" %in% sections && !is.null(pgx$drugs)) {
+    dbg("[CopilotModule] createContent : adding drug similarity...")      
+    D <- playbase::pgx.getTopDrugs(pgx, ct, n=ntop, na.rm=TRUE)    
+    drug_similarity <- list(
+      "Drug Mechanism of Action. Drug Connectivity Map (CMap) analysis of selected comparison. Similarity of the mechanism of action (MOA) is based on correlation enrichment with drug perturbation profiles of LINCS L1000 database. The top most similar (i.e. positively correlated) drugs are:" =
+        table_to_content(playbase::pgx.getTopDrugs(pgx, ct, n=ntop, dir=+1, na.rm=TRUE)), 
+      "The top most inhibitory (i.e. negative correlated) drugs are:" = 
+        table_to_content(playbase::pgx.getTopDrugs(pgx, ct, n=ntop, dir=-1, na.rm=TRUE))
+    )
+  }
+  
+  pcsf_report <- NULL
+  if(FALSE && "pcsf_report" %in% sections) {
+    dbg("[CopilotModule] createContent : get PCSF centrality...")    
+    pcsf_report <- list("Identification of hub genes. Hub genes can identify important regulators. The hub score is computed using a page rank network centrality score. The most central genes are:" = table_to_content(playbase::pgx.getPCSFcentrality(pgx, ct, plot = FALSE, n = ntop))
+    )
+  }
+  
+  ##-------------------------------------------------------------------
+  wgcna_report <- NULL
+  if("wgcna_report" %in% sections && !is.null(pgx$wgcna)) {
+    out <- playbase::wgcna.describeModules(
+      pgx$wgcna,
+      modules = NULL,
+      multi = FALSE, 
+      ntop = 40,
+      annot = pgx$genes, 
+      experiment = pgx$description,
+      verbose = FALSE,
+      model = NULL
+    ) 
+    names(out)
+    wgcna_report <- list_to_content(out$answers)
+  }
+    
+  ##-----------------------------------------------------------
+  dbg("[CopilotModule] createContent : get datasets info and meta data...")  
+  report <- list(
+    DATASET_INFO = list_to_content(dataset_info)
+  )
+
+  dbg("[CopilotModule] createContent : compiling content...")  
+  content <- list(
+    description = list_to_content(description),
+    dataset_info = list_to_content(dataset_info),
+    compute_settings = list_to_content(compute_settings),
+    differential_expression = list_to_content(differential_expression),
+    geneset_enrichment = list_to_content(geneset_enrichment),
+    drug_similarity = list_to_content(drug_similarity),
+    pcsf_report = list_to_content(pcsf_report),
+    wgcna_report = wgcna_report
+  )
+  
+  if(collate) {
+    dbg("[CopilotModule] createContent : collating pages...")
+    content <- collate_as_sections(content,level=2) 
+  }
+
+  dbg("[CopilotModule] createContent : done!")  
+  return(content)
+}
+
