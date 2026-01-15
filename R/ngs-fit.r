@@ -333,6 +333,11 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     timings[["custom"]] <- system.time(0)
   }
 
+  ##-------temp
+  saveRDS(list(outputs=outputs, contr.matrix=contr.matrix), "~/Desktop/oo.RDS")
+  ##--------
+  
+  
   ## ----------------------------------------------------------------------
   ## "corrections" ...
   ## ----------------------------------------------------------------------
@@ -514,7 +519,9 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     timings = timings0,
     X = X
   )
+
   return(res)
+
 }
 
 ## --------------------------------------------------------------------------------------------
@@ -702,31 +709,27 @@ ngs.fitContrastsWithLIMMA <- function(X,
           top <- top[rownames(X1), , drop = FALSE]        
         }
 
-        ##------------------------------new
+        ##---If covariates specified, regress them out and get p.value
         cov.pval <- list()
         if (!is.null(covariates)) {
-          message("-------------M1: class(covariates) = ", class(covariates))
-          message("-------------M2: colnames(covariates) = ", paste0(colnames(covariates), collapse="; "))
           covariates1 <- covariates[kk, , drop = FALSE]
           k=1
           for (k in 1:ncol(covariates1)) {
             cov.name <- colnames(covariates1)[k]
-            message("-------------M3: cov.name = ", cov.name, "\n")
             cov.val <- covariates1[, k]
             if (is.character(cov.val)) {
               cov.val <- factor(cov.val)
             } else if (is.numeric(cov.val)) {
-              cov.val <- as.numeric(cov.val) ## temp. bin into low vs high ???
+              nn <- unique(cov.val[!is.na(cov.val)])
+              if (length(nn) <= 4) { ## edge case: likely categorical
+                cov.val <- factor(cov.val)
+              } else {
+                cov.val <- as.numeric(cov.val) ## no arbitrary binning
+              }
             }
             model_data <- data.frame(y = y, cov = cov.val)
             design1_cov <- stats::model.matrix(~ 0 + y + cov, data = model_data)
-            if (method == "voom") {
-              v_cov <- limma::voom(2**X1, design1_cov, plot = FALSE)
-              suppressMessages(vfit_cov <- limma::lmFit(v_cov, design1_cov))
-              trend <- FALSE
-            } else {
-              suppressMessages(vfit_cov <- limma::lmFit(X1, design1_cov))
-            }
+            suppressMessages(vfit_cov <- limma::lmFit(X1, design1_cov))
             contr1_cov <- matrix(0, nrow = ncol(design1_cov), ncol = 1)
             rownames(contr1_cov) <- colnames(design1_cov)
             colnames(contr1_cov) <- "pos_vs_neg"
@@ -742,41 +745,45 @@ ngs.fitContrastsWithLIMMA <- function(X,
             }
             top_cov <- try(limma::topTable(efit_cov, coef = 1, sort.by = "none", number = Inf), silent = TRUE)
             if ("try-error" %in% class(top_cov)) {
-              cov.pval[[cov.name]] <- rep(NA, nrow(X1))
-              names(cov.pval[[cov.name]]) <- rownames(X1)
+              top_cov <- data.frame(matrix(NA, nrow = nrow(X1), ncol = 1))
+              rownames(top_cov) <- rownames(X1)
+              colnames(top_cov) <- paste0("P.Value.", cov.name)          
+              cov.pval[[cov.name]] <- top_cov
             } else {
-              top_cov <- top_cov[rownames(X1), , drop = FALSE]
-              cov.pval[[cov.name]] <- top_cov$P.Value
-            }
-
+              top_cov <- top_cov[rownames(X1), "P.Value", drop = FALSE]
+              colnames(top_cov) <- paste0("P.Value.", cov.name) 
+              cov.pval[[cov.name]] <- top_cov
+            } 
           }
 
         }
-        ##--------------------------------------
+        ##--end covariates regression
       }
-      
+
       j1 <- which(ct > 0)
       j0 <- which(ct < 0)
       mean1 <- rowMeans(X1[, j1, drop = FALSE], na.rm = TRUE)
       mean0 <- rowMeans(X1[, j0, drop = FALSE], na.rm = TRUE)
 
       top <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
-      ## Add P.Value for each individual covariate correction (if performed)
-      if (length(cov.pval) > 0) {
-        for (cov.name in names(cov.pval)) {
-          top[[paste0("P.Value.", cov.name)]] <- cov.pval[[cov.name]]
-        }
+      if (length(cov.pval) > 0) { ## add covariates' regression p.values    
+        top_cov <- do.call(cbind, cov.pval)
+        cm <- intersect(rownames(top_cov), rownames(top))
+        top <- cbind(top[cm, , drop = FALSE], top_cov[cm, , drop = FALSE])
       }
+
       tables[[i]] <- top
       names(tables)[i] <- colnames(exp0)[i]
+
     }
+
   }
 
   if (conform.output) {
     for (i in 1:length(tables)) {
       k1 <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
       k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
-      ec <- grep("^P\\.Value\\.", colnames(tables[[i]]), value = TRUE) ## extra columns (covariates)
+      ec <- grep("^P\\.Value\\.", colnames(tables[[i]]), value = TRUE)
       tables[[i]] <- tables[[i]][, c(k1, ec)]
       colnames(tables[[i]])[1:length(k2)] <- k2
     }
