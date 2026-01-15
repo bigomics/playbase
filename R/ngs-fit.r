@@ -214,6 +214,12 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         } else {
           time_var <- NULL
         }
+
+        ##---------------------------
+        saveRDS(list(X=X1, contr.matrix=contr.matrix, design=design, covariates=covariates,
+          method=mdl, trend=trend, prune.samples=prune.samples), "~/Desktop/oo.RDS")
+        ##----------------------------
+        
         tt <- system.time(
           outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithLIMMA(
             X1, contr.matrix,
@@ -333,10 +339,23 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     timings[["custom"]] <- system.time(0)
   }
 
-  ##-------temp
-  saveRDS(list(outputs=outputs, contr.matrix=contr.matrix), "~/Desktop/oo.RDS")
-  ##--------
-  
+  ## ##-------temp
+  saveRDS(list(outputs=outputs, contr.matrix=contr.matrix, design=design, X=X, genes=genes), "~/Desktop/oo.RDS")
+  ## ##--------
+  outputs <- readRDS("~/Desktop/oo.RDS")[[1]]
+  contr.matrix <- readRDS("~/Desktop/oo.RDS")[[2]]
+  design <- readRDS("~/Desktop/oo.RDS")[[3]]
+  X <- readRDS("~/Desktop/oo.RDS")[[4]]
+  genes <- readRDS("~/Desktop/oo.RDS")[[5]]
+  names(outputs)
+  names(outputs[[1]])
+  names(outputs[[2]])
+  names(outputs[[2]][[1]])
+  head(outputs[[2]][[1]][[1]])
+  head(outputs[[2]][[1]][[2]])
+  head(outputs[[2]][[1]][[3]])
+  head(outputs[[2]][[1]][[4]])
+  head(outputs[[2]][[1]][[5]])
   
   ## ----------------------------------------------------------------------
   ## "corrections" ...
@@ -368,23 +387,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
       }
     }
   }
-
-  ## -----------------------------------------------------------------------
-  ## Put "IA:*" contrasts as last columns in outputs limma/DeSeq2/EdgeR. NEEDED??
-  ## -----------------------------------------------------------------------
-  ## if (!is.null(timeseries)) {
-  ##   i <- 1
-  ##   for (i in 1:length(outputs)) {
-  ##     contr.names <- names(outputs[[i]]$tables)
-  ##     chk1 <- grep("^IA:*", contr.names)
-  ##     if (any(chk1)) {
-  ##       ss <- unique(c(contr.names[-chk1], contr.names[chk1]))
-  ##       jj <- match(ss, names(outputs[[i]]$tables))
-  ##       outputs[[i]]$tables <- outputs[[i]]$tables[jj]
-  ##       names(outputs[[i]]$tables) <- ss
-  ##     }
-  ##   }
-  ## }
 
   ## ----------------------------------------------------------------------
   ## add some statistics
@@ -472,7 +474,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   ## meta analysis, aggregate p-values
   ## --------------------------------------------------
   message("[ngs.fitContrastsWithAllMethods] aggregating p-values...")
-
+  
   all.meta <- list()
   for (i in 1:ntest) {
     pv <- P[[i]]
@@ -508,6 +510,24 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   }
   names(all.meta) <- tests
 
+  #pgx <- playbase::pgx.load("~/omicsplayground/data/RC1.pgx")
+  #M <- pgx$gx.meta$meta.covs[[1]]
+  #head(M[[4]])
+  
+  ## Add into all.meta.covariates' regression p.values (if any)
+  meta.covs <- NULL
+  if (!is.null(covariates)) {
+    cm <- grep("limma|edgeR|deseq2", names(outputs), value = TRUE)
+    if (length(cm) > 0) {
+      i=1; meta.covs=list()
+      for(i in 1:length(cm)) {
+        T <- outputs[[cm[i]]]$tables
+        V <- lapply(T, function(x) x[, grep("P.Value.", colnames(x), fixed=TRUE), drop = FALSE])
+        meta.covs[[cm[i]]] <- V 
+      }
+    }
+  }
+
   timings0 <- do.call(rbind, timings)
   colnames(timings0) <- names(timings[[1]])
   colnames(timings0) <- c("user.self", "sys.self", "elapsed", "user.child", "sys.child")
@@ -515,6 +535,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   res <- list(
     outputs = outputs,
     meta = all.meta,
+    meta.covs = meta.covs,
     sig.counts = sig.counts,
     timings = timings0,
     X = X
@@ -628,6 +649,12 @@ ngs.fitContrastsWithLIMMA <- function(X,
                                       plot = FALSE,
                                       timeseries = NULL) {
 
+
+  ## save there and test.
+  ## 1. Different Covariates cannot have exactly same pvalue
+  ## 2. Shorten code.
+  ## 3. Add button display in the platform.
+  
   ## Design (grouping): perform LIMMA on the entire contrast matrix.
   ## No design (no grouping): perform LIMMA per contrast one-by-one.
 
@@ -713,7 +740,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
         cov.pval <- list()
         if (!is.null(covariates)) {
           covariates1 <- covariates[kk, , drop = FALSE]
-          k=1
+          k=1;
           for (k in 1:ncol(covariates1)) {
             cov.name <- colnames(covariates1)[k]
             cov.val <- covariates1[, k]
@@ -727,8 +754,8 @@ ngs.fitContrastsWithLIMMA <- function(X,
                 cov.val <- as.numeric(cov.val) ## no arbitrary binning
               }
             }
-            model_data <- data.frame(y = y, cov = cov.val)
-            design1_cov <- stats::model.matrix(~ 0 + y + cov, data = model_data)
+            mm <- data.frame(y = y, cov = cov.val)
+            design1_cov <- stats::model.matrix(~ 0 + y + cov, data = mm)
             suppressMessages(vfit_cov <- limma::lmFit(X1, design1_cov))
             contr1_cov <- matrix(0, nrow = ncol(design1_cov), ncol = 1)
             rownames(contr1_cov) <- colnames(design1_cov)
@@ -747,13 +774,11 @@ ngs.fitContrastsWithLIMMA <- function(X,
             if ("try-error" %in% class(top_cov)) {
               top_cov <- data.frame(matrix(NA, nrow = nrow(X1), ncol = 1))
               rownames(top_cov) <- rownames(X1)
-              colnames(top_cov) <- paste0("P.Value.", cov.name)          
-              cov.pval[[cov.name]] <- top_cov
             } else {
               top_cov <- top_cov[rownames(X1), "P.Value", drop = FALSE]
-              colnames(top_cov) <- paste0("P.Value.", cov.name) 
-              cov.pval[[cov.name]] <- top_cov
-            } 
+            }
+            colnames(top_cov) <- paste0("P.Value.", cov.name) 
+            cov.pval[[cov.name]] <- top_cov
           }
 
         }
@@ -771,11 +796,11 @@ ngs.fitContrastsWithLIMMA <- function(X,
         cm <- intersect(rownames(top_cov), rownames(top))
         top <- cbind(top[cm, , drop = FALSE], top_cov[cm, , drop = FALSE])
       }
-
+      
       tables[[i]] <- top
       names(tables)[i] <- colnames(exp0)[i]
 
-    }
+    } ##--------end for loop contrasts
 
   }
 
