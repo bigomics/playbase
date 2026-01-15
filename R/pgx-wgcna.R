@@ -1426,7 +1426,10 @@ wgcna.computeModuleEnrichment <- function(wgcna,
   xtop <- min(xtop, round(nrow(geneX)/4))
   nbx.genes <- list()
   for(i in 1:length(wgcna)) {
+
+    dtype <- names(wgcna)[i]
     nbx.cor <- cor(t(geneX), ME[[i]])
+
     for(k in colnames(nbx.cor)) {
       if(is.null(xtop)) {
         n <- length(wgcna[[i]]$me.genes[[k]])
@@ -1439,7 +1442,13 @@ wgcna.computeModuleEnrichment <- function(wgcna,
     G1 <- G1[, which(Matrix::colSums(G1 != 0) >= min.genes), drop = FALSE]
 
     if(nrow(G1)>=3 && ncol(G1)>=3 ) {
+
       ## get eigengene members. convert to symbols.
+      ##dtype <- names(wgcna)
+      ##saveRDS(wgcna, "~/Desktop/wgcna.RDS") ##------------
+      ##wgcna <- readRDS("~/Desktop/wgcna.RDS")
+      ## source("~/Desktop/BigOmics/playbase/dev/include.R", chdir = TRUE)
+
       me.genes <- wgcna[[dtype]]$me.genes
       me.genes <- lapply(me.genes, function(g) probe2symbol(g, annot, query = symbol.col))
       
@@ -1460,8 +1469,11 @@ wgcna.computeModuleEnrichment <- function(wgcna,
       ## add to results
       gsea <- c(gsea, dt.gsea)
     }    
+
   }
+
   return(gsea)
+
 }
 
 #'
