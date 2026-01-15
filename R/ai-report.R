@@ -1,4 +1,3 @@
-
 ##---------------------------------------------------------------------
 ##----------------------- CONTENT CREATION ----------------------------
 ##---------------------------------------------------------------------
@@ -28,9 +27,6 @@ collate_as_sections <- function(a, level=2) {
 #'
 #' @export
 ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
-
-  dbg("[CopilotModule] *** createContentAllContrasts() **** ")
-  dbg("[CopilotModule] pgx$name =  ", pgx$name)
   
   contrasts <- playbase::pgx.getContrasts(pgx)
   samples <- rownames(pgx$samples)
@@ -44,9 +40,7 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
   } else {
     sections <- intersect(all.sections, sections)
   }
-  dbg("[CopilotModule] sections =  ", sections)
-  
-  dbg("[CopilotModule] adding pgx info...")  
+
   description <- NULL
   if("description" %in% sections) {
     description <- list(
@@ -58,7 +52,6 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
 
   dataset_info <- NULL
   if("dataset_info" %in% sections) {
-    dbg("[CopilotModule] createContent : adding pgx metadata...")  
     dataset_info <- list(
       name = pgx$name,
       organism = pgx$organism,
@@ -76,7 +69,6 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
 
   compute_settings <- NULL
   if("compute_settings" %in% sections) {
-    dbg("[CopilotModule] createContent : compute settings...")  
     compute_settings <- list(
       gene_tests = colnames(pgx$gx.meta$meta[[1]]$p),
       geneset_tests = colnames(pgx$gset.meta$meta[[1]]$p),
@@ -87,7 +79,6 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
   ##-------------------------------------------------------------------
   differential_expression <- NULL
   if("differential_expression" %in% sections) {
-    dbg("[CopilotModule] createContent : adding differential_expression results")
     F <- playbase::pgx.getMetaMatrix(pgx)$fc
     F <- playbase::rename_by2(F, pgx$genes, "symbol")
     ii <- match(rownames(F),pgx$genes$symbol)
@@ -105,7 +96,6 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
   ##-------------------------------------------------------------------
   geneset_enrichment <- NULL
   if("geneset_enrichment" %in% sections) {
-    dbg("[CopilotModule] createContent : get geneset enrichment....")  
     G <- playbase::pgx.getMetaMatrix(pgx, level = "geneset")$fc
     G <- G[order(-rowMeans(G)),,drop=FALSE]
     revtail <- function(A,n) head(A[nrow(A):1,,drop=FALSE],n)
@@ -134,7 +124,6 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
   ##-------------------------------------------------------------------
   drug_similarity <- NULL
   if("drug_similarity" %in% sections && !is.null(pgx$drugs)) {
-    dbg("[CopilotModule] createContent : adding drug similarity...")      
     D <- playbase::pgx.getTopDrugs(pgx, ct, n=ntop, na.rm=TRUE)    
     drug_similarity <- list(
       "Drug Mechanism of Action. Drug Connectivity Map (CMap) analysis of selected comparison. Similarity of the mechanism of action (MOA) is based on correlation enrichment with drug perturbation profiles of LINCS L1000 database. The top most similar (i.e. positively correlated) drugs are:" =
@@ -146,7 +135,6 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
   
   pcsf_report <- NULL
   if(FALSE && "pcsf_report" %in% sections) {
-    dbg("[CopilotModule] createContent : get PCSF centrality...")    
     pcsf_report <- list("Identification of hub genes. Hub genes can identify important regulators. The hub score is computed using a page rank network centrality score. The most central genes are:" = table_to_content(playbase::pgx.getPCSFcentrality(pgx, ct, plot = FALSE, n = ntop))
     )
   }
@@ -169,12 +157,10 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
   }
     
   ##-----------------------------------------------------------
-  dbg("[CopilotModule] createContent : get datasets info and meta data...")  
   report <- list(
     DATASET_INFO = list_to_content(dataset_info)
   )
 
-  dbg("[CopilotModule] createContent : compiling content...")  
   content <- list(
     description = list_to_content(description),
     dataset_info = list_to_content(dataset_info),
@@ -187,11 +173,9 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
   )
   
   if(collate) {
-    dbg("[CopilotModule] createContent : collating pages...")
     content <- collate_as_sections(content,level=2) 
   }
 
-  dbg("[CopilotModule] createContent : done!")  
   return(content)
 }
 
