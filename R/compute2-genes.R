@@ -155,13 +155,6 @@ compute_testGenes <- function(pgx,
   methods <- test.methods
   message("Testing differential expression methods: ", paste(methods, collapse = ", "))
   PRIOR.CPM <- 1
-
-  ##-----------------------------------
-  LL <- list(counts=counts, X=X, samples=samples, methods=methods, design=design,
-    covariates=pgx$covariates, contr.matrix=contr.matrix, prune.samples=prune.samples,
-    timeseries=timeseries)
-  saveRDS(LL,"~/Desktop/LL.RDS")
-  ##-----------------------------------
   
   ## Run all test methods
   message("[compute_testGenes] start fitting... ")
@@ -187,6 +180,7 @@ compute_testGenes <- function(pgx,
 
   message("[compute_testGenes]: fitting completed!")
 
+  
   ## --------------------------------------------------------------------------------
   ## set default matrices
   ## --------------------------------------------------------------------------------
@@ -200,8 +194,9 @@ compute_testGenes <- function(pgx,
 
   ## remove large outputs.
   if (remove.outputs) pgx$gx.meta$outputs <- NULL
-
+  
   message("[compute_testGenes] done!")
 
   return(pgx)
+
 }
