@@ -1443,12 +1443,6 @@ wgcna.computeModuleEnrichment <- function(wgcna,
 
     if(nrow(G1)>=3 && ncol(G1)>=3 ) {
 
-      ## get eigengene members. convert to symbols.
-      ##dtype <- names(wgcna)
-      ##saveRDS(wgcna, "~/Desktop/wgcna.RDS") ##------------
-      ##wgcna <- readRDS("~/Desktop/wgcna.RDS")
-      ## source("~/Desktop/BigOmics/playbase/dev/include.R", chdir = TRUE)
-
       me.genes <- wgcna[[dtype]]$me.genes
       me.genes <- lapply(me.genes, function(g) probe2symbol(g, annot, query = symbol.col))
       
