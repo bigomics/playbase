@@ -1347,6 +1347,7 @@ wgcna.computeModuleEnrichment <- function(wgcna,
                                           methods = c("fisher","gsetcor","xcor"),
                                           ntop = 200,
                                           xtop = 100,
+                                          min.genes = 3,
                                           annot = NULL,
                                           GMT = NULL,
                                           gsetX = NULL,
@@ -1434,6 +1435,7 @@ wgcna.computeModuleEnrichment <- function(wgcna,
       }
       nbx.genes[[k]] <- head(names(sort(-nbx.cor[,k])), n)
     }
+
     G1 <- G1[, which(Matrix::colSums(G1 != 0) >= min.genes), drop = FALSE]
 
     if(nrow(G1)>=3 && ncol(G1)>=3 ) {
