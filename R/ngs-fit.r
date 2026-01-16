@@ -216,8 +216,8 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         }
 
         ##---------------------------
-        saveRDS(list(X=X1, contr.matrix=contr.matrix, design=design, covariates=covariates,
-          method=mdl, trend=trend, prune.samples=prune.samples), "~/Desktop/oo.RDS")
+        ## saveRDS(list(X=X1, contr.matrix=contr.matrix, design=design, covariates=covariates,
+        ##  method=mdl, trend=trend, prune.samples=prune.samples), "~/Desktop/oo.RDS")
         ##----------------------------
         
         tt <- system.time(
@@ -340,22 +340,22 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   }
 
   ## ##-------temp
-  saveRDS(list(outputs=outputs, contr.matrix=contr.matrix, design=design, X=X, genes=genes), "~/Desktop/oo.RDS")
+  ## saveRDS(list(outputs=outputs, contr.matrix=contr.matrix, design=design, X=X, genes=genes), "~/Desktop/oo.RDS")
   ## ##--------
-  outputs <- readRDS("~/Desktop/oo.RDS")[[1]]
-  contr.matrix <- readRDS("~/Desktop/oo.RDS")[[2]]
-  design <- readRDS("~/Desktop/oo.RDS")[[3]]
-  X <- readRDS("~/Desktop/oo.RDS")[[4]]
-  genes <- readRDS("~/Desktop/oo.RDS")[[5]]
-  names(outputs)
-  names(outputs[[1]])
-  names(outputs[[2]])
-  names(outputs[[2]][[1]])
-  head(outputs[[2]][[1]][[1]])
-  head(outputs[[2]][[1]][[2]])
-  head(outputs[[2]][[1]][[3]])
-  head(outputs[[2]][[1]][[4]])
-  head(outputs[[2]][[1]][[5]])
+  #outputs <- readRDS("~/Desktop/oo.RDS")[[1]]
+  #contr.matrix <- readRDS("~/Desktop/oo.RDS")[[2]]
+  #design <- readRDS("~/Desktop/oo.RDS")[[3]]
+  #X <- readRDS("~/Desktop/oo.RDS")[[4]]
+  #genes <- readRDS("~/Desktop/oo.RDS")[[5]]
+  #names(outputs)
+  #names(outputs[[1]])
+  #names(outputs[[2]])
+  #names(outputs[[2]][[1]])
+  #head(outputs[[2]][[1]][[1]])
+  #head(outputs[[2]][[1]][[2]])
+  #head(outputs[[2]][[1]][[3]])
+  #head(outputs[[2]][[1]][[4]])
+  #head(outputs[[2]][[1]][[5]])
   
   ## ----------------------------------------------------------------------
   ## "corrections" ...
@@ -509,10 +509,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     if (!is.null(genes)) all.meta[[i]] <- cbind(genes, all.meta[[i]])
   }
   names(all.meta) <- tests
-
-  #pgx <- playbase::pgx.load("~/omicsplayground/data/RC1.pgx")
-  #M <- pgx$gx.meta$meta.covs[[1]]
-  #head(M[[4]])
   
   ## Add into all.meta.covariates' regression p.values (if any)
   meta.covs <- NULL
@@ -650,11 +646,6 @@ ngs.fitContrastsWithLIMMA <- function(X,
                                       timeseries = NULL) {
 
 
-  ## save there and test.
-  ## 1. Different Covariates cannot have exactly same pvalue
-  ## 2. Shorten code.
-  ## 3. Add button display in the platform.
-  
   ## Design (grouping): perform LIMMA on the entire contrast matrix.
   ## No design (no grouping): perform LIMMA per contrast one-by-one.
 
@@ -719,7 +710,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
         rownames(contr1) <- c("yneg", "yo", "ypos")
         colnames(contr1) <- "pos_vs_neg"
         contr1 <- contr1[colnames(vfit), , drop = FALSE]
-        vfit <- limma::contrasts.fit(vfit, contrasts = contr1)
+        vfit <- suppressMessages(limma::contrasts.fit(vfit, contrasts = contr1))
         efit <- try(limma::eBayes(vfit, trend = trend, robust = robust), silent = TRUE)
         if ("try-error" %in% class(efit)) {
           efit <- try(limma::eBayes(vfit, trend = trend, robust = FALSE), silent = TRUE)
@@ -740,8 +731,8 @@ ngs.fitContrastsWithLIMMA <- function(X,
         cov.pval <- list()
         if (!is.null(covariates)) {
           covariates1 <- covariates[kk, , drop = FALSE]
-          k=1;
           for (k in 1:ncol(covariates1)) {
+
             cov.name <- colnames(covariates1)[k]
             cov.val <- covariates1[, k]
             if (is.character(cov.val)) {
@@ -754,15 +745,16 @@ ngs.fitContrastsWithLIMMA <- function(X,
                 cov.val <- as.numeric(cov.val) ## no arbitrary binning
               }
             }
-            mm <- data.frame(y = y, cov = cov.val)
-            design1_cov <- stats::model.matrix(~ 0 + y + cov, data = mm)
-            suppressMessages(vfit_cov <- limma::lmFit(X1, design1_cov))
+
+            design1_cov <- stats::model.matrix(~ 0 + y + cov, data=data.frame(y=y, cov=cov.val))
             contr1_cov <- matrix(0, nrow = ncol(design1_cov), ncol = 1)
             rownames(contr1_cov) <- colnames(design1_cov)
             colnames(contr1_cov) <- "pos_vs_neg"
             y_cols <- intersect(c("yneg", "yo", "ypos"), colnames(design1_cov))
             contr1_cov[y_cols, 1] <- c(-1, 0, 1)[match(y_cols, c("yneg", "yo", "ypos"))]
-            vfit_cov <- limma::contrasts.fit(vfit_cov, contrasts = contr1_cov)
+
+            vfit_cov <- suppressMessages(limma::lmFit(X1, design1_cov))
+            vfit_cov <- suppressMessages(limma::contrasts.fit(vfit_cov, contrasts = contr1_cov))
             efit_cov <- try(limma::eBayes(vfit_cov, trend = trend_cov, robust = robust), silent = TRUE)
             if ("try-error" %in% class(efit_cov)) {
               efit_cov <- try(limma::eBayes(vfit_cov, trend = trend_cov, robust = FALSE), silent = TRUE)
@@ -770,6 +762,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
                 efit_cov <- try(limma::eBayes(vfit_cov, trend = FALSE, robust = FALSE), silent = TRUE)
               }
             }
+            
             top_cov <- try(limma::topTable(efit_cov, coef = 1, sort.by = "none", number = Inf), silent = TRUE)
             if ("try-error" %in% class(top_cov)) {
               top_cov <- data.frame(matrix(NA, nrow = nrow(X1), ncol = 1))
@@ -779,8 +772,8 @@ ngs.fitContrastsWithLIMMA <- function(X,
             }
             colnames(top_cov) <- paste0("P.Value.", cov.name) 
             cov.pval[[cov.name]] <- top_cov
-          }
 
+          }
         }
         ##--end covariates regression
       }
