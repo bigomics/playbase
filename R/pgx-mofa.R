@@ -899,11 +899,13 @@ mofa.split_data <- function(X, keep.prefix = FALSE) {
   xx
 }
 
+#' This merges list of multi-omics data to a single matrix. Columns
+#' must match. Merge data by row after adding prefix.
+#'
 #' @export
 mofa.merge_data <- function(xx) {
   do.call(rbind, mofa.prefix(xx))
 }
-
 
 #' This merges list of multi-omics data to a single matrix. Note that
 #' it can handle non-matched data by taking union of rownames or
@@ -911,33 +913,46 @@ mofa.merge_data <- function(xx) {
 #' introduce NA in such non-matched cases.
 #'
 #' @export
-mofa.merge_data2 <- function(xdata, prefix.rows=NULL, prefix.cols=NULL) {
+mofa.merge_data2 <- function(xdata, merge.rows="prefix", merge.cols="union") {
   n1 <- length(Reduce(intersect,lapply(xdata,rownames)))
   n2 <- length(Reduce(intersect,lapply(xdata,colnames)))  
-  c(n1,n2)
-  if(n1 && n2) {
-    message("WARNING: matrices are overlapping both in rows and columns")
+  rdim <- sapply(xdata,nrow)
+  cdim <- sapply(xdata,ncol)
+  if(n1 < min(rdim) && merge.rows!="prefix") {
+    message("WARNING: rows do not match")
   }
-  if(is.null(prefix.cols)) prefix.cols <- (n1 > 0 && n2 > 0)
-  if(is.null(prefix.rows)) prefix.rows <- (n1 > 0 && n2 > 0)
+  if(n2 < min(cdim) && merge.cols!="prefix") {
+    message("WARNING: columns do not match")
+  }
+  prefix.rows <- (merge.rows=="prefix")
+  prefix.cols <- (merge.cols=="prefix")
   if(prefix.cols) {
-    ## if rows overlap (i.e. same genes), prefix the column names
-    ## (i.e. different datasets)
+    ## prefix the column names. i.e. different datasets.
     for(i in 1:length(xdata)) {
-      nn <- sub("[A-Za-z]+:","",colnames(xdata[[i]]))
+      nn <- sub("^[A-Za-z]+:","",colnames(xdata[[i]]))
       colnames(xdata[[i]]) <- paste0(names(xdata)[i],":",nn)
     }
+    merge.cols <- "union"    
   }
   if(prefix.rows) {
     ## if columns overlap (i.e. same samples), prefix the feature
     ## names.
     for(i in 1:length(xdata)) {
-      nn <- sub("[A-Za-z]+:","",rownames(xdata[[i]]))
+      nn <- sub("^[A-Za-z]+:","",rownames(xdata[[i]]))
       rownames(xdata[[i]]) <- paste0(names(xdata)[i],":",nn)
     }
+    merge.rows <- "union"
   }
-  allfeatures <- unique(unlist(lapply(xdata, rownames)))
-  allsamples  <- unique(unlist(lapply(xdata, colnames)))
+  if(merge.rows == "intersect") {
+    allfeatures <- Reduce(intersect,lapply(xdata,rownames))
+  } else {
+    allfeatures <- unique(unlist(lapply(xdata, rownames)))
+  }
+  if(merge.cols == "intersect") {
+    allsamples  <- Reduce(intersect,lapply(xdata,colnames))
+  } else {
+    allsamples  <- unique(unlist(lapply(xdata, colnames)))
+  }
   D  <- matrix(0, length(allfeatures), length(allsamples))
   nn <- matrix(0, length(allfeatures), length(allsamples))
   rownames(D) <- allfeatures
@@ -987,11 +1002,11 @@ mofa.get_prefix <- function(x) {
 #' @export
 mofa.strip_prefix <- function(xx) {
   if (class(xx) == "character") {
-    xx <- sub("[A-Za-z0-9]+:", "", xx)
+    xx <- sub("^[A-Za-z0-9]+:", "", xx)
     return(xx)
   }
   if (class(xx) == "matrix") {
-    rownames(xx) <- sub("[A-Za-z0-9]+:", "", rownames(xx))
+    rownames(xx) <- sub("^[A-Za-z0-9]+:", "", rownames(xx))
     return(xx)
   }
   if (class(xx) %in% c("list", "array") || is.list(xx)) {
@@ -2652,6 +2667,13 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
                                  add.sink=FALSE, intra=TRUE, fully_connect=FALSE,
                                  add.revpheno = TRUE, condition.edges=TRUE
                                  ) {
+  if(0) {
+    pheno="pheno"; ntop=1000; nc=20;
+    annot=NULL; use.gmt=TRUE; use.graphite=TRUE;
+    add.sink=FALSE; intra=TRUE; fully_connect=FALSE;
+    add.revpheno = TRUE; condition.edges=TRUE
+  }
+  
   if (pheno == "pheno") {
     Y <- expandPhenoMatrix(data$samples, drop.ref=FALSE)
   } else if (pheno == "expanded") {
@@ -2686,7 +2708,8 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
   }
 
   ## what about not overlapping samples??
-  X <- mofa.merge_data2(xx, prefix.rows=TRUE, prefix.cols=FALSE)
+  #X <- mofa.merge_data(xx)
+  X <- mofa.merge_data2(xx, merge.rows="prefix", merge.cols="union")
   ##remove(xx)
   kk <- intersect(colnames(X),rownames(Y))
   X <- X[,kk]
@@ -2700,7 +2723,7 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
   ## Compute BIG correlation matrix. WARNING can become huge! NOTE:
   ## Needs optimization using SPARSE matrix.
   suppressWarnings( R <- cor(t(X), use = "pairwise") )
-  
+
   ## Sink/source need to be connected allways
   ii <- grep("SINK|SOURCE",rownames(R))
   if(length(ii)) {
@@ -2763,6 +2786,7 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
 
   ## mask for GSETS/pathways connections???
   if (use.gmt) {
+    ### fill me
   }
 
   ## define layers
@@ -3012,7 +3036,8 @@ lasagna.plot3D <- function(graph, pos) {
 #' @export
 lasagna.prune_graph <- function(graph, ntop = 100, layers = NULL,
                                 normalize.edges = FALSE, min.rho = 0.3,
-                                edge.sign = "both", edge.type = "both",
+                                edge.sign = c("both","pos","neg","consensus")[1],
+                                edge.type = c("both","inter","intra","both2")[1],
                                 filter = NULL,
                                 prune = TRUE) {
   
@@ -3564,10 +3589,6 @@ mofa.normalizeExpression <- function(X, method1="maxMedian", method2="none") {
   normX <- normX[rownames(X),]
   return(normX)
 }
-
-
-
-
 
 ## ======================================================================
 ## ======================================================================
