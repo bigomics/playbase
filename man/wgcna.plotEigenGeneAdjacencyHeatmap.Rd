@@ -18,7 +18,6 @@ wgcna.plotEigenGeneAdjacencyHeatmap(
   colorlabel = TRUE,
   text = FALSE,
   pstar = TRUE,
-  power = 1,
   setMargins = TRUE,
   mar1 = c(5.6, 4.5, 1.8, 0),
   mar2 = c(8, 10, 4, 2),

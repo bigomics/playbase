@@ -10,7 +10,7 @@ wgcna.computeConsensusModuleEnrichment(
   GMT,
   annot,
   methods = c("fisher", "gsetcor", "xcor"),
-  min.genes = 3,
+  min.genes = 10,
   ntop = 400
 )
 }
