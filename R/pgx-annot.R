@@ -1122,7 +1122,7 @@ getHumanOrtholog <- function(organism, symbols,
   mean.mapped <- round(100 * mean(!is.na(orthogenes)), digits = 4)
   if (verbose > 0) message("[getHumanOrtholog] ratio mapped using orthogene = ", mean.mapped, "%")
   
-  if (any(!is.na(orthogenes))) {
+  if (any(is.na(orthogenes))) {
     if (verbose > 0) message("[getHumanOrtholog] Trying biomart...")
     ## test if biomart is reachable
     ii <- which(is.na(symbols))
