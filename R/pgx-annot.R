@@ -1125,9 +1125,8 @@ getHumanOrtholog <- function(organism, symbols,
   if (any(is.na(orthogenes))) {
     if (verbose > 0) message("[getHumanOrtholog] Trying biomart...")
     ## test if biomart is reachable
-    ii <- which(is.na(symbols))
+    ii <- which(is.na(orthogenes))
     res.biomart <- try(getHumanOrtholog.biomart(organism, symbols[ii]), silent = TRUE)
-    class(res.biomart)
     if (!"try-error" %in% class(res.biomart)) {
       jj <- which(is.na(res.biomart))
       ii <- ii[jj]
