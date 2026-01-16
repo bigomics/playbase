@@ -1278,6 +1278,8 @@ wgcna.getGeneStats <- function(wgcna, trait, module=NULL, plot = TRUE,
 ## Perform geneset analysis on modules
 ## ----------------------------------------------------
 
+#' Merge multiple ME matrices into one. Allow different dimensions.
+#' 
 wgcna.mergeME <- function(mlist, me2=NULL, prefix=FALSE) {
   if(!is.null(me2) && !inherits(mlist,"list")) {
     mlist <- list(mlist, me2)
