@@ -1,3 +1,18 @@
+
+OLLAMA_MODELS = ai.get_ollama_models()
+DEFAULT_LLM = "gpt-5-nano"
+DEFAULT_LLM = NULL
+
+REMOTE_MODELS <- c(
+  "openai:gpt-5-nano",
+  "xai:grok-4-1-fast-non-reasoning", 
+  "groq:llama-3.1-8b-instant",
+  "groq:meta-llama/llama-4-scout-17b-16e-instruct",  
+  "groq:openai/gpt-oss-20b",
+  "groq:openai/gpt-oss-120b",
+  "google:gemini-2.5-flash-lite"
+)
+
 #'
 #' @export
 ai.get_ollama_models <- function(models=NULL, size=NULL) {
@@ -30,26 +45,6 @@ ai.get_ollama_models <- function(models=NULL, size=NULL) {
   }
   
   return(available.models)
-}
-
-OLLAMA_MODELS = ai.get_ollama_models()
-DEFAULT_LLM = "gpt-5-nano"
-DEFAULT_LLM = NULL
-
-REMOTE_MODELS <- c(
-  "openai:gpt-5-nano",
-  "xai:grok-4-fast-non-reasoning", 
-  "groq:llama-3.1-8b-instant",
-  "groq:meta-llama/llama-4-scout-17b-16e-instruct",  
-  "groq:openai/gpt-oss-20b",
-  "groq:openai/gpt-oss-120b",
-  "google:gemini-2.5-flash-lite"
-)
-
-if(0) {
-  model="gpt-5-nano";prompt=NULL
-  model="gemma3:1b";prompt=NULL
-  model="grok-4-1-fast-non-reasoning";prompt=NULL
 }
 
 #' @export
