@@ -2,15 +2,18 @@
 ##----------------------- CONTENT CREATION ----------------------------
 ##---------------------------------------------------------------------
 
+
 table_to_content <- function(df) {
   if(is.null(df)) return(NULL)
   paste(as.character(knitr::kable(df,format="markdown")),collapse="\n")
 }
 
-list_to_content <- function(a) {
+list_to_content <- function(a, newline=FALSE) {
   if(is.null(a)) return("")
   aa <- sapply(a, function(s) paste(unlist(s), collapse='; '))
-  cc <- paste(paste0("- **",names(a),"**: ",aa), collapse='\n')
+  pp <- paste0("- **",names(a),"**: ")
+  if(newline) pp <- paste0(pp, '\n\n')
+  cc <- paste(paste0(pp,aa), collapse='\n')
   paste(cc,'\n')
 }
 
