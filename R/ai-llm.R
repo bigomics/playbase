@@ -13,7 +13,7 @@ DEFAULT_LLM = NULL
 if(0) {
   model="gpt-5-nano";prompt=NULL
   model="gemma3:1b";prompt=NULL
-  model="grok-4-fast-non-reasoning";prompt=NULL
+  model="grok-4-1-fast-non-reasoning";prompt=NULL
 }
 
 #' @export
