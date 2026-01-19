@@ -1,5 +1,4 @@
 
-OLLAMA_MODELS = ai.get_ollama_models()
 DEFAULT_LLM = "gpt-5-nano"
 DEFAULT_LLM = NULL
 
@@ -46,6 +45,8 @@ ai.get_ollama_models <- function(models=NULL, size=NULL) {
   
   return(available.models)
 }
+OLLAMA_MODELS = ai.get_ollama_models()
+
 
 #' @export
 ai.get_remote_models <- function(models=NULL) {
