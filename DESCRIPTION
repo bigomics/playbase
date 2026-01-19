@@ -80,6 +80,7 @@ Imports:
     IntNMF,
     irlba,
     isva,
+    knitr,
     lazyeval,
     limma,
     magrittr,
