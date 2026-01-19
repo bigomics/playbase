@@ -5597,8 +5597,8 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
   }
   
   ## Step 1. Describe modules with LLM. We can use one LLM model or more.
-  message("Extracting top modules...")
   if(!is.null(progress)) progress$set(message = "Extracting top modules...", value=0.2)
+  if(verbose) message("Extracting top modules...")
   out <- wgcna.describeModules(
     wgcnalist,
     modules = top.modules,
@@ -5617,41 +5617,62 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
   ## Step 2: Make consensus conclusion from the description summaries.
   summaries <- list()
   summaries_prompts <- list()
-  k=1
-  if(!is.null(progress)) progress$set(message = "Simmering modules...", value=0.3)  
-  for(k in names(descriptions)) {
-    ss <- descriptions[[k]]
-    q2 <-  paste("Following are descriptions of a certain WGCNA module by one or more LLMs. Create a consensus conclusion out of the independent descriptions. Describe the underlying biology, relate correlated phenotypes and mention key genes, proteins or metabolites. Just answer, no confirmation, use 1-2 paragraphs.\n\n", ss)
-    cc <- ai.ask(q2, model=ai_model[[2]])
-    summaries[[k]] <- cc
-    summaries_prompts[[k]] <- q2
+  results <- NULL
+  if(ai_model[[2]] != "") {
+    if(!is.null(progress)) progress$set(message = "Simmering modules...", value=0.3)  
+    if(verbose) message("Simmering modules...")    
+    k=1
+    for(k in names(descriptions)) {
+      ss <- descriptions[[k]]
+      q2 <-  paste("Following are descriptions of a certain WGCNA module by one or more LLMs. Create a consensus conclusion out of the independent descriptions. Describe the underlying biology, relate correlated phenotypes and mention key genes, proteins or metabolites. Just answer, no confirmation, use 1-2 paragraphs. Use prose as much as possible, do not use tables or bullet points.\n\n", ss)
+      cc <- ai.ask(q2, model=ai_model[[2]])
+      summaries[[k]] <- cc
+      summaries_prompts[[k]] <- q2
+    }
+    results <- summaries
+  } else {
+    if(verbose) message("Skipping module summaries...")
+    results <- descriptions
   }
-
+  all.results <- lapply(names(results), function(me)
+    paste0("================= ",me," =================\n\n", results[[me]],"\n"))
+  all.results <- paste(all.results, collapse="\n\n")
+  
+    
   ## Step 3: Make detailed report. We concatenate all summaries and
   ## ask a (better) LLM model to create a report.
   if(!is.null(progress)) progress$set(message = "Baking full report...", value=0.6)
-  all.summaries <- lapply(names(summaries), function(m)
-    paste0("================= ",m," =================\n\n", summaries[[m]],"\n")
-  )
-  all.summaries <- paste0(paste(all.summaries, collapse="\n\n"),"\n")  
-  q3 <- "These are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed report for this experiment. Give a detailed interpretation of the underlying biology by connecting modules into biological functional programs, referring to key genes, proteins or metabolites. Build an cross-module integrative narrative. Suggest similarity to known diseases and possible therapies.\n\n"
+  if(verbose) message("Baking full report...")
+  
+  q3 <- "These are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed report for this experiment. Give a detailed interpretation of the underlying biology by connecting modules into biological functional programs, referring to key genes, proteins or metabolites. Build an cross-module integrative narrative. Suggest similarity to known diseases and possible therapies.
+\n\n
+Format like a scientific article, use prose as much as possible, minimize the use of tables and bullet points. For long tables show at least the top 5, and at most top 10, up and down entries. Do not inject any inline code. Write a discussion and conclusion at the end of the report about the integrative biological narrative. Only write if there was evidence in the source text. Omit future directions."  
 
+  if(multi) {
+    q3 <- sub("WGCNA","multiomics WGCNA",q3)
+    q3 <- paste(q3, "Discuss advantages of using multi-omics.")    
+  }
+  
   xx <- wgcna$experiment
   pp <- paste("You are a biologist interpreting results from a WGCNA analysis for this experiment:",  xx, ".\n\n")
   q3 <- paste(pp, q3, "Only write if there was evidence in the source text. Omit future directions.")
   q3 <- paste(q3, "Write in prose, no tables, no bullet points.") 
+
   if(format=="markdown") {
     q3 <- paste(q3, "Format response as markdown.")
   }
   if(tolower(format)=="html") {
     q3 <- paste(q3, "Format response as HTML.")
   }
-  q3 <- paste(q3, "\n\n",all.summaries)
+  q3 <- paste(q3, "\n\nnHere are the results: <results>",all.results,"\n</results>")
+
+  ## Finally ask LLM
   report <- ai.ask(q3, model = ai_model[[3]])
   report <- gsub("^```html|```$","",report)
 
   ## Step 4: Create diagram from report
   if(!is.null(progress)) progress$set(message = "Mashing up diagram...", value=0.8)  
+  if(verbose) message("Mashing up diagram...")
   diagram <- wgcna.create_diagram(report, ai_model=ai_model[[3]]) 
   
   list(
