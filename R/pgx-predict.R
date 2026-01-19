@@ -474,16 +474,19 @@ pgx.variableImportance <- function(X, y,
     names(imp4) <- rownames(X)
     imp[["Boruta"]] <- imp4
   }
-
+  
   if ("xgboost" %in% methods) {
+
     ny <- length(table(y))
-    yy <- as.integer(factor(y)) - 1
+    yy <- as.character(y)
+    obj <- "binary:logistic"
+    if (length(unique(yy)) > 2) obj <- "multi:softprob" 
+
     runtime[["xgboost"]] <- system.time({
       bst <- xgboost::xgboost(
-        data = t(X), label = yy, booster = "gbtree",
-        max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
-        num_class = ny,
-        verbose = 0, objective = "multi:softmax"
+        x = t(X), y = yy, booster = "gbtree",
+        max_depth = 2, nthread = 2,
+        nrounds = 2, objective = obj
       )
     })
 
@@ -493,20 +496,20 @@ pgx.variableImportance <- function(X, y,
     names(imp5) <- rownames(X)
     imp[["xgboost"]] <- imp5
 
-    ## linear model
     runtime[["xgboost.lin"]] <- system.time({
       bst2 <- xgboost::xgboost(
-        data = t(X), label = yy, booster = "gblinear",
-        max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
-        num_class = ny,
-        verbose = 0, objective = "multi:softmax"
+        x = t(X), y = yy, booster = "gblinear",
+        max_depth = 2, nthread = 2,
+        nrounds = 2, objective = obj
       )
     })
+
     xgmat <- xgboost::xgb.importance(model = bst2)
     imp6 <- xgmat$Weight
     names(imp6) <- xgmat$Feature
     imp6 <- imp6[match(rownames(X), names(imp6))]
     imp[["xgboost.lin"]] <- imp6
+
   }
 
   if ("splsda" %in% methods) {
