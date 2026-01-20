@@ -5655,8 +5655,10 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
   }
 
   ## addd setttings
-  settings <- paste0(names(pgx$wgcna$settings),'=',pgx$wgcna$settings,collapse='; ')
-  results[['compute_settings']] <- settings
+  if(!is.null(wgcna$settings)) {
+    settings <- paste0(names(wgcna$settings),'=',wgcna$settings,collapse='; ')
+    results[['compute_settings']] <- settings
+  }
   
   all.results <- lapply(names(results), function(me)
     paste0("================= ",me," =================\n\n", results[[me]],"\n"))
