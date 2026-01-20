@@ -338,24 +338,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     outputs[[custom.name]]$tables <- custom
     timings[["custom"]] <- system.time(0)
   }
-
-  ## ##-------temp
-  ## saveRDS(list(outputs=outputs, contr.matrix=contr.matrix, design=design, X=X, genes=genes), "~/Desktop/oo.RDS")
-  ## ##--------
-  #outputs <- readRDS("~/Desktop/oo.RDS")[[1]]
-  #contr.matrix <- readRDS("~/Desktop/oo.RDS")[[2]]
-  #design <- readRDS("~/Desktop/oo.RDS")[[3]]
-  #X <- readRDS("~/Desktop/oo.RDS")[[4]]
-  #genes <- readRDS("~/Desktop/oo.RDS")[[5]]
-  #names(outputs)
-  #names(outputs[[1]])
-  #names(outputs[[2]])
-  #names(outputs[[2]][[1]])
-  #head(outputs[[2]][[1]][[1]])
-  #head(outputs[[2]][[1]][[2]])
-  #head(outputs[[2]][[1]][[3]])
-  #head(outputs[[2]][[1]][[4]])
-  #head(outputs[[2]][[1]][[5]])
   
   ## ----------------------------------------------------------------------
   ## "corrections" ...
