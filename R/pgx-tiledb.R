@@ -439,8 +439,10 @@ pgx.getDatasetInfoTileDB <- function(tiledb_path, datasets_info_file = NULL) {
     if ("dataset" %in% colnames(info_csv)) {
       info_csv$dataset <- sub("[.]pgx$", "", info_csv$dataset)
     }
-    ## Select useful columns
-    info_cols <- c("dataset", "organism", "datatype", "description", "date", "nfeatures", "conditions")
+    ## Select useful columns (including metadata_* columns)
+    base_cols <- c("dataset", "organism", "datatype", "description", "date", "nfeatures", "conditions")
+    metadata_cols <- grep("^metadata_", colnames(info_csv), value = TRUE)
+    info_cols <- c(base_cols, metadata_cols)
     info_cols <- intersect(info_cols, colnames(info_csv))
     if (length(info_cols) > 1) {
       info_csv <- info_csv[, info_cols, drop = FALSE]
