@@ -671,7 +671,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
 
     vfit <- limma::contrasts.fit(vfit, contrasts = contr1)
     efit <- limma::eBayes(vfit, trend = trend, robust = robust)
-    if (plot == TRUE) limma::plotSA(efit)
+    ## if (plot == TRUE) limma::plotSA(efit)
     tables <- list()
     exp1 <- (design1 %*% contr1)
     for (i in 1:ncol(contr1)) {
@@ -735,6 +735,10 @@ ngs.fitContrastsWithLIMMA <- function(X,
 
             cov.name <- colnames(covariates1)[k]
             cov.val <- covariates1[, k]
+            keep <- which(!is.na(cov.val))
+            if (length(keep) == 0) next
+            cov.val <- cov.val[keep]
+            if (length(unique(y[keep])) == 1) next
             if (is.character(cov.val)) {
               cov.val <- factor(cov.val)
             } else if (is.numeric(cov.val)) {
@@ -746,14 +750,14 @@ ngs.fitContrastsWithLIMMA <- function(X,
               }
             }
 
-            design1_cov <- stats::model.matrix(~ 0 + y + cov, data=data.frame(y=y, cov=cov.val))
+            design1_cov <- stats::model.matrix(~ 0 + y + cov, data = data.frame(y=y[keep], cov=cov.val))
             contr1_cov <- matrix(0, nrow = ncol(design1_cov), ncol = 1)
             rownames(contr1_cov) <- colnames(design1_cov)
             colnames(contr1_cov) <- "pos_vs_neg"
             y_cols <- intersect(c("yneg", "yo", "ypos"), colnames(design1_cov))
             contr1_cov[y_cols, 1] <- c(-1, 0, 1)[match(y_cols, c("yneg", "yo", "ypos"))]
-
-            vfit_cov <- suppressMessages(limma::lmFit(X1, design1_cov))
+            
+            vfit_cov <- suppressMessages(limma::lmFit(X1[, keep, drop = FALSE], design1_cov))
             vfit_cov <- suppressMessages(limma::contrasts.fit(vfit_cov, contrasts = contr1_cov))
             efit_cov <- try(limma::eBayes(vfit_cov, trend = trend_cov, robust = robust), silent = TRUE)
             if ("try-error" %in% class(efit_cov)) {
@@ -782,14 +786,14 @@ ngs.fitContrastsWithLIMMA <- function(X,
       j0 <- which(ct < 0)
       mean1 <- rowMeans(X1[, j1, drop = FALSE], na.rm = TRUE)
       mean0 <- rowMeans(X1[, j0, drop = FALSE], na.rm = TRUE)
-
       top <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
+
       if (length(cov.pval) > 0) { ## add covariates' regression p.values    
         top_cov <- do.call(cbind, cov.pval)
         cm <- intersect(rownames(top_cov), rownames(top))
         top <- cbind(top[cm, , drop = FALSE], top_cov[cm, , drop = FALSE])
       }
-      
+
       tables[[i]] <- top
       names(tables)[i] <- colnames(exp0)[i]
 
@@ -894,7 +898,6 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
       }
       top <- top0
       rm(top0)
-      ## kk <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
       kk <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val")
       top <- top[, kk, drop = FALSE]
     }
@@ -939,10 +942,11 @@ ngs.fitContrastsWithEDGER <- function(counts,
                                       recalc.fc = TRUE,
                                       plot = TRUE,
                                       timeseries = NULL) {
-  method <- method[1]
 
-  ## ps: EdgeR/Deseq2 tests will not be available for proteomics data.
-  ## Therefore, this autoscaling will very rarely be run.
+  method <- method[1]
+  if (! method %in% c("qlf","lrt")) stop("EdgeR method must be qlf or lrt")
+
+  ## EdgeR/Deseq2 not available for proteomics. Thus, autoscaling is rarely run.
   counts <- playbase::counts.autoScaling(counts)$counts
 
   exp0 <- contr.matrix
@@ -961,7 +965,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
   dge$samples$group <- group
   if (calc.tmm) dge <- edgeR::normLibSizes(dge, method = "TMM")
 
-  if (is.null(design) && !prune.samples) { ## This will never run
+  if (is.null(design) && !prune.samples) { ## never runs? Prune samples always TRUE???
     message("[ngs.fitContrastsWithEDGER] fitting EDGER contrasts *without* design, no pruning ")
     res <- .ngs.fitContrastsWithEDGER.nodesign(
       dge = dge, contr.matrix = contr.matrix, method = method,
@@ -974,9 +978,10 @@ ngs.fitContrastsWithEDGER <- function(counts,
   if (is.null(design) && prune.samples) {
     message("[ngs.fitContrastsWithEDGER] fitting EDGER contrasts *without* design, with pruning")
     res <- .ngs.fitContrastsWithEDGER.nodesign.pruned(
-      counts = counts, contr.matrix = contr.matrix, method = method, group = group,
-      conform.output = conform.output, robust = robust, calc.tmm = calc.tmm,
-      recalc.fc = recalc.fc, plot = plot, timeseries = timeseries
+      counts = counts, contr.matrix = contr.matrix, covariates = covariates,
+      method = method, group = group, conform.output = conform.output,
+      robust = robust, calc.tmm = calc.tmm, recalc.fc = recalc.fc,
+      plot = plot, timeseries = timeseries
     )
     return(res)
   }
@@ -994,10 +999,8 @@ ngs.fitContrastsWithEDGER <- function(counts,
     fit <- edgeR::glmQLFit(dge, design, robust = robust)
   } else if (method == "lrt") {
     fit <- edgeR::glmFit(dge, design, robust = robust)
-  } else {
-    stop("unknown method")
   }
-
+  
   ## get top table and calculate means
   exp.matrix <- (design %*% contr.matrix)
   tables <- list()
@@ -1007,23 +1010,18 @@ ngs.fitContrastsWithEDGER <- function(counts,
       ct <- edgeR::glmQLFTest(fit, contrast = cntr)
     } else if (method == "lrt") {
       ct <- edgeR::glmLRT(fit, contrast = cntr)
-    } else {
-      stop("unknown method")
     }
     top <- edgeR::topTags(ct, n = Inf, sort.by = "none")$table
     top <- data.frame(top[rownames(X), ])
-
-    ## calculate means
     j1 <- which(exp.matrix[, i] > 0)
     j2 <- which(exp.matrix[, i] < 0)
     mean1 <- rowMeans(X[, j1, drop = FALSE], na.rm = TRUE)
     mean0 <- rowMeans(X[, j2, drop = FALSE], na.rm = TRUE)
-    ## logFC of edgeR is not really reliable..
     if (recalc.fc) top$logFC <- (mean1 - mean0)
     top <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
     tables[[i]] <- top
+    names(tables)[i] <- colnames(contr.matrix)[i]
   }
-  names(tables) <- colnames(contr.matrix)
 
   if (conform.output == TRUE) {
     for (i in 1:length(tables)) {
@@ -1031,16 +1029,17 @@ ngs.fitContrastsWithEDGER <- function(counts,
         k1 <- c("logFC", "logCPM", "F", "PValue", "FDR", "AveExpr0", "AveExpr1")
       } else if (method == "lrt") {
         k1 <- c("logFC", "logCPM", "LR", "PValue", "FDR", "AveExpr0", "AveExpr1")
-      } else {
-        stop("switch method error")
       }
       k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
       tables[[i]] <- tables[[i]][, k1]
       colnames(tables[[i]]) <- k2
     }
   }
+
   res <- list(tables = tables)
+
   return(res)
+
 }
 
 
@@ -1062,6 +1061,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
 
   if (class(dge) != "DGEList") stop("dge must be a DGEList object")
   method <- method[1]
+  if (! method %in% c("qlf","lrt")) stop("EdgeR method must be qlf or lrt")
 
   if (is.null(X)) X <- edgeR::cpm(dge$counts, log = TRUE)
   dge1 <- dge
@@ -1074,19 +1074,14 @@ ngs.fitContrastsWithEDGER <- function(counts,
 
   tables <- list()
   for (i in 1:ncol(contr.matrix)) {
+
     ct <- contr.matrix[, i]
     y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
 
     if (grepl("^IA:*", colnames(contr.matrix)[i]) && !is.null(timeseries)) {
-      top <- .ngs.fitContrastsWithEDGER.nodesign.timeseries(
-        dge = dge,
-        counts = as.matrix(dge$counts),
-        X = X,
-        y = y,
-        method = method,
-        timeseries = timeseries,
-        robust = robust
-      )
+      top <- .ngs.fitContrastsWithEDGER.nodesign.timeseries(dge = dge,
+        counts = as.matrix(dge$counts), X = X, y = y,
+        method = method, timeseries = timeseries, robust = robust)
     } else {
       design1 <- stats::model.matrix(~ 0 + y)
       if (method == "qlf") {
@@ -1097,8 +1092,6 @@ ngs.fitContrastsWithEDGER <- function(counts,
         fit <- edgeR::glmFit(dge1, design1, robust = robust)
         ctx <- contr0[colnames(stats::coef(fit)), ]
         res <- edgeR::glmLRT(fit, contrast = ctx)
-      } else {
-        stop("unknown method: ", method)
       }
       top <- edgeR::topTags(res, n = 1e9)$table
       top <- data.frame(top[rownames(X), ])
@@ -1108,7 +1101,6 @@ ngs.fitContrastsWithEDGER <- function(counts,
     j0 <- which(contr.matrix[, i] < 0)
     mean1 <- rowMeans(X[, j1, drop = FALSE], na.rm = TRUE)
     mean0 <- rowMeans(X[, j0, drop = FALSE], na.rm = TRUE)
-    ## logFC of edgeR is not really reliable..
     if (recalc.fc) top$logFC <- (mean1 - mean0)
     top <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
     tables[[i]] <- top
@@ -1121,8 +1113,6 @@ ngs.fitContrastsWithEDGER <- function(counts,
         k1 <- c("logFC", "logCPM", "F", "PValue", "FDR", "AveExpr0", "AveExpr1")
       } else if (method == "lrt") {
         k1 <- c("logFC", "logCPM", "LR", "PValue", "FDR", "AveExpr0", "AveExpr1")
-      } else {
-        stop("switch method error")
       }
       k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
       tables[[i]] <- tables[[i]][, k1]
@@ -1131,6 +1121,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
   }
 
   res <- list(tables = tables)
+
   return(res)
 
 }
@@ -1140,6 +1131,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
 #' @export
 .ngs.fitContrastsWithEDGER.nodesign.pruned <- function(counts,
                                                        contr.matrix,
+                                                       covariates = NULL,
                                                        group = NULL,
                                                        method = c("qlf", "lrt"),
                                                        X = NULL,
@@ -1149,17 +1141,23 @@ ngs.fitContrastsWithEDGER <- function(counts,
                                                        recalc.fc = TRUE,
                                                        plot = TRUE,
                                                        timeseries = NULL) {
-  method <- method[1]
 
-  ## ps: EdgeR/Deseq2 tests will not be available for proteomics data.
-  ## Therefore, this autoscaling will very rarely be run.
+  saveRDS(list(counts=counts, contr.matrix=contr.matrix, covariates=covariates,
+    group=group, method=method, X=X, conform.output=conform.output, robust=robust,
+    calc.tmm=calc.tmm, recalc.fc=recalc.fc, plot=plot, timeseries=timeseries),
+    "~/Desktop/oo.RDS")
+
+  method <- method[1]
+  if (! method %in% c("qlf","lrt")) stop("EdgeR method must be qlf or lrt")
+
+  ## EdgeR/Deseq2 not available for proteomics. Thus, autoscaling is rarely run.
   counts <- playbase::counts.autoScaling(counts)$counts
 
   tables <- list()
   for (i in 1:NCOL(contr.matrix)) {
+
     kk <- which(!is.na(contr.matrix[, i]) & contr.matrix[, i] != 0)
     counts1 <- counts[, kk, drop = FALSE]
-    # X1 <- NULL
     if (!is.null(X)) {
       X1 <- X[, kk, drop = FALSE]
     } else {
@@ -1174,61 +1172,133 @@ ngs.fitContrastsWithEDGER <- function(counts,
     if (calc.tmm) dge1 <- edgeR::normLibSizes(dge1, method = "TMM")
 
     if (grepl("^IA:*", colnames(contr.matrix)[i]) && !is.null(timeseries)) {
-      top <- .ngs.fitContrastsWithEDGER.nodesign.timeseries(
-        dge = dge1,
-        counts = counts1,
-        X = X1,
-        y = y,
-        method = method,
-        timeseries = timeseries,
-        robust = robust
-      )
+      top <- .ngs.fitContrastsWithEDGER.nodesign.timeseries(dge = dge1,
+        counts = counts1, X = X1, y = y, method = method,
+        timeseries = timeseries, robust = robust)
     } else {
       design1 <- stats::model.matrix(~y)
-      dge1 <- edgeR::estimateDisp(dge1, design = design1, robust = robust)
+      dge1 <- try(edgeR::estimateDisp(dge1, design = design1, robust = robust), silent = TRUE)
       if (method == "qlf") {
-        fit <- edgeR::glmQLFit(dge1, design1, robust = robust)
-        res <- edgeR::glmQLFTest(fit, coef = 2)
+        fit <- try(edgeR::glmQLFit(dge1, design1, robust = robust), silent = TRUE)
+        res <- try(edgeR::glmQLFTest(fit, coef = 2), silent = TRUE)
       } else if (method == "lrt") {
-        fit <- edgeR::glmFit(dge1, design1, robust = robust)
-        res <- edgeR::glmLRT(fit, coef = 2)
-      } else {
-        stop("unknown method: ", method)
+        fit <- try(edgeR::glmFit(dge1, design1, robust = robust), silent = TRUE)
+        res <- try(edgeR::glmLRT(fit, coef = 2), silent = TRUE)
       }
-      top <- edgeR::topTags(res, n = 1e9)$table
-      top <- data.frame(top[rownames(X1), ])
+      top <- try(edgeR::topTags(res, n = 1e9)$table, silent = TRUE)
+      if(! "try-error" %in% class(top)) {
+        top <- data.frame(top[rownames(X1), ])
+      } else {
+        top <- data.frame(matrix(NA, nrow = nrow(X1), ncol = 5))
+        rownames(top) <- rownames(X1)
+        colnames(top) <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val")
+      }
     }
 
-    contr1 <- contr.matrix[kk, i]
-    j1 <- which(contr1 > 0)
-    j0 <- which(contr1 < 0)
+    j1 <- which(contr.matrix[kk, i] > 0)
+    j0 <- which(contr.matrix[kk, i] < 0)
     mean1 <- rowMeans(X1[, j1, drop = FALSE], na.rm = TRUE)
     mean0 <- rowMeans(X1[, j0, drop = FALSE], na.rm = TRUE)
-    ## logFC of edgeR is not really reliable..
     if (recalc.fc) top$logFC <- (mean1 - mean0)
     top <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
-    Matrix::head(top)
     tables[[i]] <- top
     names(tables)[i] <- colnames(contr.matrix)[i]
+
+    ## Regress covariates (if specified)
+    cov.pval <- list()
+    if (!is.null(covariates)) {
+
+      covariates1 <- covariates[kk, , drop = FALSE]
+
+      for (k in 1:ncol(covariates1)) {
+
+        cov.name <- colnames(covariates1)[k]
+        cov.val <- covariates1[, k]
+        keep <- which(!is.na(cov.val))
+        if (length(keep) == 0) next
+        cov.val <- cov.val[keep]
+        if (length(unique(y[keep])) == 1) next
+
+        if (is.character(cov.val)) {
+          cov.val <- as.factor(cov.val)
+        } else if (is.numeric(cov.val)) {
+          nn <- unique(cov.val[!is.na(cov.val)])
+          if (length(nn) <= 4) { ## edge case: likely categorical
+            cov.val <- factor(cov.val)
+          } else {
+            cov.val <- as.numeric(cov.val) ## no arbitrary binning
+          }
+        }
+
+        mm <- data.frame(y = y[keep], cov = cov.val)
+        design1_cov <- stats::model.matrix(~ cov + y, data = mm); rm(mm)
+
+        dge1 <- edgeR::DGEList(round(counts1[, keep, drop = FALSE]), group = group1)
+        if (calc.tmm) dge1 <- edgeR::normLibSizes(dge1, method = "TMM")
+
+        dge1_cov <- try(edgeR::estimateDisp(dge1, design = design1_cov, robust = robust), silent = TRUE)
+        if ("try-error" %in% class(dge1_cov)) {
+          dge1_cov <- try(edgeR::estimateDisp(dge1, design = design1_cov, robust = FALSE), silent = TRUE)
+          if ("try-error" %in% class(dge1_cov)) next
+        }
+
+        if (method == "qlf") {
+          fit_cov <- try(edgeR::glmQLFit(dge1_cov, design1_cov, robust = robust), silent = TRUE)
+          res_cov <- try(edgeR::glmQLFTest(fit_cov, coef = ncol(design1_cov)), silent = TRUE)
+        } else if (method == "lrt") {
+          fit_cov <- try(edgeR::glmFit(dge1_cov, design1_cov, robust = robust), silent = TRUE)
+          res_cov <- try(edgeR::glmLRT(fit_cov, coef = coef_y), silent = TRUE)
+        }
+
+        top_cov <- try(edgeR::topTags(res_cov, n = 1e9)$table, silent = TRUE)
+        if ("try-error" %in% class(top_cov)) {
+          top_cov <- data.frame(matrix(NA, nrow = nrow(X1), ncol = 1))
+          rownames(top_cov) <- rownames(X1)
+        } else {
+          top_cov <- top_cov[rownames(X1), "PValue", drop = FALSE]
+        }
+        colnames(top_cov) <- paste0("P.Value.", cov.name) 
+        cov.pval[[cov.name]] <- top_cov
+        
+      }
+    }
+    ##-----end covariate regression
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   }
+
 
   if (conform.output == TRUE) {
     for (i in 1:length(tables)) {
-      if (method %in% c("qlf", "qlf2")) {
+      if (method == "qlf") {
         k1 <- c("logFC", "logCPM", "F", "PValue", "FDR", "AveExpr0", "AveExpr1")
-      } else if (method %in% c("lrt", "lrt2")) {
+      } else if (method == "lrt") {
         k1 <- c("logFC", "logCPM", "LR", "PValue", "FDR", "AveExpr0", "AveExpr1")
-      } else {
-        stop("switch method error")
-      }
+      }    
       k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
-      tables[[i]] <- tables[[i]][, k1]
-      colnames(tables[[i]]) <- k2
+      ec <- grep("^P\\.Value\\.", colnames(tables[[i]]), value = TRUE)
+      tables[[i]] <- tables[[i]][, c(k1, ec)]
+      colnames(tables[[i]])[1:length(k2)] <- k2
     }
   }
 
   res <- list(tables = tables)
+  
   return(res)
+
 }
 
 ## #' @describeIn ngs.fitContrastsWithAllMethods Fits time-series contrasts using edgeR QLF or LRT
@@ -1348,8 +1418,8 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
                                        prune.samples = FALSE,
                                        conform.output = FALSE,
                                        timeseries = NULL) {
-  ## ps: EdgeR/Deseq2 tests will not be available for proteomics data.
-  ## Therefore, this autoscaling will very rarely be run.
+
+  ## EdgeR/Deseq2 not available for proteomics. Thus, autoscaling is rarely run.
   counts <- playbase::counts.autoScaling(counts)$counts
 
   exp0 <- contr.matrix
@@ -1492,8 +1562,8 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
                                                  conform.output = FALSE,
                                                  X = NULL,
                                                  timeseries = NULL) {
-  ## ps: EdgeR/Deseq2 tests will not be available for proteomics data.
-  ## Therefore, this autoscaling will very rarely be run.
+
+  ## EdgeR/Deseq2 not available for proteomics. Thus, autoscaling is rarely run.
   counts <- playbase::counts.autoScaling(counts)$counts
 
   counts <- round(counts)
@@ -1613,8 +1683,7 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
                                                             fitType = "mean",
                                                             use.spline = NULL) {
 
-  ## ps: EdgeR/Deseq2 tests will not be available for proteomics data.
-  ## Therefore, this autoscaling will very rarely be run.
+  ## EdgeR/Deseq2 not available for proteomics. Thus, autoscaling is rarely run.
   counts <- playbase::counts.autoScaling(counts)$counts
 
   if (!all(colnames(counts) %in% names(timeseries))) {
