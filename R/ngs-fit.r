@@ -215,11 +215,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
           time_var <- NULL
         }
 
-        ##---------------------------
-        ## saveRDS(list(X=X1, contr.matrix=contr.matrix, design=design, covariates=covariates,
-        ##  method=mdl, trend=trend, prune.samples=prune.samples), "~/Desktop/oo.RDS")
-        ##----------------------------
-        
         tt <- system.time(
           outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithLIMMA(
             X1, contr.matrix,
@@ -495,7 +490,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   ## Add into all.meta.covariates' regression p.values (if any)
   meta.covs <- NULL
   if (!is.null(covariates)) {
-    cm <- grep("limma|edgeR|deseq2", names(outputs), value = TRUE)
+    cm <- grep("limma|edger|deseq2", tolower(names(outputs)), value = TRUE)
     if (length(cm) > 0) {
       i=1; meta.covs=list()
       for(i in 1:length(cm)) {
@@ -717,10 +712,13 @@ ngs.fitContrastsWithLIMMA <- function(X,
 
             cov.name <- colnames(covariates1)[k]
             cov.val <- covariates1[, k]
+
             keep <- which(!is.na(cov.val))
-            if (length(keep) == 0) next
+            c1 <- (length(keep) == 0)
+            c2 <- (length(unique(y[keep])) == 1)
+            if (c1 | c2) next
             cov.val <- cov.val[keep]
-            if (length(unique(y[keep])) == 1) next
+
             if (is.character(cov.val)) {
               cov.val <- factor(cov.val)
             } else if (is.numeric(cov.val)) {
@@ -1193,7 +1191,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
         keep <- which(!is.na(cov.val))
         c1 <- (length(keep) == 0)
         c2 <- (length(unique(y[keep])) == 1)
-        if (c1 | c2 ) next
+        if (c1 | c2) next
         cov.val <- cov.val[keep]
 
         if (is.character(cov.val)) {
@@ -1233,6 +1231,8 @@ ngs.fitContrastsWithEDGER <- function(counts,
         } else {
           top_cov <- top_cov[rownames(X1), "PValue", drop = FALSE]
         }
+        nas <- which(is.na(top_cov[, 1])) ## set NA pvalues to 1
+        if(length(nas) > 0) top_cov[nas, 1] <- 1
         colnames(top_cov) <- paste0("P.Value.", cov.name) 
         cov.pval[[cov.name]] <- top_cov
 
