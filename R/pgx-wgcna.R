@@ -162,12 +162,31 @@ pgx.wgcna <- function(
     wgcna$prompts <- ai$questions
   }
 
+  ## save setting in object
+  settings <- list(
+    minmodsize = minmodsize,
+    power = power,
+    mergeCutHeight = cutheight,
+    deepsplit = deepsplit,
+    minKME = minKME,
+    networktype = "signed",
+    tomtype = "signed",
+    #ngenes = 2000,
+    #maxBlockSize = 9999,
+    #gset.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]",
+    #compute.enrichment = TRUE,
+    #summary = TRUE,
+    #ai_model = ai_model,
+    NULL
+  )
+  
   ## add to results object
   wgcna$clust <- clust
   wgcna$networktype <- networktype
   wgcna$tomtype <- tomtype
   wgcna$annot <- pgx$genes
   wgcna$experiment <- pgx$description
+  wgcna$settings <- settings
   
   return(wgcna)
 }
@@ -5470,12 +5489,12 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
         pp <- paste( top$pheno[[m]], collapse='; ')
       }
       d <- ""
-      if(!is.null(pp)) d <- paste(d, "\n\n<b>Correlated phenotypes:</b> ", pp, "<br><br>")
+      if(!is.null(pp)) d <- paste(d, "**Correlated phenotypes**:", pp, "\n\n")
       if(!is.null(gg) && gg!="") {
-        d <- paste(d, "\n\n<b>Key genes:</b> ", gg, "<br><br>")
+        d <- paste(d, "**Key genes**:", gg, "\n\n")
       }
       if(!is.null(ss) && ss!="") {
-        d <- paste(d, "\n\n<b>Top enriched gene sets:</b> ", ss, "<br><br>")
+        d <- paste(d, "**Top enriched gene sets**:", ss, "\n\n")
       }
       desc[[m]] <- d
     }
@@ -5634,35 +5653,37 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
     if(verbose) message("Skipping module summaries...")
     results <- descriptions
   }
+
+  ## addd setttings
+  settings <- paste0(names(pgx$wgcna$settings),'=',pgx$wgcna$settings,collapse='; ')
+  results[['compute_settings']] <- settings
+  
   all.results <- lapply(names(results), function(me)
     paste0("================= ",me," =================\n\n", results[[me]],"\n"))
-  all.results <- paste(all.results, collapse="\n\n")
+  all.results <- paste(all.results, collapse="\n\n")   
   
-    
   ## Step 3: Make detailed report. We concatenate all summaries and
   ## ask a (better) LLM model to create a report.
   if(!is.null(progress)) progress$set(message = "Baking full report...", value=0.6)
   if(verbose) message("Baking full report...")
   
-  q3 <- "These are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed report for this experiment. Give a detailed interpretation of the underlying biology by connecting modules into biological functional programs, referring to key genes, proteins or metabolites. Build an cross-module integrative narrative. Suggest similarity to known diseases and possible therapies.
-\n\n
-Format like a scientific article, use prose as much as possible, minimize the use of tables and bullet points. For long tables show at least the top 5, and at most top 10, up and down entries. Do not inject any inline code. Write a discussion and conclusion at the end of the report about the integrative biological narrative. Only write if there was evidence in the source text. Omit future directions."  
+  q3 <- "These are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed report for this experiment. Give a detailed interpretation of the underlying biology by connecting WGCNA modules into biological functional programs, referring to key genes, proteins or metabolites. Build an cross-module integrative biological narrative. Suggest similarity to known diseases and possible therapies. Add a very short methods paragraph describing the compute settings. Add a discussion and conclusion. Omit abstract, future directions, limitations, or references.
+
+Format like a scientific article, use prose as much as possible, minimize the use of tables and bullet points. For long tables show at least the top 5, and at most top 10, up and down entries. Do not inject any inline code. Only write if there was evidence in the source text."  
 
   if(multi) {
-    q3 <- sub("WGCNA","multiomics WGCNA",q3)
-    q3 <- paste(q3, "Discuss advantages of using multi-omics.")    
+    q3 <- gsub("WGCNA","multiomics WGCNA",q3)
   }
   
   xx <- wgcna$experiment
   pp <- paste("You are a biologist interpreting results from a WGCNA analysis for this experiment:",  xx, ".\n\n")
-  q3 <- paste(pp, q3, "Only write if there was evidence in the source text. Omit future directions.")
-  q3 <- paste(q3, "Write in prose, no tables, no bullet points.") 
+  q3 <- paste(pp, q3)
 
   if(format=="markdown") {
-    q3 <- paste(q3, "Format response as markdown.")
+    q3 <- paste(q3, "Format text and sections as markdown.")
   }
   if(tolower(format)=="html") {
-    q3 <- paste(q3, "Format response as HTML.")
+    q3 <- paste(q3, "Format text and sections as HTML.")
   }
   q3 <- paste(q3, "\n\nnHere are the results: <results>",all.results,"\n</results>")
 
@@ -5677,12 +5698,12 @@ Format like a scientific article, use prose as much as possible, minimize the us
   
   list(
     descriptions_prompts = descriptions_prompts,
-    descriptions = descriptions,
+    descriptions = descriptions,    
     summaries_prompts = summaries_prompts,
     summaries = summaries,
     report_prompt = q3,
     report = report,
-    diagram = diagram
+    diagram = diagram    
   )
 
 }
