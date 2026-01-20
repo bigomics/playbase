@@ -405,6 +405,56 @@ pgx.listDatasetsTileDB <- function(tiledb_path) {
 }
 
 
+#' @title Get dataset information table from TileDB database
+#'
+#' @description Returns a data.frame with metadata for datasets in the TileDB database.
+#' Cross-references with datasets-info.csv if provided for additional metadata.
+#'
+#' @param tiledb_path Path to the TileDB database
+#' @param datasets_info_file Optional path to datasets-info.csv file for metadata lookup
+#'
+#' @return Data.frame with columns: dataset, nsamples, and optionally organism, datatype, description, date
+#' @export
+pgx.getDatasetInfoTileDB <- function(tiledb_path, datasets_info_file = NULL) {
+  metadata <- readRDS(paste0(tiledb_path, "_metadata.rds"))
+
+  datasets <- tools::file_path_sans_ext(basename(metadata$pgx_files))
+
+  ## Count samples per dataset
+  sample_datasets <- pgx.getDatasetFromSample(metadata$samples)
+  samples_per_dataset <- table(sample_datasets)
+
+  ## Build base info data.frame
+
+  df <- data.frame(
+    dataset = datasets,
+    nsamples = as.integer(samples_per_dataset[datasets]),
+    stringsAsFactors = FALSE
+  )
+
+  ## Cross-reference with datasets-info.csv if available
+  if (!is.null(datasets_info_file) && file.exists(datasets_info_file)) {
+    info_csv <- utils::read.csv(datasets_info_file, stringsAsFactors = FALSE)
+    ## Normalize dataset names (remove .pgx extension if present)
+    if ("dataset" %in% colnames(info_csv)) {
+      info_csv$dataset <- sub("[.]pgx$", "", info_csv$dataset)
+    }
+    ## Select useful columns
+    info_cols <- c("dataset", "organism", "datatype", "description", "date", "nfeatures", "conditions")
+    info_cols <- intersect(info_cols, colnames(info_csv))
+    if (length(info_cols) > 1) {
+      info_csv <- info_csv[, info_cols, drop = FALSE]
+      df <- merge(df, info_csv, by = "dataset", all.x = TRUE)
+    }
+  }
+
+  df <- df[order(df$dataset), ]
+  rownames(df) <- NULL
+
+  df
+}
+
+
 #' @title Get TileDB database info
 #' @param tiledb_path Path to the TileDB database
 #' @return List with database metadata (invisibly)
