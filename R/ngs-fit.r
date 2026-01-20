@@ -1141,12 +1141,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
                                                        recalc.fc = TRUE,
                                                        plot = TRUE,
                                                        timeseries = NULL) {
-
-  saveRDS(list(counts=counts, contr.matrix=contr.matrix, covariates=covariates,
-    group=group, method=method, X=X, conform.output=conform.output, robust=robust,
-    calc.tmm=calc.tmm, recalc.fc=recalc.fc, plot=plot, timeseries=timeseries),
-    "~/Desktop/oo.RDS")
-
+  
   method <- method[1]
   if (! method %in% c("qlf","lrt")) stop("EdgeR method must be qlf or lrt")
 
@@ -1201,8 +1196,6 @@ ngs.fitContrastsWithEDGER <- function(counts,
     mean0 <- rowMeans(X1[, j0, drop = FALSE], na.rm = TRUE)
     if (recalc.fc) top$logFC <- (mean1 - mean0)
     top <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
-    tables[[i]] <- top
-    names(tables)[i] <- colnames(contr.matrix)[i]
 
     ## Regress covariates (if specified)
     cov.pval <- list()
@@ -1237,13 +1230,12 @@ ngs.fitContrastsWithEDGER <- function(counts,
 
         dge1 <- edgeR::DGEList(round(counts1[, keep, drop = FALSE]), group = group1)
         if (calc.tmm) dge1 <- edgeR::normLibSizes(dge1, method = "TMM")
-
+        
         dge1_cov <- try(edgeR::estimateDisp(dge1, design = design1_cov, robust = robust), silent = TRUE)
         if ("try-error" %in% class(dge1_cov)) {
           dge1_cov <- try(edgeR::estimateDisp(dge1, design = design1_cov, robust = FALSE), silent = TRUE)
-          if ("try-error" %in% class(dge1_cov)) next
         }
-
+        
         if (method == "qlf") {
           fit_cov <- try(edgeR::glmQLFit(dge1_cov, design1_cov, robust = robust), silent = TRUE)
           res_cov <- try(edgeR::glmQLFTest(fit_cov, coef = ncol(design1_cov)), silent = TRUE)
@@ -1251,7 +1243,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
           fit_cov <- try(edgeR::glmFit(dge1_cov, design1_cov, robust = robust), silent = TRUE)
           res_cov <- try(edgeR::glmLRT(fit_cov, coef = coef_y), silent = TRUE)
         }
-
+        
         top_cov <- try(edgeR::topTags(res_cov, n = 1e9)$table, silent = TRUE)
         if ("try-error" %in% class(top_cov)) {
           top_cov <- data.frame(matrix(NA, nrow = nrow(X1), ncol = 1))
@@ -1265,6 +1257,14 @@ ngs.fitContrastsWithEDGER <- function(counts,
       }
 
     } ##-----end covariate regression
+
+    if (length(cov.pval) > 0) {    
+      top_cov <- do.call(cbind, cov.pval)
+      cm <- intersect(rownames(top_cov), rownames(top))
+      top <- cbind(top[cm, , drop = FALSE], top_cov[cm, , drop = FALSE])      
+    }
+    tables[[i]] <- top
+    names(tables)[i] <- colnames(contr.matrix)[i]
 
   } ##-----end contrast loop
 
