@@ -457,6 +457,26 @@ pgx.getDatasetInfoTileDB <- function(tiledb_path, datasets_info_file = NULL) {
 }
 
 
+#' @title List datasets in TileDB database
+#'
+#' @description Returns all unique dataset names stored in the TileDB database.
+#'
+#' @param tiledb_path Path to the TileDB database
+#'
+#' @return Character vector of dataset names (sorted alphabetically)
+#'
+#' @export
+pgx.listDatasetsTileDB <- function(tiledb_path) {
+  metadata_path <- paste0(tiledb_path, "_metadata.rds")
+  if (!file.exists(metadata_path)) {
+    stop("Metadata file not found: ", metadata_path)
+  }
+  metadata <- readRDS(metadata_path)
+  datasets <- tools::file_path_sans_ext(basename(metadata$pgx_files))
+  return(sort(datasets))
+}
+
+
 #' @title Get TileDB database info
 #' @param tiledb_path Path to the TileDB database
 #' @return List with database metadata (invisibly)
