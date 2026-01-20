@@ -1214,10 +1214,12 @@ ngs.fitContrastsWithEDGER <- function(counts,
 
         cov.name <- colnames(covariates1)[k]
         cov.val <- covariates1[, k]
+
         keep <- which(!is.na(cov.val))
-        if (length(keep) == 0) next
+        c1 <- (length(keep) == 0)
+        c2 <- (length(unique(y[keep])) == 1)
+        if (c1 | c2 ) next
         cov.val <- cov.val[keep]
-        if (length(unique(y[keep])) == 1) next
 
         if (is.character(cov.val)) {
           cov.val <- as.factor(cov.val)
@@ -1259,46 +1261,27 @@ ngs.fitContrastsWithEDGER <- function(counts,
         }
         colnames(top_cov) <- paste0("P.Value.", cov.name) 
         cov.pval[[cov.name]] <- top_cov
-        
+
       }
-    }
-    ##-----end covariate regression
 
+    } ##-----end covariate regression
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-  }
-
+  } ##-----end contrast loop
 
   if (conform.output == TRUE) {
+    k1 <- c("logFC", "logCPM", "stats", "PValue", "FDR", "AveExpr0", "AveExpr1")
+    if (method == "qlf") k1[k1 == "stats"] <- "F"
+    if (method == "lrt") k1[k1 == "stats"] <- "LR"
+    k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
     for (i in 1:length(tables)) {
-      if (method == "qlf") {
-        k1 <- c("logFC", "logCPM", "F", "PValue", "FDR", "AveExpr0", "AveExpr1")
-      } else if (method == "lrt") {
-        k1 <- c("logFC", "logCPM", "LR", "PValue", "FDR", "AveExpr0", "AveExpr1")
-      }    
-      k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
       ec <- grep("^P\\.Value\\.", colnames(tables[[i]]), value = TRUE)
       tables[[i]] <- tables[[i]][, c(k1, ec)]
       colnames(tables[[i]])[1:length(k2)] <- k2
     }
   }
 
-  res <- list(tables = tables)
+  return(list(tables = tables))
   
-  return(res)
-
 }
 
 ## #' @describeIn ngs.fitContrastsWithAllMethods Fits time-series contrasts using edgeR QLF or LRT
