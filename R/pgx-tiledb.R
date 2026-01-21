@@ -64,8 +64,8 @@
 ## ----------------
 ##
 ##   Full ID:    "dataset_name::original_sample_id"
-##   Dataset:    pgx.getDatasetFromSample()  -> "dataset_name"
-##   Short name: pgx.getSampleShortName()    -> "original_sample_id"
+##   Dataset:    getDatasetFromSample()  -> "dataset_name"
+##   Short name: getSampleShortName()    -> "original_sample_id"
 ##
 ##   Dataset name = PGX filename without .pgx extension
 ##
@@ -95,7 +95,7 @@
 #' stored as strings for flexibility.
 #'
 #' @export
-pgx.buildTileDB <- function(pgx_folder, tiledb_path, overwrite = FALSE, verbose = TRUE) {
+buildTileDB <- function(pgx_folder, tiledb_path, overwrite = FALSE, verbose = TRUE) {
   if (!requireNamespace("tiledb", quietly = TRUE)) {
     stop("Package 'tiledb' is required. Install with: install.packages('tiledb')")
   }
@@ -303,7 +303,7 @@ pgx.buildTileDB <- function(pgx_folder, tiledb_path, overwrite = FALSE, verbose 
 #' @return Matrix (genes x samples) or data.frame with columns: gene, sample, count
 #'
 #' @export
-pgx.queryTileDB <- function(tiledb_path, genes, samples = NULL, as_matrix = TRUE) {
+queryTileDB <- function(tiledb_path, genes, samples = NULL, as_matrix = TRUE) {
   if (!requireNamespace("tiledb", quietly = TRUE)) {
     stop("Package 'tiledb' is required. Install with: install.packages('tiledb')")
   }
@@ -337,7 +337,7 @@ pgx.queryTileDB <- function(tiledb_path, genes, samples = NULL, as_matrix = TRUE
     stop("No valid genes to query")
   }
 
-  arr <- tiledb::tiledb_array(tiledb_path, as.data.frame = TRUE)
+  arr <- tiledb::tiledb_array(tiledb_path, return_as = "data.frame")
 
   df <- arr[]
   df <- df[df$gene %in% genes, , drop = FALSE]
@@ -379,7 +379,7 @@ pgx.queryTileDB <- function(tiledb_path, genes, samples = NULL, as_matrix = TRUE
 #' @param tiledb_path Path to the TileDB database
 #' @return Character vector of gene names
 #' @export
-pgx.listGenesTileDB <- function(tiledb_path) {
+listGenesTileDB <- function(tiledb_path) {
   metadata <- readRDS(paste0(tiledb_path, "_metadata.rds"))
   metadata$genes
 }
@@ -389,7 +389,7 @@ pgx.listGenesTileDB <- function(tiledb_path) {
 #' @param tiledb_path Path to the TileDB database
 #' @return Character vector of sample names (format: "filename::samplename")
 #' @export
-pgx.listSamplesTileDB <- function(tiledb_path) {
+listSamplesTileDB <- function(tiledb_path) {
   metadata <- readRDS(paste0(tiledb_path, "_metadata.rds"))
   metadata$samples
 }
@@ -399,7 +399,7 @@ pgx.listSamplesTileDB <- function(tiledb_path) {
 #' @param tiledb_path Path to the TileDB database
 #' @return Character vector of dataset names
 #' @export
-pgx.listDatasetsTileDB <- function(tiledb_path) {
+listDatasetsTileDB <- function(tiledb_path) {
   metadata <- readRDS(paste0(tiledb_path, "_metadata.rds"))
   sort(tools::file_path_sans_ext(basename(metadata$pgx_files)))
 }
@@ -415,13 +415,13 @@ pgx.listDatasetsTileDB <- function(tiledb_path) {
 #'
 #' @return Data.frame with columns: dataset, nsamples, and optionally organism, datatype, description, date
 #' @export
-pgx.getDatasetInfoTileDB <- function(tiledb_path, datasets_info_file = NULL) {
+getDatasetInfoTileDB <- function(tiledb_path, datasets_info_file = NULL) {
   metadata <- readRDS(paste0(tiledb_path, "_metadata.rds"))
 
   datasets <- tools::file_path_sans_ext(basename(metadata$pgx_files))
 
   ## Count samples per dataset
-  sample_datasets <- pgx.getDatasetFromSample(metadata$samples)
+  sample_datasets <- getDatasetFromSample(metadata$samples)
   samples_per_dataset <- table(sample_datasets)
 
   ## Build base info data.frame
@@ -466,7 +466,7 @@ pgx.getDatasetInfoTileDB <- function(tiledb_path, datasets_info_file = NULL) {
 #' @return Character vector of dataset names (sorted alphabetically)
 #'
 #' @export
-pgx.listDatasetsTileDB <- function(tiledb_path) {
+listDatasetsTileDB <- function(tiledb_path) {
   metadata_path <- paste0(tiledb_path, "_metadata.rds")
   if (!file.exists(metadata_path)) {
     stop("Metadata file not found: ", metadata_path)
@@ -481,7 +481,7 @@ pgx.listDatasetsTileDB <- function(tiledb_path) {
 #' @param tiledb_path Path to the TileDB database
 #' @return List with database metadata (invisibly)
 #' @export
-pgx.infoTileDB <- function(tiledb_path) {
+infoTileDB <- function(tiledb_path) {
   metadata <- readRDS(paste0(tiledb_path, "_metadata.rds"))
 
   cat("TileDB Database Info\n")
@@ -508,7 +508,7 @@ pgx.infoTileDB <- function(tiledb_path) {
 #' @param tiledb_path Path to the TileDB database
 #' @return Character vector of phenotype column names
 #' @export
-pgx.listPhenotypesTileDB <- function(tiledb_path) {
+listPhenotypesTileDB <- function(tiledb_path) {
   metadata <- readRDS(paste0(tiledb_path, "_metadata.rds"))
   if (is.null(metadata$phenotypes)) return(character(0))
   metadata$phenotypes
@@ -520,7 +520,7 @@ pgx.listPhenotypesTileDB <- function(tiledb_path) {
 #' @param dataset Optional dataset name. If NULL, returns list for all datasets.
 #' @return Named list of phenotype columns per dataset, or character vector if dataset specified
 #' @export
-pgx.listPhenotypesByDatasetTileDB <- function(tiledb_path, dataset = NULL) {
+listPhenotypesByDatasetTileDB <- function(tiledb_path, dataset = NULL) {
   metadata <- readRDS(paste0(tiledb_path, "_metadata.rds"))
 
   if (is.null(metadata$phenotypes_by_dataset)) return(list())
@@ -545,7 +545,7 @@ pgx.listPhenotypesByDatasetTileDB <- function(tiledb_path, dataset = NULL) {
 #'   or columns: sample, phenotype, value (long)
 #'
 #' @export
-pgx.queryPhenotypesTileDB <- function(tiledb_path, samples = NULL, phenotypes = NULL,
+queryPhenotypesTileDB <- function(tiledb_path, samples = NULL, phenotypes = NULL,
                                        datasets = NULL, as_wide = TRUE) {
   metadata <- readRDS(paste0(tiledb_path, "_metadata.rds"))
 
@@ -560,7 +560,7 @@ pgx.queryPhenotypesTileDB <- function(tiledb_path, samples = NULL, phenotypes = 
   result <- metadata$phenotype_data
 
   if (!is.null(datasets)) {
-    sample_datasets <- pgx.getDatasetFromSample(all_samples)
+    sample_datasets <- getDatasetFromSample(all_samples)
     samples_in_datasets <- all_samples[sample_datasets %in% datasets]
     samples <- if (is.null(samples)) samples_in_datasets else intersect(samples, samples_in_datasets)
   }
@@ -606,8 +606,8 @@ pgx.queryPhenotypesTileDB <- function(tiledb_path, samples = NULL, phenotypes = 
     }
   }
 
-  wide_df$dataset <- pgx.getDatasetFromSample(rownames(wide_df))
-  wide_df$sample_short <- pgx.getSampleShortName(rownames(wide_df))
+  wide_df$dataset <- getDatasetFromSample(rownames(wide_df))
+  wide_df$sample_short <- getSampleShortName(rownames(wide_df))
   wide_df
 }
 
@@ -618,7 +618,7 @@ pgx.queryPhenotypesTileDB <- function(tiledb_path, samples = NULL, phenotypes = 
 #' @param datasets Optional dataset names to filter by
 #' @return Character vector of unique values for the phenotype
 #' @export
-pgx.getPhenotypeValuesTileDB <- function(tiledb_path, phenotype, datasets = NULL) {
+getPhenotypeValuesTileDB <- function(tiledb_path, phenotype, datasets = NULL) {
   metadata <- readRDS(paste0(tiledb_path, "_metadata.rds"))
 
   if (is.null(metadata$phenotype_data) || nrow(metadata$phenotype_data) == 0) {
@@ -629,7 +629,7 @@ pgx.getPhenotypeValuesTileDB <- function(tiledb_path, phenotype, datasets = NULL
   if (nrow(result) == 0) return(character(0))
 
   if (!is.null(datasets)) {
-    sample_datasets <- pgx.getDatasetFromSample(result$sample)
+    sample_datasets <- getDatasetFromSample(result$sample)
     result <- result[sample_datasets %in% datasets, , drop = FALSE]
   }
 
@@ -642,7 +642,7 @@ pgx.getPhenotypeValuesTileDB <- function(tiledb_path, phenotype, datasets = NULL
 #' @param samples Character vector of sample identifiers ("dataset::sample")
 #' @return Character vector of dataset names
 #' @export
-pgx.getDatasetFromSample <- function(samples) {
+getDatasetFromSample <- function(samples) {
   sub("::.*", "", samples)
 }
 
@@ -651,14 +651,14 @@ pgx.getDatasetFromSample <- function(samples) {
 #' @param samples Character vector of sample identifiers ("dataset::sample")
 #' @return Character vector of short sample names
 #' @export
-pgx.getSampleShortName <- function(samples) {
+getSampleShortName <- function(samples) {
   sub(".*::", "", samples)
 }
 
 
 #' @title Convert TileDB query result to plotting data.frame
 #'
-#' @param result Matrix or data.frame from pgx.queryTileDB
+#' @param result Matrix or data.frame from queryTileDB
 #' @param gene_name Optional gene name for single-gene matrix input
 #' @param tiledb_path Optional path to TileDB database for merging phenotype data
 #' @param phenotypes Optional phenotype columns to include
@@ -666,7 +666,7 @@ pgx.getSampleShortName <- function(samples) {
 #' @return Data.frame with columns: sample, count, dataset, sample_short, gene, phenotypes
 #'
 #' @export
-pgx.tiledbToPlotDF <- function(result, gene_name = NULL, tiledb_path = NULL, phenotypes = NULL) {
+tiledbToPlotDF <- function(result, gene_name = NULL, tiledb_path = NULL, phenotypes = NULL) {
   if (is.matrix(result) || inherits(result, "Matrix")) {
     if (nrow(result) == 1) {
       df <- data.frame(
@@ -689,11 +689,11 @@ pgx.tiledbToPlotDF <- function(result, gene_name = NULL, tiledb_path = NULL, phe
     stop("Input must be a matrix or data.frame")
   }
 
-  df$dataset <- pgx.getDatasetFromSample(df$sample)
-  df$sample_short <- pgx.getSampleShortName(df$sample)
+  df$dataset <- getDatasetFromSample(df$sample)
+  df$sample_short <- getSampleShortName(df$sample)
 
   if (!is.null(tiledb_path) && !is.null(phenotypes)) {
-    pheno_df <- pgx.queryPhenotypesTileDB(
+    pheno_df <- queryPhenotypesTileDB(
       tiledb_path, samples = unique(df$sample), phenotypes = phenotypes, as_wide = TRUE
     )
     if (nrow(pheno_df) > 0) {
