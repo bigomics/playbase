@@ -704,62 +704,25 @@ ngs.fitContrastsWithLIMMA <- function(X,
           top <- top[rownames(X1), , drop = FALSE]        
         }
 
-        ##---If covariates specified, regress them out and get p.value
+        ## Regress out covariates (if present). Get p-value.
         cov.pval <- list()
         if (!is.null(covariates)) {
           covariates1 <- covariates[kk, , drop = FALSE]
           for (k in 1:ncol(covariates1)) {
-
-            cov.name <- colnames(covariates1)[k]
             cov.val <- covariates1[, k]
-
+            cov.name <- colnames(covariates1)[k]
             keep <- which(!is.na(cov.val))
             c1 <- (length(keep) == 0)
             c2 <- (length(unique(y[keep])) == 1)
             if (c1 | c2) next
+            X2 <- X1[, keep, drop = FALSE]
             cov.val <- cov.val[keep]
-
-            if (is.character(cov.val)) {
-              cov.val <- factor(cov.val)
-            } else if (is.numeric(cov.val)) {
-              nn <- unique(cov.val[!is.na(cov.val)])
-              if (length(nn) <= 4) { ## edge case: likely categorical
-                cov.val <- factor(cov.val)
-              } else {
-                cov.val <- as.numeric(cov.val) ## no arbitrary binning
-              }
-            }
-
-            design1_cov <- stats::model.matrix(~ 0 + y + cov, data = data.frame(y=y[keep], cov=cov.val))
-            contr1_cov <- matrix(0, nrow = ncol(design1_cov), ncol = 1)
-            rownames(contr1_cov) <- colnames(design1_cov)
-            colnames(contr1_cov) <- "pos_vs_neg"
-            y_cols <- intersect(c("yneg", "yo", "ypos"), colnames(design1_cov))
-            contr1_cov[y_cols, 1] <- c(-1, 0, 1)[match(y_cols, c("yneg", "yo", "ypos"))]
-            
-            vfit_cov <- suppressMessages(limma::lmFit(X1[, keep, drop = FALSE], design1_cov))
-            vfit_cov <- suppressMessages(limma::contrasts.fit(vfit_cov, contrasts = contr1_cov))
-            efit_cov <- try(limma::eBayes(vfit_cov, trend = trend_cov, robust = robust), silent = TRUE)
-            if ("try-error" %in% class(efit_cov)) {
-              efit_cov <- try(limma::eBayes(vfit_cov, trend = trend_cov, robust = FALSE), silent = TRUE)
-              if ("try-error" %in% class(efit_cov)) {
-                efit_cov <- try(limma::eBayes(vfit_cov, trend = FALSE, robust = FALSE), silent = TRUE)
-              }
-            }
-            
-            top_cov <- try(limma::topTable(efit_cov, coef = 1, sort.by = "none", number = Inf), silent = TRUE)
-            if ("try-error" %in% class(top_cov)) {
-              top_cov <- data.frame(matrix(NA, nrow = nrow(X1), ncol = 1))
-              rownames(top_cov) <- rownames(X1)
-            } else {
-              top_cov <- top_cov[rownames(X1), "P.Value", drop = FALSE]
-            }
-            colnames(top_cov) <- paste0("P.Value.", cov.name) 
+            y1 <- y[keep]
+            top_cov <- ngs.fitContrastsWithLIMMA.regress.covs(X2, y1, cov.val, cov.name, trend, robust)
             cov.pval[[cov.name]] <- top_cov
-
           }
         }
-        ##--end covariates regression
+        
       }
 
       j1 <- which(ct > 0)
@@ -768,7 +731,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
       mean0 <- rowMeans(X1[, j0, drop = FALSE], na.rm = TRUE)
       top <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
 
-      if (length(cov.pval) > 0) { ## add covariates' regression p.values    
+      if (length(cov.pval) > 0) {
         top_cov <- do.call(cbind, cov.pval)
         cm <- intersect(rownames(top_cov), rownames(top))
         top <- cbind(top[cm, , drop = FALSE], top_cov[cm, , drop = FALSE])
@@ -777,7 +740,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
       tables[[i]] <- top
       names(tables)[i] <- colnames(exp0)[i]
 
-    } ##--------end for loop contrasts
+    }
 
   }
 
@@ -795,6 +758,69 @@ ngs.fitContrastsWithLIMMA <- function(X,
 
 }
 
+#' @title ngs.fitContrastsWithLIMMA.regress.covs. See ngs.fitContrastsWithLIMMA().
+#' @param X log2-transformed data matrix. Features in rows; samples in columns. 
+#' @param y phenotype vector (main contrast)
+#' @param covariate covariate vector
+#' @description Regress out covariate from main contrast using limma.
+#' @return Table with p-values of main contrast adjusted for the covariate.
+#' @name ngs.fitContrastsWithLIMMA.regress.covs
+#' @export
+ngs.fitContrastsWithLIMMA.regress.covs <- function(X,
+                                                   y,
+                                                   covariate,
+                                                   covariate.name = "covariate",
+                                                   trend = TRUE,
+                                                   robust = TRUE) {
+
+
+  message("[ngs.fitContrastsWithLIMMA.regress.covs:] Regressing out covariates: ", covariate.name)
+
+  cov.val <- covariate
+
+  if (is.character(cov.val)) {
+    cov.val <- factor(cov.val)
+  } else if (is.numeric(cov.val)) {
+    nn <- unique(cov.val[!is.na(cov.val)])
+    if (length(nn) <= 4) { ## edge case: likely categorical
+      cov.val <- factor(cov.val)
+    } else {
+      cov.val <- as.numeric(cov.val) ## no arbitrary binning
+    }
+  }
+
+  design <- stats::model.matrix(~ 0 + y + cov, data = data.frame(y=y, cov=cov.val))
+  contr1 <- matrix(0, nrow = ncol(design), ncol = 1)
+  rownames(contr) <- colnames(design)
+  colnames(contr) <- "pos_vs_neg"
+  y_cols <- intersect(c("yneg", "yo", "ypos"), colnames(design))
+  contr[y_cols, 1] <- c(-1, 0, 1)[match(y_cols, c("yneg", "yo", "ypos"))]
+  
+  vfit <- suppressMessages(limma::lmFit(X, design))
+  vfit <- suppressMessages(limma::contrasts.fit(vfit, contrasts = contr1))
+  efit <- try(limma::eBayes(vfit, trend = trend, robust = robust), silent = TRUE)
+  if ("try-error" %in% class(efit)) {
+    efit <- try(limma::eBayes(vfit, trend = trend, robust = FALSE), silent = TRUE)
+    if ("try-error" %in% class(efit)) {
+      efit <- try(limma::eBayes(vfit, trend = FALSE, robust = FALSE), silent = TRUE)
+    }
+  }
+      
+  top <- try(limma::topTable(efit, coef = 1, sort.by = "none", number = Inf), silent = TRUE)
+  if ("try-error" %in% class(top)) {
+    top <- data.frame(matrix(NA, nrow = nrow(X), ncol = 1))
+    rownames(top) <- rownames(X)
+  } else {
+    top <- top[rownames(X), "P.Value", drop = FALSE]
+  }
+
+  nas <- which(is.na(top[, 1])) ## set NA pvalues to 1
+  if(length(nas) > 0) top[nas, 1] <- 1
+  colnames(top) <- paste0("P.Value.", covariate.name) 
+  
+  return(top)
+  
+}
 
 #' @describeIn ngs.fitContrastsWithLIMMA Fits contrasts using LIMMA with no design. For time-series analysis.
 #' @export
@@ -1177,78 +1203,37 @@ ngs.fitContrastsWithEDGER <- function(counts,
     if (recalc.fc) top$logFC <- (mean1 - mean0)
     top <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
 
-    ## Regress covariates (if specified)
+    ## Regress out covariates (if present). Get p-value.
     cov.pval <- list()
     if (!is.null(covariates)) {
-
       covariates1 <- covariates[kk, , drop = FALSE]
-
       for (k in 1:ncol(covariates1)) {
-
-        cov.name <- colnames(covariates1)[k]
         cov.val <- covariates1[, k]
-
+        cov.name <- colnames(covariates1)[k]
         keep <- which(!is.na(cov.val))
         c1 <- (length(keep) == 0)
         c2 <- (length(unique(y[keep])) == 1)
-        if (c1 | c2) next
+        if (c1 | c2) next        
+        counts2 <- counts1[, keep, drop = FALSE]
+        X2 <- X1[, keep, drop = FALSE]
+        y1 <- y[keep]
         cov.val <- cov.val[keep]
-
-        if (is.character(cov.val)) {
-          cov.val <- as.factor(cov.val)
-        } else if (is.numeric(cov.val)) {
-          nn <- unique(cov.val[!is.na(cov.val)])
-          if (length(nn) <= 4) { ## edge case: likely categorical
-            cov.val <- factor(cov.val)
-          } else {
-            cov.val <- as.numeric(cov.val) ## no arbitrary binning
-          }
-        }
-
-        mm <- data.frame(y = y[keep], cov = cov.val)
-        design1_cov <- stats::model.matrix(~ cov + y, data = mm); rm(mm)
-
-        dge1 <- edgeR::DGEList(round(counts1[, keep, drop = FALSE]), group = group1)
-        if (calc.tmm) dge1 <- edgeR::normLibSizes(dge1, method = "TMM")
-        
-        dge1_cov <- try(edgeR::estimateDisp(dge1, design = design1_cov, robust = robust), silent = TRUE)
-        if ("try-error" %in% class(dge1_cov)) {
-          dge1_cov <- try(edgeR::estimateDisp(dge1, design = design1_cov, robust = FALSE), silent = TRUE)
-        }
-        
-        if (method == "qlf") {
-          fit_cov <- try(edgeR::glmQLFit(dge1_cov, design1_cov, robust = robust), silent = TRUE)
-          res_cov <- try(edgeR::glmQLFTest(fit_cov, coef = ncol(design1_cov)), silent = TRUE)
-        } else if (method == "lrt") {
-          fit_cov <- try(edgeR::glmFit(dge1_cov, design1_cov, robust = robust), silent = TRUE)
-          res_cov <- try(edgeR::glmLRT(fit_cov, coef = coef_y), silent = TRUE)
-        }
-        
-        top_cov <- try(edgeR::topTags(res_cov, n = 1e9)$table, silent = TRUE)
-        if ("try-error" %in% class(top_cov)) {
-          top_cov <- data.frame(matrix(NA, nrow = nrow(X1), ncol = 1))
-          rownames(top_cov) <- rownames(X1)
-        } else {
-          top_cov <- top_cov[rownames(X1), "PValue", drop = FALSE]
-        }
-        nas <- which(is.na(top_cov[, 1])) ## set NA pvalues to 1
-        if(length(nas) > 0) top_cov[nas, 1] <- 1
-        colnames(top_cov) <- paste0("P.Value.", cov.name) 
+        top_cov <- ngs.fitContrastsWithEDGER.regress.covs(counts2, X2, group, y1,
+          cov.val, cov.name, method, robust, calc.tmm)
         cov.pval[[cov.name]] <- top_cov
-
       }
-
-    } ##-----end covariate regression
+    }
 
     if (length(cov.pval) > 0) {    
       top_cov <- do.call(cbind, cov.pval)
       cm <- intersect(rownames(top_cov), rownames(top))
       top <- cbind(top[cm, , drop = FALSE], top_cov[cm, , drop = FALSE])      
     }
+
     tables[[i]] <- top
     names(tables)[i] <- colnames(contr.matrix)[i]
 
-  } ##-----end contrast loop
+  }
 
   if (conform.output == TRUE) {
     k1 <- c("logFC", "logCPM", "stats", "PValue", "FDR", "AveExpr0", "AveExpr1")
@@ -1265,6 +1250,79 @@ ngs.fitContrastsWithEDGER <- function(counts,
   return(list(tables = tables))
   
 }
+
+#' @title ngs.fitContrastsWithEDGER.regress.covs. See ngs.fitContrastsWithEDGER().
+#' @param counts counts matrix. Features in rows; samples in columns.
+#' @param X log2-transformed (and normalized) data matrix. Features in rows; samples in columns.
+#' @param y phenotype vector (main contrast)
+#' @param covariate covariate vector
+#' @param covariate.name covariate name.
+#' @param method "qlf" or "lrt"
+#' @description Regress out covariate from main contrast using EdgeR.
+#' @return Table with p-values of main contrast adjusted for the covariate.
+#' @name ngs.fitContrastsWithEDGER.regress.covs
+#' @export
+ngs.fitContrastsWithEDGER.regress.covs <- function(counts,
+                                                   X,
+                                                   group,
+                                                   y,
+                                                   covariate,
+                                                   covariate.name = "covariate",
+                                                   method,
+                                                   robust = TRUE,
+                                                   calc.tmm = TRUE) {
+  
+  message("[ngs.fitContrastsWithEDGER.regress.covs:] Regressing out covariates: ", covariate.name)
+  
+  cov.val <- covariate
+
+  if (is.character(cov.val)) {
+    cov.val <- as.factor(cov.val)
+  } else if (is.numeric(cov.val)) {
+    nn <- unique(cov.val[!is.na(cov.val)])
+    if (length(nn) <= 4) { ## edge case: likely categorical
+      cov.val <- factor(cov.val)
+    } else {
+      cov.val <- as.numeric(cov.val) ## no arbitrary binning
+    }
+  }
+
+  mm <- data.frame(y = y, cov = cov.val)
+  design <- stats::model.matrix(~ cov + y, data = mm)
+
+  dge <- edgeR::DGEList(round(counts), group = group)
+  if (calc.tmm) dge <- edgeR::normLibSizes(dge, method = "TMM")
+  
+  dge <- try(edgeR::estimateDisp(dge, design = design, robust = robust), silent = TRUE)
+  if ("try-error" %in% class(dge_cov)) {
+    dge <- try(edgeR::estimateDisp(dge, design = design, robust = FALSE), silent = TRUE)
+  }
+  
+  if (method == "qlf") {
+    fit <- try(edgeR::glmQLFit(dge, design, robust = robust), silent = TRUE)
+    res <- try(edgeR::glmQLFTest(fit, coef = ncol(design)), silent = TRUE)
+  } else if (method == "lrt") {
+    fit <- try(edgeR::glmFit(dge, design, robust = robust), silent = TRUE)
+    res <- try(edgeR::glmLRT(fit, coef = ncol(design)), silent = TRUE)
+  }
+  
+  top <- try(edgeR::topTags(res, n = 1e9)$table, silent = TRUE)
+  if ("try-error" %in% class(top)) {
+    top <- data.frame(matrix(NA, nrow = nrow(X), ncol = 1))
+    rownames(top) <- rownames(X)
+  } else {
+    top <- top[rownames(X), "PValue", drop = FALSE]
+  }
+
+  nas <- which(is.na(top[, 1])) ## set NA pvalues to 1
+  if(length(nas) > 0) top[nas, 1] <- 1
+  colnames(top) <- paste0("P.Value.", covariate.name) 
+
+  return(top)
+  
+}
+
+
 
 ## #' @describeIn ngs.fitContrastsWithAllMethods Fits time-series contrasts using edgeR QLF or LRT
 ## #' @export
