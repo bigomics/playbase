@@ -775,29 +775,27 @@ ngs.fitContrastsWithLIMMA.regress.covs <- function(X,
 
 
   message("[ngs.fitContrastsWithLIMMA.regress.covs:] Regressing out covariates: ", covariate.name)
-
-  cov.val <- covariate
-
-  if (is.character(cov.val)) {
-    cov.val <- factor(cov.val)
-  } else if (is.numeric(cov.val)) {
-    nn <- unique(cov.val[!is.na(cov.val)])
+  
+  if (is.character(covariate)) {
+    covariate <- factor(covariate)
+  } else if (is.numeric(covariate)) {
+    nn <- unique(covariate[!is.na(covariate)])
     if (length(nn) <= 4) { ## edge case: likely categorical
-      cov.val <- factor(cov.val)
+      covariate <- factor(covariate)
     } else {
-      cov.val <- as.numeric(cov.val) ## no arbitrary binning
+      covariate <- as.numeric(covariate) ## no arbitrary binning
     }
   }
 
-  design <- stats::model.matrix(~ 0 + y + cov, data = data.frame(y=y, cov=cov.val))
-  contr1 <- matrix(0, nrow = ncol(design), ncol = 1)
+  design <- stats::model.matrix(~ 0 + y + cov, data = data.frame(y=y, cov=covariate))
+  contr <- matrix(0, nrow = ncol(design), ncol = 1)
   rownames(contr) <- colnames(design)
   colnames(contr) <- "pos_vs_neg"
   y_cols <- intersect(c("yneg", "yo", "ypos"), colnames(design))
   contr[y_cols, 1] <- c(-1, 0, 1)[match(y_cols, c("yneg", "yo", "ypos"))]
   
   vfit <- suppressMessages(limma::lmFit(X, design))
-  vfit <- suppressMessages(limma::contrasts.fit(vfit, contrasts = contr1))
+  vfit <- suppressMessages(limma::contrasts.fit(vfit, contrasts = contr))
   efit <- try(limma::eBayes(vfit, trend = trend, robust = robust), silent = TRUE)
   if ("try-error" %in% class(efit)) {
     efit <- try(limma::eBayes(vfit, trend = trend, robust = FALSE), silent = TRUE)
@@ -1132,7 +1130,6 @@ ngs.fitContrastsWithEDGER <- function(counts,
 
 }
 
-
 #' @describeIn ngs.fitContrastsWithAllMethods Fit contrasts with EdgeR without a design matrix
 #' @export
 .ngs.fitContrastsWithEDGER.nodesign.pruned <- function(counts,
@@ -1274,27 +1271,23 @@ ngs.fitContrastsWithEDGER.regress.covs <- function(counts,
   
   message("[ngs.fitContrastsWithEDGER.regress.covs:] Regressing out covariates: ", covariate.name)
   
-  cov.val <- covariate
-
-  if (is.character(cov.val)) {
-    cov.val <- as.factor(cov.val)
-  } else if (is.numeric(cov.val)) {
-    nn <- unique(cov.val[!is.na(cov.val)])
+  if (is.character(covariate)) {
+    covariate <- as.factor(covariate)
+  } else if (is.numeric(covariate)) {
+    nn <- unique(covariate[!is.na(covariate)])
     if (length(nn) <= 4) { ## edge case: likely categorical
-      cov.val <- factor(cov.val)
+      covariate <- factor(covariate)
     } else {
-      cov.val <- as.numeric(cov.val) ## no arbitrary binning
+      covariate <- as.numeric(covariate) ## no arbitrary binning
     }
   }
-
-  mm <- data.frame(y = y, cov = cov.val)
-  design <- stats::model.matrix(~ cov + y, data = mm)
-
+  
   dge <- edgeR::DGEList(round(counts), group = group)
   if (calc.tmm) dge <- edgeR::normLibSizes(dge, method = "TMM")
-  
+
+  design <- stats::model.matrix(~ cov + y, data = data.frame(y = y, cov = covariate))
   dge <- try(edgeR::estimateDisp(dge, design = design, robust = robust), silent = TRUE)
-  if ("try-error" %in% class(dge_cov)) {
+  if ("try-error" %in% class(dge)) {
     dge <- try(edgeR::estimateDisp(dge, design = design, robust = FALSE), silent = TRUE)
   }
   
@@ -1684,6 +1677,76 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
 
   return(list(tables = tables))
 }
+
+## #' @title ngs.fitContrastsWithDESEQ2.regress.covs. See ngs.fitContrastsWithDESEQ2().
+## #' @param counts counts matrix. Features in rows; samples in columns.
+## #' @param X log2-transformed (and normalized) data matrix. Features in rows; samples in columns.
+## #' @param y phenotype vector (main contrast)
+## #' @param covariate covariate vector
+## #' @param covariate.name covariate name. 
+## #' @description Regress out covariate from main contrast using DESeq2.
+## #' @return Table with p-values of main contrast adjusted for the covariate.
+## #' @name ngs.fitContrastsWithDESEQ2.regress.covs
+## #' @export
+## ngs.fitContrastsWithDESEQ2.regress.covs <- function(counts,
+##                                                     X,
+##                                                     group,
+##                                                     y,
+##                                                     covariate,
+##                                                     covariate.name = "covariate",
+##                                                     method,
+##                                                     robust = TRUE,
+##                                                     calc.tmm = TRUE) {
+  
+##   message("[ngs.fitContrastsWithEDGER.regress.covs:] Regressing out covariates: ", covariate.name)
+  
+##   cov.val <- covariate
+
+##   if (is.character(cov.val)) {
+##     cov.val <- as.factor(cov.val)
+##   } else if (is.numeric(cov.val)) {
+##     nn <- unique(cov.val[!is.na(cov.val)])
+##     if (length(nn) <= 4) { ## edge case: likely categorical
+##       cov.val <- factor(cov.val)
+##     } else {
+##       cov.val <- as.numeric(cov.val) ## no arbitrary binning
+##     }
+##   }
+
+##   mm <- data.frame(y = y, cov = cov.val)
+##   design <- stats::model.matrix(~ cov + y, data = mm)
+
+##   dge <- edgeR::DGEList(round(counts), group = group)
+##   if (calc.tmm) dge <- edgeR::normLibSizes(dge, method = "TMM")
+  
+##   dge <- try(edgeR::estimateDisp(dge, design = design, robust = robust), silent = TRUE)
+##   if ("try-error" %in% class(dge_cov)) {
+##     dge <- try(edgeR::estimateDisp(dge, design = design, robust = FALSE), silent = TRUE)
+##   }
+  
+##   if (method == "qlf") {
+##     fit <- try(edgeR::glmQLFit(dge, design, robust = robust), silent = TRUE)
+##     res <- try(edgeR::glmQLFTest(fit, coef = ncol(design)), silent = TRUE)
+##   } else if (method == "lrt") {
+##     fit <- try(edgeR::glmFit(dge, design, robust = robust), silent = TRUE)
+##     res <- try(edgeR::glmLRT(fit, coef = ncol(design)), silent = TRUE)
+##   }
+  
+##   top <- try(edgeR::topTags(res, n = 1e9)$table, silent = TRUE)
+##   if ("try-error" %in% class(top)) {
+##     top <- data.frame(matrix(NA, nrow = nrow(X), ncol = 1))
+##     rownames(top) <- rownames(X)
+##   } else {
+##     top <- top[rownames(X), "PValue", drop = FALSE]
+##   }
+
+##   nas <- which(is.na(top[, 1])) ## set NA pvalues to 1
+##   if(length(nas) > 0) top[nas, 1] <- 1
+##   colnames(top) <- paste0("P.Value.", covariate.name) 
+
+##   return(top)
+  
+## }
 
 ## Q: does the condition induces a change in gene expression at
 ## any time point after the reference level time point (time 0)?
