@@ -5506,8 +5506,8 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
     )
     return(res)
   }
-  
-  prompt <- paste("Give a",docstyle,"of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about \"<EXPERIMENT>\". Use maximum",numpar,"paragraphs. Use prose, do not use any bullet points or tables. \n\nHere is list of enriched gene sets: <GENESETS>\n")
+    
+  prompt <- paste("Give a",docstyle,"of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. After that, shortly discuss if any of these key genes/proteins/metabolites might be involved in the biological function. No need to mention all, just a few. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about \"<EXPERIMENT>\". Use maximum",numpar,"paragraphs. Use prose, do not use any bullet points or tables. \n\nHere is list of enriched gene sets:\n <GENESETS>\n\n")
 
   if(verbose>1) cat(prompt)
   
@@ -5517,17 +5517,23 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
     if(verbose>0) message("Describing module ",k)
 
     ss=gg=pp=""
-    ss <- sub( ".*:","", top$sets[[k]] ) ## strip prefix
-    ss <- paste( ss, collapse=';')    
+    if(length(top$sets[[k]])>0) {
+      ss <- sub( ".*:","", top$sets[[k]] ) ## strip prefix
+      ss <- paste(ss, collapse=';')    
+    } else {
+      ss <- "[no significant genesets]"
+    }
+
     if(k %in% names(top$pheno)) {
       pp <- paste0("'",top$pheno[[k]],"'")
       pp <- paste( pp, collapse=';')      
     }
 
     q <- prompt
+
     if(length(top$genes[[k]])>0) {
       gg <- paste( top$genes[[k]], collapse=';')
-      q <- paste(q, "\nAfter that, shortly discuss if any of these key genes/proteins/metabolites might be involved in the biological function. No need to mention all, just a few. Here is the list of key genes/proteins/metabolites: <KEYGENES>\n")
+      q <- paste(q, "\nHere is the list of key genes/proteins/metabolites: <KEYGENES>\n")
     }
     
     q <- sub("<MODULE>", k, q)

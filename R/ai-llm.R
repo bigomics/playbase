@@ -95,7 +95,9 @@ ai.get_remote_models <- function(models=NULL) {
 ai.get_models <- function(models=NULL) {
   local.models  <- sort(ai.get_ollama_models(models))
   remote.models <- sort(ai.get_remote_models(models))   
-  models <- list( local = local.models, remote = remote.models)
+  models <- list()
+  if(length(local.models))  models$local <- local.models
+  if(length(remote.models)) models$remote <- remote.models  
   return(models)
 }
 
