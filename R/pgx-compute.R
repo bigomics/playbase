@@ -145,6 +145,7 @@ pgx.createFromFiles <- function(counts.file,
 #' - `creator`: Creator of the dataset
 #' - `datatype`: Type of data (e.g. RNA-seq, microarray)
 #' - `description`: Description of the dataset
+#' - `metadata`: User-defined metadata (list with study_type, tissue_type, etc.)
 #' - `samples`: Sample metadata
 #' - `counts`: Raw count matrix
 #' - `contrasts`: Contrast matrix
@@ -172,6 +173,7 @@ pgx.createPGX <- function(counts,
                           probe_type = NULL,
                           creator = "unknown",
                           description = "No description provided.",
+                          metadata = NULL,
                           X = NULL,
                           norm_method = "CPM",
                           is.logx = NULL,
@@ -384,6 +386,7 @@ pgx.createPGX <- function(counts,
     creator = creator,
     datatype = datatype,
     description = description,
+    metadata = metadata,
     samples = data.frame(samples, check.names = FALSE),
     counts = as.matrix(counts),
     contrasts = contrasts,

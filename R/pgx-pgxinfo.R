@@ -62,6 +62,22 @@ pgxinfo.add <- function(pgxinfo, pgx, remove.old = TRUE) {
     path = NULL
   )
 
+  ## Extract metadata fields dynamically (if present)
+  ## Metadata fields are stored with "metadata_" prefix in pgxinfo
+  metadata <- pgx$metadata
+  if (!is.null(metadata) && is.list(metadata) && length(metadata) > 0) {
+    for (field_name in names(metadata)) {
+      field_value <- metadata[[field_name]]
+      if (!is.null(field_value) && length(field_value) > 0) {
+        ## Convert vectors (e.g., multiselect) to comma-separated string
+        if (length(field_value) > 1) {
+          field_value <- paste(field_value, collapse = ", ")
+        }
+        this.info[[paste0("metadata_", field_name)]] <- as.character(field_value)
+      }
+    }
+  }
+
   ## force to be character...
   if (!is.null(pgxinfo) && NCOL(pgxinfo) > 0 && nrow(pgxinfo) > 0) {
     if ("date" %in% colnames(pgxinfo)) {
@@ -162,21 +178,29 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE, use.
     sel <- pgxinfo.datasets %in% pgx.files1
     pgxinfo <- pgxinfo[sel, , drop = FALSE]
   }
-  info.colnames <- c(
+  ## Core columns that should always be present
+  core.colnames <- c(
     "dataset", "datatype", "description", "nsamples",
     "nfeatures", "nsets", "conditions", "organism", "date",
     "creator"
   )
+
+  ## Also keep any metadata columns (prefixed with "metadata_")
+  metadata.colnames <- grep("^metadata_", colnames(pgxinfo), value = TRUE)
+  info.colnames <- c(core.colnames, metadata.colnames)
+
   if (is.null(pgxinfo)) {
-    aa <- rep(NA, length(info.colnames))
-    names(aa) <- info.colnames
+    aa <- rep(NA, length(core.colnames))
+    names(aa) <- core.colnames
     pgxinfo <- data.frame(rbind(aa))[0, ]
   }
-  ## add missing columns fields
-  missing.cols <- setdiff(info.colnames, colnames(pgxinfo))
+  ## add missing core columns
+  missing.cols <- setdiff(core.colnames, colnames(pgxinfo))
   for (s in missing.cols) pgxinfo[[s]] <- rep(NA, nrow(pgxinfo))
-  ii <- match(info.colnames, colnames(pgxinfo))
-  pgxinfo <- pgxinfo[, ii]
+
+  ## Reorder: core columns first, then metadata columns
+  existing.cols <- intersect(info.colnames, colnames(pgxinfo))
+  pgxinfo <- pgxinfo[, existing.cols, drop = FALSE]
 
   if (clean.description) {
     ## clean up description: remove special characters from description
