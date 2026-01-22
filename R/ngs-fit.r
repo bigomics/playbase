@@ -1689,6 +1689,8 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
       top_cov <- do.call(cbind, cov.pval)
       cm <- intersect(rownames(top_cov), rownames(resx))
       top <- cbind(resx[cm, , drop = FALSE], top_cov[cm, , drop = FALSE])      
+    } else {
+      top <- resx
     }
 
     tables[[i]] <- top
