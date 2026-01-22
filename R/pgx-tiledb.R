@@ -22,20 +22,22 @@
 ## ----------------------------
 ##
 ##   Dimensions:  gene (ASCII), sample (ASCII)
-##   Attributes:  count (FLOAT64)
+##   Attributes:  count (FLOAT64), zscore (FLOAT64)
 ##
 ##   Stored as coordinate (COO) format:
 ##
-##       gene     | sample                   | count
-##       ---------+--------------------------+--------
-##       TP53     | TCGA_BRCA::TCGA-A1-A0SB  | 1523.5
-##       TP53     | GSE12345::sample_001     | 892.3
-##       BRCA1    | TCGA_BRCA::TCGA-A1-A0SB  | 234.1
-##       ...      | ...                      | ...
+##       gene     | sample                   | count   | zscore
+##       ---------+--------------------------+---------+---------
+##       TP53     | TCGA_BRCA::TCGA-A1-A0SB  | 1523.5  | 1.23
+##       TP53     | GSE12345::sample_001     | 892.3   | -0.45
+##       BRCA1    | TCGA_BRCA::TCGA-A1-A0SB  | 234.1   | 0.78
+##       ...      | ...                      | ...     | ...
 ##
 ##   - Genes are human orthologs (converted via pgx$genes$human_ortholog)
 ##   - Samples are prefixed with dataset name: "dataset::original_sample_id"
 ##   - Zeros ARE stored (distinguish from missing data which is NA)
+##   - Z-scores are computed per-dataset: (count - gene_mean) / gene_sd
+##   - Z-scores are NA for genes with zero variance or single-sample datasets
 ##
 ##
 ## METADATA RDS FILE
@@ -185,7 +187,8 @@ buildTileDB <- function(pgx_folder, tiledb_path, overwrite = FALSE, verbose = TR
   sample_dim <- tiledb::tiledb_dim(name = "sample", domain = NULL, tile = NULL, type = "ASCII")
   dom <- tiledb::tiledb_domain(dims = list(gene_dim, sample_dim))
   count_attr <- tiledb::tiledb_attr(name = "count", type = "FLOAT64")
-  schema <- tiledb::tiledb_array_schema(domain = dom, attrs = list(count_attr), sparse = TRUE)
+  zscore_attr <- tiledb::tiledb_attr(name = "zscore", type = "FLOAT64")
+  schema <- tiledb::tiledb_array_schema(domain = dom, attrs = list(count_attr, zscore_attr), sparse = TRUE)
   tiledb::tiledb_array_create(tiledb_path, schema)
 
   if (verbose) message("TileDB array created at: ", tiledb_path)
@@ -210,16 +213,24 @@ buildTileDB <- function(pgx_folder, tiledb_path, overwrite = FALSE, verbose = TR
       samples <- colnames(counts)
       file_prefix <- tools::file_path_sans_ext(basename(pgx_file))
 
+      ## Compute z-scores for this dataset (per-gene standardization)
+      gene_means <- rowMeans(counts, na.rm = TRUE)
+      gene_sds <- apply(counts, 1, sd, na.rm = TRUE)
+      gene_sds[gene_sds == 0] <- NA  ## Avoid division by zero
+      zscores <- (counts - gene_means) / gene_sds
+
       for (j in seq_along(samples)) {
         sample_name <- paste0(file_prefix, "::", samples[j])
-        values <- counts[, j]
-        valid_idx <- which(!is.na(values))
+        count_values <- counts[, j]
+        zscore_values <- zscores[, j]
+        valid_idx <- which(!is.na(count_values))
 
         if (length(valid_idx) > 0) {
           df <- data.frame(
             gene = genes[valid_idx],
             sample = rep(sample_name, length(valid_idx)),
-            count = as.numeric(values[valid_idx]),
+            count = as.numeric(count_values[valid_idx]),
+            zscore = as.numeric(zscore_values[valid_idx]),
             stringsAsFactors = FALSE
           )
           arr[] <- df
@@ -250,7 +261,7 @@ buildTileDB <- function(pgx_folder, tiledb_path, overwrite = FALSE, verbose = TR
         }
       }
 
-      rm(pgx, counts)
+      rm(pgx, counts, zscores)
       gc(verbose = FALSE)
     }, error = function(e) {
       warning("Error writing ", pgx_file, ": ", e$message)
@@ -293,20 +304,25 @@ buildTileDB <- function(pgx_folder, tiledb_path, overwrite = FALSE, verbose = TR
 }
 
 
-#' @title Query gene counts from TileDB database
+#' @title Query gene counts or z-scores from TileDB database
 #'
 #' @param tiledb_path Path to the TileDB database
 #' @param genes Character vector of gene names to query
 #' @param samples Optional character vector of sample names to filter
 #' @param as_matrix Return as matrix (TRUE) or data.frame (FALSE)
+#' @param value Which value to return: "count" for raw counts, "zscore" for
+#'   per-dataset standardized values. Default is "count".
 #'
-#' @return Matrix (genes x samples) or data.frame with columns: gene, sample, count
+#' @return Matrix (genes x samples) or data.frame with columns: gene, sample, and the selected value
 #'
 #' @export
-queryTileDB <- function(tiledb_path, genes, samples = NULL, as_matrix = TRUE) {
+queryTileDB <- function(tiledb_path, genes, samples = NULL, as_matrix = TRUE,
+                        value = c("count", "zscore")) {
   if (!requireNamespace("tiledb", quietly = TRUE)) {
     stop("Package 'tiledb' is required. Install with: install.packages('tiledb')")
   }
+
+  value <- match.arg(value)
 
   if (!dir.exists(tiledb_path)) {
     stop("TileDB database not found at: ", tiledb_path)
@@ -352,11 +368,16 @@ queryTileDB <- function(tiledb_path, genes, samples = NULL, as_matrix = TRUE) {
       colnms <- if (!is.null(samples)) samples else if (!is.null(all_samples)) all_samples else character(0)
       return(matrix(NA_real_, nrow = length(genes), ncol = ncols, dimnames = list(genes, colnms)))
     } else {
-      return(data.frame(gene = character(0), sample = character(0), count = numeric(0)))
+      return(data.frame(gene = character(0), sample = character(0), value = numeric(0)))
     }
   }
 
-  if (!as_matrix) return(df)
+  ## Select the requested value column
+  df$value <- df[[value]]
+
+  if (!as_matrix) {
+    return(df[, c("gene", "sample", value), drop = FALSE])
+  }
 
   sample_names <- if (!is.null(samples)) samples else if (!is.null(all_samples)) all_samples else unique(df$sample)
 
@@ -367,7 +388,7 @@ queryTileDB <- function(tiledb_path, genes, samples = NULL, as_matrix = TRUE) {
     g <- df$gene[i]
     s <- df$sample[i]
     if (g %in% genes && s %in% sample_names) {
-      mat[g, s] <- df$count[i]
+      mat[g, s] <- df$value[i]
     }
   }
 
@@ -705,5 +726,522 @@ tiledbToPlotDF <- function(result, gene_name = NULL, tiledb_path = NULL, phenoty
   }
 
   df
+}
+
+
+## ============================================================================
+## INCREMENTAL UPDATE FUNCTIONS
+## ============================================================================
+
+
+#' @title Add a dataset to existing TileDB database
+#'
+#' @description Adds a single PGX file to an existing TileDB database.
+#' If the dataset already exists, it can be overwritten. If the TileDB
+#' database doesn't exist, it will be created.
+#'
+#' @param tiledb_path Path to the TileDB database
+#' @param pgx_file Path to .pgx file to add
+#' @param overwrite If TRUE and dataset already exists, remove old data first. Default TRUE.
+#' @param verbose Logical, whether to print progress messages. Default TRUE.
+#'
+#' @return Invisibly returns updated metadata
+#'
+#' @details This function enables incremental updates to the TileDB database
+#' without rebuilding from scratch. It:
+#' \itemize{
+#'   \item Loads the pgx file and extracts counts/phenotypes
+#'   \item Appends new data to the TileDB sparse array
+#'   \item Updates the metadata RDS file
+#' }
+#'
+#' @export
+tiledb.addDataset <- function(tiledb_path, pgx_file, overwrite = TRUE, verbose = TRUE) {
+  if (!requireNamespace("tiledb", quietly = TRUE)) {
+    stop("Package 'tiledb' is required. Install with: install.packages('tiledb')")
+  }
+
+  ## Normalize pgx_file path
+  if (!file.exists(pgx_file)) {
+    stop("PGX file does not exist: ", pgx_file)
+  }
+
+  metadata_path <- paste0(tiledb_path, "_metadata.rds")
+
+  ## If TileDB doesn't exist, create it with just this file
+
+  if (!dir.exists(tiledb_path)) {
+    if (verbose) message("TileDB database doesn't exist. Creating new database...")
+    pgx_folder <- dirname(pgx_file)
+    ## Create with just this single file by building from folder but filtering
+    return(tiledb.addDataset.create(tiledb_path, pgx_file, verbose))
+  }
+
+  ## Load existing metadata
+  if (!file.exists(metadata_path)) {
+    stop("Metadata file not found: ", metadata_path)
+  }
+  metadata <- readRDS(metadata_path)
+
+  ## Get dataset name from filename
+  dataset_name <- tools::file_path_sans_ext(basename(pgx_file))
+
+  ## Check if dataset already exists
+  existing_datasets <- tools::file_path_sans_ext(basename(metadata$pgx_files))
+  dataset_exists <- dataset_name %in% existing_datasets
+
+  if (dataset_exists) {
+    if (!overwrite) {
+      if (verbose) message("Dataset '", dataset_name, "' already exists. Use overwrite=TRUE to replace.")
+      return(invisible(metadata))
+    }
+    if (verbose) message("Removing existing data for dataset: ", dataset_name)
+    metadata <- tiledb.removeDataset.internal(tiledb_path, dataset_name, metadata, verbose = FALSE)
+  }
+
+  ## Load the PGX file
+  if (verbose) message("Loading PGX file: ", basename(pgx_file))
+
+  pgx <- tryCatch({
+    pgx.load(pgx_file)
+  }, error = function(e) {
+    stop("Error loading PGX file: ", e$message)
+  })
+
+  if (is.null(pgx$counts)) {
+    stop("No counts found in PGX file: ", pgx_file)
+  }
+
+  ## Extract and transform counts
+  counts <- as.matrix(pgx$counts)
+  counts <- rename_by2(counts, pgx$genes, new_id = "human_ortholog", keep.prefix = FALSE)
+
+  genes <- rownames(counts)
+  samples <- colnames(counts)
+  file_prefix <- dataset_name
+
+  if (verbose) message("Adding ", ncol(counts), " samples, ", nrow(counts), " genes")
+
+  ## Compute z-scores for this dataset (per-gene standardization)
+  gene_means <- rowMeans(counts, na.rm = TRUE)
+  gene_sds <- apply(counts, 1, sd, na.rm = TRUE)
+  gene_sds[gene_sds == 0] <- NA  ## Avoid division by zero
+  zscores <- (counts - gene_means) / gene_sds
+
+  ## Open TileDB array and write data
+  arr <- tiledb::tiledb_array(tiledb_path)
+
+  for (j in seq_along(samples)) {
+    sample_name <- paste0(file_prefix, "::", samples[j])
+    count_values <- counts[, j]
+    zscore_values <- zscores[, j]
+    valid_idx <- which(!is.na(count_values))
+
+    if (length(valid_idx) > 0) {
+      df <- data.frame(
+        gene = genes[valid_idx],
+        sample = rep(sample_name, length(valid_idx)),
+        count = as.numeric(count_values[valid_idx]),
+        zscore = as.numeric(zscore_values[valid_idx]),
+        stringsAsFactors = FALSE
+      )
+      arr[] <- df
+    }
+  }
+
+  ## Collect phenotype data
+  new_phenotype_data <- list()
+  new_phenotypes <- character(0)
+
+  if (!is.null(pgx$samples) && is.data.frame(pgx$samples)) {
+    pheno_data <- pgx$samples
+    pheno_cols <- colnames(pheno_data)
+    pheno_cols <- pheno_cols[!grepl("^\\.", pheno_cols)]
+    new_phenotypes <- pheno_cols
+
+    if (length(pheno_cols) > 0) {
+      for (j in seq_len(nrow(pheno_data))) {
+        sample_id <- rownames(pheno_data)[j]
+        sample_name <- paste0(file_prefix, "::", sample_id)
+
+        for (col in pheno_cols) {
+          val <- pheno_data[j, col]
+          val_str <- if (is.na(val)) NA_character_ else as.character(val)
+          new_phenotype_data[[length(new_phenotype_data) + 1]] <- data.frame(
+            sample = sample_name,
+            phenotype = col,
+            value = val_str,
+            stringsAsFactors = FALSE
+          )
+        }
+      }
+    }
+  }
+
+  ## Update metadata
+  new_samples <- paste0(file_prefix, "::", samples)
+
+  metadata$genes <- sort(unique(c(metadata$genes, genes)))
+  metadata$samples <- c(metadata$samples, new_samples)
+  metadata$phenotypes <- sort(unique(c(metadata$phenotypes, new_phenotypes)))
+  metadata$phenotypes_by_dataset[[file_prefix]] <- new_phenotypes
+
+  if (length(new_phenotype_data) > 0) {
+    new_pheno_df <- do.call(rbind, new_phenotype_data)
+    metadata$phenotype_data <- rbind(metadata$phenotype_data, new_pheno_df)
+  }
+
+  metadata$pgx_files <- c(metadata$pgx_files, normalizePath(pgx_file))
+  metadata$n_genes <- length(metadata$genes)
+  metadata$n_samples <- length(metadata$samples)
+  metadata$n_phenotypes <- length(metadata$phenotypes)
+  metadata$n_files <- length(metadata$pgx_files)
+  metadata$updated <- Sys.time()
+
+  ## Save updated metadata
+  saveRDS(metadata, metadata_path)
+
+  if (verbose) {
+    message("Dataset '", dataset_name, "' added successfully!")
+    message("  Total genes: ", metadata$n_genes)
+    message("  Total samples: ", metadata$n_samples)
+    message("  Total datasets: ", metadata$n_files)
+  }
+
+  rm(pgx, counts, zscores)
+  gc(verbose = FALSE)
+
+  invisible(metadata)
+}
+
+
+#' @title Create new TileDB database with single file (internal)
+#' @keywords internal
+tiledb.addDataset.create <- function(tiledb_path, pgx_file, verbose = TRUE) {
+  if (!requireNamespace("tiledb", quietly = TRUE)) {
+    stop("Package 'tiledb' is required. Install with: install.packages('tiledb')")
+  }
+
+  ## Load the PGX file
+  if (verbose) message("Loading PGX file: ", basename(pgx_file))
+
+  pgx <- tryCatch({
+    pgx.load(pgx_file)
+  }, error = function(e) {
+    stop("Error loading PGX file: ", e$message)
+  })
+
+  if (is.null(pgx$counts)) {
+    stop("No counts found in PGX file: ", pgx_file)
+  }
+
+  ## Extract and transform counts
+  counts <- as.matrix(pgx$counts)
+  counts <- rename_by2(counts, pgx$genes, new_id = "human_ortholog", keep.prefix = FALSE)
+
+  genes <- rownames(counts)
+  samples <- colnames(counts)
+  file_prefix <- tools::file_path_sans_ext(basename(pgx_file))
+
+  if (verbose) message("Creating TileDB with ", ncol(counts), " samples, ", nrow(counts), " genes")
+
+  ## Create TileDB schema
+  gene_dim <- tiledb::tiledb_dim(name = "gene", domain = NULL, tile = NULL, type = "ASCII")
+  sample_dim <- tiledb::tiledb_dim(name = "sample", domain = NULL, tile = NULL, type = "ASCII")
+  dom <- tiledb::tiledb_domain(dims = list(gene_dim, sample_dim))
+  count_attr <- tiledb::tiledb_attr(name = "count", type = "FLOAT64")
+  zscore_attr <- tiledb::tiledb_attr(name = "zscore", type = "FLOAT64")
+  schema <- tiledb::tiledb_array_schema(domain = dom, attrs = list(count_attr, zscore_attr), sparse = TRUE)
+  tiledb::tiledb_array_create(tiledb_path, schema)
+
+  ## Compute z-scores for this dataset
+  gene_means <- rowMeans(counts, na.rm = TRUE)
+  gene_sds <- apply(counts, 1, sd, na.rm = TRUE)
+  gene_sds[gene_sds == 0] <- NA  ## Avoid division by zero
+  zscores <- (counts - gene_means) / gene_sds
+
+  ## Write data
+  arr <- tiledb::tiledb_array(tiledb_path)
+
+  for (j in seq_along(samples)) {
+    sample_name <- paste0(file_prefix, "::", samples[j])
+    count_values <- counts[, j]
+    zscore_values <- zscores[, j]
+    valid_idx <- which(!is.na(count_values))
+
+    if (length(valid_idx) > 0) {
+      df <- data.frame(
+        gene = genes[valid_idx],
+        sample = rep(sample_name, length(valid_idx)),
+        count = as.numeric(count_values[valid_idx]),
+        zscore = as.numeric(zscore_values[valid_idx]),
+        stringsAsFactors = FALSE
+      )
+      arr[] <- df
+    }
+  }
+
+  ## Collect phenotype data
+  all_phenotype_data <- list()
+  phenotypes <- character(0)
+  phenotypes_by_dataset <- list()
+
+  if (!is.null(pgx$samples) && is.data.frame(pgx$samples)) {
+    pheno_data <- pgx$samples
+    pheno_cols <- colnames(pheno_data)
+    pheno_cols <- pheno_cols[!grepl("^\\.", pheno_cols)]
+    phenotypes <- pheno_cols
+    phenotypes_by_dataset[[file_prefix]] <- pheno_cols
+
+    if (length(pheno_cols) > 0) {
+      for (j in seq_len(nrow(pheno_data))) {
+        sample_id <- rownames(pheno_data)[j]
+        sample_name <- paste0(file_prefix, "::", sample_id)
+
+        for (col in pheno_cols) {
+          val <- pheno_data[j, col]
+          val_str <- if (is.na(val)) NA_character_ else as.character(val)
+          all_phenotype_data[[length(all_phenotype_data) + 1]] <- data.frame(
+            sample = sample_name,
+            phenotype = col,
+            value = val_str,
+            stringsAsFactors = FALSE
+          )
+        }
+      }
+    }
+  }
+
+  phenotype_data <- if (length(all_phenotype_data) > 0) {
+    do.call(rbind, all_phenotype_data)
+  } else {
+    data.frame(sample = character(0), phenotype = character(0), value = character(0))
+  }
+
+  ## Create metadata
+  all_samples <- paste0(file_prefix, "::", samples)
+  metadata_path <- paste0(tiledb_path, "_metadata.rds")
+  metadata <- list(
+    genes = sort(unique(genes)),
+    samples = all_samples,
+    phenotypes = sort(unique(phenotypes)),
+    phenotypes_by_dataset = phenotypes_by_dataset,
+    phenotype_data = phenotype_data,
+    n_genes = length(unique(genes)),
+    n_samples = length(all_samples),
+    n_phenotypes = length(unique(phenotypes)),
+    n_files = 1,
+    pgx_files = normalizePath(pgx_file),
+    created = Sys.time()
+  )
+  saveRDS(metadata, metadata_path)
+
+  if (verbose) {
+    message("TileDB database created at: ", tiledb_path)
+    message("  Genes: ", metadata$n_genes)
+    message("  Samples: ", metadata$n_samples)
+    message("  Datasets: 1")
+  }
+
+  rm(pgx, counts, zscores)
+  gc(verbose = FALSE)
+
+  invisible(metadata)
+}
+
+
+#' @title Remove dataset from TileDB (internal helper)
+#' @keywords internal
+tiledb.removeDataset.internal <- function(tiledb_path, dataset_name, metadata, verbose = TRUE) {
+  ## Remove samples belonging to this dataset from metadata
+  sample_datasets <- getDatasetFromSample(metadata$samples)
+  keep_samples <- metadata$samples[sample_datasets != dataset_name]
+
+  ## Remove phenotype data for this dataset
+  if (!is.null(metadata$phenotype_data) && nrow(metadata$phenotype_data) > 0) {
+    pheno_datasets <- getDatasetFromSample(metadata$phenotype_data$sample)
+    metadata$phenotype_data <- metadata$phenotype_data[pheno_datasets != dataset_name, , drop = FALSE]
+  }
+
+  ## Remove from phenotypes_by_dataset
+  metadata$phenotypes_by_dataset[[dataset_name]] <- NULL
+
+  ## Remove from pgx_files
+  pgx_basenames <- tools::file_path_sans_ext(basename(metadata$pgx_files))
+  keep_files <- metadata$pgx_files[pgx_basenames != dataset_name]
+
+  ## Update metadata
+  metadata$samples <- keep_samples
+  metadata$pgx_files <- keep_files
+  metadata$n_samples <- length(keep_samples)
+  metadata$n_files <- length(keep_files)
+
+  ## Note: We don't actually delete from TileDB sparse array - old data remains
+
+  ## but is effectively orphaned since metadata no longer references it.
+  ## A full rebuild would clean this up if storage becomes an issue.
+
+  if (verbose) message("Removed dataset '", dataset_name, "' from metadata")
+
+  metadata
+}
+
+
+#' @title Check if TileDB database needs update
+#'
+#' @description Checks if the TileDB database is missing any .pgx files
+#' from the specified directory.
+#'
+#' @param pgx_dir Directory containing .pgx files
+#' @param tiledb_path Path to TileDB database. If NULL, defaults to pgx_dir/counts_tiledb
+#'
+#' @return Logical indicating if update is needed (TRUE if TileDB doesn't exist
+#'   or is missing datasets)
+#'
+#' @export
+tiledb.needUpdate <- function(pgx_dir, tiledb_path = NULL) {
+  if (!dir.exists(pgx_dir)) {
+    return(FALSE)
+  }
+
+  ## Get pgx files in directory - if none, nothing to update
+  pgx_files <- list.files(pgx_dir, pattern = "\\.pgx$", full.names = FALSE)
+  if (length(pgx_files) == 0) {
+    return(FALSE)
+  }
+
+  if (is.null(tiledb_path)) {
+    tiledb_path <- file.path(pgx_dir, "counts_tiledb")
+  }
+
+  metadata_path <- paste0(tiledb_path, "_metadata.rds")
+
+  ## If TileDB doesn't exist, needs update
+  if (!dir.exists(tiledb_path) || !file.exists(metadata_path)) {
+    return(TRUE)
+  }
+  pgx_datasets <- tools::file_path_sans_ext(pgx_files)
+
+  ## Get datasets in TileDB
+  metadata <- tryCatch({
+    readRDS(metadata_path)
+  }, error = function(e) {
+    return(TRUE)  ## Can't read metadata, needs rebuild
+  })
+
+  if (is.null(metadata) || is.null(metadata$pgx_files)) {
+    return(TRUE)
+  }
+
+  tiledb_datasets <- tools::file_path_sans_ext(basename(metadata$pgx_files))
+
+  ## Check if any pgx files are missing from TileDB
+  missing <- setdiff(pgx_datasets, tiledb_datasets)
+
+  return(length(missing) > 0)
+}
+
+
+#' @title Update TileDB database for a folder
+#'
+#' @description Updates the TileDB database to include any new or modified
+#' .pgx files. If a specific file is provided via new_pgx, only that file
+#' is added/updated.
+#'
+#' @param pgx_dir Directory containing .pgx files
+#' @param tiledb_path Path to TileDB database. If NULL, defaults to pgx_dir/counts_tiledb
+#' @param new_pgx Optional. Specific .pgx filename that was just added/modified.
+#'   If provided, only this file is processed.
+#' @param verbose Logical, whether to print progress messages. Default TRUE.
+#'
+#' @return Invisibly returns the updated metadata, or NULL if no update needed
+#'
+#' @details This function mirrors the behavior of pgxinfo.updateDatasetFolder()
+#' for TileDB databases. It:
+#' \itemize{
+#'   \item Creates the TileDB database if it doesn't exist
+#'   \item Adds specific new datasets when new_pgx is provided
+#'   \item Or scans for all missing datasets and adds them
+#' }
+#'
+#' @export
+tiledb.updateDatasetFolder <- function(pgx_dir, tiledb_path = NULL, new_pgx = NULL, verbose = TRUE) {
+  if (!dir.exists(pgx_dir)) {
+    if (verbose) message("[tiledb.updateDatasetFolder] Directory does not exist: ", pgx_dir)
+    return(invisible(NULL))
+  }
+
+  if (is.null(tiledb_path)) {
+    tiledb_path <- file.path(pgx_dir, "counts_tiledb")
+  }
+
+  metadata_path <- paste0(tiledb_path, "_metadata.rds")
+
+  ## If specific file provided, just add that one
+  if (!is.null(new_pgx)) {
+    new_pgx <- sub("\\.pgx$", "", new_pgx)  ## strip extension if present
+    pgx_file <- file.path(pgx_dir, paste0(new_pgx, ".pgx"))
+
+    if (!file.exists(pgx_file)) {
+      if (verbose) message("[tiledb.updateDatasetFolder] PGX file not found: ", pgx_file)
+      return(invisible(NULL))
+    }
+
+    if (verbose) message("[tiledb.updateDatasetFolder] Adding dataset: ", new_pgx)
+    result <- tiledb.addDataset(tiledb_path, pgx_file, overwrite = TRUE, verbose = verbose)
+    return(invisible(result))
+  }
+
+  ## Otherwise, check what's missing and add all
+  pgx_files <- list.files(pgx_dir, pattern = "\\.pgx$", full.names = TRUE)
+  if (length(pgx_files) == 0) {
+    if (verbose) message("[tiledb.updateDatasetFolder] No .pgx files found in: ", pgx_dir)
+    return(invisible(NULL))
+  }
+
+  pgx_datasets <- tools::file_path_sans_ext(basename(pgx_files))
+
+  ## Get existing datasets in TileDB (if exists)
+  tiledb_datasets <- character(0)
+  if (dir.exists(tiledb_path) && file.exists(metadata_path)) {
+    metadata <- tryCatch({
+      readRDS(metadata_path)
+    }, error = function(e) NULL)
+
+    if (!is.null(metadata) && !is.null(metadata$pgx_files)) {
+      tiledb_datasets <- tools::file_path_sans_ext(basename(metadata$pgx_files))
+    }
+  }
+
+  ## Find missing datasets
+  missing_datasets <- setdiff(pgx_datasets, tiledb_datasets)
+
+  if (length(missing_datasets) == 0) {
+    if (verbose) message("[tiledb.updateDatasetFolder] TileDB is up to date")
+    return(invisible(NULL))
+  }
+
+  if (verbose) message("[tiledb.updateDatasetFolder] Adding ", length(missing_datasets), " missing dataset(s)")
+
+  ## Add each missing dataset
+  result <- NULL
+  for (ds in missing_datasets) {
+    pgx_file <- file.path(pgx_dir, paste0(ds, ".pgx"))
+    if (file.exists(pgx_file)) {
+      if (verbose) message("  Adding: ", ds)
+      result <- tryCatch({
+        tiledb.addDataset(tiledb_path, pgx_file, overwrite = TRUE, verbose = FALSE)
+      }, error = function(e) {
+        warning("Error adding dataset '", ds, "': ", e$message)
+        NULL
+      })
+    }
+  }
+
+  if (verbose && !is.null(result)) {
+    message("[tiledb.updateDatasetFolder] Done! Total datasets: ", result$n_files)
+  }
+
+  invisible(result)
 }
 

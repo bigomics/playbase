@@ -440,6 +440,47 @@ test_that("queryTileDB returns data.frame when as_matrix=FALSE", {
   expect_true(all(c("gene", "sample", "count") %in% colnames(result)))
 })
 
+test_that("queryTileDB returns z-scores when value='zscore'", {
+  fixture <- setup_test_tiledb()
+  on.exit(fixture$cleanup(), add = TRUE)
+
+  genes <- playbase::listGenesTileDB(fixture$tiledb_path)
+  query_genes <- head(genes, 3)
+
+  # Query z-scores as matrix
+  result <- playbase::queryTileDB(
+    fixture$tiledb_path,
+    genes = query_genes,
+    value = "zscore"
+  )
+
+  expect_true(is.matrix(result))
+  expect_equal(nrow(result), 3)
+  expect_equal(ncol(result), 7)
+
+  # Z-scores should have mean ~0 within each dataset
+  # (allowing for NA values from zero-variance genes)
+})
+
+test_that("queryTileDB returns zscore column in data.frame mode", {
+  fixture <- setup_test_tiledb()
+  on.exit(fixture$cleanup(), add = TRUE)
+
+  genes <- playbase::listGenesTileDB(fixture$tiledb_path)
+
+  result <- playbase::queryTileDB(
+    fixture$tiledb_path,
+    genes = genes[1],
+    as_matrix = FALSE,
+    value = "zscore"
+  )
+
+  expect_true(is.data.frame(result))
+  expect_true("zscore" %in% colnames(result))
+  expect_true("gene" %in% colnames(result))
+  expect_true("sample" %in% colnames(result))
+})
+
 test_that("queryTileDB filters by samples", {
   fixture <- setup_test_tiledb()
   on.exit(fixture$cleanup(), add = TRUE)
@@ -831,6 +872,236 @@ test_that("tiledbToPlotDF errors on invalid input", {
     playbase::tiledbToPlotDF("not a matrix or df"),
     "must be a matrix or data.frame"
   )
+})
+
+
+# ============================================================================
+# TESTS FOR Z-SCORE COMPUTATION
+# ============================================================================
+
+test_that("Z-scores are computed correctly per dataset", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_zscore_")
+  tiledb_path <- tempfile("tiledb_zscore_")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+    unlink(tiledb_path, recursive = TRUE)
+    unlink(paste0(tiledb_path, "_metadata.rds"))
+  }, add = TRUE)
+
+  # Create PGX with known values for easy z-score verification
+  set.seed(42)
+  n_genes <- 3
+  n_samples <- 4
+  gene_names <- paste0("GENE", seq_len(n_genes))
+  sample_names <- paste0("sample_", seq_len(n_samples))
+
+  # Create counts where we can predict z-scores
+  # Gene1: constant value (should give NA z-scores)
+  # Gene2 and Gene3: varying values
+  counts <- matrix(
+    c(100, 100, 100, 100,    # Gene1: constant
+      80, 90, 100, 110,      # Gene2: mean=95, sd~12.9
+      50, 100, 150, 200),    # Gene3: mean=125, sd~62.9
+    nrow = n_genes, ncol = n_samples, byrow = TRUE,
+    dimnames = list(gene_names, sample_names)
+  )
+
+  genes <- data.frame(
+    symbol = gene_names,
+    human_ortholog = gene_names,  # Keep same names
+    row.names = gene_names,
+    stringsAsFactors = FALSE
+  )
+
+  samples <- data.frame(
+    condition = rep("test", n_samples),
+    row.names = sample_names,
+    stringsAsFactors = FALSE
+  )
+
+  pgx <- list(counts = counts, genes = genes, samples = samples)
+  save_mock_pgx(pgx, file.path(pgx_dir, "test.pgx"))
+
+  playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
+
+  # Query z-scores
+  zscores <- playbase::queryTileDB(tiledb_path, genes = gene_names, value = "zscore")
+
+  # Gene1 (constant) should have NA z-scores
+  expect_true(all(is.na(zscores["GENE1", ])))
+
+  # Gene2 and Gene3 should have valid z-scores
+  # Z-scores should have mean 0 (within floating point tolerance)
+  gene2_zscores <- zscores["GENE2", ]
+  gene3_zscores <- zscores["GENE3", ]
+
+  expect_false(any(is.na(gene2_zscores)))
+  expect_false(any(is.na(gene3_zscores)))
+
+  expect_equal(mean(gene2_zscores), 0, tolerance = 1e-10)
+  expect_equal(mean(gene3_zscores), 0, tolerance = 1e-10)
+
+  # Z-scores should have sd 1
+
+  expect_equal(sd(gene2_zscores), 1, tolerance = 1e-10)
+  expect_equal(sd(gene3_zscores), 1, tolerance = 1e-10)
+})
+
+test_that("Z-scores are computed independently per dataset", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_zscore_multi_")
+  tiledb_path <- tempfile("tiledb_zscore_multi_")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+    unlink(tiledb_path, recursive = TRUE)
+    unlink(paste0(tiledb_path, "_metadata.rds"))
+  }, add = TRUE)
+
+  # Create two datasets with different scales
+  set.seed(42)
+
+  # Dataset A: low expression
+  counts_a <- matrix(
+    c(10, 20, 30),
+    nrow = 1, ncol = 3,
+    dimnames = list("TESTGENE", paste0("a_sample_", 1:3))
+  )
+  genes_a <- data.frame(symbol = "TESTGENE", human_ortholog = "TESTGENE", row.names = "TESTGENE")
+  samples_a <- data.frame(group = "A", row.names = paste0("a_sample_", 1:3))
+  pgx_a <- list(counts = counts_a, genes = genes_a, samples = samples_a)
+  save_mock_pgx(pgx_a, file.path(pgx_dir, "datasetA.pgx"))
+
+  # Dataset B: high expression (10x scale)
+  counts_b <- matrix(
+    c(100, 200, 300),
+    nrow = 1, ncol = 3,
+    dimnames = list("TESTGENE", paste0("b_sample_", 1:3))
+  )
+  genes_b <- data.frame(symbol = "TESTGENE", human_ortholog = "TESTGENE", row.names = "TESTGENE")
+  samples_b <- data.frame(group = "B", row.names = paste0("b_sample_", 1:3))
+  pgx_b <- list(counts = counts_b, genes = genes_b, samples = samples_b)
+  save_mock_pgx(pgx_b, file.path(pgx_dir, "datasetB.pgx"))
+
+  playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
+
+  # Query z-scores
+  zscores <- playbase::queryTileDB(tiledb_path, genes = "TESTGENE", value = "zscore")
+
+  # Get z-scores for each dataset
+  samples <- colnames(zscores)
+  ds_a_samples <- samples[grep("datasetA::", samples)]
+  ds_b_samples <- samples[grep("datasetB::", samples)]
+
+  zscores_a <- zscores[1, ds_a_samples]
+  zscores_b <- zscores[1, ds_b_samples]
+
+  # Both datasets should have same z-scores despite different scales
+  # (because z-scores are computed per-dataset)
+  expect_equal(as.numeric(zscores_a), as.numeric(zscores_b), tolerance = 1e-10)
+})
+
+test_that("Z-scores handle NA values in counts", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_zscore_na_")
+  tiledb_path <- tempfile("tiledb_zscore_na_")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+    unlink(tiledb_path, recursive = TRUE)
+    unlink(paste0(tiledb_path, "_metadata.rds"))
+  }, add = TRUE)
+
+  # Create counts with NA values
+  counts <- matrix(
+    c(10, NA, 30, 40),
+    nrow = 1, ncol = 4,
+    dimnames = list("GENE1", paste0("s", 1:4))
+  )
+
+  genes <- data.frame(symbol = "GENE1", human_ortholog = "GENE1", row.names = "GENE1")
+  samples <- data.frame(group = "test", row.names = paste0("s", 1:4))
+  pgx <- list(counts = counts, genes = genes, samples = samples)
+  save_mock_pgx(pgx, file.path(pgx_dir, "test.pgx"))
+
+  playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
+
+  # Query both counts and z-scores
+  counts_result <- playbase::queryTileDB(tiledb_path, genes = "GENE1", value = "count")
+  zscores_result <- playbase::queryTileDB(tiledb_path, genes = "GENE1", value = "zscore")
+
+  # NA in counts should result in NA in z-scores
+  na_samples <- colnames(counts_result)[is.na(counts_result[1, ])]
+  if (length(na_samples) > 0) {
+    expect_true(all(is.na(zscores_result[1, na_samples])))
+  }
+})
+
+test_that("Z-scores work with tiledb.addDataset", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_zscore_add_")
+  tiledb_path <- tempfile("tiledb_zscore_add_")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+    unlink(tiledb_path, recursive = TRUE)
+    unlink(paste0(tiledb_path, "_metadata.rds"))
+  }, add = TRUE)
+
+  # Create and add first dataset
+  counts1 <- matrix(
+    c(10, 20, 30),
+    nrow = 1, ncol = 3,
+    dimnames = list("GENE1", paste0("s1_", 1:3))
+  )
+  genes1 <- data.frame(symbol = "GENE1", human_ortholog = "GENE1", row.names = "GENE1")
+  samples1 <- data.frame(group = "A", row.names = paste0("s1_", 1:3))
+  pgx1 <- list(counts = counts1, genes = genes1, samples = samples1)
+  pgx1_file <- file.path(pgx_dir, "dataset1.pgx")
+  save_mock_pgx(pgx1, pgx1_file)
+
+  playbase::tiledb.addDataset(tiledb_path, pgx1_file, verbose = FALSE)
+
+  # Create and add second dataset
+  counts2 <- matrix(
+    c(100, 200, 300, 400),
+    nrow = 1, ncol = 4,
+    dimnames = list("GENE1", paste0("s2_", 1:4))
+  )
+  genes2 <- data.frame(symbol = "GENE1", human_ortholog = "GENE1", row.names = "GENE1")
+  samples2 <- data.frame(group = "B", row.names = paste0("s2_", 1:4))
+  pgx2 <- list(counts = counts2, genes = genes2, samples = samples2)
+  pgx2_file <- file.path(pgx_dir, "dataset2.pgx")
+  save_mock_pgx(pgx2, pgx2_file)
+
+  playbase::tiledb.addDataset(tiledb_path, pgx2_file, verbose = FALSE)
+
+  # Query z-scores - should work for both datasets
+  zscores <- playbase::queryTileDB(tiledb_path, genes = "GENE1", value = "zscore")
+
+  expect_equal(ncol(zscores), 7)  # 3 + 4 samples
+
+  # Verify z-scores are present for both datasets
+  samples <- colnames(zscores)
+  ds1_samples <- samples[grep("dataset1::", samples)]
+  ds2_samples <- samples[grep("dataset2::", samples)]
+
+  expect_equal(length(ds1_samples), 3)
+  expect_equal(length(ds2_samples), 4)
+
+  # Both should have valid z-scores
+  expect_false(any(is.na(zscores[1, ds1_samples])))
+  expect_false(any(is.na(zscores[1, ds2_samples])))
 })
 
 
@@ -1339,4 +1610,649 @@ test_that("Empty and NULL sample names don't crash the system", {
   # Just the separator
   expect_equal(playbase::getDatasetFromSample("::"), "")
   expect_equal(playbase::getSampleShortName("::"), "")
+})
+
+
+# ============================================================================
+# TESTS FOR INCREMENTAL UPDATE FUNCTIONS
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# tiledb.needUpdate tests
+# ----------------------------------------------------------------------------
+
+test_that("tiledb.needUpdate returns TRUE when TileDB doesn't exist", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_needupdate_")
+  tiledb_path <- tempfile("tiledb_needupdate_")
+  dir.create(pgx_dir)
+  on.exit(unlink(pgx_dir, recursive = TRUE), add = TRUE)
+
+  # Create a PGX file but no TileDB
+  pgx <- create_mock_pgx(n_genes = 5, n_samples = 3)
+  save_mock_pgx(pgx, file.path(pgx_dir, "test.pgx"))
+
+  result <- playbase::tiledb.needUpdate(pgx_dir, tiledb_path)
+  expect_true(result)
+})
+
+test_that("tiledb.needUpdate returns FALSE when TileDB is up to date", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_needupdate2_")
+  tiledb_path <- tempfile("tiledb_needupdate2_")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+    unlink(tiledb_path, recursive = TRUE)
+    unlink(paste0(tiledb_path, "_metadata.rds"))
+  }, add = TRUE)
+
+  # Create PGX and build TileDB
+  pgx <- create_mock_pgx(n_genes = 5, n_samples = 3)
+  save_mock_pgx(pgx, file.path(pgx_dir, "test.pgx"))
+  playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
+
+  result <- playbase::tiledb.needUpdate(pgx_dir, tiledb_path)
+  expect_false(result)
+})
+
+test_that("tiledb.needUpdate returns TRUE when new PGX files added", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_needupdate3_")
+  tiledb_path <- tempfile("tiledb_needupdate3_")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+    unlink(tiledb_path, recursive = TRUE)
+    unlink(paste0(tiledb_path, "_metadata.rds"))
+  }, add = TRUE)
+
+  # Create first PGX and build TileDB
+  pgx1 <- create_mock_pgx(n_genes = 5, n_samples = 3)
+  save_mock_pgx(pgx1, file.path(pgx_dir, "dataset1.pgx"))
+  playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
+
+  # Should be up to date
+  expect_false(playbase::tiledb.needUpdate(pgx_dir, tiledb_path))
+
+  # Add a new PGX file
+  pgx2 <- create_mock_pgx(n_genes = 5, n_samples = 4)
+  save_mock_pgx(pgx2, file.path(pgx_dir, "dataset2.pgx"))
+
+  # Now should need update
+  expect_true(playbase::tiledb.needUpdate(pgx_dir, tiledb_path))
+})
+
+test_that("tiledb.needUpdate returns FALSE for empty directory", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  empty_dir <- tempfile("pgx_empty_")
+  dir.create(empty_dir)
+  on.exit(unlink(empty_dir, recursive = TRUE), add = TRUE)
+
+  # No pgx files means nothing to update
+  result <- playbase::tiledb.needUpdate(empty_dir)
+  expect_false(result)
+})
+
+test_that("tiledb.needUpdate returns FALSE for non-existent directory", {
+  result <- playbase::tiledb.needUpdate("/nonexistent/path/12345")
+  expect_false(result)
+})
+
+test_that("tiledb.needUpdate uses default tiledb_path", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_defaultpath_")
+  dir.create(pgx_dir)
+  on.exit(unlink(pgx_dir, recursive = TRUE), add = TRUE)
+
+  pgx <- create_mock_pgx(n_genes = 5, n_samples = 3)
+  save_mock_pgx(pgx, file.path(pgx_dir, "test.pgx"))
+
+  # Should use pgx_dir/counts_tiledb as default
+  result <- playbase::tiledb.needUpdate(pgx_dir)
+  expect_true(result)  # TileDB doesn't exist at default path
+})
+
+
+# ----------------------------------------------------------------------------
+# tiledb.addDataset tests
+# ----------------------------------------------------------------------------
+
+test_that("tiledb.addDataset creates new database when none exists", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_add_create_")
+  tiledb_path <- tempfile("tiledb_add_create_")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+    unlink(tiledb_path, recursive = TRUE)
+    unlink(paste0(tiledb_path, "_metadata.rds"))
+  }, add = TRUE)
+
+  # Create PGX file
+  pgx <- create_mock_pgx(n_genes = 10, n_samples = 5)
+  pgx_file <- file.path(pgx_dir, "newdataset.pgx")
+  save_mock_pgx(pgx, pgx_file)
+
+  # Add to non-existent TileDB (should create it)
+  metadata <- playbase::tiledb.addDataset(tiledb_path, pgx_file, verbose = FALSE)
+
+  expect_true(dir.exists(tiledb_path))
+  expect_true(file.exists(paste0(tiledb_path, "_metadata.rds")))
+  expect_equal(metadata$n_files, 1)
+  expect_equal(metadata$n_samples, 5)
+  expect_equal(metadata$n_genes, 10)
+})
+
+test_that("tiledb.addDataset adds to existing database", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_add_existing_")
+  tiledb_path <- tempfile("tiledb_add_existing_")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+    unlink(tiledb_path, recursive = TRUE)
+    unlink(paste0(tiledb_path, "_metadata.rds"))
+  }, add = TRUE)
+
+  # Create first dataset and build TileDB
+  pgx1 <- create_mock_pgx(n_genes = 10, n_samples = 3)
+  save_mock_pgx(pgx1, file.path(pgx_dir, "dataset1.pgx"))
+  playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
+
+  # Create second dataset
+  pgx2 <- create_mock_pgx(n_genes = 10, n_samples = 4)
+  pgx2_file <- file.path(pgx_dir, "dataset2.pgx")
+  save_mock_pgx(pgx2, pgx2_file)
+
+  # Add second dataset
+  metadata <- playbase::tiledb.addDataset(tiledb_path, pgx2_file, verbose = FALSE)
+
+  expect_equal(metadata$n_files, 2)
+  expect_equal(metadata$n_samples, 7)  # 3 + 4
+
+  # Verify both datasets are queryable
+  datasets <- playbase::listDatasetsTileDB(tiledb_path)
+  expect_true("dataset1" %in% datasets)
+  expect_true("dataset2" %in% datasets)
+})
+
+test_that("tiledb.addDataset overwrites existing dataset", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_add_overwrite_")
+  tiledb_path <- tempfile("tiledb_add_overwrite_")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+    unlink(tiledb_path, recursive = TRUE)
+    unlink(paste0(tiledb_path, "_metadata.rds"))
+  }, add = TRUE)
+
+  # Create and add first version
+  pgx1 <- create_mock_pgx(n_genes = 10, n_samples = 3)
+  pgx_file <- file.path(pgx_dir, "mydataset.pgx")
+  save_mock_pgx(pgx1, pgx_file)
+  playbase::tiledb.addDataset(tiledb_path, pgx_file, verbose = FALSE)
+
+  initial_metadata <- readRDS(paste0(tiledb_path, "_metadata.rds"))
+  expect_equal(initial_metadata$n_samples, 3)
+
+  # Create updated version with more samples
+  pgx2 <- create_mock_pgx(n_genes = 10, n_samples = 7)
+  save_mock_pgx(pgx2, pgx_file)
+
+  # Overwrite
+  metadata <- playbase::tiledb.addDataset(tiledb_path, pgx_file, overwrite = TRUE, verbose = FALSE)
+
+  # Should have new sample count (metadata updated)
+  expect_equal(metadata$n_samples, 7)
+  expect_equal(metadata$n_files, 1)
+})
+
+test_that("tiledb.addDataset skips existing dataset when overwrite=FALSE", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_add_nooverwrite_")
+  tiledb_path <- tempfile("tiledb_add_nooverwrite_")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+    unlink(tiledb_path, recursive = TRUE)
+    unlink(paste0(tiledb_path, "_metadata.rds"))
+  }, add = TRUE)
+
+  # Create and add dataset
+  pgx <- create_mock_pgx(n_genes = 10, n_samples = 3)
+  pgx_file <- file.path(pgx_dir, "mydataset.pgx")
+  save_mock_pgx(pgx, pgx_file)
+  playbase::tiledb.addDataset(tiledb_path, pgx_file, verbose = FALSE)
+
+  # Try to add again with overwrite=FALSE
+  metadata <- playbase::tiledb.addDataset(tiledb_path, pgx_file, overwrite = FALSE, verbose = FALSE)
+
+  # Should return existing metadata unchanged
+  expect_equal(metadata$n_samples, 3)
+})
+
+test_that("tiledb.addDataset fails with non-existent PGX file", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  tiledb_path <- tempfile("tiledb_add_nofile_")
+
+  expect_error(
+    playbase::tiledb.addDataset(tiledb_path, "/nonexistent/file.pgx"),
+    "does not exist"
+  )
+})
+
+test_that("tiledb.addDataset fails with PGX without counts", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_add_nocounts_")
+  tiledb_path <- tempfile("tiledb_add_nocounts_")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+    unlink(tiledb_path, recursive = TRUE)
+    unlink(paste0(tiledb_path, "_metadata.rds"))
+  }, add = TRUE)
+
+  # Create PGX without counts
+  pgx_nocounts <- list(
+    genes = data.frame(symbol = "A", human_ortholog = "A"),
+    samples = data.frame(age = 30, row.names = "s1"),
+    counts = NULL
+  )
+  pgx_file <- file.path(pgx_dir, "nocounts.pgx")
+  save_mock_pgx(pgx_nocounts, pgx_file)
+
+  expect_error(
+    playbase::tiledb.addDataset(tiledb_path, pgx_file, verbose = FALSE),
+    "No counts found"
+  )
+})
+
+test_that("tiledb.addDataset preserves phenotype data", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_add_pheno_")
+  tiledb_path <- tempfile("tiledb_add_pheno_")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+    unlink(tiledb_path, recursive = TRUE)
+    unlink(paste0(tiledb_path, "_metadata.rds"))
+  }, add = TRUE)
+
+  # Create PGX with phenotypes
+  pgx <- create_mock_pgx(n_genes = 5, n_samples = 3, include_phenotypes = TRUE)
+  pgx_file <- file.path(pgx_dir, "withpheno.pgx")
+  save_mock_pgx(pgx, pgx_file)
+
+  playbase::tiledb.addDataset(tiledb_path, pgx_file, verbose = FALSE)
+
+  # Verify phenotypes stored
+  phenotypes <- playbase::listPhenotypesTileDB(tiledb_path)
+  expect_true("age" %in% phenotypes)
+  expect_true("sex" %in% phenotypes)
+  expect_true("condition" %in% phenotypes)
+
+  pheno_data <- playbase::queryPhenotypesTileDB(tiledb_path)
+  expect_equal(nrow(pheno_data), 3)
+})
+
+test_that("tiledb.addDataset handles multiple sequential additions", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_add_multi_")
+  tiledb_path <- tempfile("tiledb_add_multi_")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+    unlink(tiledb_path, recursive = TRUE)
+    unlink(paste0(tiledb_path, "_metadata.rds"))
+  }, add = TRUE)
+
+  # Add three datasets sequentially
+  for (i in 1:3) {
+    pgx <- create_mock_pgx(n_genes = 10, n_samples = i + 2)
+    pgx_file <- file.path(pgx_dir, paste0("dataset", i, ".pgx"))
+    save_mock_pgx(pgx, pgx_file)
+    playbase::tiledb.addDataset(tiledb_path, pgx_file, verbose = FALSE)
+  }
+
+  metadata <- readRDS(paste0(tiledb_path, "_metadata.rds"))
+  expect_equal(metadata$n_files, 3)
+  expect_equal(metadata$n_samples, 3 + 4 + 5)  # (1+2) + (2+2) + (3+2)
+
+  datasets <- playbase::listDatasetsTileDB(tiledb_path)
+  expect_equal(length(datasets), 3)
+})
+
+
+# ----------------------------------------------------------------------------
+# tiledb.updateDatasetFolder tests
+# ----------------------------------------------------------------------------
+
+test_that("tiledb.updateDatasetFolder creates TileDB when none exists", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_update_create_")
+  tiledb_path <- file.path(pgx_dir, "counts_tiledb")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+  }, add = TRUE)
+
+  # Create PGX file
+  pgx <- create_mock_pgx(n_genes = 10, n_samples = 5)
+  save_mock_pgx(pgx, file.path(pgx_dir, "test.pgx"))
+
+  # Update folder (should create TileDB)
+  metadata <- playbase::tiledb.updateDatasetFolder(pgx_dir, verbose = FALSE)
+
+  expect_true(dir.exists(tiledb_path))
+  expect_equal(metadata$n_files, 1)
+  expect_equal(metadata$n_samples, 5)
+})
+
+test_that("tiledb.updateDatasetFolder adds specific new_pgx file", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_update_specific_")
+  tiledb_path <- file.path(pgx_dir, "counts_tiledb")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+  }, add = TRUE)
+
+  # Create first dataset and update folder
+  pgx1 <- create_mock_pgx(n_genes = 10, n_samples = 3)
+  save_mock_pgx(pgx1, file.path(pgx_dir, "dataset1.pgx"))
+  playbase::tiledb.updateDatasetFolder(pgx_dir, verbose = FALSE)
+
+  # Create second dataset
+  pgx2 <- create_mock_pgx(n_genes = 10, n_samples = 4)
+  save_mock_pgx(pgx2, file.path(pgx_dir, "dataset2.pgx"))
+
+  # Update with specific file
+  metadata <- playbase::tiledb.updateDatasetFolder(
+    pgx_dir,
+    new_pgx = "dataset2.pgx",
+    verbose = FALSE
+  )
+
+  expect_equal(metadata$n_files, 2)
+  expect_equal(metadata$n_samples, 7)
+})
+
+test_that("tiledb.updateDatasetFolder handles new_pgx without extension", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_update_noext_")
+  tiledb_path <- file.path(pgx_dir, "counts_tiledb")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+  }, add = TRUE)
+
+  pgx <- create_mock_pgx(n_genes = 10, n_samples = 5)
+  save_mock_pgx(pgx, file.path(pgx_dir, "mydata.pgx"))
+
+  # Pass without .pgx extension
+  metadata <- playbase::tiledb.updateDatasetFolder(
+    pgx_dir,
+    new_pgx = "mydata",
+    verbose = FALSE
+  )
+
+  expect_equal(metadata$n_files, 1)
+})
+
+test_that("tiledb.updateDatasetFolder adds all missing datasets", {
+
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_update_missing_")
+  tiledb_path <- file.path(pgx_dir, "counts_tiledb")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+  }, add = TRUE)
+
+  # Create first dataset and build TileDB
+  pgx1 <- create_mock_pgx(n_genes = 10, n_samples = 3)
+  save_mock_pgx(pgx1, file.path(pgx_dir, "dataset1.pgx"))
+  playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
+
+  # Add two more datasets
+  pgx2 <- create_mock_pgx(n_genes = 10, n_samples = 4)
+  pgx3 <- create_mock_pgx(n_genes = 10, n_samples = 5)
+  save_mock_pgx(pgx2, file.path(pgx_dir, "dataset2.pgx"))
+  save_mock_pgx(pgx3, file.path(pgx_dir, "dataset3.pgx"))
+
+  # Update folder (no new_pgx specified - should find all missing)
+  metadata <- playbase::tiledb.updateDatasetFolder(pgx_dir, verbose = FALSE)
+
+  expect_equal(metadata$n_files, 3)
+  expect_equal(metadata$n_samples, 12)  # 3 + 4 + 5
+})
+
+test_that("tiledb.updateDatasetFolder returns NULL when up to date", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_update_uptodate_")
+  tiledb_path <- file.path(pgx_dir, "counts_tiledb")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+  }, add = TRUE)
+
+  pgx <- create_mock_pgx(n_genes = 10, n_samples = 5)
+  save_mock_pgx(pgx, file.path(pgx_dir, "test.pgx"))
+  playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
+
+  # Update when already up to date
+  result <- playbase::tiledb.updateDatasetFolder(pgx_dir, verbose = FALSE)
+
+  expect_null(result)
+})
+
+test_that("tiledb.updateDatasetFolder returns NULL for empty directory", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  empty_dir <- tempfile("pgx_update_empty_")
+  dir.create(empty_dir)
+  on.exit(unlink(empty_dir, recursive = TRUE), add = TRUE)
+
+  result <- playbase::tiledb.updateDatasetFolder(empty_dir, verbose = FALSE)
+  expect_null(result)
+})
+
+test_that("tiledb.updateDatasetFolder returns NULL for non-existent directory", {
+  result <- playbase::tiledb.updateDatasetFolder("/nonexistent/path/12345", verbose = FALSE)
+  expect_null(result)
+})
+
+test_that("tiledb.updateDatasetFolder returns NULL for non-existent new_pgx", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_update_nofile_")
+  dir.create(pgx_dir)
+  on.exit(unlink(pgx_dir, recursive = TRUE), add = TRUE)
+
+  result <- playbase::tiledb.updateDatasetFolder(
+    pgx_dir,
+    new_pgx = "nonexistent.pgx",
+    verbose = FALSE
+  )
+
+  expect_null(result)
+})
+
+test_that("tiledb.updateDatasetFolder uses custom tiledb_path", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_update_custompath_")
+  custom_tiledb <- tempfile("custom_tiledb_")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+    unlink(custom_tiledb, recursive = TRUE)
+    unlink(paste0(custom_tiledb, "_metadata.rds"))
+  }, add = TRUE)
+
+  pgx <- create_mock_pgx(n_genes = 10, n_samples = 5)
+  save_mock_pgx(pgx, file.path(pgx_dir, "test.pgx"))
+
+  metadata <- playbase::tiledb.updateDatasetFolder(
+    pgx_dir,
+    tiledb_path = custom_tiledb,
+    verbose = FALSE
+  )
+
+  expect_true(dir.exists(custom_tiledb))
+  expect_equal(metadata$n_files, 1)
+})
+
+test_that("tiledb.updateDatasetFolder handles errors gracefully", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_update_error_")
+  dir.create(pgx_dir)
+  on.exit(unlink(pgx_dir, recursive = TRUE), add = TRUE)
+
+  # Create one valid and one invalid PGX
+  pgx_valid <- create_mock_pgx(n_genes = 5, n_samples = 3)
+  save_mock_pgx(pgx_valid, file.path(pgx_dir, "valid.pgx"))
+
+  pgx_invalid <- list(counts = NULL, genes = NULL)
+  save_mock_pgx(pgx_invalid, file.path(pgx_dir, "invalid.pgx"))
+
+  # Should complete with warnings but not fail
+  expect_warning(
+    metadata <- playbase::tiledb.updateDatasetFolder(pgx_dir, verbose = FALSE)
+  )
+
+  # Valid dataset should still be added
+  expect_equal(metadata$n_files, 1)
+})
+
+
+# ----------------------------------------------------------------------------
+# Integration tests for incremental updates
+# ----------------------------------------------------------------------------
+
+test_that("Full workflow: build, add, query cycle works", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_workflow_")
+  tiledb_path <- file.path(pgx_dir, "counts_tiledb")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+  }, add = TRUE)
+
+  # Step 1: Create initial dataset
+  pgx1 <- create_mock_pgx(n_genes = 10, n_samples = 3)
+  save_mock_pgx(pgx1, file.path(pgx_dir, "initial.pgx"))
+
+  # Step 2: Build initial TileDB
+  playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
+  expect_equal(playbase::listDatasetsTileDB(tiledb_path), "initial")
+
+  # Step 3: Add new dataset via tiledb.addDataset
+  pgx2 <- create_mock_pgx(n_genes = 10, n_samples = 4)
+  save_mock_pgx(pgx2, file.path(pgx_dir, "added.pgx"))
+  playbase::tiledb.addDataset(tiledb_path, file.path(pgx_dir, "added.pgx"), verbose = FALSE)
+
+  datasets <- playbase::listDatasetsTileDB(tiledb_path)
+  expect_true("initial" %in% datasets)
+  expect_true("added" %in% datasets)
+
+  # Step 4: Add another via tiledb.updateDatasetFolder
+  pgx3 <- create_mock_pgx(n_genes = 10, n_samples = 5)
+  save_mock_pgx(pgx3, file.path(pgx_dir, "updated.pgx"))
+  playbase::tiledb.updateDatasetFolder(pgx_dir, new_pgx = "updated", verbose = FALSE)
+
+  # Step 5: Verify all data is queryable
+  datasets <- playbase::listDatasetsTileDB(tiledb_path)
+  expect_equal(length(datasets), 3)
+
+  samples <- playbase::listSamplesTileDB(tiledb_path)
+  expect_equal(length(samples), 12)  # 3 + 4 + 5
+
+  genes <- playbase::listGenesTileDB(tiledb_path)
+  result <- playbase::queryTileDB(tiledb_path, genes = genes[1:3])
+  expect_equal(ncol(result), 12)
+
+  # Step 6: Verify phenotypes from all datasets
+  pheno <- playbase::queryPhenotypesTileDB(tiledb_path)
+  expect_equal(nrow(pheno), 12)
+})
+
+test_that("Incremental updates preserve existing data integrity", {
+  skip_if_not(requireNamespace("tiledb", quietly = TRUE),
+              message = "tiledb not installed")
+
+  pgx_dir <- tempfile("pgx_integrity_")
+  tiledb_path <- file.path(pgx_dir, "counts_tiledb")
+  dir.create(pgx_dir)
+  on.exit({
+    unlink(pgx_dir, recursive = TRUE)
+  }, add = TRUE)
+
+  # Create dataset with known values
+  set.seed(123)
+  pgx1 <- create_mock_pgx(n_genes = 5, n_samples = 3)
+  save_mock_pgx(pgx1, file.path(pgx_dir, "dataset1.pgx"))
+  playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
+
+  # Query original data
+  genes <- playbase::listGenesTileDB(tiledb_path)
+  original_result <- playbase::queryTileDB(tiledb_path, genes = genes)
+  original_ds1_data <- original_result[, grep("dataset1", colnames(original_result))]
+
+  # Add second dataset
+  set.seed(456)
+  pgx2 <- create_mock_pgx(n_genes = 5, n_samples = 4)
+  save_mock_pgx(pgx2, file.path(pgx_dir, "dataset2.pgx"))
+  playbase::tiledb.addDataset(tiledb_path, file.path(pgx_dir, "dataset2.pgx"), verbose = FALSE)
+
+  # Query again and verify dataset1 data unchanged
+  new_result <- playbase::queryTileDB(tiledb_path, genes = genes)
+  new_ds1_data <- new_result[, grep("dataset1", colnames(new_result))]
+
+  expect_equal(original_ds1_data, new_ds1_data)
 })
