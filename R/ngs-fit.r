@@ -652,7 +652,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
     tables <- list()
     exp1 <- (design1 %*% contr1)
     for (i in 1:ncol(contr1)) {
-      top <- limma::topTable(efit, coef = i, sort.by = "none", number = Inf, adjust.method = "BH")
+      top <- limma::topTable(efit, coef = i, sort.by = "none", number = Inf)
       j1 <- which(exp1[, i] > 0)
       j2 <- which(exp1[, i] < 0)
       mean1 <- rowMeans(X1[, j1, drop = FALSE], na.rm = TRUE)
@@ -695,7 +695,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
             efit <- try(limma::eBayes(vfit, trend = FALSE, robust = FALSE), silent = TRUE)
           }
         }
-        top <- try(limma::topTable(efit, coef = 1, sort.by = "none", number = Inf, adjust.method = "BH"), silent = TRUE)
+        top <- try(limma::topTable(efit, coef = 1, sort.by = "none", number = Inf), silent = TRUE)
         if ("try-error" %in% class(top)) {
           top <- data.frame(matrix(NA, nrow = nrow(X1), ncol = 6))
           rownames(top) <- rownames(X1)
@@ -710,16 +710,16 @@ ngs.fitContrastsWithLIMMA <- function(X,
           covariates1 <- covariates[kk, , drop = FALSE]
           for (k in 1:ncol(covariates1)) {
             cov.val <- covariates1[, k]
-            cov.name <- colnames(covariates1)[k]
             keep <- which(!is.na(cov.val))
-            c1 <- (length(keep) == 0)
-            c2 <- (length(unique(y[keep])) == 1)
-            if (c1 | c2) next
-            X2 <- X1[, keep, drop = FALSE]
-            cov.val <- cov.val[keep]
-            y1 <- y[keep]
-            top_cov <- ngs.fitContrastsWithLIMMA.regress.covs(X2, y1, cov.val, cov.name, trend, robust)
-            cov.pval[[cov.name]] <- top_cov
+            if (!length(keep) || length(unique(y[keep])) == 1) next
+            top_cov <- ngs.fitContrastsWithLIMMA.regress.covs(
+              X = X1[, keep, drop = FALSE],
+              y = y[keep],
+              covariate = cov.val[keep],
+              covariate.name = colnames(covariates1)[k],
+              trend = trend, robust = robust
+            )
+            cov.pval[[colnames(covariates1)[k]]] <- top_cov
           }
         }
         
@@ -774,7 +774,7 @@ ngs.fitContrastsWithLIMMA.regress.covs <- function(X,
                                                    robust = TRUE) {
 
 
-  message("[ngs.fitContrastsWithLIMMA.regress.covs:] Regressing out covariates: ", covariate.name)
+  message("[ngs.fitContrastsWithLIMMA.regress.covs]: Regressing out covariate: ", covariate.name)
   
   if (is.character(covariate)) {
     covariate <- factor(covariate)
@@ -794,8 +794,8 @@ ngs.fitContrastsWithLIMMA.regress.covs <- function(X,
   y_cols <- intersect(c("yneg", "yo", "ypos"), colnames(design))
   contr[y_cols, 1] <- c(-1, 0, 1)[match(y_cols, c("yneg", "yo", "ypos"))]
   
-  vfit <- suppressMessages(limma::lmFit(X, design))
-  vfit <- suppressMessages(limma::contrasts.fit(vfit, contrasts = contr))
+  vfit <- try(limma::lmFit(X, design), silent = TRUE)
+  vfit <- try(limma::contrasts.fit(vfit, contrasts = contr), silent = TRUE)
   efit <- try(limma::eBayes(vfit, trend = trend, robust = robust), silent = TRUE)
   if ("try-error" %in% class(efit)) {
     efit <- try(limma::eBayes(vfit, trend = trend, robust = FALSE), silent = TRUE)
@@ -803,18 +803,23 @@ ngs.fitContrastsWithLIMMA.regress.covs <- function(X,
       efit <- try(limma::eBayes(vfit, trend = FALSE, robust = FALSE), silent = TRUE)
     }
   }
-      
-  top <- try(limma::topTable(efit, coef = 1, sort.by = "none", number = Inf), silent = TRUE)
-  if ("try-error" %in% class(top)) {
+
+  if ("try-error" %in% class(efit)) {
     top <- data.frame(matrix(NA, nrow = nrow(X), ncol = 1))
     rownames(top) <- rownames(X)
   } else {
-    top <- top[rownames(X), "P.Value", drop = FALSE]
+    top <- try(limma::topTable(efit, coef = 1, sort.by = "none", number = Inf), silent = TRUE)
+    if ("try-error" %in% class(top)) {
+      top <- data.frame(matrix(NA, nrow = nrow(X), ncol = 1))
+      rownames(top) <- rownames(X)
+    } else {
+      top <- top[rownames(X), "P.Value", drop = FALSE]
+    }
   }
 
+  colnames(top) <- paste0("P.Value.", covariate.name) 
   nas <- which(is.na(top[, 1])) ## set NA pvalues to 1
   if(length(nas) > 0) top[nas, 1] <- 1
-  colnames(top) <- paste0("P.Value.", covariate.name) 
   
   return(top)
   
@@ -1206,18 +1211,19 @@ ngs.fitContrastsWithEDGER <- function(counts,
       covariates1 <- covariates[kk, , drop = FALSE]
       for (k in 1:ncol(covariates1)) {
         cov.val <- covariates1[, k]
-        cov.name <- colnames(covariates1)[k]
         keep <- which(!is.na(cov.val))
-        c1 <- (length(keep) == 0)
-        c2 <- (length(unique(y[keep])) == 1)
-        if (c1 | c2) next        
-        counts2 <- counts1[, keep, drop = FALSE]
-        X2 <- X1[, keep, drop = FALSE]
-        y1 <- y[keep]
-        cov.val <- cov.val[keep]
-        top_cov <- ngs.fitContrastsWithEDGER.regress.covs(counts2, X2, group, y1,
-          cov.val, cov.name, method, robust, calc.tmm)
-        cov.pval[[cov.name]] <- top_cov
+        if (!length(keep) || length(unique(y[keep])) == 1) next
+        top_cov <- ngs.fitContrastsWithEDGER.regress.covs(
+          counts = counts1[, keep, drop = FALSE],
+          X = X1[, keep, drop = FALSE],
+          group = group,
+          y = y[keep],
+          covariate = cov.val[keep],
+          covariate.name = colnames(covariates1)[k],
+          method = method,
+          robust = robust, calc.tmm = calc.tmm
+        )
+        cov.pval[[colnames(covariates1)[k]]] <- top_cov
       }
     }
 
@@ -1269,7 +1275,7 @@ ngs.fitContrastsWithEDGER.regress.covs <- function(counts,
                                                    robust = TRUE,
                                                    calc.tmm = TRUE) {
   
-  message("[ngs.fitContrastsWithEDGER.regress.covs:] Regressing out covariates: ", covariate.name)
+  message("[ngs.fitContrastsWithEDGER.regress.covs]: Regressing out covariate: ", covariate.name)
   
   if (is.character(covariate)) {
     covariate <- as.factor(covariate)
@@ -1282,8 +1288,8 @@ ngs.fitContrastsWithEDGER.regress.covs <- function(counts,
     }
   }
   
-  dge <- edgeR::DGEList(round(counts), group = group)
-  if (calc.tmm) dge <- edgeR::normLibSizes(dge, method = "TMM")
+  dge <- try(edgeR::DGEList(round(counts), group = group), silent = TRUE)
+  if (calc.tmm) dge <- try(edgeR::normLibSizes(dge, method = "TMM"), silent = TRUE)
 
   design <- stats::model.matrix(~ cov + y, data = data.frame(y = y, cov = covariate))
   dge <- try(edgeR::estimateDisp(dge, design = design, robust = robust), silent = TRUE)
@@ -1306,10 +1312,9 @@ ngs.fitContrastsWithEDGER.regress.covs <- function(counts,
   } else {
     top <- top[rownames(X), "PValue", drop = FALSE]
   }
-
+  colnames(top) <- paste0("P.Value.", covariate.name)
   nas <- which(is.na(top[, 1])) ## set NA pvalues to 1
   if(length(nas) > 0) top[nas, 1] <- 1
-  colnames(top) <- paste0("P.Value.", covariate.name) 
 
   return(top)
   
@@ -1455,6 +1460,7 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
     out <- .ngs.fitContrastsWithDESEQ2.nodesign(
       counts = counts,
       contr.matrix = contr.matrix,
+      covariates = covariates,
       test = test,
       timeseries = timeseries,
       prune.samples = prune.samples,
@@ -1462,6 +1468,7 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
     )
     return(out)
   }
+
   message("[ngs.fitContrastsWithDESEQ2] fitting DESEQ2 using design matrix")
 
   design.formula <- stats::formula(" ~ 0 + group")
@@ -1565,6 +1572,7 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
 
   res <- list(tables = tables)
   return(res)
+
 }
 
 
@@ -1572,12 +1580,18 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
 #' @export
 .ngs.fitContrastsWithDESEQ2.nodesign <- function(counts,
                                                  contr.matrix,
+                                                 covariates = NULL,
                                                  test = "Wald",
                                                  fitType = "mean",
                                                  prune.samples = FALSE,
                                                  conform.output = FALSE,
                                                  X = NULL,
                                                  timeseries = NULL) {
+
+  saveRDS(list(counts=counts, contr.matrix=contr.matrix,
+    covariates=covariates, test=test, fitType=fitType,
+    prune.samples=prune.samples, conform.output=conform.output,
+    X=X, timeseries=timeseries), "~/Desktop/oo.RDS")
 
   ## EdgeR/Deseq2 not available for proteomics. Thus, autoscaling is rarely run.
   counts <- playbase::counts.autoScaling(counts)$counts
@@ -1586,13 +1600,12 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
   if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
 
   if (nrow(contr.matrix) != ncol(X)) {
-    stop("ngs.fitContrastsWithDESEQ2.nodesign:: contrast matrix must be by sample")
+    stop("[ngs.fitContrastsWithDESEQ2.nodesign]: contrast matrix must be by sample")
   }
 
   exp.matrix <- contr.matrix
   tables <- list()
   for (i in 1:ncol(exp.matrix)) {
-    ## manual design matrix (CHECK THIS!!!)
     kk <- 1:nrow(exp.matrix)
     if (prune.samples) {
       kk <- which(!is.na(exp.matrix[, i]) & exp.matrix[, i] != 0)
@@ -1604,149 +1617,211 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
       resx <- .ngs.fitContrastsWithDESEQ2.nodesign.timeseries(counts1, y, timeseries, test = test)
     } else {
       colData <- data.frame(y, row.names = colnames(counts1))
-      ## sample-wise model matrix (does this work???)
       colnames(counts1) <- NULL
-      design.formula <- stats::formula("~ 0 + y")
-      dds <- DESeq2::DESeqDataSetFromMatrix(
-        countData = counts1,
-        design = design.formula,
-        colData = colData
-      )
-      ## fitType <- "mean"
+      design <- stats::formula("~ 0 + y")
+      dds <- DESeq2::DESeqDataSetFromMatrix(countData = counts1, design = design, colData = colData)
       suppressWarnings({
         if (test == "glmGamPoi" || fitType == "glmGamPoi") {
-          dds <- try(DESeq2::DESeq(dds, fitType = "glmGamPoi", test = "LRT", reduced = ~1))
+          dds <- try(DESeq2::DESeq(dds, fitType = "glmGamPoi", test = "LRT", reduced = ~1), silent = TRUE)
         } else if (test == "LRT") {
-          dds <- try(DESeq2::DESeq(dds, fitType = fitType, test = "LRT", reduced = ~1))
+          dds <- try(DESeq2::DESeq(dds, fitType = fitType, test = "LRT", reduced = ~1), silent = TRUE)
         } else {
-          dds <- try(DESeq2::DESeq(dds, fitType = fitType, test = "Wald"))
+          dds <- try(DESeq2::DESeq(dds, fitType = fitType, test = "Wald"), silent = TRUE)
         }
       })
-      ## sometime DESEQ2 fails
       if ("try-error" %in% class(dds)) {
         message("[.ngs.fitContrastsWithDESEQ2.nodesign] retrying DESEQ2 with gene-wise estimates...")
-        dds <- DESeq2::DESeqDataSetFromMatrix(
-          countData = counts1,
-          design = design.formula,
-          colData = data.frame(y)
+        dds <- try(
+          DESeq2::DESeqDataSetFromMatrix(countData = counts1, design = design, colData = data.frame(y)),
+          silent = TRUE
         )
-        dds <- DESeq2::estimateSizeFactors(dds)
+        dds <- try(DESeq2::estimateSizeFactors(dds), silent = TRUE)
         disp.type <- ifelse(test == "glmGamPoi", "glmGamPoi", "DESeq2")
-        dds <- DESeq2::estimateDispersionsGeneEst(dds, type = disp.type)
+        dds <- try(DESeq2::estimateDispersionsGeneEst(dds, type = disp.type), silent = TRUE)
         DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
         suppressWarnings({
           if (test == "LRT") {
-            dds <- try(DESeq2::nbinomLRT(dds))
+            dds <- try(DESeq2::nbinomLRT(dds), silent = TRUE)
           } else if (test == "glmGamPoi") {
-            dds <- try(DESeq2::nbinomLRT(dds, type = "glmGamPoi"))
+            dds <- try(DESeq2::nbinomLRT(dds, type = "glmGamPoi"), silent = TRUE)
           } else {
-            dds <- try(DESeq2::nbinomWaldTest(dds))
+            dds <- try(DESeq2::nbinomWaldTest(dds), silent = TRUE)
           }
         })
       }
-      ## DESeq2::resultsNames(dds)
       ctx <- c("yneg" = -1, "yzero" = 0, "ypos" = 1)[DESeq2::resultsNames(dds)]
       resx <- DESeq2::results(dds, contrast = ctx, cooksCutoff = FALSE, independentFiltering = FALSE)
-      ## we add the gene annotation here (not standard...)
       rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
     }
+
     X1 <- X[, kk, drop = FALSE]
     pos.samples <- which(exp.matrix[kk, i] > 0)
     neg.samples <- which(exp.matrix[kk, i] < 0)
     resx$AveExpr1 <- rowMeans(X1[, pos.samples, drop = FALSE], na.rm = TRUE)
     resx$AveExpr0 <- rowMeans(X1[, neg.samples, drop = FALSE], na.rm = TRUE)
     resx$log2BaseMean <- log2(0.0001 + resx$baseMean)
-    if (conform.output) {
-      ## For time-series we keep DESeq2 log2FC from LRT/Wald.
+    resx <- as.data.frame(resx)
+    
+    if (conform.output) { ## timeseries: keep DESeq2 log2FC
       if (!grepl("^IA:*", colnames(exp.matrix)[i])) {
-        resx$log2FoldChange <- (resx$AveExpr1 - resx$AveExpr0) ## recompute
+        resx$log2FoldChange <- (resx$AveExpr1 - resx$AveExpr0)
       }
     }
-    tables[[i]] <- data.frame(resx)
+    
+    ## Regress out covariates (if present). Get p-value.
+    cov.pval <- list()
+    if (!is.null(covariates)) {
+      covariates1 <- covariates[kk, , drop = FALSE]
+      for (k in 1:ncol(covariates1)) {
+        cov.val <- covariates1[, k]
+        keep <- which(!is.na(cov.val))
+        if (!length(keep) || length(unique(y[keep])) == 1) next
+        top_cov <- ngs.fitContrastsWithDESEQ2.regress.covs(
+          counts = counts1[, keep, drop = FALSE],
+          X = X1[, keep, drop = FALSE],
+          y = y[keep],
+          covariate = cov.val[keep],
+          covariate.name = colnames(covariates1)[k],
+          test = test, fitType = fitType
+        )
+        cov.pval[[colnames(covariates1)[k]]] <- top_cov
+      }
+    }
+
+    if (length(cov.pval) > 0) {    
+      top_cov <- do.call(cbind, cov.pval)
+      cm <- intersect(rownames(top_cov), rownames(resx))
+      top <- cbind(resx[cm, , drop = FALSE], top_cov[cm, , drop = FALSE])      
+    }
+
+    tables[[i]] <- top
     names(tables)[i] <- colnames(exp.matrix)[i]
+    
   }
 
   if (conform.output) {
     for (i in 1:length(tables)) {
       k1 <- c("log2FoldChange", "log2BaseMean", "stat", "pvalue", "padj", "AveExpr0", "AveExpr1")
       k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
-      tables[[i]] <- tables[[i]][, k1]
-      colnames(tables[[i]]) <- k2
+      ec <- grep("^P\\.Value\\.", colnames(tables[[i]]), value = TRUE)
+      tables[[i]] <- tables[[i]][, c(k1, ec)]
+      colnames(tables[[i]])[1:length(k2)] <- k2
     }
   }
 
   return(list(tables = tables))
+  
 }
 
-## #' @title ngs.fitContrastsWithDESEQ2.regress.covs. See ngs.fitContrastsWithDESEQ2().
-## #' @param counts counts matrix. Features in rows; samples in columns.
-## #' @param X log2-transformed (and normalized) data matrix. Features in rows; samples in columns.
-## #' @param y phenotype vector (main contrast)
-## #' @param covariate covariate vector
-## #' @param covariate.name covariate name. 
-## #' @description Regress out covariate from main contrast using DESeq2.
-## #' @return Table with p-values of main contrast adjusted for the covariate.
-## #' @name ngs.fitContrastsWithDESEQ2.regress.covs
-## #' @export
-## ngs.fitContrastsWithDESEQ2.regress.covs <- function(counts,
-##                                                     X,
-##                                                     group,
-##                                                     y,
-##                                                     covariate,
-##                                                     covariate.name = "covariate",
-##                                                     method,
-##                                                     robust = TRUE,
-##                                                     calc.tmm = TRUE) {
+#' @title ngs.fitContrastsWithDESEQ2.regress.covs. See ngs.fitContrastsWithDESEQ2().
+#' @param counts counts matrix. Features in rows; samples in columns.
+#' @param X log2-transformed (and normalized) data matrix. Features in rows; samples in columns.
+#' @param y phenotype vector (main contrast)
+#' @param covariate covariate vector
+#' @param covariate.name covariate name.
+#' @description Regress out covariate from main contrast using DESeq2.
+#' @return Table with p-values of main contrast adjusted for the covariate.
+#' @name ngs.fitContrastsWithDESEQ2.regress.covs
+#' @export
+ngs.fitContrastsWithDESEQ2.regress.covs <- function(counts,
+                                                    X,
+                                                    y,
+                                                    covariate,
+                                                    covariate.name = "covariate",
+                                                    test = "Wald",
+                                                    fitType = "mean") {
   
-##   message("[ngs.fitContrastsWithEDGER.regress.covs:] Regressing out covariates: ", covariate.name)
+  message("[ngs.fitContrastsWithDESEQ2.regress.covs]: Regressing out covariate: ", covariate.name)
   
-##   cov.val <- covariate
+  if (is.character(covariate)) {
+    covariate <- as.factor(covariate)
+  } else if (is.numeric(covariate)) {
+    nn <- unique(covariate[!is.na(covariate)])
+    if (length(nn) <= 4) { ## edge case: likely categorical
+      covariate <- factor(covariate)
+    } else {
+      covariate <- as.numeric(covariate) ## no arbitrary binning
+    }
+  }
 
-##   if (is.character(cov.val)) {
-##     cov.val <- as.factor(cov.val)
-##   } else if (is.numeric(cov.val)) {
-##     nn <- unique(cov.val[!is.na(cov.val)])
-##     if (length(nn) <= 4) { ## edge case: likely categorical
-##       cov.val <- factor(cov.val)
-##     } else {
-##       cov.val <- as.numeric(cov.val) ## no arbitrary binning
-##     }
-##   }
+  colData <- data.frame(y = y, cov = covariate)
+  colnames(colData)[2] <- covariate.name
+  design <- stats::formula(paste("~ 0 +", covariate.name, "+ y"))
+  dds <- try(
+    DESeq2::DESeqDataSetFromMatrix(countData = counts, design = design, colData = colData),
+    silent = TRUE
+  )
 
-##   mm <- data.frame(y = y, cov = cov.val)
-##   design <- stats::model.matrix(~ cov + y, data = mm)
+  reduced <- NULL
+  if (test == "LRT" || test == "glmGamPoi" || fitType == "glmGamPoi") {
+    reduced <- stats::formula(paste("~", covariate.name))
+  }
 
-##   dge <- edgeR::DGEList(round(counts), group = group)
-##   if (calc.tmm) dge <- edgeR::normLibSizes(dge, method = "TMM")
-  
-##   dge <- try(edgeR::estimateDisp(dge, design = design, robust = robust), silent = TRUE)
-##   if ("try-error" %in% class(dge_cov)) {
-##     dge <- try(edgeR::estimateDisp(dge, design = design, robust = FALSE), silent = TRUE)
-##   }
-  
-##   if (method == "qlf") {
-##     fit <- try(edgeR::glmQLFit(dge, design, robust = robust), silent = TRUE)
-##     res <- try(edgeR::glmQLFTest(fit, coef = ncol(design)), silent = TRUE)
-##   } else if (method == "lrt") {
-##     fit <- try(edgeR::glmFit(dge, design, robust = robust), silent = TRUE)
-##     res <- try(edgeR::glmLRT(fit, coef = ncol(design)), silent = TRUE)
-##   }
-  
-##   top <- try(edgeR::topTags(res, n = 1e9)$table, silent = TRUE)
-##   if ("try-error" %in% class(top)) {
-##     top <- data.frame(matrix(NA, nrow = nrow(X), ncol = 1))
-##     rownames(top) <- rownames(X)
-##   } else {
-##     top <- top[rownames(X), "PValue", drop = FALSE]
-##   }
+  suppressWarnings({
+    if (test == "glmGamPoi" || fitType == "glmGamPoi") {
+      dds <- try(DESeq2::DESeq(dds, fitType = "glmGamPoi", test = "LRT", reduced = reduced),
+        silent = TRUE)
+    } else if (test == "LRT") {
+      dds <- try(DESeq2::DESeq(dds, fitType = fitType, test = "LRT", reduced = reduced),
+        silent = TRUE)
+    } else if (test == "Wald") {
+      dds <- try(DESeq2::DESeq(dds, fitType = fitType, test = "Wald"), silent = TRUE)
+    }
+  })
 
-##   nas <- which(is.na(top[, 1])) ## set NA pvalues to 1
-##   if(length(nas) > 0) top[nas, 1] <- 1
-##   colnames(top) <- paste0("P.Value.", covariate.name) 
+  if ("try-error" %in% class(dds)) {
+    message("[.ngs.fitContrastsWithDESEQ2.regress.covs] retrying DESEQ2 with gene-wise estimates...")
+    dds <- try(DESeq2::DESeqDataSetFromMatrix(countData = counts, design = design, colData = colData),
+      silent = TRUE)
+    dds <- try(DESeq2::estimateSizeFactors(dds), silent = TRUE)
+    disp.type <- if (test == "glmGamPoi") "glmGamPoi" else "DESeq2"
+    dds <- try(DESeq2::estimateDispersionsGeneEst(dds, type = disp.type), silent = TRUE)
+    disp.values <- try(GenomicRanges::mcols(dds)$dispGeneEst, silent = TRUE)
+    if (!"try-error" %in% class(disp.values)) DESeq2::dispersions(dds) <- disp.values 
+    suppressWarnings({
+      if (test == "glmGamPoi" || disp.type == "glmGamPoi") {
+        dds <- try(DESeq2::nbinomLRT(dds, reduced = reduced, type = "glmGamPoi"), silent = TRUE)
+      } else if (test == "LRT") {
+        dds <- try(DESeq2::nbinomLRT(dds, reduced = reduced), silent = TRUE)
+      } else if (test == "Wald") {
+        dds <- try(DESeq2::nbinomWaldTest(dds), silent = TRUE)
+      }
+    })
+  }
 
-##   return(top)
+  if ("try-error" %in% class(dds)) {
+    top <- data.frame(matrix(NA, nrow = nrow(X), ncol = 1))
+    rownames(top) <- rownames(X)  
+  } else {
+    res_names <- DESeq2::resultsNames(dds)
+    ctx <- rep(0, length(res_names))
+    names(ctx) <- res_names
+    if ("yneg" %in% names(ctx)) ctx["yneg"] <- -1
+    if ("yzero" %in% names(ctx)) ctx["yzero"] <- 0
+    if ("ypos" %in% names(ctx)) ctx["ypos"] <- 1 
+    top <- try(
+      DESeq2::results(dds, contrast = ctx, cooksCutoff = FALSE, independentFiltering = FALSE),
+      silent = TRUE
+    )
+    jj <- match(rownames(X), rownames(SummarizedExperiment::rowData(dds)))
+    X <- X[jj, ]
+    if ("try-error" %in% class(top)) {
+      top <- data.frame(matrix(NA, nrow = nrow(X), ncol = 1))
+      rownames(top) <- rownames(X)
+    } else {
+      top <- as.data.frame(top)
+      rownames(top) <- rownames(X)
+      top <- top[, "pvalue", drop = FALSE]
+    }
+  }
+
+  colnames(top) <- paste0("P.Value.", covariate.name)
+  nas <- which(is.na(top[, 1])) ## set NA pvalues to 1
+  if (length(nas) > 0) top[nas, 1] <- 1
   
-## }
+  return(top)
+  
+}
 
 ## Q: does the condition induces a change in gene expression at
 ## any time point after the reference level time point (time 0)?
