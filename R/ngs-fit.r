@@ -711,7 +711,8 @@ ngs.fitContrastsWithLIMMA <- function(X,
           for (k in 1:ncol(covariates1)) {
             cov.val <- covariates1[, k]
             keep <- which(!is.na(cov.val))
-            if (!length(keep) || length(unique(y[keep])) == 1) next
+            if (!length(keep) || length(unique(y[keep])) == 1 ||
+                  length(unique(cov.val[keep])) == 1) next
             top_cov <- ngs.fitContrastsWithLIMMA.regress.covs(
               X = X1[, keep, drop = FALSE],
               y = y[keep],
@@ -772,7 +773,6 @@ ngs.fitContrastsWithLIMMA.regress.covs <- function(X,
                                                    covariate.name = "covariate",
                                                    trend = TRUE,
                                                    robust = TRUE) {
-
 
   message("[ngs.fitContrastsWithLIMMA.regress.covs]: Regressing out covariate: ", covariate.name)
   
@@ -1212,7 +1212,8 @@ ngs.fitContrastsWithEDGER <- function(counts,
       for (k in 1:ncol(covariates1)) {
         cov.val <- covariates1[, k]
         keep <- which(!is.na(cov.val))
-        if (!length(keep) || length(unique(y[keep])) == 1) next
+        if (!length(keep) || length(unique(y[keep])) == 1 ||
+              length(unique(cov.val[keep])) == 1) next
         top_cov <- ngs.fitContrastsWithEDGER.regress.covs(
           counts = counts1[, keep, drop = FALSE],
           X = X1[, keep, drop = FALSE],
@@ -1588,11 +1589,6 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
                                                  X = NULL,
                                                  timeseries = NULL) {
 
-  saveRDS(list(counts=counts, contr.matrix=contr.matrix,
-    covariates=covariates, test=test, fitType=fitType,
-    prune.samples=prune.samples, conform.output=conform.output,
-    X=X, timeseries=timeseries), "~/Desktop/oo.RDS")
-
   ## EdgeR/Deseq2 not available for proteomics. Thus, autoscaling is rarely run.
   counts <- playbase::counts.autoScaling(counts)$counts
 
@@ -1675,7 +1671,8 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
       for (k in 1:ncol(covariates1)) {
         cov.val <- covariates1[, k]
         keep <- which(!is.na(cov.val))
-        if (!length(keep) || length(unique(y[keep])) == 1) next
+        if (!length(keep) || length(unique(y[keep])) == 1 ||
+              length(unique(cov.val[keep])) == 1) next        
         top_cov <- ngs.fitContrastsWithDESEQ2.regress.covs(
           counts = counts1[, keep, drop = FALSE],
           X = X1[, keep, drop = FALSE],
