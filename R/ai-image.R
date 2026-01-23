@@ -14,8 +14,6 @@ IMAGE_MODELS <- c(
 #' @export
 ai.get_image_models <- function(models=NULL) {
   keys <- NULL
-  dbg("[ai.get_image_models] input models = ",models)
-  dbg("[ai.get_image_models] len.models = ",length(models))
   if(!is.null(models) && "IMAGE_MODELS" %in% models) {
     models <- unique(c(models, IMAGE_MODELS))
   }
@@ -27,8 +25,6 @@ ai.get_image_models <- function(models=NULL) {
   if (Sys.getenv("GROQ_API_KEY")!="") keys <- c(keys,"groq:")
   if (Sys.getenv("GEMINI_API_KEY")!="") keys <- c(keys,"gemini-","google:")
   if (Sys.getenv("OLLAMA_REMOTE")!="") keys <- c(keys,"remote:.*")
-
-  dbg("[ai.get_image_models] keys = ", keys)
   
   if(is.null(models) || length(models)==0 || models[1]=="" ) {
     models <- keys
@@ -39,7 +35,6 @@ ai.get_image_models <- function(models=NULL) {
     models <- NULL
   }
 
-  dbg("[ai.get_image_models] available image models = ",models)
   models
 }
 
