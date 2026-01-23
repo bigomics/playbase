@@ -62,7 +62,7 @@ ai.create_image_gemini <- function(prompt,
     stop("GEMINI_API_KEY environment variable is not set", call. = FALSE)
   }
 
-  message("calling gemini image generation...")
+  message("calling gemini image ($0.134 per image)")
   model <- sub("^google:","",model)
   #url <- glue::glue("{base_url}/models/{model}:generateContent?key={api_key}")
   url <- glue::glue("{base_url}/models/{model}:generateContent")
