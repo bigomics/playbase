@@ -5286,6 +5286,7 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
   }
 
   if(!"stats" %in% names(wgcna)) {
+    ## NOTE! should we recompute???
     message("[wgcna.getTopGenesAndSets] Error: no stats object")
     return(NULL)
   }
@@ -5322,9 +5323,10 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
   if(!is.null(wgcna$modTraits)) {
     M <- wgcna$modTraits
   } else {
-    M <- cor( wgcna$net$MEs, wgcna$datTraits, use="pairwise")
+    M <- cor(wgcna$net$MEs, wgcna$datTraits, use="pairwise")
   }
-  toppheno <- apply(M, 1, function(x) names(which(x > 0.8*max(x))))
+  M[is.na(M)] <- 0
+  toppheno <- apply(M, 1, function(x) names(which(x > 0.8*max(x, na.rm=TRUE))))
   
   if(level=="geneset") {
     topsets <- topgenes
@@ -5477,17 +5479,17 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
   if(is.null(model) || length(model)==0 ) {
     desc <- list()
     for(m in modules) {
-      ss=gg=pp=NULL
+      ss=gg=pp="<none>"
       
       if(!is.null(top$genes[[m]])) {
         gg <- paste( top$genes[[m]], collapse=', ')
-      }
+      } 
       if(!is.null(top$sets[[m]])) {
         ss <- paste( sub(".*:","",top$sets[[m]]), collapse='; ')
-      }
+      } 
       if(m %in% names(top$pheno)) {
         pp <- paste( top$pheno[[m]], collapse='; ')
-      }
+      } 
       d <- ""
       if(!is.null(pp)) d <- paste(d, "**Correlated phenotypes**:", pp, "\n\n")
       if(!is.null(gg) && gg!="") {
@@ -5675,7 +5677,7 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
   if(!is.null(progress)) progress$set(message = "Baking full report...", value=0.6)
   if(verbose) message("Baking full report...")
   
-  q3 <- "These are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed report for this experiment. Give a detailed interpretation of the underlying biology by connecting WGCNA modules into biological functional programs, referring to key genes, proteins or metabolites. Build an cross-module integrative biological narrative. Suggest similarity to known diseases and possible therapies. Add a very short methods paragraph describing the compute settings. Add a discussion and conclusion. Omit abstract, future directions, limitations, or references.
+  q3 <- "These are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed report for this experiment. Give a detailed interpretation of the underlying biology by connecting WGCNA modules into biological functional programs, referring to key genes, proteins or metabolites. Build an cross-module integrative biological narrative. Suggest similarity to known diseases and possible therapies. Add a discussion and conclusion. Omit abstract, future directions, limitations, or references. Add a short paragraph describing methods and compute settings at the end. 
 
 Format like a scientific article, use prose as much as possible, minimize the use of tables and bullet points. For long tables show at least the top 5, and at most top 10, up and down entries. Do not inject any inline code. Only write if there was evidence in the source text."  
 
@@ -5766,4 +5768,24 @@ wgcna.create_diagram <- function(wgcna_report, ai_model, rankdir="LR", format="d
   }
   
   diagram
+}
+
+
+#'
+#' @export
+wgcna.create_infographic <- function(wgcna_report,
+                                     #model = "gemini-2.5-flash-image"
+                                     model="gemini-3-pro-image-preview",
+                                     filename = "infographic.png") {
+
+  rpt <- wgcna_report
+  prompt <- paste("Create a graphical abstract according to the given diagram and information in the WGCNA report. Use scientific visual style. Illustrate biological concepts with small graphics. \n\n", rpt$report, "\n---------------\n\n", rpt$diagram)      
+    
+  outfile <- ai.create_image_gemini(
+    prompt, model,
+    format = "file",
+    filename = filename
+  )
+
+  return(invisible(outfile))
 }

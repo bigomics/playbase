@@ -52,12 +52,8 @@ REMOTE_MODELS <- c(
   "google:gemini-2.5-flash-lite"
 )
 
-if(0) {
-  model="gpt-5-nano";prompt=NULL
-  model="gemma3:1b";prompt=NULL
-  model="grok-4-fast-non-reasoning";prompt=NULL
-}
-
+#' Return list of available remote models. 
+#'
 #' @export
 ai.get_remote_models <- function(models=NULL) {
   keys <- NULL
