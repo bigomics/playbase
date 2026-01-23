@@ -94,6 +94,29 @@ ai.model_is_available <- function(model) {
   model %in% ai.get_models(models=model) 
 }
 
+##======================================================================
+##====================== FUNCTIONS =====================================
+##======================================================================
+
+#' @export
+ai.create_ellmer_chat <- function(model, system_prompt) {
+  chat <- NULL
+  if( grepl("openai:", model) ) {
+    model1 <- sub("^openai:","",model)
+    chat <- ellmer::chat_openai(model = model1, system_prompt = system_prompt)
+  } else if( grepl("^groq:",model)) {
+    model1 <- sub("^groq:","",model)
+    chat <- ellmer::chat_groq(model = model1, system_prompt = system_prompt)
+  } else if( grepl("^xai:grok",model)) {
+    message("Sorry Grok not yet supported... ")    
+  } else if(model %in% OLLAMA_MODELS) {
+    chat <- ellmer::chat_ollama(model = model, system_prompt = system_prompt)
+  } else {
+    message("unsupported model ",model)
+  }
+  chat
+}
+
 #' @export
 ai.ask <- function(question, model, engine=c("ellmer","tidyprompt")[2]) {
   if(model == "ellmer" && grepl("grok",model)) model <- "tidyprompt"

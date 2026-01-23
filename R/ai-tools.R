@@ -1,24 +1,3 @@
-##======================================================================
-##====================== FUNCTIONS =====================================
-##======================================================================
-
-#' @export
-ai.create_ellmer_chat <- function(model, system_prompt) {
-  chat <- NULL
-  if( grepl("openai:", model) ) {
-    model1 <- sub("^openai:","",model)
-    chat <- ellmer::chat_openai(model = model1, system_prompt = system_prompt)
-  } else if( grepl("^groq:",model)) {
-    model1 <- sub("^groq:","",model)
-    chat <- ellmer::chat_groq(model = model1, system_prompt = system_prompt)                
-  } else if( grepl("^ollama:",model)) {
-    model1 <- sub("^ollama:","",model)
-    chat <- ellmer::chat_ollama(model = model1, system_prompt = system_prompt)                
-  } else {
-    message("could not connect to model",model)
-  }
-  chat
-}
 
 ##======================================================================
 ##==================== TOOLS ===========================================
