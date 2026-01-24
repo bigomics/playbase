@@ -5727,13 +5727,14 @@ Format like a scientific article, use prose as much as possible, minimize the us
 wgcna.create_diagram <- function(wgcna_report, ai_model, rankdir="LR", format="dot",
                                  correct=TRUE, double.check=TRUE) {
 
-  q4 <- paste0("Create a diagram connecting modules in the following WGCNA report. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add phenotype nodes. Suggest cause and effect relations that explain the phenotypes. Group modules with same biological functions. Give just the code in DOT format, LR direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Do not use hexadecimal color coding. Use solid lines for positive regulation, use dashed lines for negative regulation. Color fill nodes matching the module names with light palette so we can still read well the text. Never use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow.")
+  q4 <- paste0("Create a diagram connecting modules in the following WGCNA report. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add phenotype nodes. Suggest cause and effect relations that explain the phenotypes. Group modules with same biological functions. Give just the code in clean DOT format. Layout in LR direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Do not use hexadecimal color coding. Use solid lines for positive regulation, use dashed lines for negative regulation. Color fill nodes matching the module names with light palette so we can still read well the text. Never use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow.")
 
   if(grepl("mermaid",format,ignore.case=TRUE)) q4 <- sub("DOT","MERMAID",q4)
   q4 <- paste(q4, "\n\n<report>", wgcna_report, "</report>")
   aa <- ai.ask(q4, model = ai_model)
-  aa <- gsub("```","",aa)
 
+  ## cleanup a little bit
+  aa <- gsub("```","",aa)
   diagram <- gsub("mermaid\n|dot\n","",aa)
   diagram <- gsub("&","and",diagram)
 
@@ -5766,19 +5767,28 @@ wgcna.create_diagram <- function(wgcna_report, ai_model, rankdir="LR", format="d
       diagram, perl = TRUE )
   }
 
-  ## second pass: double check
-  if(double.check) {
-    diagram <- ai.ask(paste("Please double check the following code that draws a diagram using the DOT format and correct if needed. If the code is correct, do not change anything. Just return the corrected code:",diagram),
-      model = ai_model)
+  if(double.check) {  
+    code.error <- TRUE
+    ntry <- 1
+    while(code.error && ntry <= 5) {
+      ## check valid code
+      dg <- DiagrammeR::grViz(diagram)
+      out <- try(DiagrammeRsvg::export_svg(dg))
+      code.error <- inherits(out, "try-error")
+      if(code.error) {
+        ## try to correct
+        diagram <- ai.ask(paste("Please double check the following DOT diagram code and correct. If the code is correct, do not change anything. Just return the corrected clean code:",diagram), model = ai_model)
+        ntry <- ntry + 1
+      }
+    }
   }
-  
   diagram
 }
 
 
 #'
 #' @export
-wgcna.create_infographic <- function(wgcna_report,
+wgcna.create_infographic <- function(wgcna_report, 
                                      #model = "gemini-2.5-flash-image"
                                      model="gemini-3-pro-image-preview",
                                      filename = "infographic.png") {
