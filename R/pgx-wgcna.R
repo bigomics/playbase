@@ -111,7 +111,9 @@ pgx.wgcna <- function(
   ## ---------------------------------------------------
   wTOM <- NULL
   if ("TOM" %in% names(wgcna)) wTOM <- wgcna$TOM
-  if (is.null(wTOM) && "svTOM" %in% names(wgcna)) wTOM <- wgcna$svTOM %*% t(wgcna$svTOM)
+  if (is.null(wTOM) && "svTOM" %in% names(wgcna)) {
+    wTOM <- tcrossprod(wgcna$svTOM)
+  }
   dissTOM <- 1 - wTOM
   rownames(dissTOM) <- colnames(dissTOM) <- colnames(wgcna$datExpr)
   clust <- pgx.clusterBigMatrix(dissTOM, methods = c("umap", "tsne", "pca"), dims = c(2))
@@ -455,7 +457,6 @@ wgcna.compute <- function(X,
     ## TOM = TOM,  ## this can be BIG!!! generally no need, just for plotting
     svTOM = svTOM,  ## smaller singular vectors
     net = net,
-    #power = net$power,
     me.genes = me.genes,
     me.colors = me.colors,
     W = MVs,
@@ -3215,7 +3216,7 @@ wgcna.plotTOM <- function(wgcna, justdata = FALSE, block = NULL,
   }
   ## if SV of TOM is stored, reconstruct TOM
   if (is.null(wTOM) && !is.null(wgcna$svTOM)) {
-    wTOM <- wgcna$svTOM %*% t(wgcna$svTOM)
+    wTOM <- tcrossprod(wgcna$svTOM)
   }
   if (is.null(wTOM)) {
     message("[wgcna.plotTOM] ERROR. no TOM matrix")
@@ -5285,17 +5286,20 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
     return(cons)
   }
 
+
+  stats <- NULL
   if(!"stats" %in% names(wgcna)) {
-    ## NOTE! should we recompute???
-    message("[wgcna.getTopGenesAndSets] Error: no stats object")
-    return(NULL)
+    stats <- wgcna.computeGeneStats(wgcna$net, wgcna$datExpr, wgcna$datTraits,
+      wgcna$svTOM)
+  } else {
+    stats <- wgcna$stats
   }
   if(!"gsea" %in% names(wgcna)) warning("object has no enrichment results (gsea)")  
   
   ## get top genes by centrality-weighted-meanFC2
-  mm <- wgcna$stats$moduleMembership  
-  mm.sig <- 1*(wgcna$stats$MMPvalue <= psig) 
-  ff <- sqrt(rowMeans(wgcna$stats$foldChange**2, na.rm=TRUE))
+  mm <- stats$moduleMembership  
+  mm.sig <- 1*(stats$MMPvalue <= psig) 
+  ff <- sqrt(rowMeans(stats$foldChange**2, na.rm=TRUE))
   mm <- mm * mm.sig * ff
   if(!is.null(annot)) {
     annot$gene_title <- paste0(annot$gene_title," (",annot$symbol,")")
@@ -5339,7 +5343,8 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
 
 #' @export
 wgcna.getMultiTopGenesAndSets <- function(multi_wgcna, annot=NULL, module=NULL,
-                                          psig=0.05, ntop=40, level="gene", rename="symbol") {
+                                          psig=0.05, ntop=40, level="gene",
+                                          rename="symbol") {
 
   toplist <- list()
   k=names(multi_wgcna)[1]
