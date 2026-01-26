@@ -45,6 +45,8 @@ Imports:
     data.table,
     DeconRNASeq,
     DESeq2,
+    DiagrammeR,
+    DiagrammeRsvg,
     dplyr,
     DT,
     dynamicTreeCut,
