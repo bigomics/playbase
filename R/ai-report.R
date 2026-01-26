@@ -31,7 +31,7 @@ collate_as_sections <- function(a, level=2) {
 #' @export
 ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
   
-  contrasts <- playbase::pgx.getContrasts(pgx)
+  contrasts <- pgx.getContrasts(pgx)
   samples <- rownames(pgx$samples)
   ct <- contrasts[1]  ## FOR NOW!!!!
 
@@ -82,8 +82,8 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
   ##-------------------------------------------------------------------
   differential_expression <- NULL
   if("differential_expression" %in% sections) {
-    F <- playbase::pgx.getMetaMatrix(pgx)$fc
-    F <- playbase::rename_by2(F, pgx$genes, "symbol")
+    F <- pgx.getMetaMatrix(pgx)$fc
+    F <- rename_by2(F, pgx$genes, "symbol")
     ii <- match(rownames(F),pgx$genes$symbol)
     rownames(F) <- paste0(pgx$genes$gene_title[ii]," (",rownames(F),")")
     F.up <- head( F[order(-rowMeans(F)),,drop=FALSE], 2*ntop )
@@ -99,9 +99,12 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
   ##-------------------------------------------------------------------
   geneset_enrichment <- NULL
   if("geneset_enrichment" %in% sections) {
-    G <- playbase::pgx.getMetaMatrix(pgx, level = "geneset")$fc
-    G <- G[order(-rowMeans(G)),,drop=FALSE]
-    revtail <- function(A,n) head(A[nrow(A):1,,drop=FALSE],n)
+    G <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
+    G <- G[order(-rowMeans(G)),,drop=FALSE]  ## NEED RETHINK: rowmeans is not good...
+    revtail <- function(A,n) {
+      if(nrow(A)==0) return(A[0,,drop=FALSE])
+      head(A[nrow(A):1,,drop=FALSE],n)
+    }
     BP.up <- head( G[grep("GOBP|GO_BP",rownames(G)),,drop=FALSE], ntop)
     BP.dn <- revtail( G[grep("GOBP|GO_BP",rownames(G)),,drop=FALSE], ntop)
     MF.up <- head( G[grep("GOMF|GO_MF",rownames(G)),,drop=FALSE], ntop)
@@ -127,25 +130,28 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
   ##-------------------------------------------------------------------
   drug_similarity <- NULL
   if("drug_similarity" %in% sections && !is.null(pgx$drugs)) {
-    D <- playbase::pgx.getTopDrugs(pgx, ct, n=ntop, na.rm=TRUE)    
+    ## NEED RETHINK: Only reports first contrast at the moment
+    D <- pgx.getTopDrugs(pgx, ct, n=ntop, na.rm=TRUE)    
     drug_similarity <- list(
       "Drug Mechanism of Action. Drug Connectivity Map (CMap) analysis of selected comparison. Similarity of the mechanism of action (MOA) is based on correlation enrichment with drug perturbation profiles of LINCS L1000 database. The top most similar (i.e. positively correlated) drugs are:" =
-        table_to_content(playbase::pgx.getTopDrugs(pgx, ct, n=ntop, dir=+1, na.rm=TRUE)), 
+        table_to_content(pgx.getTopDrugs(pgx, ct, n=ntop, dir=+1, na.rm=TRUE)), 
       "The top most inhibitory (i.e. negative correlated) drugs are:" = 
-        table_to_content(playbase::pgx.getTopDrugs(pgx, ct, n=ntop, dir=-1, na.rm=TRUE))
+        table_to_content(pgx.getTopDrugs(pgx, ct, n=ntop, dir=-1, na.rm=TRUE))
     )
   }
   
+  ##-------------------------------------------------------------------
   pcsf_report <- NULL
   if(FALSE && "pcsf_report" %in% sections) {
-    pcsf_report <- list("Identification of hub genes. Hub genes can identify important regulators. The hub score is computed using a page rank network centrality score. The most central genes are:" = table_to_content(playbase::pgx.getPCSFcentrality(pgx, ct, plot = FALSE, n = ntop))
+    pcsf_report <- list("Identification of hub genes. Hub genes can identify important regulators. The hub score is computed using a page rank network centrality score. The most central genes are:" = table_to_content(pgx.getPCSFcentrality(pgx, ct, plot = FALSE, n = ntop))
     )
   }
   
   ##-------------------------------------------------------------------
   wgcna_report <- NULL
   if("wgcna_report" %in% sections && !is.null(pgx$wgcna)) {
-    out <- playbase::wgcna.describeModules(
+
+    out <- wgcna.describeModules(
       pgx$wgcna,
       modules = NULL,
       multi = FALSE, 
@@ -155,6 +161,7 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
       verbose = FALSE,
       model = NULL
     ) 
+
     names(out)
     wgcna_report <- list_to_content(out$answers)
   }
