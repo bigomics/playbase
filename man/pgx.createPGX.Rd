@@ -26,6 +26,7 @@ pgx.createPGX(
   dotimeseries = FALSE,
   batch.correct.method = "no_batch_correct",
   batch.pars = "<autodetect>",
+  covariates = NULL,
   auto.scale = TRUE,
   filter.genes = TRUE,
   exclude.genes = NULL,
@@ -65,6 +66,8 @@ for the gene annotation table and the probe to symbol conversion.}
 \item{batch.correct.method}{BC method. Default is "no_batch_correct" (meaning no batch correction).}
 
 \item{batch.pars}{BC variable. Default "autodetect" as per QC/BC tab in upload.}
+
+\item{covariates}{variables to regress out. Valid only for linear model-based tests.}
 
 \item{auto.scale}{Logical indicating whether to automatically scale/center genes. Default is TRUE.}
 

@@ -59,7 +59,7 @@ test_that("compute_testGenesSingleOmics runs without errors", {
   suppressWarnings(
     result <- playbase::compute_testGenes(pgx, contr.matrix)
   )
-  expected_slots <- c("meta", "sig.counts")
+  expected_slots <- c("meta", "meta.covs", "sig.counts")
 
   expect_equal(names(result$gx.meta), expected_slots)
   # Check that all the test have ran

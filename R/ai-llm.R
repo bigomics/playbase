@@ -37,10 +37,7 @@ ai.get_ollama_models <- function(models=NULL, size=NULL) {
   
   return(available.models)
 }
-
 OLLAMA_MODELS = ai.get_ollama_models()
-DEFAULT_LLM = "gpt-5-nano"
-DEFAULT_LLM = NULL
 
 REMOTE_MODELS <- c(
   "openai:gpt-5-nano",
@@ -100,6 +97,29 @@ ai.get_models <- function(models=NULL) {
 #' @export
 ai.model_is_available <- function(model) {
   model %in% ai.get_models(models=model) 
+}
+
+##======================================================================
+##====================== FUNCTIONS =====================================
+##======================================================================
+
+#' @export
+ai.create_ellmer_chat <- function(model, system_prompt) {
+  chat <- NULL
+  if( grepl("openai:", model) ) {
+    model1 <- sub("^openai:","",model)
+    chat <- ellmer::chat_openai(model = model1, system_prompt = system_prompt)
+  } else if( grepl("^groq:",model)) {
+    model1 <- sub("^groq:","",model)
+    chat <- ellmer::chat_groq(model = model1, system_prompt = system_prompt)
+  } else if( grepl("^xai:grok",model)) {
+    message("Sorry Grok not yet supported... ")    
+  } else if(model %in% OLLAMA_MODELS) {
+    chat <- ellmer::chat_ollama(model = model, system_prompt = system_prompt)
+  } else {
+    message("unsupported model ",model)
+  }
+  chat
 }
 
 #' @export

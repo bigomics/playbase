@@ -26,6 +26,7 @@ compute_testGenes <- function(pgx,
                               prune.samples = TRUE,
                               remove.outputs = TRUE,
                               timeseries = FALSE) {
+
   message("[compute_testGenes] detecting stat groups...")
 
   ## -----------------------------------------------------------------------------
@@ -44,7 +45,6 @@ compute_testGenes <- function(pgx,
     stop("[compute_testGenes] FATAL: contrast must be sample-wise")
   }
 
-  ## sanity check
   if (NCOL(contr.matrix) == 0) {
     stop("[compute_testGenes] FATAL: zero contrasts")
   }
@@ -97,12 +97,12 @@ compute_testGenes <- function(pgx,
   design <- NULL
 
   if (no.design || !use.design) {
-    message("[compute_testGenes] 6 : no design matrix ")
+    message("[compute_testGenes] no design matrix ")
     ## SAMPLE-WISE DESIGN
     design <- NULL
     exp.matrix <- contr.matrix
   } else {
-    message("[compute_testGenes] 6 : creating model design matrix ")
+    message("[compute_testGenes] creating model design matrix ")
 
     ## GROUP DESIGN
     notk <- which(!stat.group %in% rownames(contr.matrix))
@@ -155,9 +155,9 @@ compute_testGenes <- function(pgx,
   methods <- test.methods
   message("Testing differential expression methods: ", paste(methods, collapse = ", "))
   PRIOR.CPM <- 1
-
+  
   ## Run all test methods
-  message("[compute_testGenes] 12 : start fitting... ")
+  message("[compute_testGenes] start fitting... ")
   gx.meta <- ngs.fitContrastsWithAllMethods(
     counts = counts,
     X = X,
@@ -165,6 +165,7 @@ compute_testGenes <- function(pgx,
     genes = NULL,
     methods = methods,
     design = design,
+    covariates = pgx$covariates,
     contr.matrix = contr.matrix,
     prune.samples = prune.samples,
     prior.cpm = PRIOR.CPM, ## prior count regularization
@@ -179,6 +180,7 @@ compute_testGenes <- function(pgx,
 
   message("[compute_testGenes]: fitting completed!")
 
+  
   ## --------------------------------------------------------------------------------
   ## set default matrices
   ## --------------------------------------------------------------------------------
@@ -191,10 +193,10 @@ compute_testGenes <- function(pgx,
   pgx$gx.meta <- gx.meta
 
   ## remove large outputs.
-  # remove.outputs = FALSE
   if (remove.outputs) pgx$gx.meta$outputs <- NULL
-
+  
   message("[compute_testGenes] done!")
 
   return(pgx)
+
 }

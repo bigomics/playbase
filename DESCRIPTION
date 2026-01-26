@@ -84,6 +84,7 @@ Imports:
     irlba,
     isva,
     jsonlite,
+    knitr,
     lazyeval,
     limma,
     magrittr,
