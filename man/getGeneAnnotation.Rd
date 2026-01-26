@@ -7,6 +7,7 @@
 getGeneAnnotation(
   organism,
   probes,
+  is.phospho = FALSE,
   use.ah = NULL,
   verbose = TRUE,
   methods = c("annothub", "gprofiler")

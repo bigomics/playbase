@@ -1,3 +1,17 @@
+
+DEFAULT_LLM = "gpt-5-nano"
+DEFAULT_LLM = NULL
+
+REMOTE_MODELS <- c(
+  "openai:gpt-5-nano",
+  "xai:grok-4-1-fast-non-reasoning", 
+  "groq:llama-3.1-8b-instant",
+  "groq:meta-llama/llama-4-scout-17b-16e-instruct",  
+  "groq:openai/gpt-oss-20b",
+  "groq:openai/gpt-oss-120b",
+  "google:gemini-2.5-flash-lite"
+)
+
 #'
 #' @export
 ai.get_ollama_models <- function(models=NULL, size=NULL) {
@@ -31,26 +45,8 @@ ai.get_ollama_models <- function(models=NULL, size=NULL) {
   
   return(available.models)
 }
-
 OLLAMA_MODELS = ai.get_ollama_models()
-DEFAULT_LLM = "gpt-5-nano"
-DEFAULT_LLM = NULL
 
-REMOTE_MODELS <- c(
-  "openai:gpt-5-nano",
-  "xai:grok-4-fast-non-reasoning", 
-  "groq:llama-3.1-8b-instant",
-  "groq:meta-llama/llama-4-scout-17b-16e-instruct",  
-  "groq:openai/gpt-oss-20b",
-  "groq:openai/gpt-oss-120b",
-  "google:gemini-2.5-flash-lite"
-)
-
-if(0) {
-  model="gpt-5-nano";prompt=NULL
-  model="gemma3:1b";prompt=NULL
-  model="grok-4-fast-non-reasoning";prompt=NULL
-}
 
 #' @export
 ai.get_remote_models <- function(models=NULL) {
@@ -96,6 +92,29 @@ ai.get_models <- function(models=NULL) {
 #' @export
 ai.model_is_available <- function(model) {
   model %in% ai.get_models(models=model) 
+}
+
+##======================================================================
+##====================== FUNCTIONS =====================================
+##======================================================================
+
+#' @export
+ai.create_ellmer_chat <- function(model, system_prompt) {
+  chat <- NULL
+  if( grepl("openai:", model) ) {
+    model1 <- sub("^openai:","",model)
+    chat <- ellmer::chat_openai(model = model1, system_prompt = system_prompt)
+  } else if( grepl("^groq:",model)) {
+    model1 <- sub("^groq:","",model)
+    chat <- ellmer::chat_groq(model = model1, system_prompt = system_prompt)
+  } else if( grepl("^xai:grok",model)) {
+    message("Sorry Grok not yet supported... ")    
+  } else if(model %in% OLLAMA_MODELS) {
+    chat <- ellmer::chat_ollama(model = model, system_prompt = system_prompt)
+  } else {
+    message("unsupported model ",model)
+  }
+  chat
 }
 
 #' @export
