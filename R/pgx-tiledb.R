@@ -36,7 +36,7 @@
 ##   - Genes are human orthologs (converted via pgx$genes$human_ortholog)
 ##   - Samples are prefixed with dataset name: "dataset::original_sample_id"
 ##   - Zeros ARE stored (distinguish from missing data which is NA)
-##   - Z-scores are computed per-dataset: (count - gene_mean) / gene_sd
+##   - Z-scores are computed per-dataset from log-scaled X: (X - gene_mean) / gene_sd
 ##   - Z-scores are NA for genes with zero variance or single-sample datasets
 ##
 ##
@@ -206,62 +206,17 @@ buildTileDB <- function(pgx_folder, tiledb_path, overwrite = FALSE, verbose = TR
       pgx <- pgx.load(pgx_file)
       if (is.null(pgx$counts)) next
 
-      counts <- as.matrix(pgx$counts)
-      counts <- rename_by2(counts, pgx$genes, new_id = "human_ortholog", keep.prefix = FALSE)
-
-      genes <- rownames(counts)
-      samples <- colnames(counts)
       file_prefix <- tools::file_path_sans_ext(basename(pgx_file))
 
-      ## Compute z-scores for this dataset (per-gene standardization)
-      gene_means <- rowMeans(counts, na.rm = TRUE)
-      gene_sds <- apply(counts, 1, sd, na.rm = TRUE)
-      gene_sds[gene_sds == 0] <- NA  ## Avoid division by zero
-      zscores <- (counts - gene_means) / gene_sds
+      ## Prepare and write counts/z-scores data
+      data <- tiledb.prepareData(pgx)
+      tiledb.writeData(arr, data, file_prefix)
 
-      for (j in seq_along(samples)) {
-        sample_name <- paste0(file_prefix, "::", samples[j])
-        count_values <- counts[, j]
-        zscore_values <- zscores[, j]
-        valid_idx <- which(!is.na(count_values))
+      ## Extract phenotype data
+      pheno <- tiledb.extractPhenotypes(pgx, file_prefix)
+      all_phenotype_data <- c(all_phenotype_data, pheno$phenotype_data)
 
-        if (length(valid_idx) > 0) {
-          df <- data.frame(
-            gene = genes[valid_idx],
-            sample = rep(sample_name, length(valid_idx)),
-            count = as.numeric(count_values[valid_idx]),
-            zscore = as.numeric(zscore_values[valid_idx]),
-            stringsAsFactors = FALSE
-          )
-          arr[] <- df
-        }
-      }
-
-      if (!is.null(pgx$samples) && is.data.frame(pgx$samples)) {
-        pheno_data <- pgx$samples
-        pheno_cols <- colnames(pheno_data)
-        pheno_cols <- pheno_cols[!grepl("^\\.", pheno_cols)]
-
-        if (length(pheno_cols) > 0) {
-          for (j in seq_len(nrow(pheno_data))) {
-            sample_id <- rownames(pheno_data)[j]
-            sample_name <- paste0(file_prefix, "::", sample_id)
-
-            for (col in pheno_cols) {
-              val <- pheno_data[j, col]
-              val_str <- if (is.na(val)) NA_character_ else as.character(val)
-              all_phenotype_data[[length(all_phenotype_data) + 1]] <- data.frame(
-                sample = sample_name,
-                phenotype = col,
-                value = val_str,
-                stringsAsFactors = FALSE
-              )
-            }
-          }
-        }
-      }
-
-      rm(pgx, counts, zscores)
+      rm(pgx, data)
       gc(verbose = FALSE)
     }, error = function(e) {
       warning("Error writing ", pgx_file, ": ", e$message)
@@ -730,6 +685,116 @@ tiledbToPlotDF <- function(result, gene_name = NULL, tiledb_path = NULL, phenoty
 
 
 ## ============================================================================
+## INTERNAL HELPER FUNCTIONS
+## ============================================================================
+
+
+#' @title Extract counts and z-scores from PGX object
+#' @description Prepares counts matrix and computes z-scores from log-scaled X matrix
+#' @param pgx PGX object with counts and X matrices
+#' @return List with counts, zscores, genes, and samples
+#' @keywords internal
+tiledb.prepareData <- function(pgx) {
+  if (is.null(pgx$counts)) {
+    stop("No counts found in PGX object")
+  }
+
+  ## Extract and transform counts
+  counts <- as.matrix(pgx$counts)
+  counts <- rename_by2(counts, pgx$genes, new_id = "human_ortholog", keep.prefix = FALSE)
+
+  ## Compute z-scores from log-scaled X matrix
+  X <- as.matrix(pgx$X)
+  X <- rename_by2(X, pgx$genes, new_id = "human_ortholog", keep.prefix = FALSE)
+  gene_means <- rowMeans(X, na.rm = TRUE)
+  gene_sds <- apply(X, 1, sd, na.rm = TRUE)
+  gene_sds[gene_sds == 0] <- NA  ## Avoid division by zero
+  zscores <- (X - gene_means) / gene_sds
+
+  list(
+    counts = counts,
+    zscores = zscores,
+    genes = rownames(counts),
+    samples = colnames(counts)
+  )
+}
+
+
+#' @title Write counts and z-scores to TileDB array
+#' @description Writes data for all samples to TileDB sparse array
+#' @param arr TileDB array object
+#' @param data List from tiledb.prepareData()
+#' @param file_prefix Dataset name prefix for sample IDs
+#' @keywords internal
+tiledb.writeData <- function(arr, data, file_prefix) {
+  genes <- data$genes
+  samples <- data$samples
+  counts <- data$counts
+  zscores <- data$zscores
+
+  for (j in seq_along(samples)) {
+    sample_name <- paste0(file_prefix, "::", samples[j])
+    count_values <- counts[, j]
+    zscore_values <- zscores[, j]
+    valid_idx <- which(!is.na(count_values))
+
+    if (length(valid_idx) > 0) {
+      df <- data.frame(
+        gene = genes[valid_idx],
+        sample = rep(sample_name, length(valid_idx)),
+        count = as.numeric(count_values[valid_idx]),
+        zscore = as.numeric(zscore_values[valid_idx]),
+        stringsAsFactors = FALSE
+      )
+      arr[] <- df
+    }
+  }
+}
+
+
+#' @title Extract phenotype data from PGX object
+#' @description Extracts phenotype data in long format
+#' @param pgx PGX object with samples data.frame
+#' @param file_prefix Dataset name prefix for sample IDs
+#' @return List with phenotype_data (list of data.frames) and phenotypes (column names)
+#' @keywords internal
+tiledb.extractPhenotypes <- function(pgx, file_prefix) {
+  phenotype_data <- list()
+  phenotypes <- character(0)
+
+  if (!is.null(pgx$samples) && is.data.frame(pgx$samples)) {
+    pheno_data <- pgx$samples
+    pheno_cols <- colnames(pheno_data)
+    pheno_cols <- pheno_cols[!grepl("^\\.", pheno_cols)]
+    phenotypes <- pheno_cols
+
+    if (length(pheno_cols) > 0) {
+      for (j in seq_len(nrow(pheno_data))) {
+        sample_id <- rownames(pheno_data)[j]
+        sample_name <- paste0(file_prefix, "::", sample_id)
+
+        for (col in pheno_cols) {
+          val <- pheno_data[j, col]
+          val_str <- if (is.na(val)) NA_character_ else as.character(val)
+          phenotype_data[[length(phenotype_data) + 1]] <- data.frame(
+            sample = sample_name,
+            phenotype = col,
+            value = val_str,
+            stringsAsFactors = FALSE
+          )
+        }
+      }
+    }
+  }
+
+  list(
+    phenotype_data = phenotype_data,
+    phenotypes = phenotypes
+  )
+}
+
+
+## ============================================================================
 ## INCREMENTAL UPDATE FUNCTIONS
 ## ============================================================================
 
@@ -808,86 +873,28 @@ tiledb.addDataset <- function(tiledb_path, pgx_file, overwrite = TRUE, verbose =
     stop("Error loading PGX file: ", e$message)
   })
 
-  if (is.null(pgx$counts)) {
-    stop("No counts found in PGX file: ", pgx_file)
-  }
-
-  ## Extract and transform counts
-  counts <- as.matrix(pgx$counts)
-  counts <- rename_by2(counts, pgx$genes, new_id = "human_ortholog", keep.prefix = FALSE)
-
-  genes <- rownames(counts)
-  samples <- colnames(counts)
+  ## Prepare and write counts/z-scores data
   file_prefix <- dataset_name
+  data <- tiledb.prepareData(pgx)
 
-  if (verbose) message("Adding ", ncol(counts), " samples, ", nrow(counts), " genes")
+  if (verbose) message("Adding ", length(data$samples), " samples, ", length(data$genes), " genes")
 
-  ## Compute z-scores for this dataset (per-gene standardization)
-  gene_means <- rowMeans(counts, na.rm = TRUE)
-  gene_sds <- apply(counts, 1, sd, na.rm = TRUE)
-  gene_sds[gene_sds == 0] <- NA  ## Avoid division by zero
-  zscores <- (counts - gene_means) / gene_sds
-
-  ## Open TileDB array and write data
   arr <- tiledb::tiledb_array(tiledb_path)
+  tiledb.writeData(arr, data, file_prefix)
 
-  for (j in seq_along(samples)) {
-    sample_name <- paste0(file_prefix, "::", samples[j])
-    count_values <- counts[, j]
-    zscore_values <- zscores[, j]
-    valid_idx <- which(!is.na(count_values))
-
-    if (length(valid_idx) > 0) {
-      df <- data.frame(
-        gene = genes[valid_idx],
-        sample = rep(sample_name, length(valid_idx)),
-        count = as.numeric(count_values[valid_idx]),
-        zscore = as.numeric(zscore_values[valid_idx]),
-        stringsAsFactors = FALSE
-      )
-      arr[] <- df
-    }
-  }
-
-  ## Collect phenotype data
-  new_phenotype_data <- list()
-  new_phenotypes <- character(0)
-
-  if (!is.null(pgx$samples) && is.data.frame(pgx$samples)) {
-    pheno_data <- pgx$samples
-    pheno_cols <- colnames(pheno_data)
-    pheno_cols <- pheno_cols[!grepl("^\\.", pheno_cols)]
-    new_phenotypes <- pheno_cols
-
-    if (length(pheno_cols) > 0) {
-      for (j in seq_len(nrow(pheno_data))) {
-        sample_id <- rownames(pheno_data)[j]
-        sample_name <- paste0(file_prefix, "::", sample_id)
-
-        for (col in pheno_cols) {
-          val <- pheno_data[j, col]
-          val_str <- if (is.na(val)) NA_character_ else as.character(val)
-          new_phenotype_data[[length(new_phenotype_data) + 1]] <- data.frame(
-            sample = sample_name,
-            phenotype = col,
-            value = val_str,
-            stringsAsFactors = FALSE
-          )
-        }
-      }
-    }
-  }
+  ## Extract phenotype data
+  pheno <- tiledb.extractPhenotypes(pgx, file_prefix)
 
   ## Update metadata
-  new_samples <- paste0(file_prefix, "::", samples)
+  new_samples <- paste0(file_prefix, "::", data$samples)
 
-  metadata$genes <- sort(unique(c(metadata$genes, genes)))
+  metadata$genes <- sort(unique(c(metadata$genes, data$genes)))
   metadata$samples <- c(metadata$samples, new_samples)
-  metadata$phenotypes <- sort(unique(c(metadata$phenotypes, new_phenotypes)))
-  metadata$phenotypes_by_dataset[[file_prefix]] <- new_phenotypes
+  metadata$phenotypes <- sort(unique(c(metadata$phenotypes, pheno$phenotypes)))
+  metadata$phenotypes_by_dataset[[file_prefix]] <- pheno$phenotypes
 
-  if (length(new_phenotype_data) > 0) {
-    new_pheno_df <- do.call(rbind, new_phenotype_data)
+  if (length(pheno$phenotype_data) > 0) {
+    new_pheno_df <- do.call(rbind, pheno$phenotype_data)
     metadata$phenotype_data <- rbind(metadata$phenotype_data, new_pheno_df)
   }
 
@@ -908,7 +915,7 @@ tiledb.addDataset <- function(tiledb_path, pgx_file, overwrite = TRUE, verbose =
     message("  Total datasets: ", metadata$n_files)
   }
 
-  rm(pgx, counts, zscores)
+  rm(pgx, data)
   gc(verbose = FALSE)
 
   invisible(metadata)
@@ -931,19 +938,11 @@ tiledb.addDataset.create <- function(tiledb_path, pgx_file, verbose = TRUE) {
     stop("Error loading PGX file: ", e$message)
   })
 
-  if (is.null(pgx$counts)) {
-    stop("No counts found in PGX file: ", pgx_file)
-  }
-
-  ## Extract and transform counts
-  counts <- as.matrix(pgx$counts)
-  counts <- rename_by2(counts, pgx$genes, new_id = "human_ortholog", keep.prefix = FALSE)
-
-  genes <- rownames(counts)
-  samples <- colnames(counts)
+  ## Prepare data
   file_prefix <- tools::file_path_sans_ext(basename(pgx_file))
+  data <- tiledb.prepareData(pgx)
 
-  if (verbose) message("Creating TileDB with ", ncol(counts), " samples, ", nrow(counts), " genes")
+  if (verbose) message("Creating TileDB with ", length(data$samples), " samples, ", length(data$genes), " genes")
 
   ## Create TileDB schema
   gene_dim <- tiledb::tiledb_dim(name = "gene", domain = NULL, tile = NULL, type = "ASCII")
@@ -954,82 +953,34 @@ tiledb.addDataset.create <- function(tiledb_path, pgx_file, verbose = TRUE) {
   schema <- tiledb::tiledb_array_schema(domain = dom, attrs = list(count_attr, zscore_attr), sparse = TRUE)
   tiledb::tiledb_array_create(tiledb_path, schema)
 
-  ## Compute z-scores for this dataset
-  gene_means <- rowMeans(counts, na.rm = TRUE)
-  gene_sds <- apply(counts, 1, sd, na.rm = TRUE)
-  gene_sds[gene_sds == 0] <- NA  ## Avoid division by zero
-  zscores <- (counts - gene_means) / gene_sds
-
   ## Write data
   arr <- tiledb::tiledb_array(tiledb_path)
+  tiledb.writeData(arr, data, file_prefix)
 
-  for (j in seq_along(samples)) {
-    sample_name <- paste0(file_prefix, "::", samples[j])
-    count_values <- counts[, j]
-    zscore_values <- zscores[, j]
-    valid_idx <- which(!is.na(count_values))
+  ## Extract phenotype data
+  pheno <- tiledb.extractPhenotypes(pgx, file_prefix)
 
-    if (length(valid_idx) > 0) {
-      df <- data.frame(
-        gene = genes[valid_idx],
-        sample = rep(sample_name, length(valid_idx)),
-        count = as.numeric(count_values[valid_idx]),
-        zscore = as.numeric(zscore_values[valid_idx]),
-        stringsAsFactors = FALSE
-      )
-      arr[] <- df
-    }
-  }
-
-  ## Collect phenotype data
-  all_phenotype_data <- list()
-  phenotypes <- character(0)
-  phenotypes_by_dataset <- list()
-
-  if (!is.null(pgx$samples) && is.data.frame(pgx$samples)) {
-    pheno_data <- pgx$samples
-    pheno_cols <- colnames(pheno_data)
-    pheno_cols <- pheno_cols[!grepl("^\\.", pheno_cols)]
-    phenotypes <- pheno_cols
-    phenotypes_by_dataset[[file_prefix]] <- pheno_cols
-
-    if (length(pheno_cols) > 0) {
-      for (j in seq_len(nrow(pheno_data))) {
-        sample_id <- rownames(pheno_data)[j]
-        sample_name <- paste0(file_prefix, "::", sample_id)
-
-        for (col in pheno_cols) {
-          val <- pheno_data[j, col]
-          val_str <- if (is.na(val)) NA_character_ else as.character(val)
-          all_phenotype_data[[length(all_phenotype_data) + 1]] <- data.frame(
-            sample = sample_name,
-            phenotype = col,
-            value = val_str,
-            stringsAsFactors = FALSE
-          )
-        }
-      }
-    }
-  }
-
-  phenotype_data <- if (length(all_phenotype_data) > 0) {
-    do.call(rbind, all_phenotype_data)
+  phenotype_data <- if (length(pheno$phenotype_data) > 0) {
+    do.call(rbind, pheno$phenotype_data)
   } else {
     data.frame(sample = character(0), phenotype = character(0), value = character(0))
   }
 
   ## Create metadata
-  all_samples <- paste0(file_prefix, "::", samples)
+  all_samples <- paste0(file_prefix, "::", data$samples)
+  phenotypes_by_dataset <- list()
+  phenotypes_by_dataset[[file_prefix]] <- pheno$phenotypes
+
   metadata_path <- paste0(tiledb_path, "_metadata.rds")
   metadata <- list(
-    genes = sort(unique(genes)),
+    genes = sort(unique(data$genes)),
     samples = all_samples,
-    phenotypes = sort(unique(phenotypes)),
+    phenotypes = sort(unique(pheno$phenotypes)),
     phenotypes_by_dataset = phenotypes_by_dataset,
     phenotype_data = phenotype_data,
-    n_genes = length(unique(genes)),
+    n_genes = length(unique(data$genes)),
     n_samples = length(all_samples),
-    n_phenotypes = length(unique(phenotypes)),
+    n_phenotypes = length(unique(pheno$phenotypes)),
     n_files = 1,
     pgx_files = normalizePath(pgx_file),
     created = Sys.time()
@@ -1043,7 +994,7 @@ tiledb.addDataset.create <- function(tiledb_path, pgx_file, verbose = TRUE) {
     message("  Datasets: 1")
   }
 
-  rm(pgx, counts, zscores)
+  rm(pgx, data)
   gc(verbose = FALSE)
 
   invisible(metadata)
