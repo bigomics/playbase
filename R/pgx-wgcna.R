@@ -3444,7 +3444,7 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL,
     }
     kmeColors <- rho2bluered(kme)
     kmeColors <- kmeColors[gg,,drop=FALSE]
-    if(clust) {
+    if(clust && ncol(kme)>2 ) {
       ii <- hclust(as.dist(1-cor(kme,use="pairwise")))$order
       kmeColors <- kmeColors[,ii,drop=FALSE]
     }
