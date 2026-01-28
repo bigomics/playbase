@@ -184,7 +184,7 @@ pgx.wgcna <- function(
   
   ## add to results object
   wgcna$clust <- clust
-  wgcna$networktype <- networktype
+  wgcna$networktype <- networktype  
   wgcna$tomtype <- tomtype
   wgcna$annot <- pgx$genes
   wgcna$experiment <- pgx$description
@@ -193,6 +193,9 @@ pgx.wgcna <- function(
   return(wgcna)
 }
 
+#' Get merged multiomics geneset x feature matrix. Combines geneset
+#' and metabolite sets.
+#' 
 getPlaydataGMT <- function() {
   G1 <- Matrix::t(playdata::GSETxGENE)
   G2 <- Matrix::t(playdata::MSETxMETABOLITE)
@@ -476,6 +479,7 @@ wgcna.compute_multiomics <- function(dataX,
                                      contrasts = NULL,
                                      power = 12,
                                      ngenes = 2000,
+                                     datanames = NULL,
                                      clustMethod = "average",
                                      cutMethod = "hybrid",
                                      minmodsize = 10,
@@ -494,7 +498,7 @@ wgcna.compute_multiomics <- function(dataX,
                                      gset.methods = c("fisher","gsetcor","xcor"),
                                      gset.ntop = 1000,
                                      gset.xtop = 100,
-                                     summary = TRUE,
+                                     report = TRUE,
                                      ai_model = DEFAULT_LLM,
                                      ai_experiment = "",
                                      verbose = 1,
@@ -512,6 +516,7 @@ wgcna.compute_multiomics <- function(dataX,
     minmodsize = 10;
     minKME = 0.3;
     deepsplit = 2;
+    mergeCutHeight = 0.3;
     compute.enrichment = TRUE;
     xref = c("gx","px");
     annot = NULL;
@@ -523,8 +528,8 @@ wgcna.compute_multiomics <- function(dataX,
     gset.methods = c("fisher","gsetcor","xcor");
     gset.ntop = 1000;
     gset.xtop = 100;
-    summary = TRUE;
-    ai_model = DEFAULT_LLM;
+    report = TRUE;
+    ai_model = "";
     ai_experiment = "";
     verbose = 1;
     progress = NULL
@@ -596,7 +601,7 @@ wgcna.compute_multiomics <- function(dataX,
     for(i in ii) {
       p <- wgcna.pickSoftThreshold(
         Matrix::t(dataX[[i]]), sft=NULL, rcut=0.85, powers = NULL,
-        method=power[1], nmax=1000, verbose=1)
+        method=power[i], nmax=1000, verbose=1)
       if(length(p)==0 || is.null(p) ) p <- NA
       power[i] <- p
     }
@@ -607,7 +612,7 @@ wgcna.compute_multiomics <- function(dataX,
   names(power) <- names(dataX)
 
   ## This runs WGCNA on an expression list. 
-  wgcna <- list()
+  layers <- list()
   has.gxpx <- all(c("gx","px") %in% names(dataX))
   if (do.consensus && has.gxpx) {
     cat("[wgcna.compute_multiomics] computing WGCNA consensus layers for GX+PX \n")
@@ -615,7 +620,7 @@ wgcna.compute_multiomics <- function(dataX,
     if (nn < 0.10) {
       message("[wgcna.compute_multiomics] ERROR: gx and px features do not overlap")
     } else {
-      wgcna <- wgcna.createConsensusLayers(
+      layers <- wgcna.createConsensusLayers(
         dataX[c('gx','px')],
         samples = samples,
         contrasts = contrasts,
@@ -632,12 +637,12 @@ wgcna.compute_multiomics <- function(dataX,
     }
   }
    
-  dtlist <- setdiff(names(dataX), names(wgcna))
+  dtlist <- setdiff(names(dataX), names(layers))
   for(dt in dtlist) {
     cat("[wgcna.compute_multiomics] computing WGCNA for", dt, "-------------\n")
     minkme1 <- ifelse(dt=='ph', 0, minKME[dt])
     minmodsize <- ifelse(dt=='ph', 1, minmodsize)      
-    wgcna[[dt]] <- wgcna.compute(
+    layers[[dt]] <- wgcna.compute(
       X = dataX[[dt]],
       samples = samples,
       contrasts = contrasts,
@@ -660,19 +665,18 @@ wgcna.compute_multiomics <- function(dataX,
     )
   }
 
-  wgcna <- wgcna[names(dataX)]
+  layers <- layers[names(dataX)]
+  names(layers)
   
   ## Compute enrichment
+  gsea <- NULL
   if(compute.enrichment) {
-
     message("[wgcna.compute_multiomics] computing module enrichment...")
-
     if(!is.null(progress)) {
       progress$set(message = paste("computing module enrichment..."), value = 0.66)
     }
-    
-    gse <- wgcna.computeModuleEnrichment(
-      wgcna = wgcna,
+    gsea <- wgcna.computeModuleEnrichment(
+      wgcna = layers,
       multi = TRUE,
       methods = gset.methods,
       ntop = gset.ntop,
@@ -682,32 +686,108 @@ wgcna.compute_multiomics <- function(dataX,
       GMT = GMT,
       filter = NULL
     )
-
-    ## split up results
-    for(k in names(wgcna)) {
-      mm <- names(wgcna[[k]]$me.genes)
-      wgcna[[k]]$gsea <- gse[mm]
+    
+    ## split up results?? still needed in old formats
+    for(k in names(layers)) {
+      mm <- names(layers[[k]]$me.genes)
+      layers[[k]]$gsea <- gsea[mm]
     }
+    
+  }
 
-    if(summary) {
-      if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
-      message("Annotating modules using ", ai_model)    
-      for(k in names(wgcna)) {
-        ai <- wgcna.describeModules(
-          wgcna[[k]],
-          ntop = 50,
-          model = ai_model,
-          annot = annot,
-          experiment = ai_experiment,
-          verbose = 0
-        )
-        wgcna[[k]]$summary <- ai$answers
-        wgcna[[k]]$prompts <- ai$questions
-      }
-    }      
+
+  lasagna.model <- NULL
+  lasagna.graph <- NULL
+  do.lasagna = TRUE
+  if(do.lasagna) {
+    ## Get eigengene matrices, remove grey modules
+    ww <- lapply(layers, function(w) t(w$net$MEs))
+    ww <- lapply(ww, function(w) w[!grepl("[A-Z]{2}grey$", rownames(w)), , drop=FALSE])
+    datTraits <- layers[[1]]$datTraits    
+    gdata <- list( X = ww, samples = datTraits )
+    
+    ## Create lasagna model
+    lasagna.model <- lasagna.create_model(
+      gdata,
+      pheno = "expanded",
+      ntop = 2000,
+      nc = 20,
+      add.sink = FALSE,
+      intra = TRUE,
+      fully_connect = FALSE,
+      add.revpheno = TRUE
+    )
+
+    ## Multi-condition edge weighting
+    lasagna.graph <- lasagna.multisolve(
+      lasagna.model,
+      min_rho = 0.1,
+      max_edges = 1000,
+      fc.weight = TRUE,
+      sp.weight = FALSE,
+      prune = FALSE
+    ) 
+    
+  }
+
+  report.out <- NULL
+  if(report) {
+    ## Create summaries of each module.
+    ##
+    if(!is.null(progress)) progress$set(message = "Creating report...", value=0.8)
+    if(!is.null(ai_model)) message("Creating report using ", ai_model)
+    if(is.null(ai_model)||ai_model=="") message("Creating dummy report")
+    report.out <- wgcna.create_report(
+      layers, ai_model,
+      annot = annot,
+      multi = TRUE,
+      graph = lasagna.graph,
+      topratio = 0.85,
+      psig = 0.05,
+      verbose = 1
+    ) 
   } 
+
+  ## get some settings
+  power <- sapply(layers, function(a) a$net$power, USE.NAMES=FALSE)
+  names(power) <- names(layers)
+
   
-  return(wgcna)
+  ## IK: new structure. like consensus. put datatype wgcna in
+  ## layers slot.  
+  settings <- list(
+    minmodsize = minmodsize,
+    power = power,
+    mergeCutHeight = mergeCutHeight,
+    deepsplit = deepsplit,
+    minKME = minKME,
+    networktype = "signed",
+    tomtype = "signed",
+    #ngenes = ngenes,
+    #maxBlockSize = 9999,
+    gset.methods = gset.methods,
+    #compute.enrichment = TRUE,
+    #summary = TRUE,
+    #ai_model = ai_model,
+    NULL
+  )
+  
+  out <- list(
+    layers = layers,
+    gsea = gsea,
+    report = report.out,
+    datanames = datanames,
+    lasagna = lasagna.model,
+    graph = lasagna.graph,  
+    ## datExpr = datExpr,
+    ## datTraits = datTraits,
+    ## modTraits = avgZ,
+    experiment = ai_experiment,
+    settings = settings,
+    class = "multiomics"
+  )
+  
+  return(out)
 }
 
 
@@ -1995,21 +2075,22 @@ wgcna.runConsensusWGCNA <- function(exprList,
       min.genes = gsea.mingenes,
       ntop = gsea.ntop
     )
-    if(summary) {
-      if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
-      message("Annotating modules using ", ai_model)    
-      ai <- wgcna.describeModules(
-        res,
-        multi = FALSE,
-        ntop = 50,
-        model = ai_model,
-        annot = annot,
-        experiment = ai_experiment,
-        verbose = 0
-      )
-      res$summary <- ai$answers
-      res$prompts <- ai$questions
-    }
+  }
+
+  if(summary) {
+    if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
+    message("Annotating modules using ", ai_model)    
+    ai <- wgcna.describeModules(
+      res,
+      multi = FALSE,
+      ntop = 50,
+      model = ai_model,
+      annot = annot,
+      experiment = ai_experiment,
+      verbose = 0
+    )
+    res$summary <- ai$answers
+    res$prompts <- ai$questions
   }
   
   res
@@ -3299,14 +3380,17 @@ wgcna.plotTOM <- function(wgcna, justdata = FALSE, block = NULL,
 #'
 #'
 #' @export
-wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=1,
+wgcna.plotDendroAndColors <- function(wgcna, main=NULL, 
                                       extra.colors=NULL,
                                       show.kme = FALSE,
                                       show.traits = FALSE,
                                       show.contrasts = FALSE,
+                                      clust = TRUE,
                                       use.tree = 0,
+                                      block = 1,
                                       rm.na = TRUE,
                                       sd.wt = 0,
+                                      nmax = -1,
                                       marAll = c(0.4, 5, 1, 0.2),
                                       setLayout=TRUE, ... ) {
 
@@ -3350,17 +3434,30 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=1,
     colors <- cbind(colors, 0, extra.colors[jj,])
   }
 
+  calcKMEcolors <- function(X, Y) {
+    kme <- cor(X, Y, use="pairwise")
+    sdx <- matrixStats::colSds(X,na.rm=TRUE)
+    if(sd.wt>0) kme <- kme * (sdx / max(abs(sdx),na.rm=TRUE))**sd.wt
+    if(nmax>0 && nmax<ncol(kme)) {
+      sel <- head(order(-colMeans(kme**2)),nmax)
+      kme <- kme[,sel,drop=FALSE]
+    }
+    kmeColors <- rho2bluered(kme)
+    kmeColors <- kmeColors[gg,,drop=FALSE]
+    if(clust) {
+      ii <- hclust(as.dist(1-cor(kme,use="pairwise")))$order
+      kmeColors <- kmeColors[,ii,drop=FALSE]
+    }
+    kmeColors 
+  }
+  
   is.multi <- is.list(wgcna$datExpr)
   is.multi
   if(!is.multi) {
     if(show.kme) {
       X <- wgcna$datExpr
       Y <- net$MEs
-      kme <- cor(X, Y, use="pairwise")
-      sdx <- matrixStats::colSds(X,na.rm=TRUE)
-      if(sd.wt>0) kme <- kme * (sdx / max(abs(sdx),na.rm=TRUE))**sd.wt
-      kmeColors <- rho2bluered(kme)
-      kmeColors <- kmeColors[gg,]
+      kmeColors <- calcKMEcolors(X, Y) 
       colors <- cbind(colors, 0, kmeColors)
     }
     if(show.traits) {
@@ -3368,11 +3465,7 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=1,
       Y <- wgcna$datTraits
       Y <- Y[,grep("_vs_",colnames(Y),invert=TRUE),drop=FALSE]
       if(NCOL(Y)>0) {
-        kme <- cor(X, Y, use="pairwise")
-        sdx <- matrixStats::colSds(X,na.rm=TRUE)
-        if(sd.wt>0) kme <- kme * (sdx / max(abs(sdx),na.rm=TRUE))**sd.wt
-        kmeColors <- rho2bluered(kme)
-        kmeColors <- kmeColors[gg,,drop=FALSE]
+        kmeColors <- calcKMEcolors(X, Y) 
         colors <- cbind(colors, 0, kmeColors)
       }
     }
@@ -3381,11 +3474,7 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=1,
       Y <- wgcna$datTraits
       Y <- Y[,grep("_vs_",colnames(Y)),drop=FALSE]
       if(NCOL(Y)>0) {
-        kme <- cor(X, Y, use="pairwise")
-        sdx <- matrixStats::colSds(X,na.rm=TRUE)
-        if(sd.wt>0) kme <- kme * (sdx / max(abs(sdx),na.rm=TRUE))**sd.wt
-        kmeColors <- rho2bluered(kme)
-        kmeColors <- kmeColors[gg,,drop=FALSE]
+        kmeColors <- calcKMEcolors(X, Y)         
         colors <- cbind(colors, 0, kmeColors)
       }
     }
@@ -3396,11 +3485,7 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=1,
       X <- wgcna$datExpr
       Y <- wgcna$net$multiMEs
       for(i in 1:length(X)) {
-        kme <- cor(X[[i]], Y[[i]]$data, use="pairwise")
-        sdx <- matrixStats::colSds(X[[i]],na.rm=TRUE)
-        if(sd.wt>0) kme <- kme * (sdx / max(abs(sdx),na.rm=TRUE))**sd.wt
-        kmeColors <- rho2bluered(kme)
-        kmeColors <- kmeColors[gg,,drop=FALSE]
+        kmeColors <- calcKMEcolors(X[[i]], Y[[i]]$data)
         colnames(kmeColors) <- paste0(names(X)[i],":",colnames(kmeColors))
         colors <- cbind(colors, 0, kmeColors)
       }
@@ -3412,11 +3497,7 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=1,
         Y1 <- Y[rownames(X[[i]]),]
         Y1 <- Y1[,grep("_vs_",colnames(Y1),invert=TRUE),drop=FALSE]
         if(NCOL(Y1)) {
-          kme <- cor(X[[i]], Y1, use="pairwise")
-          sdx <- matrixStats::colSds(X[[i]],na.rm=TRUE)
-          if(sd.wt>0) kme <- kme * (sdx / max(abs(sdx),na.rm=TRUE))**sd.wt          
-          kmeColors <- rho2bluered(kme)
-          kmeColors <- kmeColors[gg,,drop=FALSE]
+          kmeColors <- calcKMEcolors(X[[i]], Y1)
           colnames(kmeColors) <- paste0(names(X)[i],":",colnames(kmeColors))
           colors <- cbind(colors, 0, kmeColors)
         }
@@ -3429,11 +3510,7 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=1,
         Y1 <- Y[rownames(X[[i]]),]
         Y1 <- Y1[,grep("_vs_",colnames(Y1)),drop=FALSE]
         if(NCOL(Y1)) {
-          kme <- cor(X[[i]], Y1, use="pairwise")
-          sdx <- matrixStats::colSds(X[[i]],na.rm=TRUE)
-          if(sd.wt>0) kme <- kme * (sdx / max(abs(sdx),na.rm=TRUE))**sd.wt
-          kmeColors <- rho2bluered(kme)
-          kmeColors <- kmeColors[gg,,drop=FALSE]
+          kmeColors <- calcKMEcolors(X[[i]], Y1)
           colnames(kmeColors) <- paste0(names(X)[i],":",colnames(kmeColors))
           colors <- cbind(colors, 0, kmeColors)
         }
@@ -3475,9 +3552,11 @@ wgcna.plotMultiDendroAndColors <- function(multi_wgcna,
                                            show.kme = FALSE,
                                            show.traits = FALSE,
                                            show.contrasts = FALSE,
+                                           clust = TRUE,
                                            use.tree = 0,
                                            rm.na = TRUE,
                                            sd.wt = 0,
+                                           nmax = -1,
                                            main = NULL,
                                            colorHeight = 0.5,
                                            marAll = c(0.4,5,1,0.2)
@@ -3504,7 +3583,9 @@ wgcna.plotMultiDendroAndColors <- function(multi_wgcna,
       show.contrasts = show.contrasts,
       show.kme = show.kme,
       use.tree = use.tree,
+      clust = clust,
       sd.wt = sd.wt,
+      nmax = nmax,
       setLayout = FALSE,
       main = main[k]
     )
@@ -5348,15 +5429,24 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
 
 #' @export
 wgcna.getMultiTopGenesAndSets <- function(multi_wgcna, annot=NULL, module=NULL,
-                                          psig=0.05, ntop=40, level="gene",
+                                          psig=0.05, ntop=40, level=NULL,
                                           rename="symbol") {
 
+  ## set level
+  nw <- length(multi_wgcna)
+  if(!is.null(level)) {
+    level <- head(rep(level, nw),nw)
+  } else {
+    level <- c("gene","geneset")[1 + 1*grepl("^gs|^gset|geneset",names(multi_wgcna))]
+  } 
+  names(level) <- names(multi_wgcna)
+ 
   toplist <- list()
   k=names(multi_wgcna)[1]
   for(k in names(multi_wgcna)) {
     topk <- wgcna.getTopGenesAndSets(
       multi_wgcna[[k]],  module=module,  annot=annot,
-      ntop=ntop, psig=psig, level=level, rename=rename)
+      ntop=ntop, psig=psig, level=level[[k]], rename=rename)
     if(!is.null(module)) {
       topk <- lapply( topk, function(s) s[which(names(s) %in% module)] )
     }
@@ -5467,7 +5557,7 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
   
   if(multi) {
     top <- wgcna.getMultiTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
-      psig=psig, level=level, rename="gene_title")
+      psig=psig, level=NULL, rename="gene_title")
   } else {
     top <- wgcna.getTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
       psig=psig, level=level, rename="gene_title")
@@ -5611,36 +5701,50 @@ wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
   top.modules
 }
 
+#' Create report
+#'
 #' @export
-wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
+wgcna.create_report <- function(wgcna, ai_model,
+                                graph = NULL, annot=NULL, multi=FALSE,
                                 ntop=100, topratio=0.85, psig=0.05,
                                 format="markdown", verbose=1,
                                 progress=NULL) {
+  if(0) {
+    graph = NULL; annot=NULL; multi=FALSE;
+    ntop=100; topratio=0.85; psig=0.05;
+    format="markdown"; verbose=1;
+    progress=NULL
+  }
+  
+  if(is.null(ai_model)) ai_model <- ""
 
-  if(length(ai_model)==1) ai_model <- rep(ai_model,3)
   if(!multi) {
-    wgcnalist <- list(gx=wgcna)
+    layers <- list(gx = wgcna)
+  } else if(!is.null(wgcna$layers)) {
+    layers <- wgcna$layers
   } else {
-    wgcnalist <- wgcna
+    layers <- wgcna
   }
   
   ## get top modules (most correlated with some phenotype)
-  top.modules <- wgcna.getTopModules(wgcnalist, topratio=topratio, kx=4,
+  top.modules <- wgcna.getTopModules(layers, topratio=topratio, kx=4,
     multi=TRUE) ## always multi format
   top.modules
   
-  if(is.null(annot) && !is.null(wgcnalist[[1]]$annot)) {
-    annot <- wgcnalist[[1]]$annot
+  if(is.null(annot) && !is.null(layers[[1]]$annot)) {
+    annot <- layers[[1]]$annot
   }
   if(is.null(annot)) {
     message("[wgcna.create_report] WARNING. providing user annot table is recommended.")
   }
   
+  ##--------------------------------------------------------------------
   ## Step 1. Describe modules with LLM. We can use one LLM model or more.
+  ##--------------------------------------------------------------------
   if(!is.null(progress)) progress$set(message = "Extracting top modules...", value=0.2)
   if(verbose) message("Extracting top modules...")
   out <- wgcna.describeModules(
-    wgcnalist,
+    layers,
     modules = top.modules,
     multi = TRUE,  ## always true (we use list)
     ntop = ntop,  ## number of top genes or sets
@@ -5648,24 +5752,26 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
     psig = psig,
     experiment = wgcna$experiment,
     verbose = verbose,
-    model = ai_model[[1]]
+    model = ""
   ) 
   names(out)
   descriptions_prompts <- out$questions
   descriptions <- out$answers
   
-  ## Step 2: Make consensus conclusion from the description summaries.
+  ##--------------------------------------------------------------------
+  ## Step 2: Make consensus summary from the descriptions.
+  ##--------------------------------------------------------------------
   summaries <- list()
   summaries_prompts <- list()
   results <- NULL
-  if(ai_model[[2]] != "") {
+  if(ai_model != "") {
     if(!is.null(progress)) progress$set(message = "Simmering modules...", value=0.3)  
     if(verbose) message("Simmering modules...")    
     k=1
     for(k in names(descriptions)) {
       ss <- descriptions[[k]]
       q2 <-  paste("Following are descriptions of a certain WGCNA module by one or more LLMs. Create a consensus conclusion out of the independent descriptions. Describe the underlying biology, relate correlated phenotypes and mention key genes, proteins or metabolites. Just answer, no confirmation, use 1-2 paragraphs. Use prose as much as possible, do not use tables or bullet points.\n\n", ss)
-      cc <- ai.ask(q2, model=ai_model[[2]])
+      cc <- ai.ask(q2, model=ai_model)
       summaries[[k]] <- cc
       summaries_prompts[[k]] <- q2
     }
@@ -5675,104 +5781,163 @@ wgcna.create_report <- function(wgcna, ai_model, annot=NULL, multi=FALSE,
     results <- descriptions
   }
 
-  ## addd setttings
+  ## addd compute setttings
   if(!is.null(wgcna$settings)) {
     settings <- paste0(names(wgcna$settings),'=',wgcna$settings,collapse='; ')
     results[['compute_settings']] <- settings
   }
-  
+
+  ## collate all results
   all.results <- lapply(names(results), function(me)
     paste0("================= ",me," =================\n\n", results[[me]],"\n"))
-  all.results <- paste(all.results, collapse="\n\n")   
-  
+  all.results <- paste(all.results, collapse="\n")   
+
+  ##--------------------------------------------------------------------
   ## Step 3: Make detailed report. We concatenate all summaries and
   ## ask a (better) LLM model to create a report.
+  ## --------------------------------------------------------------------
   if(!is.null(progress)) progress$set(message = "Baking full report...", value=0.6)
   if(verbose) message("Baking full report...")
-  
-  q3 <- "These are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed report for this experiment. Give a detailed interpretation of the underlying biology by connecting WGCNA modules into biological functional programs, referring to key genes, proteins or metabolites. Build an cross-module integrative biological narrative. Suggest similarity to known diseases and possible therapies. Add a discussion and conclusion. Omit abstract, future directions, limitations, or references. Add a short paragraph describing methods and compute settings at the end. 
+
+  qq=diagram=report=NULL
+  if(ai_model == "") {
+    report <- all.results
+  } else {
+    
+    qq <- "These are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed report for this experiment. Give a detailed interpretation of the underlying biology by connecting WGCNA modules into biological functional programs, referring to key genes, proteins or metabolites. Build an cross-module integrative biological narrative. Suggest similarity to known diseases and possible therapies. Add a discussion and conclusion. Omit abstract, future directions, limitations, or references. Add a short paragraph describing methods and compute settings at the end. 
 
 Format like a scientific article, use prose as much as possible, minimize the use of tables and bullet points. For long tables show at least the top 5, and at most top 10, up and down entries. Do not inject any inline code. Only write if there was evidence in the source text."  
-
-  if(multi) {
-    q3 <- gsub("WGCNA","multiomics WGCNA",q3)
+    
+    if(multi) {
+      qq <- gsub("WGCNA","multiomics WGCNA",qq)
+    }
+    
+    xx <- wgcna$experiment
+    pp <- paste("You are a biologist interpreting results from a WGCNA analysis for this experiment:",  xx, ".\n\n")
+    qq <- paste(pp, qq)
+    
+    if(format=="markdown") {
+      qq <- paste(qq, "Format text and sections as markdown.")
+    }
+    if(tolower(format)=="html") {
+      qq <- paste(qq, "Format text and sections as HTML.")
+    }
+    qq <- paste(qq, "\n\nnHere are the results: <results>",all.results,"\n</results>")
+    ## Finally ask LLM
+    report <- ai.ask(qq, model = ai_model)
+    report <- gsub("^```html|```$","",report)
+        
+    ##--------------------------------------------------------------------
+    ## Step 4: Create diagram from report
+    ##-------------------------------------------------------------------
+    if(!is.null(progress)) progress$set(message = "Mashing up diagram...", value=0.8)  
+    if(verbose) message("Mashing up diagram...")
+    diagram <- wgcna.create_diagram(
+      report,
+      graph = graph,
+      ai_model = ai_model
+    )
   }
-  
-  xx <- wgcna$experiment
-  pp <- paste("You are a biologist interpreting results from a WGCNA analysis for this experiment:",  xx, ".\n\n")
-  q3 <- paste(pp, q3)
-
-  if(format=="markdown") {
-    q3 <- paste(q3, "Format text and sections as markdown.")
-  }
-  if(tolower(format)=="html") {
-    q3 <- paste(q3, "Format text and sections as HTML.")
-  }
-  q3 <- paste(q3, "\n\nnHere are the results: <results>",all.results,"\n</results>")
-
-  ## Finally ask LLM
-  report <- ai.ask(q3, model = ai_model[[3]])
-  report <- gsub("^```html|```$","",report)
-
-  ## Step 4: Create diagram from report
-  if(!is.null(progress)) progress$set(message = "Mashing up diagram...", value=0.8)  
-  if(verbose) message("Mashing up diagram...")
-  diagram <- wgcna.create_diagram(report, ai_model=ai_model[[3]]) 
   
   list(
     descriptions_prompts = descriptions_prompts,
     descriptions = descriptions,    
     summaries_prompts = summaries_prompts,
     summaries = summaries,
-    report_prompt = q3,
+    report_prompt = qq,
     report = report,
     diagram = diagram    
   )
 
 }
 
+correct_dot_diagram <- function(diagram) {
+  ## force as digraph
+  diagram <- sub("^graph","digraph",diagram)
+  
+  ## crazy arrows
+  diagram <- gsub("-x->","->",diagram)
+  
+  ## remove anything after DOT last curly bracket  
+  diagram <- sub("\\}\n.*","}\n",diagram)
+  diagram <- gsub("\\[solid\\]","[style=solid]",diagram)
+  diagram <- gsub("\\[dashed\\]","[style=dashed]",diagram)
+  
+  # avoid these problematic colors
+  diagram <- gsub("lightgreen","palegreen", diagram)  ## avoid
+  diagram <- gsub("lightorange","lightsalmon", diagram)  ## avoid
+  diagram <- gsub("fillcolor=black","fillcolor=lightgrey", diagram)  ## avoid    
+  diagram <- gsub("#000000","#AAAAAA",diagram)  ## no black
+
+  # match 3- or 6-digit hex color with replace with quoted version  
+  diagram <- gsub("(?<!['\"])\\b(#(?:[0-9A-Fa-f]{3}){1,2})\\b(?!['\"])",
+    "\"\\1\"", diagram, perl = TRUE )
+  diagram
+}
+
+
+#' Create DOT string object from graph object for sending to
+#' LLM. Clean unneeded attributes.
+#' 
+wgcna.graph2dot <- function(graph) {  
+
+  aa <- names(igraph::vertex_attr(graph))
+  aa <- intersect(aa, c("layer","fc","value"))
+  for(a in aa)  graph <- igraph::delete_vertex_attr(graph, a)
+
+  bb <- names(igraph::edge_attr(graph))
+  bb <- intersect(bb, c("rho","connection_type"))
+  for(b in bb)  graph <- igraph::delete_edge_attr(graph, b)
+  
+  file <- tempfile(fileext = ".dot")
+  igraph::write_graph(graph, file=file, format="dot")
+  dot <- readChar(file, file.info(file)$size)
+  unlink(file)
+  dot
+}
+
+#' Change layout of DOT string object
+#' 
+dot.rankdir <- function(dot, dir) {
+  if(dir=="TB") dot <- sub("rankdir=LR","rankdir=TB",dot)
+  if(dir=="LR") dot <- sub("rankdir=TB","rankdir=LR",dot)
+  dot
+}
+
 #' @export
-wgcna.create_diagram <- function(wgcna_report, ai_model, rankdir="LR", format="dot",
-                                 correct=TRUE, double.check=TRUE) {
+wgcna.create_diagram <- function(wgcna_report, ai_model, graph=NULL,
+                                 rankdir="TB", correct=TRUE, double.check=TRUE) {
 
-  q4 <- paste0("Create a diagram connecting modules in the following WGCNA report. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add phenotype nodes. Suggest cause and effect relations that explain the phenotypes. Group modules with same biological functions. Give just the code in clean DOT format. Layout in LR direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Do not use hexadecimal color coding. Use solid lines for positive regulation, use dashed lines for negative regulation. Color fill nodes matching the module names with light palette so we can still read well the text. Never use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow.")
+  if(!is.null(graph)) {
+    ## If we pass a graph (from e.g. Lasagna) we tell the LLM to use
+    ## the graph as starting point or template. This constrains the
+    ## connections and minimizes 'hallucinations'
+    message("[wgcna.create_diagram] using graph template...")
+    dot <- wgcna.graph2dot(graph) 
+    qq <- paste0("Create a directed diagram connecting modules according to the following WGCNA report. Use the given undirected graph as starting point and use known scientific information to infer connectivity and directionality. All modules must be connected with at least one other module. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add extra nodes for inferred intermediate phenotypes. Determine which phenotypes are causal and which phenotypes are observed effects. Suggest cause and effect relations that explain phenotypes and modules. Group modules with same biological functions. Give just the code in clean DOT format.
 
-  if(grepl("mermaid",format,ignore.case=TRUE)) q4 <- sub("DOT","MERMAID",q4)
-  q4 <- paste(q4, "\n\n<report>", wgcna_report, "</report>")
-  aa <- ai.ask(q4, model = ai_model)
+Layout in TB direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Do not use hexadecimal color coding. Use solid lines for positive regulation, use dashed lines for negative regulation. Annotate modules with module name, biological function and key gene/protein or metabolite. Use rectangular shapes for module nodes, use oval shapes for phenotype nodes. Color fill nodes matching the module names with light palette so we can still read well the text. Never use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow. ")
+    qq <- paste(qq,
+      "\n\n<report>", wgcna_report, "</report>",
+      "\n\n<dot>", dot, "</dot>" )
+
+  } else {
+    ## If we do not pass a graph (from e.g. Lasagna) we let the LLM
+    ## connect the modules itself based on its external knowledge.
+    message("[wgcna.create_diagram] no graph template...")
+    qq <- paste0("Create a diagram connecting modules in the following WGCNA report. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add phenotype nodes. Suggest cause and effect relations that explain the phenotypes. Group modules with same biological functions. Give just the code in clean DOT format. Layout in TB direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Do not use hexadecimal color coding. Use solid lines for positive regulation, use dashed lines for negative regulation. Color fill nodes matching the module names with light palette so we can still read well the text. Never use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow.")
+    qq <- paste(qq, "\n\n<report>", wgcna_report, "</report>")
+  }
+
+  aa <- ai.ask(qq, model = ai_model)
 
   ## cleanup a little bit
   aa <- gsub("```","",aa)
   diagram <- gsub("mermaid\n|dot\n","",aa)
   diagram <- gsub("&","and",diagram)
-
-  is.dot <- grepl("dot",tolower(format))
-  if(is.dot) {    
-    if(rankdir=="TB") diagram <- sub("rankdir=LR","rankdir=TB",diagram)
-    if(rankdir=="LR") diagram <- sub("rankdir=TB","rankdir=LR",diagram)  
-  }
-
-  if(is.dot && correct) {
-
-    ## force as digraph
-    diagram <- sub("^graph","digraph",diagram)
-
-    ## crazy arrows
-    diagram <- gsub("-x->","->",diagram)
-    
-    ## remove anything after DOT last curly bracket  
-    diagram <- sub("\\}\n.*","}\n",diagram)
-    diagram <- gsub("\\[solid\\]","[style=solid]",diagram)
-    diagram <- gsub("\\[dashed\\]","[style=dashed]",diagram)
-    
-    # match 3- or 6-digit hex color with replace with quoted version
-    diagram <- gsub("lightgreen","limegreen", diagram)  ## avoid
-    diagram <- gsub("fillcolor=black","fillcolor=lightgrey", diagram)  ## avoid    
-    diagram <- gsub("#000000","#AAAAAA",diagram)  ## no black
-    diagram <- gsub(
-      "(?<!['\"])\\b(#(?:[0-9A-Fa-f]{3}){1,2})\\b(?!['\"])",
-      "\"\\1\"",
-      diagram, perl = TRUE )
+  diagram <- dot.rankdir(diagram, dir=rankdir)   
+  if(correct) {
+    diagram <- correct_dot_diagram(diagram) 
   }
 
   if(double.check) {  
@@ -5794,21 +5959,38 @@ wgcna.create_diagram <- function(wgcna_report, ai_model, rankdir="LR", format="d
 }
 
 
-#'
+#' Given the output from wgcna.create_report() this function creates
+#' an infographic by calling Gemini3. The genAI model is given the
+#' report and asked to adhere to the included or external given
+#' diagram (in DOT format).
+#' 
 #' @export
-wgcna.create_infographic <- function(wgcna_report, 
+wgcna.create_infographic <- function(rpt,  diagram=NULL,
                                      #model = "gemini-2.5-flash-image"
                                      model="gemini-3-pro-image-preview",
-                                     filename = "infographic.png") {
-
-  rpt <- wgcna_report
-  prompt <- paste("Create a graphical abstract according to the given diagram and information in the WGCNA report. Use scientific visual style. Illustrate biological concepts with small graphics. \n\n", rpt$report, "\n---------------\n\n", rpt$diagram)      
-    
+                                     filename = "infographic.png") {  
+  report <- rpt$report
+  if(is.null(diagram)) diagram <- rpt$diagram
+  prompt <- paste("Create a graphical abstract according to the given diagram and information in the WGCNA report. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. \n\n", report, "\n---------------\n\n", diagram)
   outfile <- ai.create_image_gemini(
     prompt, model,
     format = "file",
     filename = filename
   )
+  return(invisible(outfile))
+}
 
+#' @export
+wgcna.create_module_infographic <- function(rpt, module,
+                                            #model = "gemini-2.5-flash-image"
+                                            model="gemini-3-pro-image-preview",
+                                            filename = "module-infographic.png") {  
+  if(!module %in% names(rpt$summaries)) {
+    stop(paste("module",m,"not in report summaries"))
+  }
+  mm <- paste0("**",module,"**: ",rpt$summaries[[module]])
+  prompt <- paste("Create an infographic summarizing the biological narrative of the following WGCNA module. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. Match the background with the name of the module with a very light shade. Include the module name in the title or image. \n\n", mm)
+  outfile <- ai.create_image_gemini(prompt, model, filename = filename)
+  message("saving to ", outfile)
   return(invisible(outfile))
 }

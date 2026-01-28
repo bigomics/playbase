@@ -2915,7 +2915,7 @@ sp_edge_weight <- function(graph, layers) {
 #' @export
 lasagna.solve <- function(obj, pheno, max_edges = 100, value.type = "rho",
                           min_rho = 0, prune = TRUE, fc.weights = TRUE,
-                          sp.weight = FALSE) {
+                          sp.weight = FALSE, graph=NULL) {
   if (!pheno %in% colnames(obj$Y)) {
     stop("pheno not in Y")
   }
@@ -2923,7 +2923,7 @@ lasagna.solve <- function(obj, pheno, max_edges = 100, value.type = "rho",
     stop("graph edges should have rho attribute")
   }
 
-  graph <- obj$graph
+  if(is.null(graph)) graph <- obj$graph
   X <- obj$X
   y <- obj$Y[,pheno]
 
@@ -3018,6 +3018,61 @@ lasagna.solve <- function(obj, pheno, max_edges = 100, value.type = "rho",
 }
 
 
+#' Solves lasagna graph iteratively for multiple contrasts. The
+#' solution is the RMS graph. 
+#'
+#' @export
+lasagna.multisolve <- function(obj, min_rho = 0.2, traits=NULL,
+                               max_edges = 100, value.type = "rho",
+                               fc.weights = TRUE, prune=TRUE,
+                               sp.weight = FALSE) {
+  if(0) {
+    max_edges = 100; value.type = "rho";
+    prune = TRUE; fc.weights = TRUE;
+    sp.weight = FALSE
+    min_rho=0.1
+  }
+
+  if(is.null(traits)) traits <- colnames(obj$Y)
+  traits <- intersect(traits, colnames(obj$Y))
+  
+  M <- list()
+  for(ct in traits) {
+    solved <- lasagna.solve(
+      obj,
+      pheno = ct,
+      min_rho = min_rho,
+      max_edges = max_edges,
+      value.type = value.type,
+      fc.weights = fc.weights,
+      sp.weight = sp.weight,
+      prune = FALSE
+    )
+    adj <- igraph::as_adjacency_matrix(solved, attr="weight")
+    M[[ct]] <- adj
+  }
+  
+  ## As solution we calculate the root-mean-square adjacency matrix
+  M <- lapply(M, function(mat) as.matrix(mat**2))
+  avgM <- sqrt(Reduce('+', M) / length(M))
+  avgM <- avgM * (avgM > min_rho)
+
+  gr <- obj$graph
+  ee <- igraph::get.edges(gr, igraph::E(gr))
+  igraph::E(gr)$weight <- sign(igraph::E(gr)$weight) * avgM[ee]
+  ## igraph::E(gr)$rho <- igraph::E(gr)$weight
+  del.ee <- which(abs(igraph::E(gr)$weight) < min_rho)
+  gr <- igraph::delete_edges(gr, del.ee)
+
+  if(prune) {
+    del.vv <- which( igraph::degree(gr) == 0)
+    gr <- igraph::delete_vertices(gr, del.vv)
+  }
+
+  return(gr)
+}
+
+
 #' @export
 lasagna.plot3D <- function(graph, pos) {
   edges <- data.frame(igraph::get.edgelist(graph), weight = E(graph)$weight)
@@ -3038,8 +3093,7 @@ lasagna.prune_graph <- function(graph, ntop = 100, layers = NULL,
                                 normalize.edges = FALSE, min.rho = 0.3,
                                 edge.sign = c("both","pos","neg","consensus")[1],
                                 edge.type = c("both","inter","intra","both2")[1],
-                                filter = NULL,
-                                prune = TRUE) {
+                                filter = NULL, select = NULL, prune = TRUE) {
   
   if (is.null(layers))
     layers <- graph$layers
@@ -3051,6 +3105,14 @@ lasagna.prune_graph <- function(graph, ntop = 100, layers = NULL,
     stop("vertex must have 'value' attribute")
   }
 
+  ## select nodes/modules
+  if (!is.null(select)) {
+    v1 <- (igraph::V(graph)$name %in% select)
+    v2 <- (sub(".*:","",igraph::V(graph)$name) %in% select)
+    v3 <- (sub(":.*","",igraph::V(graph)$name) %in% select)
+    graph <- igraph::subgraph(graph, vids = which(v1|v2|v3))
+  }
+  
   if (!is.null(filter)) {
     if (class(filter) != "list") stop("filter must be a named list")
     if (is.null(names(filter))) stop("filter must be a named list")
