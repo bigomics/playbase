@@ -477,11 +477,12 @@ pgx.variableImportance <- function(X, y,
 
   if ("xgboost" %in% methods) {
     ny <- length(table(y))
-    yy <- as.character(y) 
+    yy <- as.character(y)
     runtime[["xgboost"]] <- system.time({
       bst <- xgboost::xgboost(
-        t(X), yy, booster = "gbtree",
-        max_depth = 2, 
+        t(X), yy,
+        booster = "gbtree",
+        max_depth = 2,
         nthread = 2, nrounds = 2,
         objective = "multi:softprob"
       )
@@ -496,8 +497,9 @@ pgx.variableImportance <- function(X, y,
     ## linear model
     runtime[["xgboost.lin"]] <- system.time({
       bst2 <- xgboost::xgboost(
-        t(X), yy, booster = "gblinear",
-        max_depth = 2, 
+        t(X), yy,
+        booster = "gblinear",
+        max_depth = 2,
         nthread = 2, nrounds = 2,
         objective = "multi:softprob"
       )
@@ -690,7 +692,6 @@ plotDecisionTreeFromImportance <- function(imp, add.splits = 0, rf = NULL,
     }
   }
 }
-
 
 
 ## ===============================================================================

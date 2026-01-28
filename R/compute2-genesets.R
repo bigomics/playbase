@@ -65,7 +65,7 @@ compute_testGenesets <- function(pgx,
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
     X <- rename_by2(X, pgx$genes, "symbol", unique = TRUE)
   }
-  
+
   ## -----------------------------------------------------------
   ## Run methods
   ## -----------------------------------------------------------
@@ -79,7 +79,7 @@ compute_testGenesets <- function(pgx,
   Y <- pgx$samples
   gc()
 
-  X1 <- X;
+  X1 <- X
   is.mox <- playbase::is.multiomics(rownames(X))
   if (any(is.na(X))) {
     if (is.mox) {
@@ -159,7 +159,6 @@ compute_testGenesets <- function(pgx,
 }
 
 
-
 #' Clean GMT
 #'
 #' Cleans the GMT (Gene Matrix Transposed) object by modifying its names and removing duplicates.
@@ -193,7 +192,6 @@ clean_gmt <- function(gmt.all, gmt.db) {
   gmt.all <- lapply(gmt.all, function(x) gsub("[,].*", "", x))
 
 
-
   ## order by length and take out duplicated sets (only by name)
   gmt.all <- gmt.all[order(-sapply(gmt.all, length))]
   gmt.all <- gmt.all[!duplicated(names(gmt.all))]
@@ -216,13 +214,14 @@ clean_gmt <- function(gmt.all, gmt.db) {
 #'
 #' @export
 createSparseGenesetMatrix <- function(
-    gmt.all,
-    min.geneset.size = 15,
-    max.geneset.size = 500,
-    min_gene_frequency = 10,
-    all_genes = NULL,
-    annot = NULL,
-    filter_genes = TRUE) {
+  gmt.all,
+  min.geneset.size = 15,
+  max.geneset.size = 500,
+  min_gene_frequency = 10,
+  all_genes = NULL,
+  annot = NULL,
+  filter_genes = TRUE
+) {
   # WARNING #
   # This function is used in playbase and playdata to generate curated GMT. Do not change it without testing it in both packages to ensure reproducibility.
 

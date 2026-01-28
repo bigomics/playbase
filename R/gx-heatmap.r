@@ -815,7 +815,7 @@ gx.heatmap <- function(gx, values = NULL,
   graphics::par(xpd = FALSE)
 
   if (verbose > 1) cat("input.dim.gx=", dim(gx), "\n")
-  if (is.null(symm)) symm <- nrow(gx)==ncol(gx) && all(rownames(gx) == colnames(gx))
+  if (is.null(symm)) symm <- nrow(gx) == ncol(gx) && all(rownames(gx) == colnames(gx))
 
   ## -------------------------------------------------------------
   ## scaling options

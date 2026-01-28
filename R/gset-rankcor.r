@@ -218,8 +218,8 @@ gset.gsva <- function(X, geneSets, method = "gsva") {
 #'   gene/feature is part of gene sets. Features on rows, gene sets on
 #'   columns.
 #'
-gset.ttest <- function(fc, G, sort.by = "pvalue", nprior=0,
-                       method = c("ttest","ztest")[1] ) {
+gset.ttest <- function(fc, G, sort.by = "pvalue", nprior = 0,
+                       method = c("ttest", "ztest")[1]) {
   if (is.null(names(fc))) stop("fc must have names")
   if (is.list(G)) {
     message("[gset.ttest] converting gmt to sparse matrix...")
@@ -235,24 +235,24 @@ gset.ttest <- function(fc, G, sort.by = "pvalue", nprior=0,
   fc <- fc[gg]
   G <- G[gg, ]
 
-  if(nprior>0) {
-    fc <- c( rep(0, nprior), fc)
-    G <- rbind(matrix(1, nrow=nprior, ncol=ncol(G)), G)
+  if (nprior > 0) {
+    fc <- c(rep(0, nprior), fc)
+    G <- rbind(matrix(1, nrow = nprior, ncol = ncol(G)), G)
     names(fc)[1:nprior] <- paste0("zero", 1:nprior)
-    rownames(G)[1:nprior] <- paste0("zero", 1:nprior)    
+    rownames(G)[1:nprior] <- paste0("zero", 1:nprior)
   }
 
-  if(method == "ttest") {
+  if (method == "ttest") {
     mt <- matrix_onesample_ttest(fc, G)
     pv <- mt$p[, 1]
-  } else if(method == "ztest") {
+  } else if (method == "ztest") {
     mt <- fc_ztest(fc, G)
     pv <- mt$p_value
   } else {
     stop("unknown test method: ", method)
   }
   qv <- p.adjust(pv, method = "fdr")
-  gsetFC <- gset.averageCLR(fc, G, center=FALSE, use.rank=FALSE)[, 1]
+  gsetFC <- gset.averageCLR(fc, G, center = FALSE, use.rank = FALSE)[, 1]
 
   res <- cbind(
     gsetFC = gsetFC,

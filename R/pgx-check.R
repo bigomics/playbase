@@ -9,8 +9,9 @@
 #'  `PASS` which contains the overall status of the check.
 #' @export
 pgx.checkINPUT <- function(
-    df,
-    type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")) {
+  df,
+  type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")
+) {
   datatype <- match.arg(type)
   df_clean <- df
   PASS <- TRUE
@@ -233,10 +234,11 @@ pgx.checkINPUT <- function(
 #'  `PASS` which contains the overall status of the check.
 #' @export
 pgx.crosscheckINPUT <- function(
-    SAMPLES = NULL,
-    COUNTS = NULL,
-    CONTRASTS = NULL,
-    PASS = TRUE) {
+  SAMPLES = NULL,
+  COUNTS = NULL,
+  CONTRASTS = NULL,
+  PASS = TRUE
+) {
   samples <- SAMPLES
   counts <- COUNTS
   contrasts <- CONTRASTS

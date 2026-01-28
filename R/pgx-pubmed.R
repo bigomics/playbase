@@ -8,8 +8,6 @@ NCORE <- function() {
 }
 
 
-
-
 #' @title Get PubMed context for a gene
 #'
 #' @description
@@ -72,9 +70,6 @@ pmid.getPubMedContext <- function(gene, context) {
 }
 
 
-
-
-
 #' @title Annotate edges with shared genes in a Pubmed network graph
 #'
 #' @description Annotates edges in a Pubmed citation network graph with the genes shared between connected articles.
@@ -100,8 +95,6 @@ pmid.annotateEdges <- function(gr) {
   igraph::E(gr)$weight <- nshared
   return(gr)
 }
-
-
 
 
 #' Link to PubMed article

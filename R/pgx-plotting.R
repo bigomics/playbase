@@ -207,9 +207,7 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
       message("[repelwords] WARNING maximum iterations reached: iter = ", iter)
       boxes[[length(boxes) + 1]] <-
         c(x1 - 0.5 * wid, y1 - 0.5 * ht, wid, ht)
-    } else {
-
-    }
+    } else {}
   }
   result <- do.call(rbind, boxes)
 
@@ -224,7 +222,7 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
 
 
 #' @export
-pgx.plotEnrichmentDotPlot <- function(pgx, contrast, filter = NULL, 
+pgx.plotEnrichmentDotPlot <- function(pgx, contrast, filter = NULL,
                                       ntop = 30, dir = "both",
                                       ptsize = 6,
                                       main = "Enrichment Analysis") {
@@ -269,7 +267,6 @@ pgx.plotEnrichmentDotPlot <- function(pgx, contrast, filter = NULL,
       legend.title = ggplot2::element_text(size = 11),
       legend.text = ggplot2::element_text(size = 8)
     )
-
 }
 
 #' @export
@@ -888,8 +885,6 @@ pgx.SankeyFromPhenotypes.GGPLOT <- function(pgx, phenotypes, mat = NULL, fill = 
 }
 
 
-
-
 #' @title Plot contrasts from a PGX analysis
 #'
 #' @description Generate plots for contrasts from a pharmacogenomic (PGX) analysis.
@@ -1275,7 +1270,6 @@ plot_volcano <- function(x,
 }
 
 
-
 #' @describeIn pgx.plotContrast Create a volcano plot from a PGX object
 #'
 #' @param pgx A PGX object containing differential expression results.
@@ -1618,9 +1612,6 @@ plot_MA <- function(x,
     )
   }
 }
-
-
-
 
 
 #' @describeIn pgx.plotContrast Scatter plot of contrast results
@@ -2401,8 +2392,6 @@ pgx.splitHeatmap <- function(ngs, splitx = NULL, top.mode = "specific",
 ## =================================================================================
 
 
-
-
 #' Convert a plotly plot to a ggplot object
 #'
 #' @param plot The plotly plot object to convert
@@ -2747,8 +2736,6 @@ ggenplot <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ylab = NULL) {
       axis.title.y = ggplot2::element_text(size = 9, hjust = +0.5)
     )
 }
-
-
 
 
 #' @title Scatter Plot with Filled Colors
@@ -3584,9 +3571,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     graphics::mtext(title, 3, adj = 0, padj = -0.35, cex = 0.9 * cex.title)
   }
 
-  if (set.par) {
-
-  }
+  if (set.par) {}
   out <- list()
   out$lab.pos <- lab.pos
   invisible(out)
@@ -4626,8 +4611,6 @@ pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, na.co
 }
 
 
-
-
 #' Stacked barplot
 #'
 #' @param x Numeric data matrix. Rows are stacked, columns are groups.
@@ -5475,7 +5458,8 @@ plotlyVolcano_multi <- function(FC,
 #' )
 #' @export
 plotly_build_light <- function(
-    fig, vars_hf = c("x", "y", "text", "hovertext")) {
+  fig, vars_hf = c("x", "y", "text", "hovertext")
+) {
   # check_arguments
   stopifnot(inherits(fig, "plotly"))
   stopifnot(inherits(fig$x$attrs, "list"))
@@ -5744,7 +5728,7 @@ plotlyCytoplot <- function(pgx,
 #' }
 #'
 #' @export
-corclust <- function(x, method="ward.D2") {
+corclust <- function(x, method = "ward.D2") {
   cx <- stats::cor(t(x), use = "pairwise")
   cx[is.na(cx)] <- 0
   hclust(stats::as.dist(1 - cx), method = method)
@@ -6152,7 +6136,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
 }
 
 
-
 #' Box plot using plotly
 #'
 #' @param data Data frame to plot.
@@ -6173,19 +6156,20 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
 #'
 #' @export
 pgx.boxplot.PLOTLY <- function(
-    data,
-    x = NULL,
-    y = NULL,
-    title = NULL,
-    color = "#3181de",
-    fillcolor = "#2fb5e3",
-    linecolor = "#3181de",
-    hoverinfo = "y",
-    hoverformat = ".2f",
-    yaxistitle = FALSE,
-    xaxistitle = FALSE,
-    font_family = "Lato",
-    margin = list(l = 10, r = 10, b = 10, t = 10)) {
+  data,
+  x = NULL,
+  y = NULL,
+  title = NULL,
+  color = "#3181de",
+  fillcolor = "#2fb5e3",
+  linecolor = "#3181de",
+  hoverinfo = "y",
+  hoverformat = ".2f",
+  yaxistitle = FALSE,
+  xaxistitle = FALSE,
+  font_family = "Lato",
+  margin = list(l = 10, r = 10, b = 10, t = 10)
+) {
   plotly::plot_ly(
     data = data,
     x = ~ get(x),
@@ -6236,26 +6220,27 @@ pgx.boxplot.PLOTLY <- function(
 #'
 #' @export
 pgx.barplot.PLOTLY <- function(
-    data,
-    x = NULL,
-    y = NULL,
-    title = NULL,
-    color = "#3181de",
-    fillcolor = "#A6CEE3",
-    linecolor = "#3181de",
-    titlecolor = "#1f77b4",
-    hoverinfo = "y",
-    hoverformat = ".2f",
-    yaxistitle = FALSE,
-    xaxistitle = FALSE,
-    xlen = NULL,
-    yrange = NULL,
-    barmode = "relative",
-    font_family = "Lato",
-    margin = list(l = 0, r = 0, b = 0, t = 0),
-    grouped = TRUE, # true will calculate mean +/- (sd) across groups
-    annotations = NULL,
-    pct.NA = NULL) {
+  data,
+  x = NULL,
+  y = NULL,
+  title = NULL,
+  color = "#3181de",
+  fillcolor = "#A6CEE3",
+  linecolor = "#3181de",
+  titlecolor = "#1f77b4",
+  hoverinfo = "y",
+  hoverformat = ".2f",
+  yaxistitle = FALSE,
+  xaxistitle = FALSE,
+  xlen = NULL,
+  yrange = NULL,
+  barmode = "relative",
+  font_family = "Lato",
+  margin = list(l = 0, r = 0, b = 0, t = 0),
+  grouped = TRUE, # true will calculate mean +/- (sd) across groups
+  annotations = NULL,
+  pct.NA = NULL
+) {
   if (is.null(x)) x <- 1
   if (is.null(y)) y <- 2
 
@@ -6789,7 +6774,6 @@ plotTimeSeries.groups <- function(time,
                                   lwd = 3,
                                   xlab = "time",
                                   time.factor = TRUE) {
-
   if (is.null(group)) group <- rep(1, length(time))
   groups <- sort(unique(group))
   ngroup <- length(groups)
@@ -6843,9 +6827,9 @@ plotTimeSeries.groups <- function(time,
   }
 
   title(main = main)
-  if (ngroup > 1)
+  if (ngroup > 1) {
     legend("bottomright", legend = groups, fill = 2:99, y.intersp = 0.8, cex = 0.9)
-
+  }
 }
 
 
@@ -7140,26 +7124,26 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
     edge.cex <- 1
     edge.alpha <- 0.33
     fc <- "value"
-    xdist = 1
-    normalize.edges = FALSE
-    yheight = 2
-    edge.sign = "both"     
+    xdist <- 1
+    normalize.edges <- FALSE
+    yheight <- 2
+    edge.sign <- "both"
     edge.type <- "both"
     labpos <- NULL
     layout <- c("parallel", "hive")[1]
     normalize.edges <- FALSE
     value.name <- "rho"
     strip.prefix <- FALSE
-    prune = FALSE
+    prune <- FALSE
   }
-  
+
   vattr <- igraph::vertex_attr_names(graph)
   edgeattr <- igraph::edge_attr_names(graph)
-  if(!"rho" %in% edgeattr) message("WARNING: no rho in edge attributes!")
-  if(!"weight" %in% edgeattr) message("WARNING: no weight in edge attributes!")
-  if(!"value" %in% vattr) stop("ERROR: no value in vertex attributes!")
-  if(!"layer" %in% vattr) stop("ERROR: no layer in vertex attributes!")
-  
+  if (!"rho" %in% edgeattr) message("WARNING: no rho in edge attributes!")
+  if (!"weight" %in% edgeattr) message("WARNING: no weight in edge attributes!")
+  if (!"value" %in% vattr) stop("ERROR: no value in vertex attributes!")
+  if (!"layer" %in% vattr) stop("ERROR: no layer in vertex attributes!")
+
   graph <- lasagna.prune_graph(
     graph,
     ntop = ntop,
@@ -7169,20 +7153,21 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
     edge.sign = edge.sign,
     edge.type = edge.type,
     filter = NULL,
-    prune = prune)
+    prune = prune
+  )
 
   layers <- graph$layers
-  layers <- setdiff(layers, c("SOURCE","SINK"))
+  layers <- setdiff(layers, c("SOURCE", "SINK"))
 
   fc <- igraph::V(graph)$value
   names(fc) <- igraph::V(graph)$name
-  
+
   ## layout
   vlayer <- igraph::V(graph)$layer
   if (layout == "parallel") {
     if (is.null(xpos)) xpos <- c(0:(length(layers) - 1))
     xpos <- xpos * xdist
-    xpos <- head(rep(xpos,10),length(layers))
+    xpos <- head(rep(xpos, 10), length(layers))
     x <- xpos[match(vlayer, layers)]
     y <- fc[igraph::V(graph)$name]
     layout.xy <- cbind(x = x, y = y)
@@ -7219,20 +7204,20 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
   ew <- (ewt / max.wt)**2
 
   ## vertex size relative to centrality
-  vx <- log(1000*igraph::page_rank(graph, weights=ewt)$vector)
-  vx <- (0.1+abs(vx)/max(abs(vx)))**1
-  vcol <- c("blue2","red2")[ 1+1*(fc[vv] > 0)]
+  vx <- log(1000 * igraph::page_rank(graph, weights = ewt)$vector)
+  vx <- (0.1 + abs(vx) / max(abs(vx)))**1
+  vcol <- c("blue2", "red2")[1 + 1 * (fc[vv] > 0)]
 
   ## color edges by sign or correlation. set NA edges to grey
-  ecol <- c("darkorange3","magenta4")[ 1+1*(igraph::E(graph)$rho >= 0)]    
+  ecol <- c("darkorange3", "magenta4")[1 + 1 * (igraph::E(graph)$rho >= 0)]
   ii <- which(is.na(igraph::E(graph)$rho))
-  if(length(ii)) ecol[ii] <- "grey70"
+  if (length(ii)) ecol[ii] <- "grey70"
   ecol <- adjustcolor(ecol, edge.alpha)
-  
+
   ## add curvature for intra-edges
-  ecurv <- c(-0.25,0)[1 + 1*grepl("->",igraph::E(graph)$connection_type)]
-  #ecurv <- c(TRUE,FALSE)[1 + 1*grepl("->",igraph::E(graph)$connection_type)]
-  
+  ecurv <- c(-0.25, 0)[1 + 1 * grepl("->", igraph::E(graph)$connection_type)]
+  # ecurv <- c(TRUE,FALSE)[1 + 1*grepl("->",igraph::E(graph)$connection_type)]
+
   igraph::V(graph)$label <- ""
   if (is.null(xlim)) {
     xlim <- range(layout.xy[, 1])
@@ -7355,8 +7340,8 @@ plotHivePlot <- function(X, f, group, groups = NULL,
   gr <- igraph::graph_from_edgelist(ee, directed = FALSE)
   igraph::E(gr)$weight <- abs(R[idx])
   igraph::V(gr)$group <- group[igraph::V(gr)$name]
-  
-  if(length(gr)==0) {
+
+  if (length(gr) == 0) {
     message("[plotHivePlot] ERROR. empty graph.")
     return(NULL)
   }
