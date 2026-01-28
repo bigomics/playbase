@@ -27,11 +27,13 @@ create_mock_pgx <- function(n_genes = 10, n_samples = 5, dataset_name = "test",
   )
 
   # Optionally add NA values
-
   if (include_na) {
     na_idx <- sample(length(counts), size = floor(length(counts) * 0.1))
     counts[na_idx] <- NA
   }
+
+  # Create X matrix (log-scaled counts) - used for z-score computation
+  X <- log2(counts + 1)
 
   # Create genes annotation with human_ortholog column
   genes <- data.frame(
@@ -56,6 +58,7 @@ create_mock_pgx <- function(n_genes = 10, n_samples = 5, dataset_name = "test",
 
   list(
     counts = counts,
+    X = X,
     genes = genes,
     samples = samples
   )
@@ -923,7 +926,8 @@ test_that("Z-scores are computed correctly per dataset", {
     stringsAsFactors = FALSE
   )
 
-  pgx <- list(counts = counts, genes = genes, samples = samples)
+  X <- log2(counts + 1)
+  pgx <- list(counts = counts, X = X, genes = genes, samples = samples)
   save_mock_pgx(pgx, file.path(pgx_dir, "test.pgx"))
 
   playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
@@ -975,7 +979,8 @@ test_that("Z-scores are computed independently per dataset", {
   )
   genes_a <- data.frame(symbol = "TESTGENE", human_ortholog = "TESTGENE", row.names = "TESTGENE")
   samples_a <- data.frame(group = "A", row.names = paste0("a_sample_", 1:3))
-  pgx_a <- list(counts = counts_a, genes = genes_a, samples = samples_a)
+  X_a <- log2(counts_a + 1)
+  pgx_a <- list(counts = counts_a, X = X_a, genes = genes_a, samples = samples_a)
   save_mock_pgx(pgx_a, file.path(pgx_dir, "datasetA.pgx"))
 
   # Dataset B: high expression (10x scale)
@@ -986,7 +991,8 @@ test_that("Z-scores are computed independently per dataset", {
   )
   genes_b <- data.frame(symbol = "TESTGENE", human_ortholog = "TESTGENE", row.names = "TESTGENE")
   samples_b <- data.frame(group = "B", row.names = paste0("b_sample_", 1:3))
-  pgx_b <- list(counts = counts_b, genes = genes_b, samples = samples_b)
+  X_b <- log2(counts_b + 1)
+  pgx_b <- list(counts = counts_b, X = X_b, genes = genes_b, samples = samples_b)
   save_mock_pgx(pgx_b, file.path(pgx_dir, "datasetB.pgx"))
 
   playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
@@ -1029,7 +1035,8 @@ test_that("Z-scores handle NA values in counts", {
 
   genes <- data.frame(symbol = "GENE1", human_ortholog = "GENE1", row.names = "GENE1")
   samples <- data.frame(group = "test", row.names = paste0("s", 1:4))
-  pgx <- list(counts = counts, genes = genes, samples = samples)
+  X <- log2(counts + 1)
+  pgx <- list(counts = counts, X = X, genes = genes, samples = samples)
   save_mock_pgx(pgx, file.path(pgx_dir, "test.pgx"))
 
   playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
@@ -1066,7 +1073,8 @@ test_that("Z-scores work with tiledb.addDataset", {
   )
   genes1 <- data.frame(symbol = "GENE1", human_ortholog = "GENE1", row.names = "GENE1")
   samples1 <- data.frame(group = "A", row.names = paste0("s1_", 1:3))
-  pgx1 <- list(counts = counts1, genes = genes1, samples = samples1)
+  X1 <- log2(counts1 + 1)
+  pgx1 <- list(counts = counts1, X = X1, genes = genes1, samples = samples1)
   pgx1_file <- file.path(pgx_dir, "dataset1.pgx")
   save_mock_pgx(pgx1, pgx1_file)
 
@@ -1080,7 +1088,8 @@ test_that("Z-scores work with tiledb.addDataset", {
   )
   genes2 <- data.frame(symbol = "GENE1", human_ortholog = "GENE1", row.names = "GENE1")
   samples2 <- data.frame(group = "B", row.names = paste0("s2_", 1:4))
-  pgx2 <- list(counts = counts2, genes = genes2, samples = samples2)
+  X2 <- log2(counts2 + 1)
+  pgx2 <- list(counts = counts2, X = X2, genes = genes2, samples = samples2)
   pgx2_file <- file.path(pgx_dir, "dataset2.pgx")
   save_mock_pgx(pgx2, pgx2_file)
 
@@ -1277,7 +1286,8 @@ test_that("Sample names with special characters are handled correctly", {
     stringsAsFactors = FALSE
   )
 
-  pgx <- list(counts = counts, genes = genes, samples = samples)
+  X <- log2(counts + 1)
+  pgx <- list(counts = counts, X = X, genes = genes, samples = samples)
   save_mock_pgx(pgx, file.path(pgx_dir, "test.pgx"))
 
   metadata <- playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
@@ -1352,7 +1362,8 @@ test_that("Sample names with whitespace are handled correctly", {
     stringsAsFactors = FALSE
   )
 
-  pgx <- list(counts = counts, genes = genes, samples = samples)
+  X <- log2(counts + 1)
+  pgx <- list(counts = counts, X = X, genes = genes, samples = samples)
   save_mock_pgx(pgx, file.path(pgx_dir, "test.pgx"))
 
   metadata <- playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
@@ -1420,7 +1431,8 @@ test_that("Gene names with special characters are handled correctly", {
     stringsAsFactors = FALSE
   )
 
-  pgx <- list(counts = counts, genes = genes, samples = samples)
+  X <- log2(counts + 1)
+  pgx <- list(counts = counts, X = X, genes = genes, samples = samples)
   save_mock_pgx(pgx, file.path(pgx_dir, "test.pgx"))
 
   metadata <- playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
@@ -1512,7 +1524,8 @@ test_that("Phenotype values with special characters are preserved", {
     stringsAsFactors = FALSE
   )
 
-  pgx <- list(counts = counts, genes = genes, samples = samples)
+  X <- log2(counts + 1)
+  pgx <- list(counts = counts, X = X, genes = genes, samples = samples)
   save_mock_pgx(pgx, file.path(pgx_dir, "test.pgx"))
 
   metadata <- playbase::buildTileDB(pgx_dir, tiledb_path, verbose = FALSE)
@@ -1580,7 +1593,8 @@ test_that("Unicode characters in sample names are handled", {
     stringsAsFactors = FALSE
   )
 
-  pgx <- list(counts = counts, genes = genes, samples = samples)
+  X <- log2(counts + 1)
+  pgx <- list(counts = counts, X = X, genes = genes, samples = samples)
   save_mock_pgx(pgx, file.path(pgx_dir, "test.pgx"))
 
   # This should either work or fail gracefully
