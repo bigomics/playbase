@@ -20,6 +20,7 @@ pgx.createPGX(
   probe_type = NULL,
   creator = "unknown",
   description = "No description provided.",
+  metadata = NULL,
   X = NULL,
   norm_method = "CPM",
   is.logx = NULL,
@@ -103,6 +104,7 @@ pgx.createPGX creates a pgx object with the following slots:
 - `creator`: Creator of the dataset
 - `datatype`: Type of data (e.g. RNA-seq, microarray)
 - `description`: Description of the dataset
+- `metadata`: User-defined metadata (list with study_type, tissue_type, etc.)
 - `samples`: Sample metadata
 - `counts`: Raw count matrix
 - `contrasts`: Contrast matrix
