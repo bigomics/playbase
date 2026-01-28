@@ -406,100 +406,149 @@ read_contrasts <- function(file) {
 }
 
 
+## #' Read Olink NPX data and create a counts matrix
+## #' @param NPX_data Path to Olink NPX data file. Must be standard Olink format as per OlinkAnalyze R package.
+## #' @return NPX data matrix (features on rows; samples on columns)
+## #' @export
+## read_Olink_NPX <- function(NPX_data) {
+
+##   NPX <- try(OlinkAnalyze::read_NPX(NPX_data), silent = TRUE)
+##   if (!inherits(NPX, "try-error")) {
+##     NPX <- as.data.frame(NPX)
+##   } else {
+##     message("[read_Olink_NPX]: Uploaded file is not Olink or does not adhere with standard Olink NPX format.")
+##     return(NULL)
+##   }
+
+##   hh1 <- grep("NPX", colnames(NPX), ignore.case = TRUE)
+##   if (any(hh1)) {
+##     npx.id <- colnames(NPX)[hh1[1]]
+##   } else {
+##     message("[read_Olink_NPX]: Uploaded Olink NPX file does not contain the variable NPX")
+##     return(NULL)
+##   }
+
+##   feature.id <- NULL
+##   hh <- grepl("uniprot", tolower(colnames(NPX)))
+##   if (any(hh)) feature.id <- colnames(NPX)[hh][1]
+##   if (is.null(feature.id)) {
+##     hh <- grepl("assay$", tolower(colnames(NPX)))
+##     if (any(hh)) feature.id <- colnames(NPX)[hh][1]
+##   }
+##   if (is.null(feature.id)) {
+##     message("[read_Olink_NPX]: Uploaded Olink NPX file does not contain the variables Uniprot or Assay")
+##     return(NULL)
+##   }
+
+##   sample.id <- NULL
+##   hh <- grepl("sampleid", tolower(colnames(NPX)))
+##   if (any(hh)) sample.id <- colnames(NPX)[hh][1]
+##   if (is.null(sample.id)) {
+##     message("[read_Olink_NPX]: Uploaded Olink file does not contain the variable SampleID")
+##     return(NULL)
+##   }
+
+##   fm <- as.formula(paste0(feature.id, "~", sample.id))
+##   counts.df <- reshape2::dcast(NPX, fm, value.var = npx.id, fun.aggregate = mean)
+##   counts <- as.matrix(counts.df[sapply(counts.df, is.numeric)])
+##   rownames(counts) <- counts.df[, feature.id]
+##   counts <- counts[!is.na(rownames(counts)), ]
+
+##   return(counts)
+
+## }
+
+## #' Read Olink NPX data and automatically create samples dataframe
+## #' @param NPX_data Path to Olink NPX data file. Must be standard Olink format as per OlinkAnalyze R package.
+## #' @return Dataframe with metadata
+## #' @export
+## read_Olink_samples <- function(NPX_data) {
+
+##   NPX <- try(OlinkAnalyze::read_NPX(NPX_data), silent = TRUE)
+##   if (!inherits(NPX, "try-error")) {
+##     NPX <- as.data.frame(NPX)
+##   } else {
+##     message("[read_Olink_NPX]: Uploaded file is not Olink or does not adhere with standard Olink NPX format.")
+##     return(NULL)
+##   }
+
+##   samples.id <- NULL
+##   hh <- grep("SampleID", colnames(NPX), ignore.case = TRUE)
+##   if (any(hh)) samples.id <- unique(NPX[, hh[1]])
+##   if (is.null(samples.id)) {
+##     message("[read_Olink_NPX]: Uploaded file does not contain the variable SampleID")
+##     return(NULL)
+##   }
+
+##   # https://cran.r-project.org/web/packages/OlinkAnalyze/vignettes/Vignett.html
+##   exclude.vars <- ""
+##   hh <- grepl("uniprot|olinkid|assay|npx|freq|lod", tolower(colnames(NPX)))
+##   if (any(hh)) exclude.vars <- colnames(NPX)[hh]
+##   samples <- matrix(NA, nrow = length(samples.id), ncol = sum(!hh))
+##   samples <- data.frame(samples, row.names = samples.id)
+##   colnames(samples) <- colnames(NPX)[!hh]
+
+##   hh <- grep("SampleID", colnames(NPX), ignore.case = TRUE)
+##   for (i in 1:nrow(samples)) {
+##     for (t in 1:ncol(samples)) {
+##       jj <- match(rownames(samples)[i], NPX[, hh[1]])
+##       jx <- match(colnames(samples)[t], colnames(NPX))
+##       if (!any(jj) | !any(jx)) next
+##       samples[i, t] <- NPX[jj, jx]
+##     }
+##   }
+##   samples <- samples[, -hh[1]]
+
+##   return(samples)
+
+## }
+
 #' Read Olink NPX data and create a counts matrix
-#' @param NPX_data Path to input Olink NPX data file. Must be standard Olink NPX format as per OlinkAnalyze R package.
-#' @return data matrix (features on rows; samples on columns)
+#' @param NPX_data Path to Olink file. Must be standard format as per OlinkAnalyze R package.
+#' @return NPX data matrix (features on rows; samples on columns)
+#' @return Sample metadata matrix (samples on rows; metadata on columns)
 #' @export
 read_Olink_NPX <- function(NPX_data) {
+
   NPX <- try(OlinkAnalyze::read_NPX(NPX_data), silent = TRUE)
-  if (!inherits(NPX, "try-error")) {
-    NPX <- as.data.frame(NPX)
-  } else {
-    dbg("[read_Olink_NPX]. Uploaded proteomics data file is not Olink or does not adhere with standard Olink NPX format.")
+  if (inherits(NPX, "try-error")) {
+    message("[read_Olink_NPX]: Uploaded file does not adhere with standard Olink format.")
     return(NULL)
   }
 
-  hh1 <- grep("NPX", colnames(NPX), ignore.case = TRUE)
-  if (any(hh1)) {
-    npx.id <- colnames(NPX)[hh1[1]]
-  } else {
-    dbg("[read_Olink_NPX] The uploaded Olink NPX file does not contain the variable NPX")
-    return(NULL)
-  }
+  NPX <- data.table::as.data.table(NPX)
+  cols <- tolower(colnames(NPX))
 
-  feature.id <- NULL
-  hh <- grepl("uniprot", tolower(colnames(NPX)))
-  if (any(hh)) feature.id <- colnames(NPX)[hh][1]
-  if (is.null(feature.id)) {
-    hh <- grepl("assay$", tolower(colnames(NPX)))
-    if (any(hh)) feature.id <- colnames(NPX)[hh][1]
-  }
-  if (is.null(feature.id)) {
-    dbg("[read_Olink_NPX] The uploaded Olink NPX file does not contain the variables Uniprot or Assay")
-    return(NULL)
-  }
+  npx.id <- colnames(NPX)[grep("npx", cols)[1]]
+  ss.id <- colnames(NPX)[grep("sampleid", cols)[1]]
+  ff.id <- colnames(NPX)[c(grep("uniprot", cols), grep("assay$", cols))[1]]
 
-  sample.id <- NULL
-  hh <- grepl("sampleid", tolower(colnames(NPX)))
-  if (any(hh)) sample.id <- colnames(NPX)[hh][1]
-  if (is.null(sample.id)) {
-    dbg("[read_Olink_NPX] The uploaded Olink NPX file does not contain the variable SampleID")
-    return(NULL)
-  }
+  if (is.na(npx.id)) message("[read_Olink_NPX]: 'NPX' is missing.")
+  if (is.na(ss.id)) message("[read_Olink_NPX]: 'SampleID' is missing.")
+  if (is.na(ff.id)) message("[read_Olink_NPX]: 'Uniprot' or 'Assay' is missing.")
+  if (is.na(npx.id) | is.na(ss.id) | is.na(ff.id)) return(NULL)
 
-  # Convert to matrix
-  fm <- as.formula(paste0(feature.id, "~", sample.id))
-  counts.df <- reshape2::dcast(NPX, fm, value.var = npx.id, fun.aggregate = mean)
-  counts <- as.matrix(counts.df[sapply(counts.df, is.numeric)])
-  rownames(counts) <- counts.df[, feature.id]
-  counts <- counts[!is.na(rownames(counts)), ]
+  ## Counts
+  fm <- as.formula(paste0(ff.id, "~", ss.id))
+  counts.df <- data.table::dcast(NPX, fm, value.var = npx.id, fun.aggregate = mean)
+  counts <- as.matrix(counts.df[, -1, with = FALSE])
+  rownames(counts) <- counts.df[[1]]
+  counts <- counts[!is.na(rownames(counts)), , drop = FALSE]
 
-  return(counts)
-}
+  ## Metadata
+  NPX <- as.data.frame(NPX)
+  hh <- grepl("uniprot|olinkid|assay|npx|freq|lod", cols)
+  meta_cols <- colnames(NPX)[!hh]
+  samples <- NPX[!duplicated(NPX[[ss.id]]), meta_cols, drop = FALSE]
+  rownames(samples) <- samples[[ss.id]]
+  samples <- samples[, setdiff(colnames(samples), ss.id), drop = FALSE]
 
-#' Read Olink NPX data and automatically create samples dataframe
-#' @param NPX_data Path to input Olink NPX data file. Must be standard Olink NPX format as per OlinkAnalyze R package.
-#' @return dataframe with the metadata
-#' @export
-read_Olink_samples <- function(NPX_data) {
-  NPX <- try(OlinkAnalyze::read_NPX(NPX_data), silent = TRUE)
-  if (!inherits(NPX, "try-error")) {
-    NPX <- as.data.frame(NPX)
-  } else {
-    dbg("[read_Olink_NPX]. Uploaded proteomics data file is not Olink or does not adhere with standard Olink NPX format.")
-    return(NULL)
-  }
+  cm <- intersect(colnames(counts),rownames(samples))
+  counts <- counts[, cm, drop = FALSE]
+  samples <- samples[cm, , drop = FALSE]
+  
+  return(list(counts=counts, samples=samples))
 
-  samples.id <- NULL
-  hh <- grep("SampleID", colnames(NPX), ignore.case = TRUE)
-  if (any(hh)) samples.id <- unique(NPX[, hh[1]])
-  if (is.null(samples.id)) {
-    dbg("[read_Olink_NPX] The uploaded Olink NPX file does not contain the variable SampleID")
-    return(NULL)
-  }
-
-  # https://cran.r-project.org/web/packages/OlinkAnalyze/vignettes/Vignett.html
-  exclude.vars <- ""
-  hh <- grepl("uniprot|olinkid|assay|npx|freq|lod", tolower(colnames(NPX)))
-  if (any(hh)) exclude.vars <- colnames(NPX)[hh]
-  samples <- matrix(NA, nrow = length(samples.id), ncol = sum(!hh))
-  samples <- data.frame(samples, row.names = samples.id)
-  colnames(samples) <- colnames(NPX)[!hh]
-
-  hh <- grep("SampleID", colnames(NPX), ignore.case = TRUE)
-  i <- 1
-  for (i in 1:nrow(samples)) {
-    t <- 1
-    for (t in 1:ncol(samples)) {
-      jj <- match(rownames(samples)[i], NPX[, hh[1]])
-      jx <- match(colnames(samples)[t], colnames(NPX))
-      if (!any(jj) | !any(jx)) next
-      samples[i, t] <- NPX[jj, jx]
-    }
-  }
-  samples <- samples[, -hh[1]]
-
-  return(samples)
 }
 
 
