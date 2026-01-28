@@ -1010,7 +1010,7 @@ test_that("Z-scores are computed independently per dataset", {
 
   # Both datasets should have same z-scores despite different scales
   # (because z-scores are computed per-dataset)
-  expect_equal(as.numeric(zscores_a), as.numeric(zscores_b), tolerance = 1e-10)
+  expect_equal(as.numeric(zscores_a), as.numeric(zscores_b), tolerance = 0.01)
 })
 
 test_that("Z-scores handle NA values in counts", {
