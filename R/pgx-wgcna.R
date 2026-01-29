@@ -500,7 +500,7 @@ wgcna.compute_multiomics <- function(dataX,
                                      gset.xtop = 100,
                                      report = TRUE,
                                      ai_model = DEFAULT_LLM,
-                                     ai_experiment = "",
+                                     experiment = "",
                                      verbose = 1,
                                      progress = NULL
                                      ) {
@@ -530,7 +530,7 @@ wgcna.compute_multiomics <- function(dataX,
     gset.xtop = 100;
     report = TRUE;
     ai_model = "";
-    ai_experiment = "";
+    experiment = "";
     verbose = 1;
     progress = NULL
   }
@@ -781,8 +781,8 @@ wgcna.compute_multiomics <- function(dataX,
     graph = lasagna.graph,  
     ## datExpr = datExpr,
     ## datTraits = datTraits,
-    ## modTraits = avgZ,
-    experiment = ai_experiment,
+    ## modTraits = modTraits,
+    experiment = experiment,
     settings = settings,
     class = "multiomics"
   )
@@ -1879,7 +1879,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
                                     compute.enrichment = TRUE,
                                     summary = TRUE,
                                     ai_model = DEFAULT_LLM,
-                                    ai_experiment = "",
+                                    experiment = "",
                                     gsea.mingenes = 10,
                                     gsea.ntop = 1000,
                                     gset.methods = c("fisher","gsetcor","xcor"),
@@ -2086,7 +2086,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
       ntop = 50,
       model = ai_model,
       annot = annot,
-      experiment = ai_experiment,
+      experiment = experiment,
       verbose = 0
     )
     res$summary <- ai$answers
@@ -3444,7 +3444,7 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL,
     }
     kmeColors <- rho2bluered(kme)
     kmeColors <- kmeColors[gg,,drop=FALSE]
-    if(clust && ncol(kme)>2 ) {
+    if(clust && ncol(kme)>2) {
       ii <- hclust(as.dist(1-cor(kme,use="pairwise")))$order
       kmeColors <- kmeColors[,ii,drop=FALSE]
     }
@@ -5377,7 +5377,6 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
     return(cons)
   }
 
-
   stats <- NULL
   if(!"stats" %in% names(wgcna)) {
     stats <- wgcna.computeGeneStats(wgcna$net, wgcna$datExpr, wgcna$datTraits,
@@ -5432,6 +5431,10 @@ wgcna.getMultiTopGenesAndSets <- function(multi_wgcna, annot=NULL, module=NULL,
                                           psig=0.05, ntop=40, level=NULL,
                                           rename="symbol") {
 
+  if("layers" %in% names(multi_wgcna)) {
+    multi_wgcna <- multi_wgcna$layers
+  }
+  
   ## set level
   nw <- length(multi_wgcna)
   if(!is.null(level)) {
@@ -5477,8 +5480,8 @@ wgcna.getMultiTopGenesAndSets <- function(multi_wgcna, annot=NULL, module=NULL,
 wgcna.getConsensusTopGenesAndSets <- function(cons, annot=NULL, module=NULL, ntop=40,
                                               level=c("gene","geneset")[1],
                                               rename="symbol" ) {
-  if(!"stats" %in% names(wgcna)) stop("object has no stats")
-  if(!any(c("gse","gsea") %in% names(wgcna))) {
+  if(!"stats" %in% names(cons)) stop("object has no stats")
+  if(!any(c("gse","gsea") %in% names(cons))) {
     warning("object has no enrichment results (gsea)")
   }
   
@@ -5515,9 +5518,9 @@ wgcna.getConsensusTopGenesAndSets <- function(cons, annot=NULL, module=NULL, nto
   
   ## top genesets (as symbol!)
   topsets <- NULL
-  if(any(c("gse","gsea") %in% names(wgcna))) {
-    if(!is.null(wgcna$gsea)) ee <- wgcna$gsea
-    if(!is.null(wgcna$gse)) ee <- wgcna$gse
+  if(any(c("gse","gsea") %in% names(cons))) {
+    if(!is.null(cons$gsea)) ee <- cons$gsea
+    if(!is.null(cons$gse)) ee <- cons$gse
     ee <- ee[match(names(topgenes),names(ee))]
     names(ee) <- names(topgenes)
     topsets <- lapply(ee,function(x) head(rownames(x),ntop))
@@ -5965,18 +5968,17 @@ Layout in TB direction. Do not use any special characters, without headers or fo
 #' diagram (in DOT format).
 #' 
 #' @export
-wgcna.create_infographic <- function(rpt,  diagram=NULL,
+wgcna.create_infographic <- function(report,  diagram=NULL,
                                      #model = "gemini-2.5-flash-image"
                                      model="gemini-3-pro-image-preview",
                                      filename = "infographic.png") {  
-  report <- rpt$report
-  if(is.null(diagram)) diagram <- rpt$diagram
+
   prompt <- paste("Create a graphical abstract according to the given diagram and information in the WGCNA report. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. \n\n", report, "\n---------------\n\n", diagram)
-  outfile <- ai.create_image_gemini(
-    prompt, model,
-    format = "file",
-    filename = filename
-  )
+  outfile <- try(ai.create_image_gemini(
+    prompt = prompt,  model = model, 
+    format = "file", filename = filename
+  ))
+  if(inherits(outfile,"try-error")) return(NULL)
   return(invisible(outfile))
 }
 
