@@ -20,12 +20,14 @@ pgx.createPGX(
   probe_type = NULL,
   creator = "unknown",
   description = "No description provided.",
+  metadata = NULL,
   X = NULL,
   norm_method = "CPM",
   is.logx = NULL,
   dotimeseries = FALSE,
   batch.correct.method = "no_batch_correct",
   batch.pars = "<autodetect>",
+  covariates = NULL,
   auto.scale = TRUE,
   filter.genes = TRUE,
   exclude.genes = NULL,
@@ -66,6 +68,8 @@ for the gene annotation table and the probe to symbol conversion.}
 
 \item{batch.pars}{BC variable. Default "autodetect" as per QC/BC tab in upload.}
 
+\item{covariates}{variables to regress out. Valid only for linear model-based tests.}
+
 \item{auto.scale}{Logical indicating whether to automatically scale/center genes. Default is TRUE.}
 
 \item{filter.genes}{Logical indicating whether to filter lowly expressed genes. Default is TRUE.}
@@ -100,6 +104,7 @@ pgx.createPGX creates a pgx object with the following slots:
 - `creator`: Creator of the dataset
 - `datatype`: Type of data (e.g. RNA-seq, microarray)
 - `description`: Description of the dataset
+- `metadata`: User-defined metadata (list with study_type, tissue_type, etc.)
 - `samples`: Sample metadata
 - `counts`: Raw count matrix
 - `contrasts`: Contrast matrix

@@ -4,7 +4,7 @@
 \alias{corclust}
 \title{Correlation-based Clustering}
 \usage{
-corclust(x)
+corclust(x, method = "ward.D2")
 }
 \arguments{
 \item{x}{A numeric matrix or data frame containing the data to be clustered.}

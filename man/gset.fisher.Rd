@@ -8,15 +8,15 @@ gset.fisher(
   genes,
   genesets,
   background = NULL,
-  fdr = 0.05,
+  fdr = 0.25,
   mc = TRUE,
-  sort.by = "zratio",
+  sort.by = "p.value",
   nmin = 3,
   min.genes = 15,
   max.genes = 500,
   method = "fast.fisher",
   check.background = TRUE,
-  common.genes = TRUE,
+  report.genes = FALSE,
   no.pass = NA,
   verbose = 1
 )
@@ -36,7 +36,7 @@ Defaults to 0.05.}
 \item{mc}{A logical value indicating whether to perform multiple testing adjustment
 using Monte Carlo simulation. Defaults to `TRUE`.}
 
-\item{sort.by}{The statistic used to sort the results. Defaults to "zratio".}
+\item{sort.by}{The statistic used to sort the results. Defaults to "p.value".}
 
 \item{nmin}{The minimum number of genes required in a gene set for the test to be performed.}
 
@@ -49,8 +49,7 @@ using Monte Carlo simulation. Defaults to `TRUE`.}
 \item{check.background}{A logical value indicating whether to check the presence of genes in
 the background set. Defaults to `TRUE`.}
 
-\item{common.genes}{A logical value indicating whether to use only genes common to both the
-input gene set and the background set. Defaults to `TRUE`.}
+\item{report.genes}{A logical value indicating whether to report genes in gene sets. Defaults to `TRUE`.}
 
 \item{verbose}{A numeric value indicating the level of verbosity. Defaults to 1.}
 }

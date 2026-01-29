@@ -1305,7 +1305,8 @@ ggVolcano <- function(x,
                       ylab = "significance (-log10q)",
                       lfc = 1,
                       psig = 0.05,
-                      ylim = NULL,
+                      xlim = NULL,
+                      ylim = NULL,                      
                       showlegend = TRUE,
                       marker.size = 2.5,
                       marker.alpha = 0.7,
@@ -1397,6 +1398,7 @@ ggVolcano <- function(x,
   df$name <- gsub("[\\'\\`-]", "", df$name)
 
   if (is.null(ylim)) ylim <- max(y, na.rm = TRUE) * 1.1
+  if (is.null(xlim)) xlim <- range(x, na.rm = TRUE)  
 
   plt <- ggplot2::ggplot(df, ggplot2::aes(x = fc, y = y)) +
     ggplot2::geom_point(
@@ -1542,9 +1544,12 @@ ggVolcano <- function(x,
   plt <- plt +
     ggplot2::scale_y_continuous(
       limits = c(0, ylim),
-      expand = ggplot2::expansion(mult = c(0, 0))
+      expand = ggplot2::expansion(mult = c(0, 0.05))
     ) +
-    ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = c(0.1, 0))) +
+    ggplot2::scale_x_continuous(
+      limits = xlim,
+      expand = ggplot2::expansion(mult = c(0.07, 0.07))
+    ) +
     ggplot2::labs(x = xlab, y = ylab) +
     guides(colour = guide_legend(reverse = T)) +
     ggplot2::theme_minimal(base_size = 15) +
@@ -5909,10 +5914,10 @@ plotlyCytoplot <- function(pgx,
 #' }
 #'
 #' @export
-corclust <- function(x) {
-  dd <- stats::as.dist(1 - stats::cor(t(x), use = "pairwise"))
-  hc <- fastcluster::hclust(dd, method = "ward.D2")
-  hc
+corclust <- function(x, method="ward.D2") {
+  cx <- stats::cor(t(x), use = "pairwise")
+  cx[is.na(cx)] <- 0
+  hclust(stats::as.dist(1 - cx), method = method)
 }
 
 ## Override add_col_annotation to be able to suppress titles
@@ -7285,7 +7290,8 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
                                    xpos = NULL, xlim = NULL, justgraph = FALSE,
                                    edge.cex = 1, edge.alpha = 0.33, xdist = 1,
                                    normalize.edges = FALSE, yheight = 2,
-                                   edge.sign = "both", edge.type = "both",
+                                   edge.sign = c("both","pos","neg","consensus")[1],
+                                   edge.type = c("both","inter","intra","both2")[1],
                                    labpos = NULL, value.name = NULL,
                                    strip.prefix = FALSE, strip.prefix2 = FALSE,
                                    prune = FALSE,
@@ -7676,3 +7682,4 @@ plotAdjacencyMatrixFromGraph <- function(graph, nmax = 40, binary = FALSE,
     sym = TRUE, ...
   )
 }
+
