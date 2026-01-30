@@ -16,7 +16,7 @@
 #' @param counts A matrix of counts, with genes in rows and samples in columns.
 #' @param X Covariates to include in the design matrix. Default is NULL.
 #' @param samples A vector of sample names that match the columns in \code{counts}.
-#' @param design The design matrix, with samples in columns.
+#' @param design The design matrix, with samples in columns. Default is NULL.
 #' @param covariates Variables to be regressed out. Only valid for linear model-based DGE tests. Default is NULL.
 #' @param contr.matrix The contrasts matrix, with contrasts in rows.
 #' @param genes A vector of gene names that match the rows in \code{counts}. Default is NULL.
@@ -79,7 +79,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
                                            custom.name = NULL,
                                            timeseries = FALSE) {
 
-  ## Don't test fully missing features. Put them back in toptable.
   counts <- counts[which(rowMeans(is.na(counts)) < 1), ]
   if (!is.null(X)) X <- X[which(rowMeans(is.na(X)) < 1), ]
 
@@ -96,19 +95,9 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     "deseq2.wald", "deseq2.lrt", "edger.qlf", "edger.lrt"
   ))
 
-  ## If degenerate set design to NULL
-  if (!is.null(design) && ncol(design) >= ncol(X)) {
-    ## "no-replicate" design!!!
-    cat("WARNING: degenerate design. setting design to NULL\n")
-    contr.matrix <- design %*% contr.matrix
-    design <- NULL
-  }
-
   counts <- pmax(counts, 0)
 
-  ## -----------------------------------------------------------------------------
   ## Time series: determine variable 'time'
-  ## -----------------------------------------------------------------------------
   if (timeseries) {
     time.var <- playbase::get_timevars()
     sel <- grep(time.var, colnames(samples), ignore.case = TRUE)
@@ -118,9 +107,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     timeseries <- NULL
   }
 
-  ## -----------------------------------------------------------------
   ## Covariates
-  ## -----------------------------------------------------------------
   if (!is.null(covariates)) {
     kk <- intersect(covariates, colnames(samples))
     if (length(kk) > 0) {
@@ -130,9 +117,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     }
   }
   
-  ## ------------------------------------------------------------------
-  ## define transformation methods: log2CPM for counts
-  ## ------------------------------------------------------------------
+  ## Define transformation methods: log2CPM for counts
   if (is.null(X)) {
     message("[ngs.fitContrastsWithAllMethods] prior CPM counts =", prior.cpm)
     message("[ngs.fitContrastsWithAllMethods] CPM scale =", cpm.scale)
@@ -142,25 +127,13 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     message("[ngs.fitContrastsWithAllMethods] Using input log-expression matrix X as is")
   }
 
-  ## ------------------------------------------------------------------
-  ## get main grouping variable for modeling
-  ## ------------------------------------------------------------------
+  ## Get main grouping variable for modeling
   group <- NULL
-  if (!is.null(design)) {
-    group <- colnames(design)[max.col(design)]
-    if (nrow(design) == ncol(design) &&
-      all(rownames(design) == colnames(design))) {
-      group <- NULL
-    }
-  }
 
   timings <- list()
   outputs <- list()
 
-  ## Skip tests that do not tolerate NAs. Inform the user.
-  nmissing.counts <- sum(is.na(counts))
-  nmissing <- sum(is.na(X))
-  if (nmissing.counts > 0 & nmissing == 0) counts <- pmax(2**X - 1, 0)
+  if (sum(is.na(counts)) > 0 & sum(is.na(X)) == 0) counts <- pmax(2**X - 1, 0)
 
   ## ---------------- t-test methods -------------------
   ttest.mtds <- c("ttest", "ttest.rank", "ttest.welch")
@@ -205,7 +178,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
       mdl <- limma.mdls[match(cm.mtds[i], limma.mtds)]
       trend <- ifelse(grepl("notrend|voom", cm.mtds[i]), FALSE, TRUE)
       message("[ngs.fitContrastsWithAllMethods] Fitting using ", cm.mtds[i])
-      if (cm.mtds[i] == "voom.limma" && nmissing > 0) {
+      if (cm.mtds[i] == "voom.limma" && sum(is.na(X)) > 0) {
         message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform voom.limma")
         next
       } else {
@@ -214,11 +187,11 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         } else {
           time_var <- NULL
         }
-
         tt <- system.time(
           outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithLIMMA(
             X1, contr.matrix,
-            design, covariates = covariates,
+            design,
+            covariates = covariates,
             method = mdl,
             trend = trend, prune.samples = prune.samples,
             conform.output = conform.output, plot = FALSE, timeseries = time_var
@@ -238,7 +211,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
       X1 <- X
       mdl <- deseq2.mdls[match(cm.mtds[i], deseq2.mtds)]
       message("[ngs.fitContrastsWithAllMethods] Fitting using ", cm.mtds[i])
-      if (nmissing.counts > 0) {
+      if (sum(is.na(counts)) > 0) {
         message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform ", cm.mtds[i])
         next
       } else {
@@ -269,8 +242,8 @@ ngs.fitContrastsWithAllMethods <- function(counts,
       X1 <- X
       mdl <- edger.mdls[match(cm.mtds[i], edger.mtds)]
       message("[ngs.fitContrastsWithAllMethods] Fitting using ", cm.mtds[i])
-      if (nmissing.counts > 0) {
-        message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform edgeR QL-F test or LRT.")
+      if (sum(is.na(counts)) > 0) {
+        message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform EdgeR tests.")
         next
       } else {
         time_var <- NULL
@@ -334,19 +307,12 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     timings[["custom"]] <- system.time(0)
   }
   
-  ## ----------------------------------------------------------------------
-  ## "corrections" ...
-  ## ----------------------------------------------------------------------
-  correct.AveExpr <- TRUE
+  ## "Corrections"
   if (correct.AveExpr) {
+
     message("[ngs.fitContrastsWithAllMethods] correcting AveExpr values...")
-
-    ## EdgeR and Deseq2 compute weird normalized expr. matrix.
-    ## We need to "correct" for those.
-
     exp.matrix <- contr.matrix
 
-    if (!is.null(design)) exp.matrix <- (design %*% contr.matrix)
     samplesX <- lapply(apply(exp.matrix != 0, 2, which, simplify = FALSE), function(i) rownames(exp.matrix)[i])
     samples1 <- lapply(apply(exp.matrix > 0, 2, which, simplify = FALSE), function(i) rownames(exp.matrix)[i])
     samples0 <- lapply(apply(exp.matrix < 0, 2, which, simplify = FALSE), function(i) rownames(exp.matrix)[i])
@@ -363,22 +329,20 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, j]
       }
     }
+
   }
 
-  ## ----------------------------------------------------------------------
-  ## add some statistics
-  ## ----------------------------------------------------------------------
+  ## Add some statistics
   message("[ngs.fitContrastsWithAllMethods] calculating statistics...")
-
   for (i in 1:length(outputs)) {
+
     res <- outputs[[i]]
-    M <- sapply(res$tables, function(x) x[, "AveExpr"]) ## !!!! edgeR and Deseq2 are weird!!!
+    M <- sapply(res$tables, function(x) x[, "AveExpr"])
     M0 <- sapply(res$tables, function(x) x[, "AveExpr0"])
     M1 <- sapply(res$tables, function(x) x[, "AveExpr1"])
     Q <- sapply(res$tables, function(x) x[, "adj.P.Val"])
     P <- sapply(res$tables, function(x) x[, "P.Value"])
     logFC <- sapply(res$tables, function(x) x[, "logFC"])
-    # colnames(M) <- colnames(logFC) <- colnames(P) <- colnames(Q) <- colnames(contr.matrix)
     rownames(M) <- rownames(logFC) <- rownames(P) <- rownames(Q) <- rownames(res$tables[[1]])
     rownames(M0) <- rownames(M1) <- rownames(res$tables[[1]])
 
@@ -411,11 +375,10 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     res$aveExpr1 <- M1
 
     outputs[[i]] <- res
+
   }
 
-  ## --------------------------------------------------------------
   ## Reshape matrices by comparison
-  ## --------------------------------------------------------------
   message("[ngs.fitContrastsWithAllMethods] Reshape matrices...")
 
   tests <- colnames(outputs[[1]]$p.value)
@@ -447,13 +410,11 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   names(sig.up) <- names(sig.down) <- names(sig.both) <- names(sig.notsig) <- tests
   sig.counts <- list(up = sig.up, down = sig.down, both = sig.both, notsig = sig.notsig)
 
-  ## --------------------------------------------------
-  ## meta analysis, aggregate p-values
-  ## --------------------------------------------------
-  message("[ngs.fitContrastsWithAllMethods] aggregating p-values...")
-  
+  ## Meta analysis, aggregate p-values
+  message("[ngs.fitContrastsWithAllMethods] aggregating p-values...")  
   all.meta <- list()
   for (i in 1:ntest) {
+
     pv <- P[[i]]
     qv <- Q[[i]]
     fc <- logFC[[i]]
@@ -461,7 +422,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     mx0 <- aveExpr0[[i]]
     mx1 <- aveExpr1[[i]]
 
-    ## avoid strange values
     fc[is.infinite(fc) | is.nan(fc)] <- NA
     pv <- pmax(pv, 1e-99)
     pv[is.na(pv)] <- 1 # ???
@@ -479,11 +439,12 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     avg <- data.frame(avg.0 = meta.avg0, avg.1 = meta.avg1)
     rownames(meta) <- rownames(logFC[[i]])
     rownames(avg) <- rownames(logFC[[i]])
-    rownames(fc) <- NULL ## saves memory
+    rownames(fc) <- NULL
     rownames(pv) <- NULL
     rownames(qv) <- NULL
     all.meta[[i]] <- data.frame(meta = meta, avg, fc = I(fc), p = I(pv), q = I(qv))
     if (!is.null(genes)) all.meta[[i]] <- cbind(genes, all.meta[[i]])
+
   }
   names(all.meta) <- tests
   
@@ -526,12 +487,12 @@ ngs.fitContrastsWithAllMethods <- function(counts,
 #' @export
 ngs.fitContrastsWithTTEST <- function(X,
                                       contr.matrix,
-                                      design, method = "welch",
+                                      design,
+                                      method = "welch",
                                       conform.output = 0) {
-
+  
   tables <- list()
   exp.matrix <- contr.matrix
-  if (!is.null(design)) exp.matrix <- (design %*% contr.matrix)
   for (i in 1:ncol(exp.matrix)) {
     j1 <- which(exp.matrix[, i] > 0)
     j0 <- which(exp.matrix[, i] < 0)
@@ -562,9 +523,8 @@ ngs.fitContrastsWithTTEST <- function(X,
 #' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using Wilcoxon Rank Sum test
 #' @export
 ngs.fitContrastsWithWILCOXON <- function(X, contr.matrix, design, conform.output = 0) {
-  exp.matrix <- contr.matrix
-  if (!is.null(design)) exp.matrix <- (design %*% contr.matrix)
 
+  exp.matrix <- contr.matrix
   tables <- list()
   for (i in 1:ncol(exp.matrix)) {
     j1 <- which(exp.matrix[, i] > 0)
@@ -602,6 +562,7 @@ ngs.fitContrastsWithWILCOXON <- function(X, contr.matrix, design, conform.output
 
   res <- list(tables = tables)
   return(res)
+
 }
 
 #' @title ngs.fitContrastsWithLIMMA
@@ -626,125 +587,89 @@ ngs.fitContrastsWithLIMMA <- function(X,
   ## Design (grouping): perform LIMMA on the entire contrast matrix.
   ## No design (no grouping): perform LIMMA per contrast one-by-one.
 
-  ## Do not test full NA features. Put them back in topTable.
   if (!is.null(X)) X <- X[which(rowMeans(is.na(X)) < 1), ]
   method <- method[1]
 
-  if (!is.null(design)) {
-    message("[ngs.fitContrastsWithLIMMA] fitting LIMMA contrasts using design matrix")
-    exp0 <- design %*% contr.matrix
-    kk <- rownames(exp0)
-    if (prune.samples) kk <- rownames(exp0)[which(rowSums(abs(exp0), na.rm = TRUE) > 0)]
-    design1 <- design[kk, , drop = FALSE]
+  message("[ngs.fitContrastsWithLIMMA] Fitting LIMMA contrasts *without* design")
+  exp0 <- contr.matrix ## sample-wise contrasts...
+  tables <- list()
+  for (i in 1:ncol(exp0)) {
+    kk <- 1:nrow(exp0)
+    if (prune.samples) kk <- which(!is.na(exp0[, i]) & exp0[, i] != 0)
+    ct <- exp0[kk, i]
+    y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
     X1 <- X[, kk, drop = FALSE]
-    contr1 <- contr.matrix
-    if (method == "voom") {
-      v <- limma::voom(2**X1, design1, plot = plot, normalize.method = "none")
-      vfit <- limma::lmFit(v, design1)
-      trend <- FALSE ## no need
+    if (grepl("^IA:*", colnames(exp0)[i]) && !is.null(timeseries)) {
+      top <- try(ngs.fitContrastsWithLIMMA.timeseries(X1, y, timeseries, trend = trend), silent = TRUE)
     } else {
-      vfit <- limma::lmFit(X1, design1)
-    }
-
-    vfit <- limma::contrasts.fit(vfit, contrasts = contr1)
-    efit <- limma::eBayes(vfit, trend = trend, robust = robust)
-    ## if (plot == TRUE) limma::plotSA(efit)
-    tables <- list()
-    exp1 <- (design1 %*% contr1)
-    for (i in 1:ncol(contr1)) {
-      top <- limma::topTable(efit, coef = i, sort.by = "none", number = Inf)
-      j1 <- which(exp1[, i] > 0)
-      j2 <- which(exp1[, i] < 0)
-      mean1 <- rowMeans(X1[, j1, drop = FALSE], na.rm = TRUE)
-      mean0 <- rowMeans(X1[, j2, drop = FALSE], na.rm = TRUE)
-      top <- top[rownames(X1), ]
-      top <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
-      tables[[i]] <- top
-      names(tables)[i] <- colnames(contr1)[i]
-    }
-  } else {
-    message("[ngs.fitContrastsWithLIMMA] Fitting LIMMA contrasts *without* design")
-    exp0 <- contr.matrix ## sample-wise contrasts...
-    tables <- list()
-    for (i in 1:ncol(exp0)) {
-      kk <- 1:nrow(exp0)
-      if (prune.samples) kk <- which(!is.na(exp0[, i]) & exp0[, i] != 0)
-      ct <- exp0[kk, i]
-      y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
-      X1 <- X[, kk, drop = FALSE]
-      if (grepl("^IA:*", colnames(exp0)[i]) && !is.null(timeseries)) {
-        top <- try(ngs.fitContrastsWithLIMMA.timeseries(X1, y, timeseries, trend = trend), silent = TRUE)
+      design1 <- stats::model.matrix(~ 0 + y)
+      if (method == "voom") {
+        v <- limma::voom(2**X1, design1, plot = FALSE)
+        suppressMessages(vfit <- limma::lmFit(v, design1))
+        trend <- FALSE
       } else {
-        design1 <- stats::model.matrix(~ 0 + y)
-        if (method == "voom") {
-          v <- limma::voom(2**X1, design1, plot = FALSE)
-          suppressMessages(vfit <- limma::lmFit(v, design1))
-          trend <- FALSE
-        } else {
-          suppressMessages(vfit <- limma::lmFit(X1, design1))
-        }
-        contr1 <- matrix(c(-1, 0, 1), nrow = 3)
-        rownames(contr1) <- c("yneg", "yo", "ypos")
-        colnames(contr1) <- "pos_vs_neg"
-        contr1 <- contr1[colnames(vfit), , drop = FALSE]
-        vfit <- suppressMessages(limma::contrasts.fit(vfit, contrasts = contr1))
-        efit <- try(limma::eBayes(vfit, trend = trend, robust = robust), silent = TRUE)
+        suppressMessages(vfit <- limma::lmFit(X1, design1))
+      }
+      contr1 <- matrix(c(-1, 0, 1), nrow = 3)
+      rownames(contr1) <- c("yneg", "yo", "ypos")
+      colnames(contr1) <- "pos_vs_neg"
+      contr1 <- contr1[colnames(vfit), , drop = FALSE]
+      vfit <- suppressMessages(limma::contrasts.fit(vfit, contrasts = contr1))
+      efit <- try(limma::eBayes(vfit, trend = trend, robust = robust), silent = TRUE)
+      if ("try-error" %in% class(efit)) {
+        efit <- try(limma::eBayes(vfit, trend = trend, robust = FALSE), silent = TRUE)
         if ("try-error" %in% class(efit)) {
-          efit <- try(limma::eBayes(vfit, trend = trend, robust = FALSE), silent = TRUE)
-          if ("try-error" %in% class(efit)) {
-            efit <- try(limma::eBayes(vfit, trend = FALSE, robust = FALSE), silent = TRUE)
-          }
+          efit <- try(limma::eBayes(vfit, trend = FALSE, robust = FALSE), silent = TRUE)
         }
-        top <- try(limma::topTable(efit, coef = 1, sort.by = "none", number = Inf), silent = TRUE)
-        if ("try-error" %in% class(top)) {
-          top <- data.frame(matrix(NA, nrow = nrow(X1), ncol = 6))
-          rownames(top) <- rownames(X1)
-          colnames(top) <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val", "B")
-        } else {
-          top <- top[rownames(X1), , drop = FALSE]        
-        }
-
-        ## Regress out covariates (if present). Get p-value.
-        cov.pval <- list()
-        if (!is.null(covariates)) {
-          covariates1 <- covariates[kk, , drop = FALSE]
-          for (k in 1:ncol(covariates1)) {
-            cov.val <- covariates1[, k]
-            keep <- which(!is.na(cov.val))
-            if (!length(keep) || length(unique(y[keep])) == 1 ||
-                  length(unique(cov.val[keep])) == 1) next
-            top_cov <- ngs.fitContrastsWithLIMMA.regress.covs(
-              X = X1[, keep, drop = FALSE],
-              y = y[keep],
-              covariate = cov.val[keep],
-              covariate.name = colnames(covariates1)[k],
-              trend = trend, robust = robust
-            )
-            cov.pval[[colnames(covariates1)[k]]] <- top_cov
-          }
-        }
-        
+      }
+      top <- try(limma::topTable(efit, coef = 1, sort.by = "none", number = Inf), silent = TRUE)
+      if ("try-error" %in% class(top)) {
+        top <- data.frame(matrix(NA, nrow = nrow(X1), ncol = 6))
+        rownames(top) <- rownames(X1)
+        colnames(top) <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val", "B")
+      } else {
+        top <- top[rownames(X1), , drop = FALSE]        
       }
 
-      j1 <- which(ct > 0)
-      j0 <- which(ct < 0)
-      mean1 <- rowMeans(X1[, j1, drop = FALSE], na.rm = TRUE)
-      mean0 <- rowMeans(X1[, j0, drop = FALSE], na.rm = TRUE)
-      top <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
-
-      if (length(cov.pval) > 0) {
-        top_cov <- do.call(cbind, cov.pval)
-        cm <- intersect(rownames(top_cov), rownames(top))
-        top <- cbind(top[cm, , drop = FALSE], top_cov[cm, , drop = FALSE])
+      ## Regress out covariates (if present). Get p-value.
+      cov.pval <- list()
+      if (!is.null(covariates)) {
+        covariates1 <- covariates[kk, , drop = FALSE]
+        for (k in 1:ncol(covariates1)) {
+          cov.val <- covariates1[, k]
+          keep <- which(!is.na(cov.val))
+          if (!length(keep) || length(unique(y[keep])) == 1 ||
+                length(unique(cov.val[keep])) == 1) next
+          top_cov <- ngs.fitContrastsWithLIMMA.regress.covs(
+            X = X1[, keep, drop = FALSE],
+            y = y[keep],
+            covariate = cov.val[keep],
+            covariate.name = colnames(covariates1)[k],
+            trend = trend, robust = robust
+          )
+          cov.pval[[colnames(covariates1)[k]]] <- top_cov
+        }
       }
-
-      tables[[i]] <- top
-      names(tables)[i] <- colnames(exp0)[i]
-
+      
     }
 
-  }
+    j1 <- which(ct > 0)
+    j0 <- which(ct < 0)
+    mean1 <- rowMeans(X1[, j1, drop = FALSE], na.rm = TRUE)
+    mean0 <- rowMeans(X1[, j0, drop = FALSE], na.rm = TRUE)
+    top <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
 
+    if (length(cov.pval) > 0) {
+      top_cov <- do.call(cbind, cov.pval)
+      cm <- intersect(rownames(top_cov), rownames(top))
+      top <- cbind(top[cm, , drop = FALSE], top_cov[cm, , drop = FALSE])
+    }
+
+    tables[[i]] <- top
+    names(tables)[i] <- colnames(exp0)[i]
+    
+  }
+  
   if (conform.output) {
     for (i in 1:length(tables)) {
       k1 <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
@@ -754,7 +679,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
       colnames(tables[[i]])[1:length(k2)] <- k2
     }
   }
-
+  
   return(list(tables = tables))
 
 }
@@ -959,13 +884,11 @@ ngs.fitContrastsWithEDGER <- function(counts,
   counts <- playbase::counts.autoScaling(counts)$counts
 
   exp0 <- contr.matrix
-  if (!is.null(design)) exp0 <- design %*% contr.matrix
 
   if (prune.samples) {
     kk <- which(rowSums(exp0 != 0, na.rm = TRUE) > 0)
     exp0 <- exp0[kk, , drop = FALSE]
     counts <- counts[, kk, drop = FALSE]
-    if (!is.null(design)) design <- design[kk, ]
     if (is.null(design)) contr.matrix <- contr.matrix[kk, , drop = FALSE]
     if (!is.null(group)) group <- group[kk]
   }
@@ -1445,134 +1368,26 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
   counts <- playbase::counts.autoScaling(counts)$counts
 
   exp0 <- contr.matrix
-  if (!is.null(design)) exp0 <- design %*% contr.matrix
 
   if (prune.samples) {
     kk <- which(rowSums(exp0 != 0, na.rm = TRUE) > 0)
     exp0 <- exp0[kk, , drop = FALSE]
     counts <- counts[, kk, drop = FALSE]
-    if (!is.null(design)) design <- design[kk, ]
     if (is.null(design)) contr.matrix <- contr.matrix[kk, , drop = FALSE]
     if (!is.null(group)) group <- group[kk]
   }
 
-  if (is.null(design)) {
-    message("[ngs.fitContrastsWithDESEQ2] fitting DESEQ2  *without* design")
-    out <- .ngs.fitContrastsWithDESEQ2.nodesign(
-      counts = counts,
-      contr.matrix = contr.matrix,
-      covariates = covariates,
-      test = test,
-      timeseries = timeseries,
-      prune.samples = prune.samples,
-      conform.output = conform.output
-    )
-    return(out)
-  }
-
-  message("[ngs.fitContrastsWithDESEQ2] fitting DESEQ2 using design matrix")
-
-  design.formula <- stats::formula(" ~ 0 + group")
-  message("[ngs.fitContrastsWithDESEQ2] using model design: ", as.character(design.formula))
-
-  rownames.counts <- rownames(counts)
-  counts <- round(counts) ## WARNING!!!
-
-  if (all(rowSums(counts == 0, na.rm = TRUE) > 0)) {
-    ## ERROR: 'every gene contains at least one zero, cannot compute log
-    ## geometric means' so we fix it villager-style
-    jmax <- which.max(rowSums(counts, na.rm = TRUE))
-    counts[jmax, ] <- pmax(counts[jmax, ], 1)
-  }
-
-  dds <- DESeq2::DESeqDataSetFromMatrix(
-    countData = counts,
-    design = design.formula,
-    colData = data.frame(group)
+  message("[ngs.fitContrastsWithDESEQ2] fitting DESEQ2  *without* design")
+  out <- .ngs.fitContrastsWithDESEQ2.nodesign(
+    counts = counts,
+    contr.matrix = contr.matrix,
+    covariates = covariates,
+    test = test,
+    timeseries = timeseries,
+    prune.samples = prune.samples,
+    conform.output = conform.output
   )
-
-  rownames(counts) <- rownames.counts
-
-  ## Run DESeq : Modeling counts with generic 'group'
-  # fitTypes <- c("parametric", "local", "mean", "glmGamPoi")
-  if (test == "glmGamPoi" || fitType == "glmGamPoi") {
-    dds <- try(DESeq2::DESeq(dds, fitType = "glmGamPoi", test = "LRT", reduced = ~1))
-  } else if (test == "LRT") {
-    dds <- try(DESeq2::DESeq(dds, fitType = fitType, test = "LRT", reduced = ~1))
-  } else {
-    dds <- try(DESeq2::DESeq(dds, fitType = fitType, test = "Wald"))
-  }
-
-  ## Sometime DESEQ2 fails and we resort to gene-wise estimates. (IK:
-  ## what is this???)
-  if ("try-error" %in% class(dds)) {
-    message("[.ngs.fitContrastsWithDESEQ2] retrying DESEQ2 with gene-wise estimates...")
-    dds <- DESeq2::DESeqDataSetFromMatrix(
-      countData = counts,
-      design = design.formula,
-      colData = data.frame(group)
-    )
-    dds <- DESeq2::estimateSizeFactors(dds)
-    disp.type <- ifelse(test == "glmGamPoi", "glmGamPoi", "DESeq2")
-    dds <- DESeq2::estimateDispersionsGeneEst(dds, type = disp.type)
-    DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
-    suppressWarnings({
-      if (test == "LRT") {
-        dds <- try(DESeq2::nbinomLRT(dds), silent = TRUE)
-      } else if (test == "glmGamPoi") {
-        dds <- try(DESeq2::nbinomLRT(dds, type = "glmGamPoi"), silent = TRUE)
-      } else {
-        dds <- try(DESeq2::nbinomWaldTest(dds), silent = TRUE)
-      }
-    })
-  }
-
-  ## we add the gene annotation here (not standard...)
-  if (!is.null(genes)) SummarizedExperiment::rowData(dds)$genes <- genes ## does this work??
-
-  ## logCPM for calculating means
-  if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
-  exp.matrix <- contr.matrix
-  if (!is.null(design)) exp.matrix <- (design %*% contr.matrix)
-
-  tables <- list()
-  for (i in 1:ncol(contr.matrix)) {
-    ## manually specify contrast vector. See also https://support.bioconductor.org/p/69104/
-    contr <- contr.matrix[, i]
-    contr[is.na(contr)] <- 0
-    contr <- (contr > 0) / sum(contr > 0) - (contr < 0) / sum(contr < 0) ## mean zero, signed sum to one.
-    DESeq2::resultsNames(dds)
-    if (any(grepl("group", DESeq2::resultsNames(dds)))) {
-      grp.contr <- contr
-      names(grp.contr) <- paste0("group", names(contr))
-      contr <- rep(0, length(DESeq2::resultsNames(dds)))
-      names(contr) <- DESeq2::resultsNames(dds)
-      contr[names(grp.contr)] <- grp.contr
-    }
-    ## do no set p values to NA
-    resx <- DESeq2::results(dds, contrast = contr, cooksCutoff = FALSE, independentFiltering = FALSE)
-    pos.samples <- which(exp.matrix[, i] > 0)
-    neg.samples <- which(exp.matrix[, i] < 0)
-    resx$AveExpr1 <- rowMeans(X[, pos.samples, drop = FALSE], na.rm = TRUE)
-    resx$AveExpr0 <- rowMeans(X[, neg.samples, drop = FALSE], na.rm = TRUE)
-    resx$log2BaseMean <- log2(0.0001 + resx$baseMean)
-    if (conform.output) resx$log2FoldChange <- (resx$AveExpr1 - resx$AveExpr0) ## recompute
-    tables[[i]] <- data.frame(resx)
-    names(tables)[i] <- colnames(contr.matrix)[i]
-  }
-  names(tables) <- colnames(contr.matrix)
-
-  if (conform.output == TRUE) {
-    for (i in 1:length(tables)) {
-      k1 <- c("log2FoldChange", "log2BaseMean", "stat", "pvalue", "padj", "AveExpr0", "AveExpr1")
-      k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
-      tables[[i]] <- tables[[i]][, k1]
-      colnames(tables[[i]]) <- k2
-    }
-  }
-
-  res <- list(tables = tables)
-  return(res)
+    return(out)
 
 }
 
