@@ -14,8 +14,6 @@ IMAGE_MODELS <- c(
 #' @export
 ai.get_image_models <- function(models=NULL) {
   keys <- NULL
-  dbg("[ai.get_image_models] input models = ",models)
-  dbg("[ai.get_image_models] len.models = ",length(models))
   if(!is.null(models) && "IMAGE_MODELS" %in% models) {
     models <- unique(c(models, IMAGE_MODELS))
   }
@@ -27,8 +25,6 @@ ai.get_image_models <- function(models=NULL) {
   if (Sys.getenv("GROQ_API_KEY")!="") keys <- c(keys,"groq:")
   if (Sys.getenv("GEMINI_API_KEY")!="") keys <- c(keys,"gemini-","google:")
   if (Sys.getenv("OLLAMA_REMOTE")!="") keys <- c(keys,"remote:.*")
-
-  dbg("[ai.get_image_models] keys = ", keys)
   
   if(is.null(models) || length(models)==0 || models[1]=="" ) {
     models <- keys
@@ -39,7 +35,6 @@ ai.get_image_models <- function(models=NULL) {
     models <- NULL
   }
 
-  dbg("[ai.get_image_models] available image models = ",models)
   models
 }
 
@@ -67,7 +62,7 @@ ai.create_image_gemini <- function(prompt,
     stop("GEMINI_API_KEY environment variable is not set", call. = FALSE)
   }
 
-  message("calling gemini image generation...")
+  message("calling gemini image (warning: $0.134 per image)")
   model <- sub("^google:","",model)
   #url <- glue::glue("{base_url}/models/{model}:generateContent?key={api_key}")
   url <- glue::glue("{base_url}/models/{model}:generateContent")
@@ -137,7 +132,7 @@ ai.create_image_gemini <- function(prompt,
   if(format=="file") {
     raw_image <- base64enc::base64decode(b64)    
     filetype <- sub("jpeg","jpg",sub("image/","",mimetype))
-    filename2 <- paste0(sub("[.].*$","",filename),".",filetype)
+    filename2 <- paste0(sub("[.](jpg|jpeg|png)$","",filename,ignore.case=TRUE),".",filetype)
     filename2
     writeBin(raw_image, filename2)
     message("Saved image to: ", filename2)
@@ -186,12 +181,12 @@ ai.create_image_openai <- function (prompt, model=NULL,
   model <- sub("^openai:","",model)
   
   if(grepl("api.x.ai",base_url,fixed=TRUE)) {
-    message("calling grok ($0.07 per image)")    
+    message("calling grok (warning: $0.07 per image)")    
     if(is.null(model)) model <- "grok-2-image-1212"
     size <- NULL
   } else if(grepl("api.openai.com",base_url,fixed=TRUE)) {
     ##if(is.null(model)) model <- NULL
-    message("calling openai ($0.05 per image)")    
+    message("calling openai (warning: $0.05 per image)")    
   } else {
     stop("invalid base_url =",base_url)
   }

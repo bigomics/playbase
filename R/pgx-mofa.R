@@ -899,11 +899,13 @@ mofa.split_data <- function(X, keep.prefix = FALSE) {
   xx
 }
 
+#' This merges list of multi-omics data to a single matrix. Columns
+#' must match. Merge data by row after adding prefix.
+#'
 #' @export
 mofa.merge_data <- function(xx) {
   do.call(rbind, mofa.prefix(xx))
 }
-
 
 #' This merges list of multi-omics data to a single matrix. Note that
 #' it can handle non-matched data by taking union of rownames or
@@ -911,33 +913,46 @@ mofa.merge_data <- function(xx) {
 #' introduce NA in such non-matched cases.
 #'
 #' @export
-mofa.merge_data2 <- function(xdata, prefix.rows=NULL, prefix.cols=NULL) {
+mofa.merge_data2 <- function(xdata, merge.rows="prefix", merge.cols="union") {
   n1 <- length(Reduce(intersect,lapply(xdata,rownames)))
   n2 <- length(Reduce(intersect,lapply(xdata,colnames)))  
-  c(n1,n2)
-  if(n1 && n2) {
-    message("WARNING: matrices are overlapping both in rows and columns")
+  rdim <- sapply(xdata,nrow)
+  cdim <- sapply(xdata,ncol)
+  if(n1 < min(rdim) && merge.rows!="prefix") {
+    message("WARNING: rows do not match")
   }
-  if(is.null(prefix.cols)) prefix.cols <- (n1 > 0 && n2 > 0)
-  if(is.null(prefix.rows)) prefix.rows <- (n1 > 0 && n2 > 0)
+  if(n2 < min(cdim) && merge.cols!="prefix") {
+    message("WARNING: columns do not match")
+  }
+  prefix.rows <- (merge.rows=="prefix")
+  prefix.cols <- (merge.cols=="prefix")
   if(prefix.cols) {
-    ## if rows overlap (i.e. same genes), prefix the column names
-    ## (i.e. different datasets)
+    ## prefix the column names. i.e. different datasets.
     for(i in 1:length(xdata)) {
-      nn <- sub("[A-Za-z]+:","",colnames(xdata[[i]]))
+      nn <- sub("^[A-Za-z]+:","",colnames(xdata[[i]]))
       colnames(xdata[[i]]) <- paste0(names(xdata)[i],":",nn)
     }
+    merge.cols <- "union"    
   }
   if(prefix.rows) {
     ## if columns overlap (i.e. same samples), prefix the feature
     ## names.
     for(i in 1:length(xdata)) {
-      nn <- sub("[A-Za-z]+:","",rownames(xdata[[i]]))
+      nn <- sub("^[A-Za-z]+:","",rownames(xdata[[i]]))
       rownames(xdata[[i]]) <- paste0(names(xdata)[i],":",nn)
     }
+    merge.rows <- "union"
   }
-  allfeatures <- unique(unlist(lapply(xdata, rownames)))
-  allsamples  <- unique(unlist(lapply(xdata, colnames)))
+  if(merge.rows == "intersect") {
+    allfeatures <- Reduce(intersect,lapply(xdata,rownames))
+  } else {
+    allfeatures <- unique(unlist(lapply(xdata, rownames)))
+  }
+  if(merge.cols == "intersect") {
+    allsamples  <- Reduce(intersect,lapply(xdata,colnames))
+  } else {
+    allsamples  <- unique(unlist(lapply(xdata, colnames)))
+  }
   D  <- matrix(0, length(allfeatures), length(allsamples))
   nn <- matrix(0, length(allfeatures), length(allsamples))
   rownames(D) <- allfeatures
@@ -987,11 +1002,11 @@ mofa.get_prefix <- function(x) {
 #' @export
 mofa.strip_prefix <- function(xx) {
   if (class(xx) == "character") {
-    xx <- sub("[A-Za-z0-9]+:", "", xx)
+    xx <- sub("^[A-Za-z0-9]+:", "", xx)
     return(xx)
   }
   if (class(xx) == "matrix") {
-    rownames(xx) <- sub("[A-Za-z0-9]+:", "", rownames(xx))
+    rownames(xx) <- sub("^[A-Za-z0-9]+:", "", rownames(xx))
     return(xx)
   }
   if (class(xx) %in% c("list", "array") || is.list(xx)) {
@@ -2652,6 +2667,13 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
                                  add.sink=FALSE, intra=TRUE, fully_connect=FALSE,
                                  add.revpheno = TRUE, condition.edges=TRUE
                                  ) {
+  if(0) {
+    pheno="pheno"; ntop=1000; nc=20;
+    annot=NULL; use.gmt=TRUE; use.graphite=TRUE;
+    add.sink=FALSE; intra=TRUE; fully_connect=FALSE;
+    add.revpheno = TRUE; condition.edges=TRUE
+  }
+  
   if (pheno == "pheno") {
     Y <- expandPhenoMatrix(data$samples, drop.ref=FALSE)
   } else if (pheno == "expanded") {
@@ -2686,7 +2708,8 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
   }
 
   ## what about not overlapping samples??
-  X <- mofa.merge_data2(xx, prefix.rows=TRUE, prefix.cols=FALSE)
+  #X <- mofa.merge_data(xx)
+  X <- mofa.merge_data2(xx, merge.rows="prefix", merge.cols="union")
   ##remove(xx)
   kk <- intersect(colnames(X),rownames(Y))
   X <- X[,kk]
@@ -2700,7 +2723,7 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
   ## Compute BIG correlation matrix. WARNING can become huge! NOTE:
   ## Needs optimization using SPARSE matrix.
   suppressWarnings( R <- cor(t(X), use = "pairwise") )
-  
+
   ## Sink/source need to be connected allways
   ii <- grep("SINK|SOURCE",rownames(R))
   if(length(ii)) {
@@ -2763,6 +2786,7 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
 
   ## mask for GSETS/pathways connections???
   if (use.gmt) {
+    ### fill me
   }
 
   ## define layers
@@ -2891,7 +2915,7 @@ sp_edge_weight <- function(graph, layers) {
 #' @export
 lasagna.solve <- function(obj, pheno, max_edges = 100, value.type = "rho",
                           min_rho = 0, prune = TRUE, fc.weights = TRUE,
-                          sp.weight = FALSE) {
+                          sp.weight = FALSE, graph=NULL) {
   if (!pheno %in% colnames(obj$Y)) {
     stop("pheno not in Y")
   }
@@ -2899,7 +2923,7 @@ lasagna.solve <- function(obj, pheno, max_edges = 100, value.type = "rho",
     stop("graph edges should have rho attribute")
   }
 
-  graph <- obj$graph
+  if(is.null(graph)) graph <- obj$graph
   X <- obj$X
   y <- obj$Y[,pheno]
 
@@ -2994,6 +3018,61 @@ lasagna.solve <- function(obj, pheno, max_edges = 100, value.type = "rho",
 }
 
 
+#' Solves lasagna graph iteratively for multiple contrasts. The
+#' solution is the RMS graph. 
+#'
+#' @export
+lasagna.multisolve <- function(obj, min_rho = 0.2, traits=NULL,
+                               max_edges = 100, value.type = "rho",
+                               fc.weights = TRUE, prune=TRUE,
+                               sp.weight = FALSE) {
+  if(0) {
+    max_edges = 100; value.type = "rho";
+    prune = TRUE; fc.weights = TRUE;
+    sp.weight = FALSE
+    min_rho=0.1
+  }
+
+  if(is.null(traits)) traits <- colnames(obj$Y)
+  traits <- intersect(traits, colnames(obj$Y))
+  
+  M <- list()
+  for(ct in traits) {
+    solved <- lasagna.solve(
+      obj,
+      pheno = ct,
+      min_rho = min_rho,
+      max_edges = max_edges,
+      value.type = value.type,
+      fc.weights = fc.weights,
+      sp.weight = sp.weight,
+      prune = FALSE
+    )
+    adj <- igraph::as_adjacency_matrix(solved, attr="weight")
+    M[[ct]] <- adj
+  }
+  
+  ## As solution we calculate the root-mean-square adjacency matrix
+  M <- lapply(M, function(mat) as.matrix(mat**2))
+  avgM <- sqrt(Reduce('+', M) / length(M))
+  avgM <- avgM * (avgM > min_rho)
+
+  gr <- obj$graph
+  ee <- igraph::get.edges(gr, igraph::E(gr))
+  igraph::E(gr)$weight <- sign(igraph::E(gr)$weight) * avgM[ee]
+  ## igraph::E(gr)$rho <- igraph::E(gr)$weight
+  del.ee <- which(abs(igraph::E(gr)$weight) < min_rho)
+  gr <- igraph::delete_edges(gr, del.ee)
+
+  if(prune) {
+    del.vv <- which( igraph::degree(gr) == 0)
+    gr <- igraph::delete_vertices(gr, del.vv)
+  }
+
+  return(gr)
+}
+
+
 #' @export
 lasagna.plot3D <- function(graph, pos) {
   edges <- data.frame(igraph::get.edgelist(graph), weight = E(graph)$weight)
@@ -3012,9 +3091,9 @@ lasagna.plot3D <- function(graph, pos) {
 #' @export
 lasagna.prune_graph <- function(graph, ntop = 100, layers = NULL,
                                 normalize.edges = FALSE, min.rho = 0.3,
-                                edge.sign = "both", edge.type = "both",
-                                filter = NULL,
-                                prune = TRUE) {
+                                edge.sign = c("both","pos","neg","consensus")[1],
+                                edge.type = c("both","inter","intra","both2")[1],
+                                filter = NULL, select = NULL, prune = TRUE) {
   
   if (is.null(layers))
     layers <- graph$layers
@@ -3026,6 +3105,14 @@ lasagna.prune_graph <- function(graph, ntop = 100, layers = NULL,
     stop("vertex must have 'value' attribute")
   }
 
+  ## select nodes/modules
+  if (!is.null(select)) {
+    v1 <- (igraph::V(graph)$name %in% select)
+    v2 <- (sub(".*:","",igraph::V(graph)$name) %in% select)
+    v3 <- (sub(":.*","",igraph::V(graph)$name) %in% select)
+    graph <- igraph::subgraph(graph, vids = which(v1|v2|v3))
+  }
+  
   if (!is.null(filter)) {
     if (class(filter) != "list") stop("filter must be a named list")
     if (is.null(names(filter))) stop("filter must be a named list")
@@ -3564,9 +3651,6 @@ mofa.normalizeExpression <- function(X, method1="maxMedian", method2="none") {
   normX <- normX[rownames(X),]
   return(normX)
 }
-
-
-
 
 
 ## ======================================================================

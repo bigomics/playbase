@@ -58,8 +58,6 @@ gx.limma <- function(X,
                      f.test = FALSE, ## If TRUE it activates previous gx.limmaF()
                      verbose = 1) {
   
-  message("[gx.limma] X contains ", sum(duplicated(rownames(X))))
-
   if (!is.null(B) && NCOL(B) == 1) {
     B <- matrix(B, ncol = 1)
     rownames(B) <- rownames(pheno)
@@ -89,6 +87,7 @@ gx.limma <- function(X,
   if (!is.null(B)) B0 <- B[jj, , drop = FALSE]
 
   if (verbose > 0) {
+    message("[gx.limma] X contains ", sum(duplicated(rownames(X))),"duplicated rownames")
     message("[gx.limma] analyzing ", ncol(X0), " samples")
     message("[gx.limma] table.pheno: ", table(pheno), "samples")
     message("[gx.limma] testing ", nrow(X0), " features")
@@ -230,7 +229,10 @@ gx.limma <- function(X,
   if (!is.null(fdr) && !is.null(lfc)) {
     ii <- which(top$adj.P.Val <= fdr & abs(top$logFC) >= lfc)
     top <- top[ii, ]
-    message("[gx.limma] Found ", nrow(top), " significant at fdr = ", fdr, " and minimal FC = ", lfc, "\n")
+    if(verbose>0) {
+      message("[gx.limma] Found ", nrow(top), " significant at fdr = ",
+        fdr, " and minimal FC = ", lfc, "\n")
+    }
   }
 
   if (compute.means && nrow(top) > 0) {
