@@ -209,7 +209,6 @@ omx.makeHivePlotData_ <- function(res, rho.min = 0.15, cxi = 0.11, use.alpha = T
 #' }
 
 
-
 #' @title Create Hive Plot for mixed network
 #'
 #' @param res Input data

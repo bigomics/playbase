@@ -216,46 +216,46 @@ imputeMissing <- function(X,
 #' @return Imputed multi-omics matrix
 #' @export
 imputeMissing.mox <- function(X,
-                              method = c("LLS", "bpca", "msImpute", "SVD", "SVD2",
+                              method = c(
+                                "LLS", "bpca", "msImpute", "SVD", "SVD2",
                                 "NMF", "RF", "knn", "QRILC", "MLE", "MinDet", "MinProb",
-                                "min", "zero", "nbavg", "rowmeans", "Perseus")[1:3],
+                                "min", "zero", "nbavg", "rowmeans", "Perseus"
+                              )[1:3],
                               rf.ntree = 100,
                               nv = 5,
                               keep.limits = FALSE,
                               infinite.na = TRUE,
                               plot = FALSE) {
-
-
   impX <- NULL
   is.mox <- playbase::is.multiomics(rownames(X))
-  
-  if (is.mox) {
 
+  if (is.mox) {
     II <- list()
     dtypes <- unique(sub(":.*", "", rownames(X)))
 
     for (i in 1:length(dtypes)) {
-      ii <- grep(paste0("^", dtypes[i], ":"), rownames(X))              
+      ii <- grep(paste0("^", dtypes[i], ":"), rownames(X))
       message("[playbase::imputeMissing.mox]: Multi-omics data. Imputing ", dtypes[i])
-      message("[playbase::imputeMissing.mox]: ", length(ii), " features..\n") 
-      II[[dtypes[i]]] <- playbase::imputeMissing(X = X[ii, ], method = method,
+      message("[playbase::imputeMissing.mox]: ", length(ii), " features..\n")
+      II[[dtypes[i]]] <- playbase::imputeMissing(
+        X = X[ii, ], method = method,
         rf.ntree = rf.ntree, nv = nv, keep.limits = keep.limits,
-        infinite.na = infinite.na, plot = plot)
+        infinite.na = infinite.na, plot = plot
+      )
     }
 
     impX <- do.call(rbind, II)
-    rm(II); gc()
-    
+    rm(II)
+    gc()
   } else {
-
-    impX <- playbase::imputeMissing(X = X, method = method,
+    impX <- playbase::imputeMissing(
+      X = X, method = method,
       rf.ntree = rf.ntree, nv = nv, keep.limits = keep.limits,
-      infinite.na = infinite.na, plot = plot)
-
+      infinite.na = infinite.na, plot = plot
+    )
   }
 
   return(impX)
-
 }
 
 
@@ -278,8 +278,8 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
   }
   nv <- min(nv, round(min(dim(X)) / 3))
 
-  init.methods <- c("MinDet","MinProb","QRILC","min")
-  
+  init.methods <- c("MinDet", "MinProb", "QRILC", "min")
+
   if (!is.null(init) && is.character(init) && grepl("%", init)) {
     ## initialize missing values with quantile fixed value
     q <- as.numeric(sub("%", "", init))
@@ -287,10 +287,10 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
     message(paste0("setting initial values to ", q, "%. init=", round(init, 4)))
     X[ind.missing] <- init
   } else if (!is.null(init) && is.character(init) &&
-               init %in% init.methods ) {
+    init %in% init.methods) {
     ## initialize missing values with other impute method
     message(paste("setting initial values using", init))
-    initX <- imputeMissing(X, method=init)
+    initX <- imputeMissing(X, method = init)
     X[ind.missing] <- initX[ind.missing]
   } else {
     ## initialize missing values with col/row medians
@@ -391,29 +391,29 @@ nmfImpute <- function(x, k = 5) {
 #'
 #' @description Imputes missing values in matrix with iterative
 #'    non-negative matrix factorization
-#' 
+#'
 #' @export
-nmfImpute2 <- function(x, k=5, niter=10, init=0.05) {
+nmfImpute2 <- function(x, k = 5, niter = 10, init = 0.05) {
   k <- min(k, dim(x) - 1)
-  ii <- which(is.na(x), arr.ind=TRUE)
+  ii <- which(is.na(x), arr.ind = TRUE)
   impx <- NULL
-  if(is.numeric(init) && length(init)==1) {
+  if (is.numeric(init) && length(init) == 1) {
     impx <- x
-    minx <- min(x,na.rm=TRUE)  
-    impx[ii] <- quantile(x[x > minx], probs=init, na.rm=TRUE)
-  } else if(is.character(init) && length(init)==1) {
-    impx <- imputeMissing(x, method=init, nv = k)
-  } else if(is.matrix(init) && all(dim(init)==dim(x))) {
+    minx <- min(x, na.rm = TRUE)
+    impx[ii] <- quantile(x[x > minx], probs = init, na.rm = TRUE)
+  } else if (is.character(init) && length(init) == 1) {
+    impx <- imputeMissing(x, method = init, nv = k)
+  } else if (is.matrix(init) && all(dim(init) == dim(x))) {
     impx <- init
-  } 
-  if(is.null(impx)) stop("[nmfImpute2] invalid init:", init)
-  
-  i=1
-  for(i in 1:niter) {
-    m1 <- RcppML::nmf(impx, k=k, verbose=FALSE)
-    if(all(c("w","d","h") %in% names(m1))) {
+  }
+  if (is.null(impx)) stop("[nmfImpute2] invalid init:", init)
+
+  i <- 1
+  for (i in 1:niter) {
+    m1 <- RcppML::nmf(impx, k = k, verbose = FALSE)
+    if (all(c("w", "d", "h") %in% names(m1))) {
       wh <- m1$w %*% diag(m1$d) %*% m1$h
-    } else if(all(c("w","d","h") %in% slotNames(m1))) {
+    } else if (all(c("w", "d", "h") %in% slotNames(m1))) {
       wh <- m1@w %*% diag(m1@d) %*% m1@h
     } else {
       stop("[nmfImpute2] Fatal error in RcppML::nmf")
@@ -442,7 +442,6 @@ BPCAimpute <- function(X, k = 2) {
 
 ## https://www.biorxiv.org/content/10.1101/2020.08.12.248963v1.full
 ## Perseus, by default, impute for each sample separately.
-
 
 
 #' @title Perseus-style imputation

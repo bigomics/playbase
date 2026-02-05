@@ -662,14 +662,15 @@ plotPCSF <- function(pcsf,
 #' @return visNetwork plot object
 #' @export
 visplot.PCSF <- function(
-    net, style = 0, edge_width = 5, node_size = 40, node_label_cex = 30,
-    Steiner_node_color = "lightblue", Terminal_node_color = "lightgreen",
-    Terminal_node_legend = "Terminal", Steiner_node_legend = "Steiner",
-    layout = "layout_with_kk", physics = TRUE, layoutMatrix = NULL,
-    border_width = 1, edge_length = 10, edge_color = "lightgrey",
-    width = 1800, height = 1800, invert.weight = FALSE,
-    extra_node_colors = c(), extra_node_shapes = c(), extra_node_borders = c(),
-    ...) {
+  net, style = 0, edge_width = 5, node_size = 40, node_label_cex = 30,
+  Steiner_node_color = "lightblue", Terminal_node_color = "lightgreen",
+  Terminal_node_legend = "Terminal", Steiner_node_legend = "Steiner",
+  layout = "layout_with_kk", physics = TRUE, layoutMatrix = NULL,
+  border_width = 1, edge_length = 10, edge_color = "lightgrey",
+  width = 1800, height = 1800, invert.weight = FALSE,
+  extra_node_colors = c(), extra_node_shapes = c(), extra_node_borders = c(),
+  ...
+) {
   if (missing(net)) {
     stop("Need to specify the subnetwork obtained from the PCSF algorithm.")
   }

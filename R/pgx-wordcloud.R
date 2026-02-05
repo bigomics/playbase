@@ -162,7 +162,6 @@ pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
 }
 
 
-
 #' @title Plot wordcloud graphic from pgx
 #'
 #' @param pgx A NGStest object containing gene set results.
@@ -214,7 +213,6 @@ pgx.plotWordCloud <- function(pgx, contrast) {
     )
   ))
 }
-
 
 
 word.gsea <- function(terms) {

@@ -89,7 +89,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       colnames(zx.rnkcorr) <- colnames(X)
       if (nrow(zx.rnkcorr) > 10) {
         zx.rnkcorr.norm <- try(scale(limma::normalizeQuantiles(zx.rnkcorr)), silent = TRUE)
-        if (! "try-error" %in% class(zx.rnkcorr.norm)) zx.rnkcorr <- zx.rnkcorr.norm
+        if (!"try-error" %in% class(zx.rnkcorr.norm)) zx.rnkcorr <- zx.rnkcorr.norm
         rm(zx.rnkcorr.norm)
       }
       cm1 <- intersect(names(gmt), rownames(zx.rnkcorr))
@@ -114,10 +114,11 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
     ## check if we have the new version of GSVA
     tt <- system.time({
-
-      if(use.replaid) {
+      if (use.replaid) {
         dbg("using replaid.gsva...")
-        zx.gsva <- try({  plaid::replaid.gsva(as.matrix(X), G, tau=0)  })
+        zx.gsva <- try({
+          plaid::replaid.gsva(as.matrix(X), G, tau = 0)
+        })
       } else {
         dbg("using GSVA::gsva...")
         new.gsva <- exists("gsvaParam", where = asNamespace("GSVA"), mode = "function")
@@ -162,9 +163,11 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       if (nmissing > 0) {
         message("Found ", nmissing, " missing values in X. Removing prior to GSVA::ssgsea.")
       }
-      if(use.replaid) {
+      if (use.replaid) {
         dbg("using replaid.ssgsea...")
-        zx.ssgsea <- try({  plaid::replaid.ssgsea(as.matrix(X), G, alpha=0)  })
+        zx.ssgsea <- try({
+          plaid::replaid.ssgsea(as.matrix(X), G, alpha = 0)
+        })
       } else {
         dbg("using GSVA::ssgsea...")
         zx.ssgsea <- try(GSVA::gsva(as.matrix(X),
@@ -175,7 +178,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
         ))
       }
       dbg("ssgsea computation done!")
-      
+
       if (!"try-error" %in% class(zx.ssgsea)) {
         if (nrow(zx.ssgsea) > 10) zx.ssgsea <- scale(limma::normalizeQuantiles(zx.ssgsea))
         kk <- match(names(gmt), rownames(zx.ssgsea))
@@ -249,7 +252,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       tt <- system.time({
         output <- gset.fisher2(
           genes.up, genes.dn,
-          #genesets = G,
+          # genesets = G,
           genesets = gmt,
           fdr = 1.0,
           background = rownames(X),
@@ -525,19 +528,21 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
     names(tables) <- colnames(contr.matrix)
   } else {
     message("fitting gset.LIMMA contrasts without design.... ")
-    i=1; tables=list()
+    i <- 1
+    tables <- list()
     for (i in 1:ncol(contr.matrix)) {
       design0 <- cbind(1, contr.matrix[, i])
       colnames(design0) <- c("ref", colnames(contr.matrix)[i])
       vfit <- try(limma::lmFit(gsetX, design0), silent = TRUE)
       efit <- try(limma::eBayes(vfit, trend = trend, robust = TRUE), silent = TRUE)
       top <- try(limma::topTable(efit, coef = 2, sort.by = "none", number = Inf, adjust.method = "BH"),
-        silent = TRUE)
+        silent = TRUE
+      )
       j1 <- which(contr.matrix[, i] > 0)
       j0 <- which(contr.matrix[, i] < 0)
       mean1 <- rowMeans(gsetX[, j1, drop = FALSE], na.rm = TRUE)
       mean0 <- rowMeans(gsetX[, j0, drop = FALSE], na.rm = TRUE)
-      if (! "try-error" %in% class(top)) {
+      if (!"try-error" %in% class(top)) {
         top <- top[rownames(gsetX), , drop = FALSE]
       } else {
         top <- data.frame(matrix(NA, nrow = nrow(gsetX), ncol = 6))

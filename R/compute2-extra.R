@@ -238,7 +238,7 @@ compute_extra <- function(pgx, extra = c(
         {
           pgx$wgcna <- pgx.wgcna(
             pgx,
-            ai_model = NULL   ## no AI by default (yet)
+            ai_model = NULL ## no AI by default (yet)
           )
         },
         error = function(e) {
