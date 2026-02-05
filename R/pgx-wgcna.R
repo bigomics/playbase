@@ -5114,6 +5114,12 @@ wgcna.scaleTOMs <- function(TOMs, scaleP = 0.95) {
   return(TOMs)
 }
 
+wgcna.get_modTraits <- function(wgcna) {
+  if(!is.null(wgcna$modTraits)) return(wgcna$modTraits)
+  mt <- cor( wgcna$net$MEs, wgcna$datTraits, use="pairwise")
+  return(mt)
+}
+
 #' @export
 wgcna.getTopGenesAndSets <- function(wgcna, annot = NULL, module = NULL, ntop = 40,
                                      level = "gene", rename = "symbol") {
@@ -5129,8 +5135,10 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot = NULL, module = NULL, ntop = 
     message("[wgcna.getTopGenesAndSets] Error: no stats object")
     return(NULL)
   }
-  if (!"gsea" %in% names(wgcna)) warning("object has no enrichment results (gsea)")
-
+  if(!any(c("gse","gsea") %in% names(wgcna))) {
+    warning("object has no enrichment results (gsea)")
+  }
+  
   ## get top genes (highest kME)
   mm <- wgcna$stats$moduleMembership
   if (!is.null(annot)) mm <- rename_by2(mm, annot, new_id = rename)
@@ -5142,17 +5150,18 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot = NULL, module = NULL, ntop = 
 
   ## top genesets
   topsets <- NULL
-  if ("gsea" %in% names(wgcna)) {
-    ee <- wgcna$gsea
-    if (!is.null(module)) ee <- ee[which(names(ee) %in% module)]
-    topsets <- lapply(ee, function(x) head(rownames(x), ntop))
+  if(any(c("gse","gsea") %in% names(wgcna))) {
+    if(!is.null(wgcna$gsea)) ee <- wgcna$gsea
+    if(!is.null(wgcna$gse)) ee <- wgcna$gse
+    if(!is.null(module)) ee <- ee[which(names(ee) %in% module)]  
+    topsets <- lapply(ee,function(x) head(rownames(x),ntop))
   }
 
   ## top correlated phenotypes
-  M <- wgcna$modTraits
-  toppheno <- apply(M, 1, function(x) names(which(x > 0.8 * max(x))))
-
-  if (level == "geneset") {
+  M <- wgcna.get_modTraits(wgcna)   
+  toppheno <- apply(M, 1, function(x) names(which(x > 0.8*max(x))))
+  
+  if(level=="geneset") {
     topsets <- topgenes
     topgenes <- NULL
   }
@@ -5199,12 +5208,14 @@ wgcna.getMultiTopGenesAndSets <- function(multi_wgcna, annot = NULL, module = NU
 
 
 #' @export
-wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot = NULL, module = NULL, ntop = 40,
-                                              level = c("gene", "geneset")[1],
-                                              rename = "symbol") {
-  if (!"stats" %in% names(wgcna)) stop("object has no stats")
-  if (!"gsea" %in% names(wgcna)) warning("object has no enrichment results (gsea)")
-
+wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
+                                              level=c("gene","geneset")[1],
+                                              rename="symbol" ) {
+  if(!"stats" %in% names(wgcna)) stop("object has no stats")
+  if(!any(c("gse","gsea") %in% names(wgcna))) {
+    warning("object has no enrichment results (gsea)")
+  }
+  
   ## get top genes (highest kME)
   topgenesx <- list()
   for (i in 1:length(wgcna$stats)) {
@@ -5227,11 +5238,12 @@ wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot = NULL, module = NULL
 
   ## top genesets (as symbol!)
   topsets <- NULL
-  if ("gsea" %in% names(wgcna)) {
-    ee <- wgcna$gsea
-    ee <- ee[match(names(topgenes), names(ee))]
-    if (!is.null(module)) ee <- ee[module]
-    topsets <- lapply(ee, function(x) head(rownames(x), ntop))
+  if(any(c("gse","gsea") %in% names(wgcna))) {
+    if(!is.null(wgcna$gsea)) ee <- wgcna$gsea
+    if(!is.null(wgcna$gse)) ee <- wgcna$gse
+    ee <- ee[match(names(topgenes),names(ee))]
+    if(!is.null(module)) ee <- ee[module]  
+    topsets <- lapply(ee,function(x) head(rownames(x),ntop))
   }
 
   ## module traits

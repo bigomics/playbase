@@ -1299,7 +1299,8 @@ ggVolcano <- function(x,
                       ylab = "significance (-log10q)",
                       lfc = 1,
                       psig = 0.05,
-                      ylim = NULL,
+                      xlim = NULL,
+                      ylim = NULL,                      
                       showlegend = TRUE,
                       marker.size = 2.5,
                       marker.alpha = 0.7,
@@ -1309,11 +1310,37 @@ ggVolcano <- function(x,
                       title = "Volcano plot",
                       colors = c(
                         up = "#f23451",
-                        notsig = "#8F8F8F",
+                        notsig = "#cccccc88",
                         notsel = "#cccccc88",
                         down = "#3181de"
                       ),
-                      girafe = FALSE) {
+                      box.padding = 0.1,
+                      min.segment.length = 0,
+                      label.box = TRUE,
+                      segment.linetype = 1,
+                      girafe = FALSE,
+                      use_hyperbola = FALSE,
+                      hyperbola_k = 1,
+                      use_ggprism = FALSE,
+                      ggprism_palette = "black_and_white",
+                      ggprism_colors = FALSE,
+                      ggprism_border = FALSE,
+                      ggprism_axis_guide = "default",
+                      ggprism_show_legend = FALSE,
+                      ggprism_legend_x = 0.95,
+                      ggprism_legend_y = 0.95,
+                      ggprism_legend_border = FALSE) {
+  ## Handle ggprism colors if enabled
+  if (isTRUE(use_ggprism) && isTRUE(ggprism_colors)) {
+    prism_cols <- ggprism::prism_colour_pal(palette = ggprism_palette)(4)
+    colors <- c(
+      up = prism_cols[1],
+      down = prism_cols[2],
+      notsig = prism_cols[3],
+      notsel = paste0(prism_cols[4], "88")
+    )
+  }
+
   if (is.null(highlight)) highlight <- names
   if (showlegend) {
     legend <- "right"
@@ -1329,17 +1356,43 @@ ggVolcano <- function(x,
   if (!is.null(facet)) {
     df$facet <- facet
   }
-  df$category <- ifelse(
-    df$y > -log10(psig) & df$fc > lfc, "Up",
-    ifelse(df$y > -log10(psig) & df$fc < -lfc, "Down", "Not significant")
-  )
-  df$label <- ifelse(names %in% label | label.names %in% label, label.names, NA)
-  df$category[!(names %in% highlight | label.names %in% highlight)] <- "Not selected"
+  ## Significance classification
+
+  psig_transformed <- -log10(psig)
+
+  if (use_hyperbola) {
+    ## Hyperbolic significance criterion:
+    ## A point is significant if: (y - psig_transformed) * (|fc| - lfc) > k
+    ## This creates a hyperbola with:
+    ##   - Horizontal asymptote at y = psig_transformed
+    ##   - Vertical asymptotes at x = ±lfc
+    ## The curvature parameter k controls how "tight" the hyperbola is
+    hyperbola_sig <- (df$y - psig_transformed) * (abs(df$fc) - lfc) > hyperbola_k
+    hyperbola_sig[abs(df$fc) <= lfc] <- FALSE # Points inside vertical asymptotes are not significant
+
+    ## Classify by significance # RPA1
+    df$category <- ifelse(
+      hyperbola_sig & df$fc > 0, "Up",
+      ifelse(hyperbola_sig & df$fc < 0, "Down", "Not significant")
+    )
+    df$label <- ifelse(names %in% label | label.names %in% label, label.names, NA)
+    highlight <- c(highlight, names[hyperbola_sig])
+    df$category[!(names %in% highlight | label.names %in% highlight)] <- "Not selected"
+  } else {
+    ## Traditional rectangular cutoff
+    df$category <- ifelse(
+      df$y > psig_transformed & df$fc > lfc, "Up",
+      ifelse(df$y > psig_transformed & df$fc < -lfc, "Down", "Not significant")
+    )
+    df$label <- ifelse(names %in% label | label.names %in% label, label.names, NA)
+    df$category[!(names %in% highlight | label.names %in% highlight)] <- "Not selected"
+  }
 
   df$tooltip <- gsub("[\\'\\`-]", "", df$tooltip)
   df$name <- gsub("[\\'\\`-]", "", df$name)
 
   if (is.null(ylim)) ylim <- max(y, na.rm = TRUE) * 1.1
+  if (is.null(xlim)) xlim <- range(x, na.rm = TRUE)  
 
   plt <- ggplot2::ggplot(df, ggplot2::aes(x = fc, y = y)) +
     ggplot2::geom_point(
@@ -1416,21 +1469,81 @@ ggVolcano <- function(x,
       )
   }
 
-  plt <- plt +
-    ggrepel::geom_label_repel(
-      ggplot2::aes(label = label, color = category),
-      size = label.cex, family = "lato", box.padding = 0.1, max.overlaps = 20, show.legend = FALSE
-    )
+  if (label.box) {
+    plt <- plt +
+      ggrepel::geom_label_repel(
+        ggplot2::aes(label = label, color = category),
+        size = label.cex, family = "lato", box.padding = box.padding,
+        min.segment.length = min.segment.length, segment.linetype = segment.linetype,
+        max.overlaps = 20, show.legend = FALSE
+      )
+  } else {
+    plt <- plt +
+      ggrepel::geom_text_repel(
+        ggplot2::aes(label = label, color = category),
+        size = label.cex, family = "lato", box.padding = box.padding,
+        min.segment.length = min.segment.length, segment.linetype = segment.linetype,
+        max.overlaps = 20, show.legend = FALSE
+      )
+  }
+
+  ## Add threshold lines or hyperbola curve
+  if (use_hyperbola) {
+    ## Create hyperbola curve data (separate branches to avoid connecting line)
+    ## Right branch: y = psig_transformed + k / (x - lfc) for x > lfc
+    ## Left branch: y = psig_transformed + k / (-x - lfc) for x < -lfc
+    x_max <- max(abs(df$fc), na.rm = TRUE) * 1.2
+
+    ## Right branch
+    x_right <- seq(lfc + 0.01, x_max, length.out = 200)
+    y_right <- psig_transformed + hyperbola_k / (x_right - lfc)
+    hyperbola_right <- data.frame(x = x_right, y = y_right)
+
+    ## Left branch
+    x_left <- seq(-x_max, -lfc - 0.01, length.out = 200)
+    y_left <- psig_transformed + hyperbola_k / (-x_left - lfc)
+    hyperbola_left <- data.frame(x = x_left, y = y_left)
+
+    ## Clip to ylim
+    if (!is.null(ylim)) {
+      hyperbola_right <- hyperbola_right[hyperbola_right$y <= ylim, ]
+      hyperbola_left <- hyperbola_left[hyperbola_left$y <= ylim, ]
+    }
+
+    plt <- plt +
+      ggplot2::geom_line(
+        data = hyperbola_right,
+        ggplot2::aes(x = x, y = y),
+        linetype = "dashed",
+        color = "gray",
+        linewidth = 0.7
+      ) +
+      ggplot2::geom_line(
+        data = hyperbola_left,
+        ggplot2::aes(x = x, y = y),
+        linetype = "dashed",
+        color = "gray",
+        linewidth = 0.7
+      ) +
+      ggplot2::geom_vline(xintercept = c(-lfc, lfc), linetype = "dotted", color = "gray", alpha = 0.5) +
+      ggplot2::geom_hline(yintercept = psig_transformed, linetype = "dotted", color = "gray", alpha = 0.5) +
+      ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey")
+  } else {
+    plt <- plt +
+      ggplot2::geom_hline(yintercept = psig_transformed, linetype = "dashed", color = "gray") +
+      ggplot2::geom_vline(xintercept = c(-lfc, lfc), linetype = "dashed", color = "gray") +
+      ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey")
+  }
 
   plt <- plt +
-    ggplot2::geom_hline(yintercept = -log10(psig), linetype = "dashed", color = "gray") +
-    ggplot2::geom_vline(xintercept = c(-lfc, lfc), linetype = "dashed", color = "gray") +
-    ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey") +
     ggplot2::scale_y_continuous(
       limits = c(0, ylim),
-      expand = ggplot2::expansion(mult = c(0, 0))
+      expand = ggplot2::expansion(mult = c(0, 0.05))
     ) +
-    ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = c(0.1, 0))) +
+    ggplot2::scale_x_continuous(
+      limits = xlim,
+      expand = ggplot2::expansion(mult = c(0.07, 0.07))
+    ) +
     ggplot2::labs(x = xlab, y = ylab) +
     guides(colour = guide_legend(reverse = T)) +
     ggplot2::theme_minimal(base_size = 15) +
@@ -1445,6 +1558,63 @@ ggVolcano <- function(x,
       axis.text = ggplot2::element_text(family = "lato"),
       plot.margin = ggplot2::margin(l = 9, b = 3, t = 9, r = 9)
     )
+
+  ## Apply ggprism theme if enabled
+  if (isTRUE(use_ggprism)) {
+    plt <- plt +
+      ggprism::theme_prism(
+        palette = ggprism_palette,
+        base_size = axis.text.size,
+        border = ggprism_border
+      )
+
+    ## Apply axis guides
+    if (ggprism_axis_guide == "prism_minor") {
+      plt <- plt + ggplot2::guides(
+        x = ggprism::guide_prism_minor(),
+        y = ggprism::guide_prism_minor()
+      )
+    } else if (ggprism_axis_guide == "prism_offset") {
+      plt <- plt + ggplot2::guides(
+        x = ggprism::guide_prism_offset(),
+        y = ggprism::guide_prism_offset()
+      )
+    } else if (ggprism_axis_guide == "prism_offset_minor") {
+      plt <- plt + ggplot2::guides(
+        x = ggprism::guide_prism_offset_minor(),
+        y = ggprism::guide_prism_offset_minor()
+      )
+    }
+
+    ## Legend positioning
+    if (isTRUE(ggprism_show_legend)) {
+      ## Calculate justification based on position (corners anchor properly)
+      just_x <- if (ggprism_legend_x > 0.5) 1 else 0
+      just_y <- if (ggprism_legend_y > 0.5) 1 else 0
+
+      ## Legend background with optional border
+      legend_bg <- if (isTRUE(ggprism_legend_border)) {
+        ggplot2::element_rect(fill = "white", colour = "black", linewidth = 0.5)
+      } else {
+        ggplot2::element_rect(fill = "white", colour = NA)
+      }
+
+      plt <- plt + ggplot2::theme(
+        legend.position = "inside",
+        legend.position.inside = c(ggprism_legend_x, ggprism_legend_y),
+        legend.justification = c(just_x, just_y),
+        legend.title = ggplot2::element_blank(),
+        legend.background = legend_bg
+      )
+    } else {
+      plt <- plt + ggplot2::theme(legend.position = "none")
+    }
+
+    if (isTRUE(ggprism_border)) {
+      plt <- plt + ggplot2::coord_cartesian(clip = "off")
+    }
+  }
+
   if (!is.null(facet)) {
     ncol_row <- ceiling(sqrt(length(unique(facet))))
     plt <- plt +
@@ -7104,7 +7274,8 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
                                    xpos = NULL, xlim = NULL, justgraph = FALSE,
                                    edge.cex = 1, edge.alpha = 0.33, xdist = 1,
                                    normalize.edges = FALSE, yheight = 2,
-                                   edge.sign = "both", edge.type = "both",
+                                   edge.sign = c("both","pos","neg","consensus")[1],
+                                   edge.type = c("both","inter","intra","both2")[1],
                                    labpos = NULL, value.name = NULL,
                                    strip.prefix = FALSE, strip.prefix2 = FALSE,
                                    prune = FALSE,
@@ -7496,3 +7667,4 @@ plotAdjacencyMatrixFromGraph <- function(graph, nmax = 40, binary = FALSE,
     sym = TRUE, ...
   )
 }
+

@@ -1135,12 +1135,23 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
     remove.failed <- TRUE
   }
 
+  if (is.null(y)) {
+    if ("uncorrected" %in% methods) {
+      if (ntop < Inf) {
+        X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], ntop) ## faster
+      }
+      xlist[["uncorrected"]] <- X
+    } else {
+      return(NULL)
+    }
+  }
+
   mod <- model.matrix(~ factor(y))
   nlevel <- length(unique(y[!is.na(y)]))
   if (ntop < Inf) {
     X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], ntop) ## faster
   }
-
+ 
   if (is.null(methods)) {
     methods <- c(
       "uncorrected", "normalized_to_control",
@@ -1184,7 +1195,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
     cX <- try(limmaCorrect(X, batch, y = NULL))
     xlist[["limma.no_mod"]] <- cX
   }
-
+ 
   ## ComBat ------------------------------------------------------
   if ("ComBat" %in% methods && is.null(batch)) {
     xlist[["ComBat"]] <- X
@@ -1206,7 +1217,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   if ("ComBat.no_mod" %in% methods && is.null(batch)) {
     xlist[["ComBat.no_mod"]] <- X
   }
-
+ 
   ## superbatchcorrect
   if ("superBC" %in% methods) {
     df <- data.frame(y = y)
@@ -1741,8 +1752,6 @@ compare_batchcorrection_methods <- function(X,
                                             xlist.init = list(),
                                             ref = NULL,
                                             evaluate = TRUE) {
-  ## methods <- c("uncorrected","ComBat","auto-ComBat","limma","RUV","SVA","NPM")
-  ## ntop = 4000; xlist.init = list(); batch=NULL
 
   if (is.null(pheno) && is.null(contrasts)) {
     stop("must give either pheno vector or contrasts matrix")

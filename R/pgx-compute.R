@@ -76,6 +76,7 @@ pgx.createFromFiles <- function(counts.file,
     dotimeseries = FALSE,
     batch.correct.method = "no_batch_correct",
     batch.pars = "<autodetect>",
+    covariates = NULL,
     auto.scale = TRUE,
     filter.genes = TRUE,
     prune.samples = FALSE,
@@ -122,6 +123,7 @@ pgx.createFromFiles <- function(counts.file,
 #' @param dotimeseries Logical indicating if timeseries analysis has been activated by the user at upload
 #' @param batch.correct.method BC method. Default is "no_batch_correct" (meaning no batch correction).
 #' @param batch.pars BC variable. Default "autodetect" as per QC/BC tab in upload.
+#' @param covariates variables to regress out. Valid only for linear model-based tests.
 #' @param auto.scale Logical indicating whether to automatically scale/center genes. Default is TRUE.
 #' @param filter.genes Logical indicating whether to filter lowly expressed genes. Default is TRUE.
 #' @param prune.samples Logical indicating whether to remove samples without contrasts. Default is FALSE.
@@ -143,6 +145,7 @@ pgx.createFromFiles <- function(counts.file,
 #' - `creator`: Creator of the dataset
 #' - `datatype`: Type of data (e.g. RNA-seq, microarray)
 #' - `description`: Description of the dataset
+#' - `metadata`: User-defined metadata (list with study_type, tissue_type, etc.)
 #' - `samples`: Sample metadata
 #' - `counts`: Raw count matrix
 #' - `contrasts`: Contrast matrix
@@ -170,12 +173,14 @@ pgx.createPGX <- function(counts,
                           probe_type = NULL,
                           creator = "unknown",
                           description = "No description provided.",
+                          metadata = NULL,
                           X = NULL,
                           norm_method = "CPM",
                           is.logx = NULL,
                           dotimeseries = FALSE,
-                          batch.correct.method = "no_batch_correct", ## new
-                          batch.pars = "<autodetect>", ## new
+                          batch.correct.method = "no_batch_correct",
+                          batch.pars = "<autodetect>",
+                          covariates = NULL, ## new
                           auto.scale = TRUE,
                           filter.genes = TRUE,
                           exclude.genes = NULL,
@@ -203,7 +208,7 @@ pgx.createPGX <- function(counts,
   message("[pgx.createPGX] dim.counts: ", dim(counts)[1], " x ", dim(counts)[2])
   message("[pgx.createPGX] class.counts: ", class(counts))
   message("[pgx.createPGX] counts has ", sum(is.na(counts)), " missing values")
-
+  
   ndup <- sum(duplicated(rownames(counts)))
   if (ndup > 0) {
     if (average.duplicated) {
@@ -380,6 +385,7 @@ pgx.createPGX <- function(counts,
     creator = creator,
     datatype = datatype,
     description = description,
+    metadata = metadata,
     samples = data.frame(samples, check.names = FALSE),
     counts = as.matrix(counts),
     contrasts = contrasts,
@@ -387,6 +393,7 @@ pgx.createPGX <- function(counts,
     norm_method = norm_method,
     total_counts = Matrix::colSums(counts, na.rm = TRUE),
     counts_multiplier = counts_multiplier,
+    covariates = covariates,
     settings = settings,
     versions = versions,
     sc_compute_settings = sc_compute_settings
@@ -699,7 +706,7 @@ pgx.computePGX <- function(pgx,
   ## select valid contrasts
   sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
   contr.matrix <- contr.matrix[, sel, drop = FALSE]
-
+ 
   ## -------------------------------------------------------------------
   ## Clustering
   ## -------------------------------------------------------------------
@@ -784,8 +791,8 @@ pgx.computePGX <- function(pgx,
   ## ------------------ gene level tests ---------------------
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
 
-  timeseries <- any(grepl("IA:*", colnames(pgx$contrasts)))
-
+  timeseries <- any(grepl("^IA:*", colnames(pgx$contrasts)))
+  
   message("[pgx.computePGX] testing genes...")
   pgx <- compute_testGenes(
     pgx,

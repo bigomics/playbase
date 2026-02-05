@@ -74,8 +74,9 @@ jobs:
         name: Unittest docker
         id: test-snapshot
         run: |
-          docker run --name run_tests -e CI=true $DOCKER_TAG
-          docker cp run_tests:/test_result.txt .
+          CONTAINER_NAME="run_tests_${{ github.run_id }}"
+          docker run --name "$CONTAINER_NAME" -e CI=true $DOCKER_TAG
+          docker cp "$CONTAINER_NAME":/test_result.txt .
       
       - 
         name: Check workflow result
