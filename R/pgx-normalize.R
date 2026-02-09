@@ -4,7 +4,6 @@
 ##
 
 
-
 NORMALIZATION.METHODS <- c("none", "mean.center", "median.center", "sum", "CPM", "TMM", "RLE", "RLE2", "quantile", "maxMedian", "maxSum")
 
 #' @title Normalize count data
@@ -167,14 +166,14 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
 #' @details
 #' Get prior. Conventionally 1 for logCPM (used for RNAseq)
 #' For other data types (proteomics, metabolomics, lipidomics) we use min positive.
-#' 
+#'
 #' @return
 #' prior value
 #'
 #' @export
 getPrior <- function(counts) {
   prior <- 0
-  if (min(counts, na.rm = TRUE) == 0 || any(is.na(counts)))  {
+  if (min(counts, na.rm = TRUE) == 0 || any(is.na(counts))) {
     prior <- min(counts[counts > 0], na.rm = TRUE)
   }
   return(prior)
@@ -191,7 +190,7 @@ getPrior <- function(counts) {
 #'
 #' @details
 #' This function normalizes each datatype independently.
-#' Default normalization methods are logCPM for gx and maxMedian for non-gx data. 
+#' Default normalization methods are logCPM for gx and maxMedian for non-gx data.
 #'
 #' @return
 #' Normalized multi-omics data matrix
@@ -201,30 +200,30 @@ normalizeMultiOmics <- function(X,
                                 prior = NULL,
                                 gx.method = "CPM",
                                 non.gx.method = "maxMedian") {
-
   dtypes <- unique(sub(":.*", "", rownames(X)))
 
-  if (is.null(gx.method)) gx.method = "CPM"
-  if (is.null(non.gx.method)) non.gx.method = "maxMedian"
-  
-  for(i in 1:length(dtypes)) {
+  if (is.null(gx.method)) gx.method <- "CPM"
+  if (is.null(non.gx.method)) non.gx.method <- "maxMedian"
+
+  for (i in 1:length(dtypes)) {
     ii <- grep(paste0("^", dtypes[i], ":"), rownames(X))
     if (any(ii)) {
       if (dtypes[i] == "gx") {
         m <- gx.method
         prior <- 1
       } else {
-        prior <- getPrior(X[ii,])
+        prior <- getPrior(X[ii, ])
         m <- non.gx.method
       }
-      message("[playbase::normalizeMultiOmics] normalizing ", dtypes[i],
-        " data using ", m, ". Prior = ", prior)
+      message(
+        "[playbase::normalizeMultiOmics] normalizing ", dtypes[i],
+        " data using ", m, ". Prior = ", prior
+      )
       X[ii, ] <- normalizeExpression(X[ii, ], method = m, prior = prior)
     }
   }
 
   return(X)
-
 }
 
 
@@ -340,12 +339,12 @@ normalizeTMM <- function(counts, log = FALSE, prior = 1,
 #' norm_counts <- normalizeRLE(counts)
 #' }
 #' @export
-normalizeRLE <- function(counts, log = FALSE, use = "deseq2", prior=1) {
+normalizeRLE <- function(counts, log = FALSE, use = "deseq2", prior = 1) {
   outx <- NULL
   if (use == "edger") {
     dge <- edgeR::DGEList(as.matrix(counts), group = NULL)
     dge <- edgeR::calcNormFactors(dge, method = "RLE")
-    outx <- edgeR::cpm(dge, log=log, prior.count=prior)
+    outx <- edgeR::cpm(dge, log = log, prior.count = prior)
   } else if (use == "deseq2") {
     cts <- round(counts)
     dds <- DESeq2::DESeqDataSetFromMatrix(
@@ -355,7 +354,7 @@ normalizeRLE <- function(counts, log = FALSE, use = "deseq2", prior=1) {
     )
     disp <- DESeq2::estimateSizeFactors(dds)
     outx <- DESeq2::counts(disp, normalized = TRUE)
-    if(log) outx <- log2(outx + prior)
+    if (log) outx <- log2(outx + prior)
   } else {
     stop("unknown method")
   }

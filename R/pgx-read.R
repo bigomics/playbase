@@ -460,21 +460,26 @@ read_Olink_NPX <- function(NPX_data) {
 #' Attempts multiple ways.
 #' @export
 read_h5_counts <- function(h5.file) {
-
   message("[playbase::read_h5_counts] Reading h5 file: ", h5.file)
   df <- NULL
-  
-  FF <- tryCatch( { rhdf5::h5ls(h5.file) }, error = function(w) { NULL } )
 
-  if (!is.null(FF) && all(c("group","name") %in% colnames(FF))) {
+  FF <- tryCatch(
+    {
+      rhdf5::h5ls(h5.file)
+    },
+    error = function(w) {
+      NULL
+    }
+  )
 
-    h5.ems <- paste0(FF[,"group"], "/", FF[,"name"])
+  if (!is.null(FF) && all(c("group", "name") %in% colnames(FF))) {
+    h5.ems <- paste0(FF[, "group"], "/", FF[, "name"])
     LL <- lapply(h5.ems, function(ems) rhdf5::h5read(file = h5.file, name = ems))
 
     dims <- unlist(lapply(LL, function(x) length(dim(x))))
     ll <- lapply(LL, length)
-    
-    if (any(dims == 2)) df <-  LL[[which(dims == 2)[1]]]
+
+    if (any(dims == 2)) df <- LL[[which(dims == 2)[1]]]
 
     if (!is.null(df)) {
       if (is.null(rownames(df)) && any(ll == nrow(df))) {
@@ -486,11 +491,27 @@ read_h5_counts <- function(h5.file) {
     }
   }
 
-  if (is.null(df))
-    df <- tryCatch({ Seurat::Read10X_h5(h5.file) }, error = function(w) { NULL } )
+  if (is.null(df)) {
+    df <- tryCatch(
+      {
+        Seurat::Read10X_h5(h5.file)
+      },
+      error = function(w) {
+        NULL
+      }
+    )
+  }
 
-  if (is.null(df))
-    df <- tryCatch( { playbase::h5.readMatrix(h5.file) }, error = function(w) { NULL } )
+  if (is.null(df)) {
+    df <- tryCatch(
+      {
+        playbase::h5.readMatrix(h5.file)
+      },
+      error = function(w) {
+        NULL
+      }
+    )
+  }
 
   if (!is.null(df) & all(class(df) %in% c("matrix", "array"))) {
     message("[playbase::read_h5_counts] success!")
@@ -499,7 +520,6 @@ read_h5_counts <- function(h5.file) {
   }
 
   return(df)
-
 }
 
 

@@ -15,10 +15,14 @@ is.multiomics <- function(pgx) {
 #' rows. Features are union of input matrices.
 #'
 #' @export
-merge_sparse_matrix <- function(m1, m2, margin=NULL, verbose=1) {
-  if(is.null(m1)) return(m2)
-  if(is.null(m2)) return(m1)
-  cbind_sparse_matrix(m1=m1, m2=m2)
+merge_sparse_matrix <- function(m1, m2, margin = NULL, verbose = 1) {
+  if (is.null(m1)) {
+    return(m2)
+  }
+  if (is.null(m2)) {
+    return(m1)
+  }
+  cbind_sparse_matrix(m1 = m1, m2 = m2)
 }
 
 #' Merge Sparse Matrix
@@ -59,7 +63,7 @@ cbind_sparse_matrix <- function(m1, m2) {
   m1 <- m1[gene_vector, , drop = FALSE]
   m2 <- m2[gene_vector, , drop = FALSE]
 
-  # Combine the matrices column-wise  
+  # Combine the matrices column-wise
   combined_gmt <- cbind(m1, m2)
 
   # If duplicated genesets, then keep only the largest one
@@ -363,8 +367,6 @@ add_opacity <- function(hexcol, opacity) {
 }
 
 
-
-
 #' @title Check for Required Fields in a PGX Object
 #'
 #' @description This function checks if a PGX object contains all required fields.
@@ -434,17 +436,16 @@ matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1, reorder = TRUE) {
 #'
 #' @export
 rowmean <- function(X, group = rownames(X), reorder = TRUE) {
-
   ## one row. do nothing
-  if(nrow(X)==1) {
+  if (nrow(X) == 1) {
     return(X)
   }
-  
+
   ## resolve special case if only one group
-  ngroup <- length(unique(group))    
-  if(ngroup == 1) {
-    newX <- matrix( Matrix::colMeans(X, na.rm=TRUE), nrow=1, ncol=ncol(X))
-    dimnames(newX) <- list( group[1], colnames(X))
+  ngroup <- length(unique(group))
+  if (ngroup == 1) {
+    newX <- matrix(Matrix::colMeans(X, na.rm = TRUE), nrow = 1, ncol = ncol(X))
+    dimnames(newX) <- list(group[1], colnames(X))
     return(newX)
   }
 
@@ -453,21 +454,21 @@ rowmean <- function(X, group = rownames(X), reorder = TRUE) {
     sumX <- base::rowsum(as.matrix(X), group, na.rm = TRUE)
     nX <- base::rowsum(1 * (!is.na(as.matrix(X))), group)
     newX <- sumX / nX
-  } else if (sum(is.na(X))==0) {
+  } else if (sum(is.na(X)) == 0) {
     ## for sparse matrix (no NA)
     group_mat <- Matrix::t(Matrix::sparse.model.matrix(~ 0 + group))
-    rownames(group_mat) <- sub("^group","",rownames(group_mat))
+    rownames(group_mat) <- sub("^group", "", rownames(group_mat))
     group_mat <- group_mat / Matrix::rowSums(group_mat)
     newX <- group_mat %*% X
   } else {
     ## safer. also handles NA for sparse matrix (rare case)
     group_mat <- Matrix::t(Matrix::sparse.model.matrix(~ 0 + group))
-    rownames(group_mat) <- sub("^group","",rownames(group_mat))
+    rownames(group_mat) <- sub("^group", "", rownames(group_mat))
     X0 <- X
     X0[is.na(X0)] <- 0
     nc <- group_mat %*% (!is.na(X))
     newX <- (group_mat %*% X0) / nc
-    newX <- Matrix::Matrix(newX, sparse=TRUE)
+    newX <- Matrix::Matrix(newX, sparse = TRUE)
   }
   if (reorder) {
     ii <- match(unique(group), rownames(newX))
@@ -1446,7 +1447,6 @@ pgx.getGeneSetCollections <- function(gsets = rownames(playdata::GSETxGENE)) {
 }
 
 
-
 ## -----------------------------------------------------------------------------
 ## Generic module functions
 ## -----------------------------------------------------------------------------
@@ -1513,15 +1513,14 @@ filterProbes <- function(annot, genes) {
 #' @export
 rename_by2 <- function(counts, annot_table, new_id = "symbol",
                        na.rm = TRUE, unique = TRUE, keep.prefix = FALSE) {
-
-  ##new_id="symbol";na.rm=TRUE;unique=TRUE;keep.prefix=FALSE
+  ## new_id="symbol";na.rm=TRUE;unique=TRUE;keep.prefix=FALSE
 
   ## add rownames and extra columns
   annot_table$rownames <- rownames(annot_table)
   annot_table$rownames2 <- sub("^[A-Za-z]+:", "", rownames(annot_table)) ## strip prefix
   
   if (is.matrix(counts) || inherits(counts, "Matrix") ||
-        is.data.frame(counts) || !is.null(dim(counts))) {
+    is.data.frame(counts) || !is.null(dim(counts))) {
     type <- "matrix"
     probes <- rownames(counts)
   } else {
@@ -1583,13 +1582,13 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
 
   # Average columns of rows with the same gene symbol
   ndup <- sum(duplicated(rownames(counts)))
-  if (unique && ndup>0) {
+  if (unique && ndup > 0) {
     rowdup <- rownames(counts)[which(duplicated(rownames(counts)))]
-    ii <- which( rownames(counts) %in% rowdup )
-    nodup.counts <- rowmean(counts[ii,,drop = FALSE], rownames(counts)[ii])
+    ii <- which(rownames(counts) %in% rowdup)
+    nodup.counts <- rowmean(counts[ii, , drop = FALSE], rownames(counts)[ii])
     rown <- unique(rownames(counts))
-    counts <- rbind( counts[-ii,,drop=FALSE], nodup.counts )
-    counts <- counts[rown,,drop = FALSE] 
+    counts <- rbind(counts[-ii, , drop = FALSE], nodup.counts)
+    counts <- counts[rown, , drop = FALSE]
   }
 
   if (type == "vector") {
@@ -1609,8 +1608,10 @@ rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
     probes <- names(counts)
   }
 
-  if(new_id=="symbol" && !"symbol" %in% colnames(annot_table) &&
-    "gene_name" %in% colnames(annot_table)) new_id <- "gene_name"
+  if (new_id == "symbol" && !"symbol" %in% colnames(annot_table) &&
+    "gene_name" %in% colnames(annot_table)) {
+    new_id <- "gene_name"
+  }
   symbol <- annot_table[probes, new_id]
 
   # Guard against NA
@@ -2371,15 +2372,17 @@ expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = 
 #'
 #' @export
 collapseTraitMatrix <- function(Y) {
-  if(sum(grepl("=",colnames(Y))) < 2) return(Y)
-  is.cat <- grepl("=",colnames(Y))
-  M <- Y[,which(!is.cat),drop=FALSE]  
-  categories <- unique(sub("=.*","",colnames(Y)[which(is.cat)]))
-  y=categories[1]
-  for(y in categories) {
-    ii <- which(sub("=.*","",colnames(Y)) == y)
-    Y1 <- Y[,ii]
-    colnames(Y1) <- sub(".*=","",colnames(Y1))
+  if (sum(grepl("=", colnames(Y))) < 2) {
+    return(Y)
+  }
+  is.cat <- grepl("=", colnames(Y))
+  M <- Y[, which(!is.cat), drop = FALSE]
+  categories <- unique(sub("=.*", "", colnames(Y)[which(is.cat)]))
+  y <- categories[1]
+  for (y in categories) {
+    ii <- which(sub("=.*", "", colnames(Y)) == y)
+    Y1 <- Y[, ii]
+    colnames(Y1) <- sub(".*=", "", colnames(Y1))
     m1 <- colnames(Y1)[max.col(Y1)]
     M <- cbind(M, m1)
     colnames(M)[ncol(M)] <- y
@@ -2590,21 +2593,21 @@ substrmatch <- function(pattern, x) {
 #' of match().
 #'
 #' @export
-multimatch <- function(id, df, parallel=TRUE) {
-  if(parallel) {
-    df.list <- apply(df, 1, c, simplify=FALSE)
-    jj <- which( parallel::mclapply(df.list, function(x) sum(id %in% x)) > 0)
+multimatch <- function(id, df, parallel = TRUE) {
+  if (parallel) {
+    df.list <- apply(df, 1, c, simplify = FALSE)
+    jj <- which(parallel::mclapply(df.list, function(x) sum(id %in% x)) > 0)
   } else {
-    jj <- which( apply(df, 1, function(x) sum(id %in% x)) > 0)    
+    jj <- which(apply(df, 1, function(x) sum(id %in% x)) > 0)
   }
-  if(length(jj)==0) {
+  if (length(jj) == 0) {
     message("WARNING: no match")
     return(NULL)
   }
-  ii <- as.vector(sapply(jj, function(i) rep(i,ncol(df))))
-  M <- cbind(as.vector(t(df[jj,])), ii)
-  M <- M[!is.na(M[,1]),,drop=FALSE]
-  idx <- as.integer(M[ match(id, M[,1]), 2])
+  ii <- as.vector(sapply(jj, function(i) rep(i, ncol(df))))
+  M <- cbind(as.vector(t(df[jj, ])), ii)
+  M <- M[!is.na(M[, 1]), , drop = FALSE]
+  idx <- as.integer(M[match(id, M[, 1]), 2])
   return(idx)
 }
 
@@ -2612,10 +2615,12 @@ multimatch <- function(id, df, parallel=TRUE) {
 #' df. Returned dataframe has length(id) rows, and ncol(df) columns.
 #'
 #' @export
-match.dataframe <- function(id, df, parallel=TRUE) {
-  ii <- multimatch(id, df, parallel=parallel)
-  if(is.null(ii)) return(NULL)
-  df1 <- df[ii,,drop=FALSE]
+match.dataframe <- function(id, df, parallel = TRUE) {
+  ii <- multimatch(id, df, parallel = parallel)
+  if (is.null(ii)) {
+    return(NULL)
+  }
+  df1 <- df[ii, , drop = FALSE]
   rownames(df1) <- make_unique(id)
   return(df1)
 }

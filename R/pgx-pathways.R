@@ -367,8 +367,6 @@ wikipathview <- function(wp, val, as.img = FALSE) {
 }
 
 
-
-
 #'
 #'
 #' @export

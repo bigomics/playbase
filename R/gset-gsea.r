@@ -801,8 +801,6 @@ run.GSEA.LeadingEdge <- function(rpt.path, gmt, xmx = 10, rpt.label = "gsea_lead
 }
 
 
-
-
 #' Run GSEA analysis using pre-ranked or phenotype comparison mode
 #'
 #' This function performs Gene Set Enrichment Analysis (GSEA) using either pre-ranked mode or phenotype comparison mode.
@@ -932,7 +930,6 @@ justGSEA <- function(X, gmt, Y = NULL, fdr = 1, set.min = 15, set.max = 500, top
 }
 
 
-
 ## ========================================================================
 ## ======================== ACCESS FUNCTIONS ==============================
 ## ========================================================================
@@ -1031,9 +1028,6 @@ getGseaOutput <- function(path = "../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut
 }
 
 
-
-
-
 ## ========================================================================
 ## =========================== PLOTTING ===================================
 ## ========================================================================
@@ -1043,9 +1037,6 @@ getGseaOutput <- function(path = "../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut
 .bluered <- function(n = 64) {
   gplots::colorpanel(n, "royalblue3", "grey90", "indianred3")
 }
-
-
-
 
 
 #' GSEA Enrichment Plot
@@ -1143,8 +1134,6 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
   }
   graphics::title(main = tt.main, cex.main = cex.main, line = main.line)
 }
-
-
 
 
 #' gsea.ftplot

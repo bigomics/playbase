@@ -7,7 +7,6 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
                              factorizations = TRUE,
                              compute.enrichment = TRUE,
                              compute.lasagna = TRUE) {
-
   has.prefix <- (mean(grepl(":", rownames(pgx$X))) > 0.8)
   is.multiomics <- (pgx$datatype == "multi-omics" && has.prefix)
 
@@ -44,7 +43,7 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
 
   ## MOFA computation
   message("computing MOFA ...")
-  ##samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=8;gpu_mode=FALSE;max_iter=1000;numfeatures=100;scale_views=1;pheno=NULL
+  ## samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=8;gpu_mode=FALSE;max_iter=1000;numfeatures=100;scale_views=1;pheno=NULL
 
   mofa <- list()
   mofa <- mofa.compute(
@@ -129,7 +128,6 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
 
   return(mofa)
 }
-
 
 
 #' @export
@@ -228,7 +226,7 @@ mofa.compute <- function(xdata,
     ## MOFA does not like non-ascii names
     xdata.names <- lapply(xdata, rownames)
     safe.names <- lapply(xdata.names, iconv2ascii)
-    for(i in 1:length(xdata)) rownames(xdata[[i]]) <- safe.names[[i]]
+    for (i in 1:length(xdata)) rownames(xdata[[i]]) <- safe.names[[i]]
     obj <- MOFA2::create_mofa(xdata, groups = NULL)
 
     ## 'group' is used by MOFA
@@ -273,10 +271,9 @@ mofa.compute <- function(xdata,
     model <- MOFA2::impute(model)
     factors <- MOFA2::get_factors(model, factors = "all")
     weights <- MOFA2::get_weights(model, views = "all", factors = "all")
-    for(i in 1:length(weights)) rownames(weights[[i]]) <- xdata.names[[i]]      
+    for (i in 1:length(weights)) rownames(weights[[i]]) <- xdata.names[[i]]
     W <- do.call(rbind, weights)
     F <- do.call(rbind, factors)
-
   } else if (tolower(kernel) %in% c("pca", "svd")) {
     message("[mofa.compute] computing PCA factorization")
     model <- irlba::irlba(X, nv = numfactors, maxit = max_iter, work = 100)
@@ -394,7 +391,7 @@ mofa.compute <- function(xdata,
   colnames(V) <- colnames(W)
 
   ## Covariate x Factor correlation
-  Y <- expandPhenoMatrix(samples, drop.ref = FALSE, keep.numeric=TRUE)
+  Y <- expandPhenoMatrix(samples, drop.ref = FALSE, keep.numeric = TRUE)
   Y <- as.matrix(Y)
   Z <- cor(Y, F, use = "pairwise")
   Z[is.na(Z)] <- 0
@@ -847,22 +844,22 @@ mofa.plot_all_factortraits <- function(meta.res) {
 
 #' @export
 mofa.topSD <- function(xdata, ntop) {
-  if(is.list(xdata)) {
+  if (is.list(xdata)) {
     res <- lapply(xdata, function(x) {
       sdx <- matrixStats::rowSds(x, na.rm = TRUE)
-      head(x[order(-sdx),,drop=FALSE], ntop)
+      head(x[order(-sdx), , drop = FALSE], ntop)
     })
-  } else if(is.matrix(xdata)) {
-    if(all(grepl(":",rownames(xdata)))) {
+  } else if (is.matrix(xdata)) {
+    if (all(grepl(":", rownames(xdata)))) {
       xdata <- mofa.split_data(xdata)
       res <- lapply(xdata, function(x) {
         sdx <- matrixStats::rowSds(x, na.rm = TRUE)
-        head(x[order(-sdx),,drop=FALSE], ntop)
+        head(x[order(-sdx), , drop = FALSE], ntop)
       })
       res <- mofa.merge_data(res)
     } else {
       sdx <- matrixStats::rowSds(xdata, na.rm = TRUE)
-      res <- head(xdata[order(-sdx),,drop=FALSE], ntop)
+      res <- head(xdata[order(-sdx), , drop = FALSE], ntop)
     }
   } else {
     message("[mofa.topSD] WARNING: could not detect type")
@@ -934,7 +931,7 @@ mofa.merge_data2 <- function(xdata, merge.rows="prefix", merge.cols="union") {
     }
     merge.cols <- "union"    
   }
-  if(prefix.rows) {
+  if (prefix.rows) {
     ## if columns overlap (i.e. same samples), prefix the feature
     ## names.
     for(i in 1:length(xdata)) {
@@ -957,23 +954,22 @@ mofa.merge_data2 <- function(xdata, merge.rows="prefix", merge.cols="union") {
   nn <- matrix(0, length(allfeatures), length(allsamples))
   rownames(D) <- allfeatures
   colnames(D) <- allsamples
-  i=1
-  for(i in 1:length(xdata)) {
+  i <- 1
+  for (i in 1:length(xdata)) {
     A <- xdata[[i]]
-    ii <- match(rownames(D),rownames(A))
-    jj <- match(colnames(D),colnames(A))
-    A1 <- A[ii,jj]
-    nn <- nn + !is.na(A1)*1
+    ii <- match(rownames(D), rownames(A))
+    jj <- match(colnames(D), colnames(A))
+    A1 <- A[ii, jj]
+    nn <- nn + !is.na(A1) * 1
     A1[is.na(A1)] <- 0
     D <- D + A1
   }
   D <- D / nn
-  D[which(nn==0)] <- NA
+  D[which(nn == 0)] <- NA
   rownames(D) <- allfeatures
   colnames(D) <- allsamples
   return(D)
 }
-
 
 
 #' @export
@@ -1189,9 +1185,7 @@ mofa.plot_heatmap <- function(mofa,
       show_colnames = show_colnames,
       annot.ht = 3.6 * annot.ht
     )
-  } else if (type == "graph") {
-
-  } else {
+  } else if (type == "graph") {} else {
     message("unknown graph type")
   }
 }
@@ -1470,7 +1464,8 @@ mofa.factor_graphs <- function(F, W, X, y, n = 100, ewidth = 1, vsize = 1) {
     rho <- cor(t(gx), use = "pairwise")
     rho[is.na(rho)] <- 0
     gr <- igraph::graph_from_adjacency_matrix(
-      rho, weighted = TRUE, diag = FALSE, mode = "undirected"
+      rho,
+      weighted = TRUE, diag = FALSE, mode = "undirected"
     )
     ew <- igraph::E(gr)$weight
     ew <- (ew - min(ew, na.rm = TRUE)) /
@@ -1486,8 +1481,10 @@ mofa.factor_graphs <- function(F, W, X, y, n = 100, ewidth = 1, vsize = 1) {
       if (length(unique(y[ii])) == 2) {
         val <- cor(t(gx[, ii, drop = FALSE]), as.integer(y[ii]))[, 1]
       } else if (length(unique(y[ii])) > 2) {
-        res <- gx.limma(gx[, ii, drop = FALSE], y[ii], fdr = 1, lfc = 0,
-          f.test = TRUE, verbose = 0)
+        res <- gx.limma(gx[, ii, drop = FALSE], y[ii],
+          fdr = 1, lfc = 0,
+          f.test = TRUE, verbose = 0
+        )
         val <- res$logFC
       } else {
         val <- NULL
@@ -1856,7 +1853,6 @@ normalize_multifc <- function(fc, by = c("sd", "mad")[1]) {
   }
   nfc
 }
-
 
 
 ## ======================================================================
@@ -2433,7 +2429,8 @@ snf.cluster <- function(xx, pheno = NULL, plot = TRUE) {
   ## -------------- graph & louvain ----------------
   W[is.na(W)] <- 0
   gr <- igraph::graph_from_adjacency_matrix(
-    W, mode = "undirected", diag = FALSE, weighted = TRUE
+    W,
+    mode = "undirected", diag = FALSE, weighted = TRUE
   )
   cl <- igraph::cluster_louvain(gr)$membership
   cl <- paste0("SNF", cl)
@@ -2628,8 +2625,8 @@ lasagna.create_from_pgx <- function(pgx, xdata = NULL, layers = NULL,
   }
   names(xdata) <- tolower(names(xdata))
 
-  if(is.null(layers)) {
-    layers <- c("hx","mir","mi","gx","px","mx","gset")
+  if (is.null(layers)) {
+    layers <- c("hx", "mir", "mi", "gx", "px", "mx", "gset")
     layers <- unique(layers, names(xdata))
   }
 
@@ -2663,29 +2660,22 @@ lasagna.create_from_pgx <- function(pgx, xdata = NULL, layers = NULL,
 #'
 #' @export
 lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
-                                 annot=NULL, use.gmt=TRUE, use.graphite=TRUE,
+                                 annot=NULL, mask.gmt=TRUE, mask.graphite=TRUE,
                                  add.sink=FALSE, intra=TRUE, fully_connect=FALSE,
                                  add.revpheno = TRUE, condition.edges=TRUE
                                  ) {
-  if(0) {
-    pheno="pheno"; ntop=1000; nc=20;
-    annot=NULL; use.gmt=TRUE; use.graphite=TRUE;
-    add.sink=FALSE; intra=TRUE; fully_connect=FALSE;
-    add.revpheno = TRUE; condition.edges=TRUE
-  }
-  
   if (pheno == "pheno") {
-    Y <- expandPhenoMatrix(data$samples, drop.ref=FALSE)
+    Y <- expandPhenoMatrix(data$samples, drop.ref = FALSE)
   } else if (pheno == "expanded") {
     Y <- 1 * data$samples
   } else if (pheno == "contrasts") {
-    if(!"contrasts" %in% names(data)) {
+    if (!"contrasts" %in% names(data)) {
       message("ERROR: contrasts missing in data")
       return(NULL)
     }
     Y <- makeContrastsFromLabelMatrix(data$contrasts)
     Y <- sign(Y)
-    if(any(grepl("^IA:",colnames(Y)))) {
+    if (any(grepl("^IA:", colnames(Y)))) {
       ## drop interaction terms
       Y <- Y[, grep("^IA:", colnames(Y), invert = TRUE), drop = FALSE]
     }
@@ -2708,7 +2698,6 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
   }
 
   ## what about not overlapping samples??
-  #X <- mofa.merge_data(xx)
   X <- mofa.merge_data2(xx, merge.rows="prefix", merge.cols="union")
   ##remove(xx)
   kk <- intersect(colnames(X),rownames(Y))
@@ -2725,15 +2714,15 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
   suppressWarnings( R <- cor(t(X), use = "pairwise") )
 
   ## Sink/source need to be connected allways
-  ii <- grep("SINK|SOURCE",rownames(R))
-  if(length(ii)) {
-    R[ii,] <- 1
-    R[,ii] <- 1
+  ii <- grep("SINK|SOURCE", rownames(R))
+  if (length(ii)) {
+    R[ii, ] <- 1
+    R[, ii] <- 1
   }
-  
+
   ## save 'pure' correlation
-  corrR <- R  
-  
+  corrR <- R
+
   ## missing correlation values will be replaced with some constant
   ## value. This in particular can happen for constant features or
   ## inter-correlation edges if samples are not matched. NOTE: we
@@ -2744,18 +2733,18 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
   ## uses phenotype matrix Y. This is particularly important when
   ## inter-correlation is unavailable and edge prioritaztion/pruning
   ## is done.
-  if(condition.edges) {
+  if (condition.edges) {
     message("conditioning edges...")
-    rho <- cor(t(X), Y, use='pairwise.complete.obs')
-    maxrho <- apply(abs(rho), 1, max, na.rm=TRUE)
-    ii <- grep("SINK|SOURCE",names(maxrho))
-    if(length(ii)) maxrho[ii] <- 1
-    rho.wt <- outer( maxrho, maxrho )
+    rho <- cor(t(X), Y, use = "pairwise.complete.obs")
+    maxrho <- apply(abs(rho), 1, max, na.rm = TRUE)
+    ii <- grep("SINK|SOURCE", names(maxrho))
+    if (length(ii)) maxrho[ii] <- 1
+    rho.wt <- outer(maxrho, maxrho)
     R <- R * rho.wt
   }
 
   ## mask for proteomic <> metabolics PPI
-  if (FALSE && use.graphite) {
+  if (FALSE && mask.graphite) {
     xtypes <- setdiff(names(data$X), "PHENO")
     xtypes
     has.mx <- ("mx" %in% xtypes)
@@ -2785,7 +2774,7 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
   }
 
   ## mask for GSETS/pathways connections???
-  if (use.gmt) {
+  if (mask.gmt) {
     ### fill me
   }
 
@@ -2797,7 +2786,7 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
   if (add.sink) layers <- c("SOURCE", layers, "SINK")
 
   ## mask for inter-layer connections
-  if(!fully_connect) {
+  if (!fully_connect) {
     layer_mask <- matrix(0, nrow(R), ncol(R))
     dimnames(layer_mask) <- dimnames(R)
     for (i in 1:(length(layers) - 1)) {
@@ -2814,7 +2803,7 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
     }
     R <- R * layer_mask
   }
-  
+
   ## Reduce inter-connections to nc top most correlated edges per
   ## node. This will avoid graph to be too large. NOTE: this will not
   ## work well if inter-correlation is unavailable or disables!!!
@@ -2847,22 +2836,23 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
     R <- R * reduce_mask
   }
 
-  ##--------------------------------------
+  ## --------------------------------------
   ## create graph
-  ##--------------------------------------
+  ## --------------------------------------
 
   ## transfer masked zeroes. create graph from 'unweighted'
   ## correlation.
-  corrR[which(R==0)] <- 0
+  corrR[which(R == 0)] <- 0
   corrR[is.na(corrR)] <- 0
   gr <- igraph::graph_from_adjacency_matrix(
-    corrR, diag = FALSE, weighted = TRUE, mode = "undirected"
+    corrR,
+    diag = FALSE, weighted = TRUE, mode = "undirected"
   )
 
   ## copy correlation from weights, put in 'rho' slot
-  igraph::E(gr)$rho <- igraph::E(gr)$weight 
+  igraph::E(gr)$rho <- igraph::E(gr)$weight
   gr$layers <- layers
-  
+
   ## add edge connection type as attribute
   igraph::V(gr)$layer <- sub(":.*", "", igraph::V(gr)$name)
   ee <- igraph::as_edgelist(gr)
@@ -2887,22 +2877,22 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
 }
 
 sp_edge_weight <- function(graph, layers) {
-  layers <- unique(c("SOURCE",layers,"SINK"))
+  layers <- unique(c("SOURCE", layers, "SINK"))
   wt <- abs(igraph::E(graph)$weight)
   wt[is.na(wt)] <- 0
   ee <- igraph::as_edgelist(graph)
-  v1 <- ee[,1]
-  v2 <- ee[,2]
+  v1 <- ee[, 1]
+  v2 <- ee[, 2]
   l1 <- match(igraph::V(graph)[v1]$layer, layers)
-  l2 <- match(igraph::V(graph)[v2]$layer, layers)  
+  l2 <- match(igraph::V(graph)[v2]$layer, layers)
   p1 <- ifelse(l1 < l2, v1, v2)
   p2 <- ifelse(l1 < l2, v2, v1)
   wt <- wt + 1e-8
   s1 <- igraph::shortest_paths(graph,
-    from = "SOURCE", to = p1, weights = 1/wt, output = "epath"
+    from = "SOURCE", to = p1, weights = 1 / wt, output = "epath"
   )
   s2 <- igraph::shortest_paths(graph,
-    from = "SINK", to = p2, weights = 1/wt, output = "epath"
+    from = "SINK", to = p2, weights = 1 / wt, output = "epath"
   )
   sp <- mapply(c, s1$epath, s2$epath)
   ## sp.score <- sapply(sp, function(e) exp(mean(log(wt[e]))))
@@ -2925,22 +2915,22 @@ lasagna.solve <- function(obj, pheno, max_edges = 100, value.type = "rho",
 
   if(is.null(graph)) graph <- obj$graph
   X <- obj$X
-  y <- obj$Y[,pheno]
+  y <- obj$Y[, pheno]
 
   ## check if phenotype was coded -1/0/1
-  ii <- grep("PHENO",rownames(X))
-  has.min1 <- (min(X[ii,], na.rm=TRUE) < 0)
+  ii <- grep("PHENO", rownames(X))
+  has.min1 <- (min(X[ii, ], na.rm = TRUE) < 0)
   has.min1
-  if(length(ii) && has.min1) {
-    X[ii,][which(X[ii,]==0)] <- NA
-    y[y==0] <- NA
+  if (length(ii) && has.min1) {
+    X[ii, ][which(X[ii, ] == 0)] <- NA
+    y[y == 0] <- NA
   }
 
-  rho <- cor(t(X), y, use="pairwise")[,1]
-  i0 <- which( y <= 0 )
-  i1 <- which( y > 0 )
-  m1 <- rowMeans(X[,i1,drop=FALSE],na.rm=TRUE)
-  m0 <- rowMeans(X[,i0,drop=FALSE],na.rm=TRUE)
+  rho <- cor(t(X), y, use = "pairwise")[, 1]
+  i0 <- which(y <= 0)
+  i1 <- which(y > 0)
+  m1 <- rowMeans(X[, i1, drop = FALSE], na.rm = TRUE)
+  m0 <- rowMeans(X[, i0, drop = FALSE], na.rm = TRUE)
   fc <- m1 - m0
   rho[is.na(rho)] <- 0
 
@@ -2957,7 +2947,7 @@ lasagna.solve <- function(obj, pheno, max_edges = 100, value.type = "rho",
     igraph::V(graph)$value <- fc
   }
   graph$value.type <- value.type
-  
+
   ## set edge weights from node values
   ww <- 1
   weight.type <- "rho"
@@ -2970,10 +2960,10 @@ lasagna.solve <- function(obj, pheno, max_edges = 100, value.type = "rho",
   }
 
   ## do the edge weighting. set NA correlation values to some constant
-  ee.rho <-igraph::E(graph)$rho
+  ee.rho <- igraph::E(graph)$rho
   ee.rho[is.na(ee.rho)] <- 0.1234
   igraph::E(graph)$weight <- ee.rho * ww
-  
+
   ## set SINK/SOURCE edges to 1
   if (any(grepl("SINK|SOURCE", igraph::V(graph)$name))) {
     igraph::E(graph)[.to("SINK")]$weight <- 1
@@ -2982,20 +2972,20 @@ lasagna.solve <- function(obj, pheno, max_edges = 100, value.type = "rho",
 
   if (sp.weight) {
     sp.wt <- sp_edge_weight(graph, obj$layers)
-    sp.wt <- (sp.wt / max(sp.wt, na.rm=TRUE))**2  ## why quadratic?
+    sp.wt <- (sp.wt / max(sp.wt, na.rm = TRUE))**2 ## why quadratic?
     igraph::E(graph)$weight <- igraph::E(graph)$weight * sp.wt
     weight.type <- paste0(weight.type, "*sp")
   }
   graph$weight.type <- weight.type
 
   ## take subgraph
-  if(min_rho > 0) {
-    dsel <- which(abs(igraph::E(graph)$weight) < min_rho)  ## rho or weight??
+  if (min_rho > 0) {
+    dsel <- which(abs(igraph::E(graph)$weight) < min_rho) ## rho or weight??
     igraph::E(graph)$weight[dsel] <- 0
   }
 
   ## Global limit number of edges per type
-  if(max_edges > 0) {
+  if (max_edges > 0) {
     ewt <- igraph::E(graph)$weight
     esel <- tapply(
       1:length(igraph::E(graph)), igraph::E(graph)$connection_type,
@@ -3097,6 +3087,7 @@ lasagna.prune_graph <- function(graph, ntop = 100, layers = NULL,
   
   if (is.null(layers))
     layers <- graph$layers
+  }
   if (is.null(layers)) layers <- unique(igraph::V(graph)$layer)
   layers <- setdiff(layers, c("SOURCE", "SINK"))
   graph <- igraph::subgraph(graph, igraph::V(graph)$layer %in% layers)
@@ -3155,12 +3146,12 @@ lasagna.prune_graph <- function(graph, ntop = 100, layers = NULL,
     igraph::E(graph)$weight[ewt < 0] <- 0
   } else if (grepl("neg", edge.sign)) {
     igraph::E(graph)$weight[ewt > 0] <- 0
-  } else if(edge.sign == "consensus") {
+  } else if (edge.sign == "consensus") {
     layersign <- rep(1, length(layers))
     names(layersign) <- layers
-    layersign[grep("^mi|^mir",layers)] <- -1
-    v1 <- igraph::as_edgelist(graph)[,1]
-    esign <- layersign[ igraph::V(graph)[v1]$layer ]
+    layersign[grep("^mi|^mir", layers)] <- -1
+    v1 <- igraph::as_edgelist(graph)[, 1]
+    esign <- layersign[igraph::V(graph)[v1]$layer]
     vsign <- sign(igraph::V(graph)[v1]$value)
     igraph::E(graph)$weight <- ewt * (sign(ewt) == esign)
   }
@@ -3179,7 +3170,7 @@ lasagna.prune_graph <- function(graph, ntop = 100, layers = NULL,
   }
   graph <- igraph::delete_edges(graph, which(igraph::E(graph)$weight == 0))
 
-  
+
   if (prune) {
     graph <- igraph::subgraph_from_edges(graph, igraph::E(graph))
   }
@@ -3415,7 +3406,6 @@ plotly_lasagna <- function(pos, vars = NULL, edges = NULL, znames = NULL,
 }
 
 
-
 ## ======================================================================
 ## ======================== MOFA FUNCTIONS ==============================
 ## ======================================================================
@@ -3585,70 +3575,70 @@ mofa.intNMF <- function(datasets, k = NULL, method = "RcppML",
 #' Impute missing values for a multiomics expression matrix
 #' X. Features must be prefixed with datatype.
 #'
-mofa.imputeMissing <- function(X, method="SVD2") {
+mofa.imputeMissing <- function(X, method = "SVD2") {
   xx <- mofa.split_data(X)
-  xx <- lapply(xx, function(x) imputeMissing(x, method=method))
+  xx <- lapply(xx, function(x) imputeMissing(x, method = method))
   impX <- mofa.merge_data(xx)
-  impX[rownames(X),]
+  impX[rownames(X), ]
 }
 
 #' Normalize matrix for a multiomics expression matrix X. Features
 #' must be prefixed with datatype.
 #'
-#' See also: normalizeMultiOmics()  
-#' 
-mofa.normalizeExpression <- function(X, method1="maxMedian", method2="none") {
-  ##method1="maxMedian";method2="none"
+#' See also: normalizeMultiOmics()
+#'
+mofa.normalizeExpression <- function(X, method1 = "maxMedian", method2 = "none") {
+  ## method1="maxMedian";method2="none"
 
   xx <- mofa.split_data(X)
 
   ## First normalization normalizes samples within each datatype but
   ## not (yet) between datatypes.
-  xx <- lapply(xx, function(x) normalizeExpression(x, method=method1))
+  xx <- lapply(xx, function(x) normalizeExpression(x, method = method1))
 
   ## Second normalization
   normX <- NULL
-  if(method2 != "none") {
-    if(method2=='median') {
+  if (method2 != "none") {
+    if (method2 == "median") {
       ## Median normalization on datatypes. This will effectively
       ## equalize the median for each datatype.
-      xmedian <- sapply(xx, function(x) mean(matrixStats::colMedians(x,na.rm=TRUE)))
-      xx <- lapply(xx, function(x) x - median(x,na.rm=TRUE) + mean(xmedian))
+      xmedian <- sapply(xx, function(x) mean(matrixStats::colMedians(x, na.rm = TRUE)))
+      xx <- lapply(xx, function(x) x - median(x, na.rm = TRUE) + mean(xmedian))
     }
-    if(method2=='combat') {
+    if (method2 == "combat") {
       ## ComBat normalization on datatypes. This will effectively
       ## equalize the mean and SD of each datatype in each sample.
       normX <- mofa.merge_data(xx)
       dtype <- mofa.get_prefix(rownames(normX))
-      normX <- t(sva::ComBat( t(normX), batch=dtype))
+      normX <- t(sva::ComBat(t(normX), batch = dtype))
     }
-    if(method2=='quantile') {
+    if (method2 == "quantile") {
       ## Quantile normalization on datatypes. We will need to cbind
       ## and augment the datatypes so the number of features are
       ## equal. We do this by repeating rows (so distribution not
       ## affected). Then after quantile normalization we unpack again.
-      nr <- max(sapply(xx,nrow))
+      nr <- max(sapply(xx, nrow))
       mx <- list()
-      i=1
-      for(i in 1:length(xx)) {
+      i <- 1
+      for (i in 1:length(xx)) {
         n <- ceiling(nr / nrow(xx[[i]]))
-        mx[[i]] <- do.call( rbind, rep( list(xx[[i]]), n))
+        mx[[i]] <- do.call(rbind, rep(list(xx[[i]]), n))
         mx[[i]] <- head(mx[[i]], nr)
         dim(mx[[i]])
       }
       mxx <- do.call(cbind, mx)
       mxx <- limma::normalizeQuantiles(mxx)
-      for(i in 1:length(xx)) {
-        kk <- ((i-1)*ncol(X)+1):(i*ncol(X))
+      for (i in 1:length(xx)) {
+        kk <- ((i - 1) * ncol(X) + 1):(i * ncol(X))
         jj <- 1:nrow(xx[[i]])
-        mx[[i]] <- mxx[jj,kk]
+        mx[[i]] <- mxx[jj, kk]
       }
       names(mx) <- names(xx)
       normX <- mofa.merge_data(mx)
     }
   }
-  if(is.null(normX)) normX <- mofa.merge_data(xx)
-  normX <- normX[rownames(X),]
+  if (is.null(normX)) normX <- mofa.merge_data(xx)
+  normX <- normX[rownames(X), ]
   return(normX)
 }
 

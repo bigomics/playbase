@@ -321,7 +321,6 @@ pgx.scBatchIntegrate <- function(X, batch,
 }
 
 
-
 #' @title Integrate single-cell data with Seurat
 #'
 #' @param counts Single-cell count matrix
@@ -494,9 +493,9 @@ pgx.supercell <- function(counts,
 
   if (!is.null(group) && any(group %in% colnames(meta))) {
     group <- intersect(group, colnames(meta))
-    message("using groups: ", paste(group,collapse="."))
+    message("using groups: ", paste(group, collapse = "."))
     group <- meta[, group]
-    if(NCOL(group) > 1) group <- apply(group, 1, paste, collapse=".")
+    if (NCOL(group) > 1) group <- apply(group, 1, paste, collapse = ".")
   }
 
   SC <- SuperCell::SCimplify(X,
@@ -522,16 +521,20 @@ pgx.supercell <- function(counts,
 
   ## Compute metacall expression as sum of counts
   counts <- as.matrix(counts)
-  if(log.transform) {
+  if (log.transform) {
     sc.counts <- SuperCell::supercell_GE(
-      counts, mode = "sum",
-      groups = SC$membership)
+      counts,
+      mode = "sum",
+      groups = SC$membership
+    )
   } else {
     sc.counts <- SuperCell::supercell_GE(
-      counts, mode = "average",
-      groups = SC$membership)
+      counts,
+      mode = "average",
+      groups = SC$membership
+    )
   }
-  
+
   message("[pgx.supercell] SuperCell::supercell_GE completed")
   sc.membership <- paste0("mc", SC$membership)
   colnames(sc.counts) <- paste0("mc", 1:ncol(sc.counts))
