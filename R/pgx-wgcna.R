@@ -3660,7 +3660,7 @@ wgcna.plotMultiDendroAndColors <- function(multi_wgcna,
   ##layout.show(nf)
   par(cex=cex)
   
-  if(is.null(main))
+  if(is.null(main)) {
     main <- names(multi_wgcna)
   }
 
