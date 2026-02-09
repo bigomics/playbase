@@ -107,10 +107,6 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
 }
 
 
-
-
-
-
 #' @title Simplify cell types names
 #'
 #' @description Simplifies cell types names from LM22, DICE, ImmProt and

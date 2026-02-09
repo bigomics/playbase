@@ -44,7 +44,6 @@ gset.fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
                          fdr = 0.05, mc = TRUE, sort.by = "p.value", nmin = 3, verbose = 1,
                          min.genes = 15, max.genes = 500, method = "fast.fisher",
                          check.background = TRUE, report.genes = FALSE) {
-
   ft.up <- gset.fisher(
     genes = genes.up, genesets = genesets, background = background,
     fdr = 1, mc = mc, sort.by = sort.by, nmin = nmin, verbose = verbose,
@@ -105,10 +104,9 @@ gset.fisher <- function(genes, genesets, background = NULL,
                         fdr = 0.25, mc = TRUE, sort.by = "p.value", nmin = 3,
                         min.genes = 15, max.genes = 500, method = "fast.fisher",
                         check.background = TRUE, report.genes = FALSE,
-                        no.pass=NA, verbose = 1) {
-
+                        no.pass = NA, verbose = 1) {
   ## switch according to geneset class
-  if(class(genesets) == "list") {
+  if (class(genesets) == "list") {
     gsnames <- names(genesets)
     res <- gset.fisherLIST(
       genes = genes, genesets = genesets, background = background,
@@ -117,14 +115,16 @@ gset.fisher <- function(genes, genesets, background = NULL,
       check.background = check.background, report.genes = report.genes,
       no.pass = no.pass, verbose = verbose
     )
-  } else if(inherits(genesets, "Matrix")) {
+  } else if (inherits(genesets, "Matrix")) {
     gsnames <- colnames(genesets)
-    res <- gset.fastFET(genes, G = genesets, bg = background,
-      report.genes = report.genes)
+    res <- gset.fastFET(genes,
+      G = genesets, bg = background,
+      report.genes = report.genes
+    )
   } else {
     stop("[gset.fisher] FATAL ERROR")
   }
-  
+
   ## filter results
   if (nrow(res) > 0) {
     size.ok <- res$size >= min.genes & res$size <= max.genes
@@ -135,24 +135,23 @@ gset.fisher <- function(genes, genesets, background = NULL,
   ## sort results
   if (nrow(res) > 0) {
     if (sort.by %in% colnames(res)) {
-      order.sign <- ifelse(sort.by %in% c("p.value","q.value"),+1,-1)
-      res <- res[order(order.sign*res[,sort.by]), ]
+      order.sign <- ifelse(sort.by %in% c("p.value", "q.value"), +1, -1)
+      res <- res[order(order.sign * res[, sort.by]), ]
     } else {
       gsnames <- intersect(gsnames, rownames(res))
-      res <- res[gsnames,]
+      res <- res[gsnames, ]
     }
   }
-  
+
   return(res)
 }
 
 
 gset.fisherLIST <- function(genes, genesets, background = NULL,
-                        fdr = 0.05, mc = TRUE, sort.by = "p.value", nmin = 3,
-                        min.genes = 15, max.genes = 500, method = "fast.fisher",
-                        check.background = TRUE, report.genes = FALSE,
-                        no.pass=NA, verbose = 1) {
-
+                            fdr = 0.05, mc = TRUE, sort.by = "p.value", nmin = 3,
+                            min.genes = 15, max.genes = 500, method = "fast.fisher",
+                            check.background = TRUE, report.genes = FALSE,
+                            no.pass = NA, verbose = 1) {
   bgNULL <- FALSE
   if (is.null(background)) {
     message("[gset.fisher] note: it is recommended to specify background")
@@ -277,18 +276,20 @@ gset.fisherLIST <- function(genes, genesets, background = NULL,
   }
 
   ## replace NA values
-  if(any(is.na(pv))) {
+  if (any(is.na(pv))) {
     pv[is.na(pv)] <- no.pass
   }
-  
+
   ## compute q-value
   qv <- rep(NA, length(pv))
   qv <- stats::p.adjust(pv, method = "fdr")
 
   ## results
   v1 <- as.character(paste0(a, "/", n.size))
-  rr <- data.frame(p.value = pv, q.value = qv, odd.ratio = odd.ratio,
-    N=a, size=n.size, overlap=v1 )
+  rr <- data.frame(
+    p.value = pv, q.value = qv, odd.ratio = odd.ratio,
+    N = a, size = n.size, overlap = v1
+  )
 
   if (!is.null(gsgenes)) {
     rr <- cbind(rr, genes = gsgenes)
@@ -312,7 +313,7 @@ gset.fisherLIST <- function(genes, genesets, background = NULL,
 }
 
 
-#' Calculate fast Fisher exact test.  
+#' Calculate fast Fisher exact test.
 #'
 #' @param genes Vector of significant genes
 #' @param G    Sparse matrix containing gene sets
@@ -320,68 +321,71 @@ gset.fisherLIST <- function(genes, genesets, background = NULL,
 #' @param report.genes  Logical to report gene set genes in output
 #'
 #' @export
-gset.fastFET <- function(genes, G, bg, report.genes=FALSE) {
+gset.fastFET <- function(genes, G, bg, report.genes = FALSE) {
   bgnull <- FALSE
-  if(is.null(bg)) {
+  if (is.null(bg)) {
     message("[gset.fisher] note: it is recommended to specify background")
-    bg <- unique(c(genes,rownames(G)))
+    bg <- unique(c(genes, rownames(G)))
     bgnull <- TRUE
   }
-  if(length(bg)>1 && !bgnull) {
+  if (length(bg) > 1 && !bgnull) {
     genes <- intersect(genes, bg)
-    G <- G[intersect(bg,rownames(G)),,drop=FALSE]
-  }  
+    G <- G[intersect(bg, rownames(G)), , drop = FALSE]
+  }
   length.bg <- NULL
-  if(length(bg)==1 && is.integer(bg)) {
+  if (length(bg) == 1 && is.integer(bg)) {
     length.bg <- as.integer(bg)
-  } else if(length(bg)>1) {
+  } else if (length(bg) > 1) {
     length.bg <- length(bg)
   }
 
-  if(is.null(length.bg)) stop("error: invalid background. bg:", head(bg))
-  if(length(genes)==0) stop("error: zero genes length")
-  if(nrow(G)==0) stop("error: empty gene set matrix G")
-  
-  genes <- intersect(genes, rownames(G))  
-  gsize <- Matrix::colSums(G!=0)
+  if (is.null(length.bg)) stop("error: invalid background. bg:", head(bg))
+  if (length(genes) == 0) stop("error: zero genes length")
+  if (nrow(G) == 0) stop("error: empty gene set matrix G")
+
   genes <- intersect(genes, rownames(G))
-  a <- Matrix::colSums(G[genes,]!=0)
+  gsize <- Matrix::colSums(G != 0)
+  genes <- intersect(genes, rownames(G))
+  a <- Matrix::colSums(G[genes, ] != 0)
   b <- length(genes) - a
   c <- gsize - a
-  d <- length.bg - (a+b+c) 
-  pv <- corpora.fastFET(a,b,c,d)
+  d <- length.bg - (a + b + c)
+  pv <- corpora.fastFET(a, b, c, d)
 
   names(pv) <- colnames(G)
-  odd.ratio <- (a/b)/(c/d)
-  qv <- p.adjust(pv, method="fdr")
-  overlap <- paste0(a,"/",gsize)
+  odd.ratio <- (a / b) / (c / d)
+  qv <- p.adjust(pv, method = "fdr")
+  overlap <- paste0(a, "/", gsize)
 
   gsgenes <- NULL
-  if(report.genes) {
-    gsgenes <- apply( G[genes,], 2, function(x) paste(sort(genes[which(x!=0)]),collapse="|") )
+  if (report.genes) {
+    gsgenes <- apply(G[genes, ], 2, function(x) paste(sort(genes[which(x != 0)]), collapse = "|"))
   }
 
-  df <- data.frame(p.value=pv, q.value=qv, odd.ratio=odd.ratio,
-    N=a, size=gsize, overlap=overlap )
-  
-  if(!is.null(gsgenes)) df <- cbind(df, genes=gsgenes)
+  df <- data.frame(
+    p.value = pv, q.value = qv, odd.ratio = odd.ratio,
+    N = a, size = gsize, overlap = overlap
+  )
+
+  if (!is.null(gsgenes)) df <- cbind(df, genes = gsgenes)
   return(df)
 }
-
 
 
 #' Wrapper superfast version of Fisher Exact Test from 'corpora' R
 #' package. This is the fastest implementation currently
 #' available. Uses phyper inside.
-#' 
+#'
 #'            setAn ¬setA
 #'        setB  a     b | a+b
 #'       ¬setB  c     d | c+d
 #'          ------------|-----
 #'             a+c   b+d| a+b+c+d
-#' 
-corpora.fastFET <- function(a, b, c, d, alternative = c("two.sided", "less", 
-    "greater")[3], log.p = FALSE) {
+#'
+corpora.fastFET <- function(a, b, c, d, alternative = c(
+                              "two.sided", "less",
+                              "greater"
+                            )[3], log.p = FALSE) {
   ## this is really-really-really fast...
   pv <- rep(NA, length(a))
   ii <- 1:length(a)
@@ -393,59 +397,71 @@ corpora.fastFET <- function(a, b, c, d, alternative = c("two.sided", "less",
   n1 <- (a + c1)[ii]
   k2 <- b[ii]
   n2 <- (b + d1)[ii]
-  
-  .match.len <-  function (vars, len = NULL, adjust = FALSE, check.numeric = TRUE, 
-                           envir = parent.frame()) {
+
+  .match.len <- function(vars, len = NULL, adjust = FALSE, check.numeric = TRUE,
+                         envir = parent.frame()) {
     vecs <- setNames(lapply(vars, get, envir = envir), vars)
     ok <- sapply(vecs, is.numeric)
-    if (check.numeric && any(!ok)) 
-      stop("argument(s) ", paste(vars[!ok], collapse = ", "), 
-        " must be numeric vector(s)")
-    if (is.null(len)) 
+    if (check.numeric && any(!ok)) {
+      stop(
+        "argument(s) ", paste(vars[!ok], collapse = ", "),
+        " must be numeric vector(s)"
+      )
+    }
+    if (is.null(len)) {
       len <- max(sapply(vecs, length))
+    }
     for (v in vars) {
       if (length(vecs[[v]]) == 1) {
-        if (adjust) 
+        if (adjust) {
           assign(v, rep(vecs[[v]], len), envir = envir)
-      }
-      else if (length(vecs[[v]]) != len) {
-        stop(sprintf("argument %s should be of length %d or a scalar (%s must have same length)", 
-          v, len, paste(vars, collapse = ", ")))
+        }
+      } else if (length(vecs[[v]]) != len) {
+        stop(sprintf(
+          "argument %s should be of length %d or a scalar (%s must have same length)",
+          v, len, paste(vars, collapse = ", ")
+        ))
       }
     }
     invisible(len)
   }
-  
+
   alternative <- match.arg(alternative)
   l <- .match.len(c("k1", "n1", "k2", "n2"), adjust = TRUE)
-  if (any(k1 < 0) || any(k1 > n1) || any(n1 <= 0)) 
+  if (any(k1 < 0) || any(k1 > n1) || any(n1 <= 0)) {
     stop("k1 and n1 must be integers with 0 <= k1 <= n1")
-  if (any(k2 < 0) || any(k2 > n2) || any(n2 <= 0)) 
+  }
+  if (any(k2 < 0) || any(k2 > n2) || any(n2 <= 0)) {
     stop("k2 and n2 must be integers with 0 <= k2 <= n2")
-  if (any(k1 + k2 <= 0)) 
+  }
+  if (any(k1 + k2 <= 0)) {
     stop("either k1 or k2 must be non-zero")
+  }
   k <- k1 + k2
   if (alternative == "two.sided") {
     if (log.p) {
-      pval <- pmin(phyper(k1 - 1, n1, n2, k, lower.tail = FALSE, 
-        log.p = TRUE), phyper(k1, n1, n2, k, lower.tail = TRUE, 
-          log.p = TRUE)) + log(2)
+      pval <- pmin(phyper(k1 - 1, n1, n2, k,
+        lower.tail = FALSE,
+        log.p = TRUE
+      ), phyper(k1, n1, n2, k,
+        lower.tail = TRUE,
+        log.p = TRUE
+      )) + log(2)
       pval <- pmin(pval, 0)
-    }
-    else {
-      pval <- 2 * pmin(phyper(k1 - 1, n1, n2, k, lower.tail = FALSE), 
-        phyper(k1, n1, n2, k, lower.tail = TRUE))
+    } else {
+      pval <- 2 * pmin(
+        phyper(k1 - 1, n1, n2, k, lower.tail = FALSE),
+        phyper(k1, n1, n2, k, lower.tail = TRUE)
+      )
       pval <- pmax(0, pmin(1, pval))
     }
-  }
-  else if (alternative == "greater") {
-    pval <- phyper(k1 - 1, n1, n2, k, lower.tail = FALSE, 
-      log.p = log.p)
-  }
-  else if (alternative == "less") {
+  } else if (alternative == "greater") {
+    pval <- phyper(k1 - 1, n1, n2, k,
+      lower.tail = FALSE,
+      log.p = log.p
+    )
+  } else if (alternative == "less") {
     pval <- phyper(k1, n1, n2, k, lower.tail = TRUE, log.p = log.p)
   }
   pval
 }
-
-

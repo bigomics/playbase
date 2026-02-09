@@ -267,7 +267,6 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 }
 
 
-
 #' @title Get Levels of Group Variables
 #'
 #' @description This function retrieves the levels of group variables in a data frame.

@@ -60,6 +60,7 @@ ggVolcano(
   ylab = "significance (-log10q)",
   lfc = 1,
   psig = 0.05,
+  xlim = NULL,
   ylim = NULL,
   showlegend = TRUE,
   marker.size = 2.5,
@@ -68,8 +69,24 @@ ggVolcano(
   axis.text.size = 14,
   label = NULL,
   title = "Volcano plot",
-  colors = c(up = "#f23451", notsig = "#8F8F8F", notsel = "#cccccc88", down = "#3181de"),
-  girafe = FALSE
+  colors = c(up = "#f23451", notsig = "#cccccc88", notsel = "#cccccc88", down =
+    "#3181de"),
+  box.padding = 0.1,
+  min.segment.length = 0,
+  label.box = TRUE,
+  segment.linetype = 1,
+  girafe = FALSE,
+  use_hyperbola = FALSE,
+  hyperbola_k = 1,
+  use_ggprism = FALSE,
+  ggprism_palette = "black_and_white",
+  ggprism_colors = FALSE,
+  ggprism_border = FALSE,
+  ggprism_axis_guide = "default",
+  ggprism_show_legend = FALSE,
+  ggprism_legend_x = 0.95,
+  ggprism_legend_y = 0.95,
+  ggprism_legend_border = FALSE
 )
 
 pgx.plotMA(

@@ -57,7 +57,6 @@ gx.limma <- function(X,
                      method = 1,
                      f.test = FALSE, ## If TRUE it activates previous gx.limmaF()
                      verbose = 1) {
-  
   message("[gx.limma] X contains ", sum(duplicated(rownames(X))))
 
   if (!is.null(B) && NCOL(B) == 1) {
@@ -106,7 +105,7 @@ gx.limma <- function(X,
   is.ref2 <- grepl(paste(paste0("^", ref), collapse = "|"), pheno0, ignore.case = TRUE)
   if (!any(is.ref) && !all(is.ref2)) is.ref <- is.ref2
   ref.detected <- (sum(is.ref) > 0 && sum(!is.ref) > 0)
-  
+
   if (ref.detected) {
     pheno.ref <- unique(pheno0[is.ref])
     if (verbose > 0) message("[gx.limma] setting reference to y=", pheno.ref, "\n")
@@ -116,7 +115,7 @@ gx.limma <- function(X,
     levels <- as.character(sort(unique(pheno0)))
     if (verbose > 0) message("[gx.limma] setting reference to first class:", levels[1], "\n")
   }
-  
+
   if (length(levels) != 2 & !f.test) {
     stop("[gx.limma] ERROR: only two class comparisons. Please activate F test using f.test=TRUE\n\n")
     return(NULL)
@@ -135,8 +134,9 @@ gx.limma <- function(X,
       colnames(design)[2:ncol(design)] <- paste0(levels(pheno1)[-1], "_vs_", levels(pheno1)[1])
     }
     if (!is.null(B0)) {
-      if (verbose > 0)
+      if (verbose > 0) {
         message("[gx.limma] augmenting design matrix with: ", paste(colnames(B0)), "\n")
+      }
       sel <- which(colMeans(B0 == 1) < 1) ## take out any constant term
       design <- cbind(design, B0[, sel, drop = FALSE])
     }
@@ -145,7 +145,6 @@ gx.limma <- function(X,
     coef <- if (f.test) NULL else "main_vs_ref"
     top <- suppressMessages(limma::topTable(fit, coef = coef, number = nrow(X0), sort.by = "none"))
   } else {
-
     if (!f.test) {
       ## second possible method with explicit contrast matrix
       design <- cbind(1 * (pheno0 == levels[1]), 1 * (pheno0 == levels[2]))
@@ -162,7 +161,6 @@ gx.limma <- function(X,
       fit2 <- limma::eBayes(fit2, trend = trend, robust = robust)
       top <- limma::topTable(fit2, coef = "main_vs_ref", number = Inf, sort.by = "none")
     } else {
-
       design <- stats::model.matrix(~ 0 + pheno1)
       colnames(design) <- sub("^pheno1", "", colnames(design))
       if (!is.null(B0)) {
@@ -190,9 +188,7 @@ gx.limma <- function(X,
       fit2 <- limma::contrasts.fit(fit, contrast.matrix)
       fit2 <- limma::eBayes(fit2, trend = trend)
       suppressMessages(top <- limma::topTable(fit2, number = Inf, sort.by = "none"))
-
     }
-
   }
 
   if (f.test) {
@@ -211,14 +207,14 @@ gx.limma <- function(X,
     kk <- setdiff(colnames(top), colnames(design))
     top <- top[, kk, drop = FALSE]
   }
-  
+
   top <- top[rownames(X0), , drop = FALSE]
 
   if (f.test) {
     ## compute averages
     avg <- do.call(cbind, tapply(1:ncol(X0), pheno1, function(i) {
       rowMeans(X0[, i, drop = FALSE], na.rm = TRUE)
-    }))    
+    }))
     if (!"logFC" %in% colnames(top)) {
       maxFC <- apply(avg, 1, max, na.rm = TRUE) - apply(avg, 1, min, na.rm = TRUE)
       top$logFC <- NULL
@@ -226,7 +222,7 @@ gx.limma <- function(X,
       rownames(top) <- rownames(X0)
     }
   }
-  
+
   if (!is.null(fdr) && !is.null(lfc)) {
     ii <- which(top$adj.P.Val <= fdr & abs(top$logFC) >= lfc)
     top <- top[ii, ]
@@ -256,7 +252,6 @@ gx.limma <- function(X,
   if (sort.by == "p") top <- top[order(top$P.Value), ]
 
   return(top)
-
 }
 
 
@@ -668,7 +663,6 @@ seq_limma <- function(countdata, y, method = "edgeR") {
   res.test <- edgeR::glmLRT(fit, coef = 2)
   toptable <- edgeR::topTags(res.test, n = nrow(countdata))@.Data[[1]]
   Matrix::head(toptable)
-
 
 
   ## calculate means

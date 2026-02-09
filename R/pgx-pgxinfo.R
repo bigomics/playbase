@@ -167,8 +167,9 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE, use.
     return(NULL)
   }
 
-  if ("ngenes" %in% tolower(colnames(pgxinfo)))
+  if ("ngenes" %in% tolower(colnames(pgxinfo))) {
     colnames(pgxinfo)[tolower(colnames(pgxinfo)) == "ngenes"] <- "nfeatures"
+  }
 
   pgxinfo$X <- NULL ## delete first column
   pgxinfo <- pgxinfo[which(!is.na(pgxinfo$dataset)), ] ## remove NA
@@ -267,9 +268,10 @@ pgxinfo.write <- function(pgxinfo, pgx.dir, info.file = "datasets-info.csv") {
 #'
 #' @export
 pgxinfo.needUpdate <- function(
-    pgx.dir,
-    check.sigdb = TRUE,
-    verbose = TRUE) {
+  pgx.dir,
+  check.sigdb = TRUE,
+  verbose = TRUE
+) {
   if (!dir.exists(pgx.dir)) {
     stop(paste("[pgxinfo.needUpdate] FATAL ERROR : folder", pgx.dir, "does not exist"))
   }

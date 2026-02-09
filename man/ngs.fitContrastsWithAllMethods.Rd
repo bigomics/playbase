@@ -132,7 +132,7 @@ ngs.fitContrastsWithDESEQ2(
 
 \item{samples}{A vector of sample names that match the columns in \code{counts}.}
 
-\item{design}{The design matrix, with samples in columns.}
+\item{design}{The design matrix, with samples in columns. Default is NULL.}
 
 \item{covariates}{Variables to be regressed out. Only valid for linear model-based DGE tests. Default is NULL.}
 

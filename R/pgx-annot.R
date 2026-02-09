@@ -195,7 +195,7 @@ getProbeAnnotation <- function(organism,
     dbg("[getProbeAnnotation] WARNING: fallback to UNKNOWN probes")
     genes <- getCustomAnnotation(probes0, custom_annot = NULL)
   }
-  
+
   ## if annot_table is provided we (priority) override our annotation
   ## and append any extra columns.
   if (!is.null(genes) && !is.null(annot_table)) {
@@ -212,7 +212,7 @@ getProbeAnnotation <- function(organism,
   }
 
   ## ensure full dimensions
-  genes <- genes[match(probes, genes$feature),]
+  genes <- genes[match(probes, genes$feature), ]
 
   ## restore original probe names
   rownames(genes) <- probes0
@@ -344,12 +344,13 @@ getGeneAnnotation <- function(
 #' }
 #' @export
 getGeneAnnotation.ANNOTHUB <- function(
-    organism,
-    probes,
-    use.ah = NULL,
-    probe_type = NULL,
-    second.pass = TRUE,
-    verbose = TRUE) {
+  organism,
+  probes,
+  use.ah = NULL,
+  probe_type = NULL,
+  second.pass = TRUE,
+  verbose = TRUE
+) {
   if (is.null(organism)) {
     warning("[getGeneAnnotation.ANNOTHUB] Please specify organism")
     return(NULL)
@@ -585,9 +586,9 @@ getGeneAnnotation.ANNOTHUB <- function(
 getOrthoSpecies <- function(organism, use = c("table", "map")[1]) {
   if (use == "map") {
     species <- try(orthogene::map_species(organism, method = "gprofiler", verbose = FALSE))
-    if(inherits(species,"try-error") || is.null(species)) {
+    if (inherits(species, "try-error") || is.null(species)) {
       species <- NULL
-      use <- "table"  ## try again using table
+      use <- "table" ## try again using table
     }
   }
   if (use == "table") {
@@ -763,11 +764,11 @@ cleanupAnnotation <- function(genes) {
   genes$gene_title <- gsub(";[ ]*", "; ", genes$gene_title)
 
   # trim whitespace
-  char.cols <- which(sapply(genes,class) == "character")
-  for(k in char.cols) {
+  char.cols <- which(sapply(genes, class) == "character")
+  for (k in char.cols) {
     genes[[k]] <- trimws(genes[[k]])
   }
-  
+
   # rename protein-coding to protein_coding to confirm with playbase <= v1.3.2
   ## genes$gene_biotype <- sub("protein-coding", "protein_coding", genes$gene_biotype)
 
@@ -1106,9 +1107,9 @@ getHumanOrtholog <- function(organism, symbols,
         ), silent = TRUE)
 
         ## Only keep successful results
-        if (!"try-error" %in% class(batch_out) && 
-            inherits(batch_out, "data.frame") && 
-            nrow(batch_out) > 0) {
+        if (!"try-error" %in% class(batch_out) &&
+          inherits(batch_out, "data.frame") &&
+          nrow(batch_out) > 0) {
           batch_results[[length(batch_results) + 1]] <- batch_out
         }
       }
@@ -1313,13 +1314,13 @@ probe2symbol <- function(probes, annot_table, query = "symbol",
 
   # Prepare inputs. add extra matching columns.
   annot_table <- cbind(rownames = rownames(annot_table), annot_table)
-  id.cols <- intersect(c("feature","gene_name","symbol"),colnames(annot_table))
-  if(length(id.cols)>0) {
-    stripped_annot <- apply(annot_table[,id.cols,drop=FALSE],2,function(a) sub("^[A-Za-z]+:","",a))
-    ##colnames(stripped_annot) <- paste0(colnames(stripped_annot),"_stripped")
+  id.cols <- intersect(c("feature", "gene_name", "symbol"), colnames(annot_table))
+  if (length(id.cols) > 0) {
+    stripped_annot <- apply(annot_table[, id.cols, drop = FALSE], 2, function(a) sub("^[A-Za-z]+:", "", a))
+    ## colnames(stripped_annot) <- paste0(colnames(stripped_annot),"_stripped")
     annot_table <- cbind(annot_table, stripped_annot)
   }
-  
+
   probes1 <- setdiff(probes, c(NA, ""))
   if (is.null(key) || !key %in% colnames(annot_table)) {
     key <- which.max(apply(annot_table, 2, function(a) sum(probes1 %in% a)))
@@ -1329,16 +1330,18 @@ probe2symbol <- function(probes, annot_table, query = "symbol",
     return(NULL)
   }
 
-  query <- head(intersect(query, colnames(annot_table)),1)
+  query <- head(intersect(query, colnames(annot_table)), 1)
   if (length(query) == 0) {
     message("ERROR. no symbol column.")
     return(NULL)
   }
 
   # fall back on old gene_name
-  if(query=="symbol" && !"symbol" %in% colnames(annot_table) &&
-       "gene_name" %in% colnames(annot_table)) query <- "gene_name"
-  
+  if (query == "symbol" && !"symbol" %in% colnames(annot_table) &&
+    "gene_name" %in% colnames(annot_table)) {
+    query <- "gene_name"
+  }
+
   # match query
   ii <- match(probes, annot_table[, key])
   query_col <- annot_table[ii, query]
@@ -1851,9 +1854,10 @@ getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
 
 #' @export
 getGeneAnnotation.ORTHOGENE <- function(
-    organism,
-    probes,
-    verbose = TRUE) {
+  organism,
+  probes,
+  verbose = TRUE
+) {
   ## correct organism names different from OrgDb
   organism <- sub("Canis familiaris", "Canis lupus familiaris", organism, fixed = TRUE)
 
@@ -2286,9 +2290,10 @@ info.add_hyperlinks <- function(info, feature, datatype,
 #'
 #' @export
 check_species_probetype <- function(
-    probes,
-    test_species = c("Human", "Mouse", "Rat"),
-    datatype = NULL, annot.cols = NULL) {
+  probes,
+  test_species = c("Human", "Mouse", "Rat"),
+  datatype = NULL, annot.cols = NULL
+) {
   ## No check if custom
   custom_datatype <- !is.null(datatype) && tolower(datatype) %in% c("custom", "unknown", "")
   custom_organism <- any(tolower(test_species) %in% c("custom", "unknown", "no organism"))
@@ -2498,18 +2503,18 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
     aa$data_type <- sub(":.*", "", probes[ii])
     ##rownames(aa) <- probes[ii]
     aa$feature <- probes[ii]
-    annot[['gx']] <- aa
+    annot[["gx"]] <- aa
   }
   if ("mx" %in% dtype) {
     ii <- which(dtype == "mx")
-    #hh <- grep("^[a-zA-Z]+:NA$", probes[ii])
-    #if (length(hh)) ii <- ii[-hh]
+    # hh <- grep("^[a-zA-Z]+:NA$", probes[ii])
+    # if (length(hh)) ii <- ii[-hh]
     pp <- sub("^[a-zA-Z]+:", "", probes[ii])
     aa <- getMetaboliteAnnotation(pp)
     aa$data_type <- "mx"
     ##rownames(aa) <- probes[ii]
     aa$feature <- probes[ii]
-    annot[['mx']] <- aa
+    annot[["mx"]] <- aa
   }
   if ("custom" %in% dtype) {
     ii <- which(dtype == "custom")
@@ -2519,17 +2524,17 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
     aa$data_type <- "custom"
     ##rownames(aa) <- probes[ii]
     aa$feature <- probes[ii]
-    annot[['custom']] <- aa
+    annot[["custom"]] <- aa
   }
 
   ## Merge all annotation tables
   names(annot)
-  ##cols <- Reduce(intersect, lapply(annot, colnames))
-  cols <- Reduce(union, lapply(annot, colnames))  
-  k=1
-  for(k in 1:length(annot)) {
+  ## cols <- Reduce(intersect, lapply(annot, colnames))
+  cols <- Reduce(union, lapply(annot, colnames))
+  k <- 1
+  for (k in 1:length(annot)) {
     missing.cols <- setdiff(cols, colnames(annot[[k]]))
-    for(m in missing.cols) annot[[k]][[m]] <- '-'
+    for (m in missing.cols) annot[[k]][[m]] <- "-"
   }
   annot <- lapply(annot, function(a) a[, cols])
   annot <- do.call(rbind, annot)
