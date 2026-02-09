@@ -3085,9 +3085,7 @@ lasagna.prune_graph <- function(graph, ntop = 100, layers = NULL,
                                 edge.type = c("both","inter","intra","both2")[1],
                                 filter = NULL, select = NULL, prune = TRUE) {
   
-  if (is.null(layers))
-    layers <- graph$layers
-  }
+  if (is.null(layers)) layers <- graph$layers
   if (is.null(layers)) layers <- unique(igraph::V(graph)$layer)
   layers <- setdiff(layers, c("SOURCE", "SINK"))
   graph <- igraph::subgraph(graph, igraph::V(graph)$layer %in% layers)
@@ -3169,7 +3167,6 @@ lasagna.prune_graph <- function(graph, ntop = 100, layers = NULL,
     ## nop
   }
   graph <- igraph::delete_edges(graph, which(igraph::E(graph)$weight == 0))
-
 
   if (prune) {
     graph <- igraph::subgraph_from_edges(graph, igraph::E(graph))
