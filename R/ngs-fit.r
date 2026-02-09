@@ -16,7 +16,6 @@
 #' @param counts A matrix of counts, with genes in rows and samples in columns.
 #' @param X Covariates to include in the design matrix. Default is NULL.
 #' @param samples A vector of sample names that match the columns in \code{counts}.
-#' @param design The design matrix, with samples in columns. Default is NULL.
 #' @param covariates Variables to be regressed out. Only valid for linear model-based DGE tests. Default is NULL.
 #' @param contr.matrix The contrasts matrix, with contrasts in rows.
 #' @param genes A vector of gene names that match the rows in \code{counts}. Default is NULL.
@@ -59,7 +58,6 @@
 ngs.fitContrastsWithAllMethods <- function(counts,
                                            X = NULL,
                                            samples,
-                                           design,
                                            covariates = NULL,
                                            contr.matrix,
                                            genes = NULL,
@@ -129,6 +127,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
 
   ## Get main grouping variable for modeling
   group <- NULL
+  design <- NULL
 
   timings <- list()
   outputs <- list()
@@ -149,8 +148,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
       mdl <- ttest.mdls[match(cm.mtds[i], ttest.mtds)]
       timings[[cm.mtds[i]]] <- system.time(
         outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithTTEST(
-          X1, contr.matrix, design,
-          method = mdl,
+          X1, contr.matrix, method = mdl,
           conform.output = conform.output
         )
       )
@@ -162,8 +160,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     message("[ngs.fitContrastsWithAllMethods] Fitting using Wilcoxon rank sum test")
     timings[["wilcoxon.ranksum"]] <- system.time(
       outputs[["wilcoxon.ranksum"]] <- ngs.fitContrastsWithWILCOXON(
-        X, contr.matrix, design,
-        conform.output = conform.output
+        X, contr.matrix, conform.output = conform.output
       )
     )
   }
@@ -190,7 +187,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         tt <- system.time(
           outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithLIMMA(
             X1, contr.matrix,
-            design,
             covariates = covariates,
             method = mdl,
             trend = trend, prune.samples = prune.samples,
@@ -268,8 +264,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     if (is.null(custom.name)) custom.name <- "custom"
     if (length(outputs) == 0) {
       compare_output <- ngs.fitContrastsWithTTEST(
-        X, contr.matrix, design,
-        method = "equalvar",
+        X, contr.matrix, method = "equalvar",
         conform.output = conform.output
       )
     } else {
@@ -487,7 +482,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
 #' @export
 ngs.fitContrastsWithTTEST <- function(X,
                                       contr.matrix,
-                                      design,
                                       method = "welch",
                                       conform.output = 0) {
   
@@ -522,7 +516,9 @@ ngs.fitContrastsWithTTEST <- function(X,
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using Wilcoxon Rank Sum test
 #' @export
-ngs.fitContrastsWithWILCOXON <- function(X, contr.matrix, design, conform.output = 0) {
+ngs.fitContrastsWithWILCOXON <- function(X,
+                                         contr.matrix,
+                                         conform.output = 0) {
 
   exp.matrix <- contr.matrix
   tables <- list()
@@ -573,7 +569,6 @@ ngs.fitContrastsWithWILCOXON <- function(X, contr.matrix, design, conform.output
 #' @name ngs.fitContrastsWithLIMMA
 ngs.fitContrastsWithLIMMA <- function(X,
                                       contr.matrix,                                    
-                                      design,
                                       covariates = NULL,
                                       method = c("voom", "limma"),
                                       trend = TRUE,
