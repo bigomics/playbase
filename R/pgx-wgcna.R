@@ -667,6 +667,11 @@ wgcna.compute_multiomics <- function(dataX,
 
   layers <- layers[names(dataX)]
   names(layers)
+
+  ## get members
+  me.genes <- lapply(layers, function(m) m$me.genes)
+  names(me.genes) <- NULL
+  me.genes <- unlist(me.genes, recursive=FALSE)
   
   ## Compute enrichment
   gsea <- NULL
@@ -686,13 +691,14 @@ wgcna.compute_multiomics <- function(dataX,
       GMT = GMT,
       filter = NULL
     )
+
+    dbg("[wgcna.compute_multiomics] length(gsea) = ", length(gsea))
     
     ## split up results?? still needed in old formats
     for(k in names(layers)) {
       mm <- names(layers[[k]]$me.genes)
       layers[[k]]$gsea <- gsea[mm]
-    }
-    
+    }    
   }
 
 
@@ -700,11 +706,27 @@ wgcna.compute_multiomics <- function(dataX,
   lasagna.graph <- NULL
   do.lasagna = TRUE
   if(do.lasagna) {
+    dbg("[wgcna.compute_multiomics] >>> creating lasagna ")
+
+    dbg("[wgcna.compute_multiomics] names(layers) = ", names(layers))
+    
     ## Get eigengene matrices, remove grey modules
     ww <- lapply(layers, function(w) t(w$net$MEs))
+    dbg("[wgcna.compute_multiomics] length(ww) = ", length(ww))
+    dbg("[wgcna.compute_multiomics] nrow(ww) = ", sapply(ww,nrow))
+    dbg("[wgcna.compute_multiomics] rownames(ww) = ", sapply(ww,rownames))
+
     ww <- lapply(ww, function(w) w[!grepl("[A-Z]{2}grey$", rownames(w)), , drop=FALSE])
+    ww <- ww[which(sapply(ww,nrow)>0)]
+    
     datTraits <- layers[[1]]$datTraits    
     gdata <- list( X = ww, samples = datTraits )
+
+    dbg("[wgcna.compute_multiomics] creating model ")
+    dbg("[wgcna.compute_multiomics] length(ww) = ", length(ww))
+    dbg("[wgcna.compute_multiomics] nrow(ww) = ", sapply(ww,nrow))
+    dbg("[wgcna.compute_multiomics] ncol(ww) = ", sapply(ww,ncol))    
+    dbg("[wgcna.compute_multiomics] dim(datTraits) = ", dim(datTraits))
     
     ## Create lasagna model
     lasagna.model <- lasagna.create_model(
@@ -718,6 +740,8 @@ wgcna.compute_multiomics <- function(dataX,
       add.revpheno = TRUE
     )
 
+    dbg("[wgcna.compute_multiomics] conditioning... ")
+    
     ## Multi-condition edge weighting
     lasagna.graph <- lasagna.multisolve(
       lasagna.model,
@@ -732,6 +756,7 @@ wgcna.compute_multiomics <- function(dataX,
 
   report.out <- NULL
   if(report) {
+    dbg("[wgcna.compute_multiomics] >>> creating report")
     ## Create summaries of each module.
     ##
     if(!is.null(progress)) progress$set(message = "Creating report...", value=0.8)
@@ -752,6 +777,7 @@ wgcna.compute_multiomics <- function(dataX,
   power <- sapply(layers, function(a) a$net$power, USE.NAMES=FALSE)
   names(power) <- names(layers)
 
+  dbg("[wgcna.compute_multiomics] copying settings...")
   
   ## IK: new structure. like consensus. put datatype wgcna in
   ## layers slot.  
@@ -770,10 +796,13 @@ wgcna.compute_multiomics <- function(dataX,
     #summary = TRUE,
     #ai_model = ai_model,
     NULL
-  )
+  ) 
   
+  dbg("[wgcna.compute_multiomics] creating out list")
+
   out <- list(
     layers = layers,
+    me.genes = me.genes,
     gsea = gsea,
     report = report.out,
     datanames = datanames,
@@ -1460,11 +1489,15 @@ wgcna.computeModuleEnrichment <- function(wgcna,
   dtype = names(wgcna)[1]
   for(dtype in names(wgcna)) {
     
+    dbg("[wgcna.computeModuleEnrichment] dtype = ", dtype)
+
     ## collapse features to symbol
     sel <- unique(c(dtype, xref))
     datExpr <- lapply(wgcna[sel], function(w) t(as.matrix(w$datExpr)))
     geneX <- mofa.merge_data2(datExpr, merge.rows="prefix", merge.cols="union")
     geneX <- rename_by2(geneX, annot, symbol.col)
+
+    dbg("[wgcna.computeModuleEnrichment] dim.geneX = ", dim(geneX))
 
     ## check if overlap exists
     bg <- intersect(rownames(geneX), rownames(GMT))
@@ -1472,6 +1505,9 @@ wgcna.computeModuleEnrichment <- function(wgcna,
       message("[wgcna.computeModuleEnrichment] WARNING. no overlapping genes for ", dtype)
       next()
     }
+
+    dbg("[wgcna.computeModuleEnrichment] length(bg) = ", length(bg))
+    
     G1 <- GMT[bg, , drop = FALSE]
     if (!is.null(filter)) {
       sel <- grep(filter, colnames(G1))
@@ -1479,6 +1515,8 @@ wgcna.computeModuleEnrichment <- function(wgcna,
     }
     G1 <- G1[, which(Matrix::colSums(G1 != 0) >= min.genes), drop = FALSE]
 
+    dbg("[wgcna.computeModuleEnrichment] dim.G1 = ", dim(G1))
+    
     if(nrow(G1)>=3 && ncol(G1)>=3 ) {
       ## get eigengene members. convert to symbols.
       me.genes <- wgcna[[dtype]]$me.genes
@@ -1497,11 +1535,21 @@ wgcna.computeModuleEnrichment <- function(wgcna,
         xtop = xtop,
         min.rho = min.rho
       )
+
+      dbg("[wgcna.computeModuleEnrichment] len.gsea = ", length(gsea))
+      dbg("[wgcna.computeModuleEnrichment] len.dtgsea = ", length(dt.gsea))
+      dbg("[wgcna.computeModuleEnrichment] names.dtgsea = ", names(dt.gsea))
+      dbg("[wgcna.computeModuleEnrichment] dim.dtgsea = ", dim(dt.gsea))
       
       ## add to results
       gsea <- c(gsea, dt.gsea)
+
+      dbg("[wgcna.computeModuleEnrichment] len.gsea = ", length(gsea))      
     }    
   }
+
+  dbg("[wgcna.computeModuleEnrichment] done!")
+
   
   return(gsea)
 }
@@ -1695,9 +1743,9 @@ wgcna.run_enrichment_methods <- function(ME, me.genes, GMT, geneX,
     df <- head(df, ntop)
     gse.list[[k]] <- df
   }
-
+  
   ## add genes
-  gse.genes <- list()
+  ##gse.genes <- list()
   k <- names(gse.list)[1]
   for (k in names(gse.list)) {
     gset <- rownames(gse.list[[k]])
@@ -1705,12 +1753,14 @@ wgcna.run_enrichment_methods <- function(ME, me.genes, GMT, geneX,
     set.genes <- lapply(gmt[gset], function(s) intersect(s, gg))
     n0 <- sapply(gmt[gset], length)
     n1 <- sapply(set.genes, length)
-    gse.genes[[k]] <- sort(table(unlist(set.genes)), decreasing = TRUE)
+    ##gse.genes[[k]] <- sort(table(unlist(set.genes)), decreasing = TRUE)
     set.genes <- sapply(set.genes, function(g) paste(sort(g), collapse = "|"))
     gse.list[[k]]$overlap <- paste0(n1, "/", n0)
     gse.list[[k]]$genes <- set.genes
   }
 
+  dbg("[wgcna.run_enrichment_methods] done!")
+  
   return(gse.list)
 }
 
@@ -3385,6 +3435,7 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL,
                                       show.kme = FALSE,
                                       show.traits = FALSE,
                                       show.contrasts = FALSE,
+                                      show.mat = NULL,
                                       clust = TRUE,
                                       use.tree = 0,
                                       block = 1,
@@ -3404,6 +3455,9 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL,
     net <- wgcna
   }
   dendro <- net$dendrograms
+
+  is.multi <- is.list(wgcna$datExpr)
+  is.multi
 
   ## check is consensus object
   if("layers" %in% names(wgcna) && use.tree>0) {
@@ -3451,8 +3505,6 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL,
     kmeColors 
   }
   
-  is.multi <- is.list(wgcna$datExpr)
-  is.multi
   if(!is.multi) {
     if(show.kme) {
       X <- wgcna$datExpr
@@ -3473,6 +3525,14 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL,
       X <- wgcna$datExpr
       Y <- wgcna$datTraits
       Y <- Y[,grep("_vs_",colnames(Y)),drop=FALSE]
+      if(NCOL(Y)>0) {
+        kmeColors <- calcKMEcolors(X, Y)         
+        colors <- cbind(colors, 0, kmeColors)
+      }
+    }
+    if(!is.null(show.mat)) {
+      X <- wgcna$datExpr
+      Y <- show.mat
       if(NCOL(Y)>0) {
         kmeColors <- calcKMEcolors(X, Y)         
         colors <- cbind(colors, 0, kmeColors)
@@ -3516,6 +3576,18 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL,
         }
       }
     }
+    if(!is.null(show.mat)) {
+      X <- wgcna$datExpr
+      Y <- show.mat
+      for(i in 1:length(X)) {
+        Y1 <- Y[rownames(X[[i]]),]
+        if(NCOL(Y1)) {
+          kmeColors <- calcKMEcolors(X[[i]], Y1)
+          colnames(kmeColors) <- paste0(names(X)[i],":",colnames(kmeColors))
+          colors <- cbind(colors, 0, kmeColors)
+        }
+      }
+    }
   }
 
   if(rm.na) {
@@ -3552,6 +3624,7 @@ wgcna.plotMultiDendroAndColors <- function(multi_wgcna,
                                            show.kme = FALSE,
                                            show.traits = FALSE,
                                            show.contrasts = FALSE,
+                                           show.mat = NULL,
                                            clust = TRUE,
                                            use.tree = 0,
                                            rm.na = TRUE,
@@ -3559,7 +3632,8 @@ wgcna.plotMultiDendroAndColors <- function(multi_wgcna,
                                            nmax = -1,
                                            main = NULL,
                                            colorHeight = 0.5,
-                                           marAll = c(0.4,5,1,0.2)
+                                           marAll = c(0.4,5,1,0.2),
+                                           cex = 1
                                            )
 {
 
@@ -3568,10 +3642,11 @@ wgcna.plotMultiDendroAndColors <- function(multi_wgcna,
   nr <- ceiling(nw / nc)  
   hh <- rep(c((1-colorHeight), colorHeight),nr)
   hh
-  nf <- layout(matrix(1:(2*nr*nc), nrow=2*nr, ncol=nc, byrow=FALSE),
-    heights = hh )
+  nf <- layout(matrix(1:(2*nr*nc), nrow=2*nr, ncol=nc,
+    byrow=FALSE), heights = hh )
   ##layout.show(nf)
-
+  par(cex=cex)
+  
   if(is.null(main))
     main <- names(multi_wgcna)
   
@@ -3582,6 +3657,7 @@ wgcna.plotMultiDendroAndColors <- function(multi_wgcna,
       show.traits = show.traits,
       show.contrasts = show.contrasts,
       show.kme = show.kme,
+      show.mat = show.mat,
       use.tree = use.tree,
       clust = clust,
       sd.wt = sd.wt,
@@ -5968,12 +6044,13 @@ Layout in TB direction. Do not use any special characters, without headers or fo
 #' diagram (in DOT format).
 #' 
 #' @export
-wgcna.create_infographic <- function(report,  diagram=NULL,
+wgcna.create_infographic <- function(report,  diagram=NULL, prompt=NULL,
                                      #model = "gemini-2.5-flash-image"
                                      model="gemini-3-pro-image-preview",
                                      filename = "infographic.png") {  
 
-  prompt <- paste("Create a graphical abstract according to the given diagram and information in the WGCNA report. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. \n\n", report, "\n---------------\n\n", diagram)
+  prompt <- paste(prompt, "\nCreate a graphical abstract according to the given diagram and information in the WGCNA report. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. \n\n", report, "\n---------------\n\n", diagram)
+
   outfile <- try(ai.create_image_gemini(
     prompt = prompt,  model = model, 
     format = "file", filename = filename
@@ -5983,7 +6060,7 @@ wgcna.create_infographic <- function(report,  diagram=NULL,
 }
 
 #' @export
-wgcna.create_module_infographic <- function(rpt, module,
+wgcna.create_module_infographic <- function(rpt, module, prompt = NULL,
                                             #model = "gemini-2.5-flash-image"
                                             model="gemini-3-pro-image-preview",
                                             filename = "module-infographic.png") {  
@@ -5991,8 +6068,11 @@ wgcna.create_module_infographic <- function(rpt, module,
     stop(paste("module",m,"not in report summaries"))
   }
   mm <- paste0("**",module,"**: ",rpt$summaries[[module]])
-  prompt <- paste("Create an infographic summarizing the biological narrative of the following WGCNA module. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. Match the background with the name of the module with a very light shade. Include the module name in the title or image. \n\n", mm)
+  prompt <- paste(prompt, "Create an infographic summarizing the biological narrative of the following WGCNA module. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. Match the background with the name of the module with a very light shade. Include the module name in the title or image. \n\n", mm)
   outfile <- ai.create_image_gemini(prompt, model, filename = filename)
   message("saving to ", outfile)
   return(invisible(outfile))
 }
+
+
+
