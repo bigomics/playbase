@@ -388,10 +388,6 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
 }
 
 
-
-
-
-
 #' Test correlation of phenotype with expression data
 #'
 #' @param df Data frame containing phenotype data

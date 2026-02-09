@@ -46,7 +46,6 @@ pgx.clusterGenes <- function(pgx,
                              find.clusters = FALSE,
                              X = NULL,
                              umap.pkg = "uwot") {
-
   if (!is.null(X)) {
     message("[pgx.clusterGenes] Using normalized X matrix provided...")
   } else if (!is.null(pgx$X) && level == "gene") {
@@ -72,7 +71,7 @@ pgx.clusterGenes <- function(pgx,
     message("[pgx.clusterGenes] WARNING: could not find matrix X")
     return(pgx)
   }
-  
+
   if (center.rows) {
     X <- X - rowMeans(X, na.rm = TRUE)
   }
@@ -204,7 +203,7 @@ pgx.clusterSamples <- function(pgx,
       X <- imputeMissing(X, method = "SVD2")
     }
   }
-  
+
   clust.pos <- pgx.clusterBigMatrix(
     X,
     methods = methods,
@@ -391,7 +390,6 @@ pgx.clusterMatrix <- function(X,
                               find.clusters = FALSE,
                               umap.pkg = "uwot",
                               verbose = 1) {
-
   methods <- intersect(methods, c("pca", "tsne", "umap", "pacmap"))
   if (length(methods) == 0) methods <- "pca"
 
@@ -453,9 +451,9 @@ pgx.clusterMatrix <- function(X,
       rownames(pos) <- colnames(X)
       pos <- pos[1:dimx[2], , drop = FALSE] ## if augmented
       colnames(pos) <- paste0("PC-", c("x", "y"))
-      all.pos[["pca2d"]] <- pos      
-      varexp <- (res.svd$d^2 / sum(res.svd$d^2))*100
-      varexp <- round(varexp[1:2],1)
+      all.pos[["pca2d"]] <- pos
+      varexp <- (res.svd$d^2 / sum(res.svd$d^2)) * 100
+      varexp <- round(varexp[1:2], 1)
       names(varexp) <- c("PC1", "PC2")
       all.pos[["pca2d.varexp"]] <- varexp
     }
@@ -468,7 +466,7 @@ pgx.clusterMatrix <- function(X,
       all.pos[["pca3d"]] <- pos
     }
   }
-  
+
   if ("tsne" %in% methods && 2 %in% dims) {
     if (verbose > 0) message("[pgx.clusterMatrix] Calculating t-SNE 2D...")
     perplexity <- pmax(min(min(dimx) / 4, perplexity), 2)
@@ -486,7 +484,7 @@ pgx.clusterMatrix <- function(X,
     colnames(pos) <- paste0("tSNE-", c("x", "y"))
     all.pos[["tsne2d"]] <- pos
   }
-  
+
   if ("tsne" %in% methods && 3 %in% dims) {
     if (verbose > 0) message("[pgx.clusterMatrix] Calculating t-SNE 3D...")
     if (verbose > 0) message("[pgx.clusterMatrix] Perplexity = ", perplexity)

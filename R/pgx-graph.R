@@ -372,8 +372,6 @@ pgx.reduceOmicsGraph <- function(ngs) {
   gr1$scaled.data <- rX
 
 
-
-
   return(gr1)
 }
 
@@ -1135,7 +1133,6 @@ go.heatmap <- function(pgx) {
     scale = "row", dist.method = "euclidean", cexRow = 1.8, cexCol = 1.8
   )
 }
-
 
 
 ## ===============================================================================

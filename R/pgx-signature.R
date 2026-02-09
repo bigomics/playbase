@@ -548,10 +548,10 @@ pgx.computeGeneSetExpression <- function(X, gmt, method = NULL,
 
   S <- list()
   if ("gsva" %in% method) {
-    S[["gsva"]] <- plaid::replaid.gsva(X, G)    
+    S[["gsva"]] <- plaid::replaid.gsva(X, G)
   }
   if ("ssgsea" %in% method) {
-    S[["ssgsea"]] <- plaid::replaid.ssgsea(X, G)        
+    S[["ssgsea"]] <- plaid::replaid.ssgsea(X, G)
   }
   if (any(method %in% c("spearman", "average"))) {
     if ("spearman" %in% method) {

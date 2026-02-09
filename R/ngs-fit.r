@@ -681,7 +681,6 @@ ngs.fitContrastsWithLIMMA <- function(X,
   }
   
   return(list(tables = tables))
-
 }
 
 #' @title ngs.fitContrastsWithLIMMA.regress.covs. See ngs.fitContrastsWithLIMMA().
@@ -757,12 +756,11 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
                                                  timeseries,
                                                  trend = TRUE,
                                                  use.spline = NULL) {
-
   message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting Limma with no design; time series analysis...")
   if (!all(colnames(X) %in% names(timeseries))) {
     stop("[ngs.fitContrastsWithLIMMA.timeseries] X and timeseries vector contain different set of samples.")
   }
-  
+
   jj <- match(colnames(X), names(timeseries))
   time0 <- as.character(unname(timeseries[jj]))
   time0 <- gsub("\\D", "", time0)
@@ -987,7 +985,6 @@ ngs.fitContrastsWithEDGER <- function(counts,
                                                 recalc.fc = TRUE,
                                                 plot = TRUE,
                                                 timeseries = NULL) {
-
   ## With no design matrix, we must do EdgeR per contrast
   ## one-by-one. Warning this can become very slow.
 
@@ -1055,7 +1052,6 @@ ngs.fitContrastsWithEDGER <- function(counts,
   res <- list(tables = tables)
 
   return(res)
-
 }
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fit contrasts with EdgeR without a design matrix
@@ -1256,7 +1252,6 @@ ngs.fitContrastsWithEDGER.regress.covs <- function(counts,
                                                            timeseries,
                                                            use.spline = NULL,
                                                            robust = TRUE) {
-
   if (!all(colnames(counts) %in% names(timeseries))) {
     message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Counts and timeseries vector contain different set of samples.")
   }
@@ -1275,7 +1270,7 @@ ngs.fitContrastsWithEDGER.regress.covs <- function(counts,
 
   ## possible ranges
   if (any(grepl("_", unname(as.character(timeseries[jj]))))) {
-    use.spline <- FALSE 
+    use.spline <- FALSE
   }
 
   if (use.spline) {
@@ -1289,7 +1284,7 @@ ngs.fitContrastsWithEDGER.regress.covs <- function(counts,
   y <- as.factor(as.character(y))
   dge0 <- dge
   res <- NULL
-  
+
   if (use.spline) {
     ## Iterate across df. Pick first valid run.
     idx <- 1:length(unique(time0))
@@ -1345,7 +1340,6 @@ ngs.fitContrastsWithEDGER.regress.covs <- function(counts,
   }
 
   return(top)
-
 }
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using DESeq2 differential expression
@@ -1672,14 +1666,14 @@ ngs.fitContrastsWithDESEQ2.regress.covs <- function(counts,
   jj <- match(colnames(counts), names(timeseries))
   time0 <- as.character(timeseries[jj])
   time0 <- gsub("\\D", "", unname(time0))
- 
+
   if (is.null(use.spline)) {
     use.spline <- !(length(unique(time0)) == 1 && unique(time0)[1] == "")
   }
 
   ## possible ranges
   if (any(grepl("_", unname(as.character(timeseries[jj]))))) {
-    use.spline <- FALSE 
+    use.spline <- FALSE
   }
 
   if (use.spline) {
@@ -1697,7 +1691,6 @@ ngs.fitContrastsWithDESEQ2.regress.covs <- function(counts,
   colData <- data.frame(y = y, time = factor(time0))
 
   if (use.spline) {
-
     ## Iterate across df. Pick first valid run.
     idx <- 1:length(unique(time0))
     for (i in 1:length(idx)) {
@@ -1740,9 +1733,7 @@ ngs.fitContrastsWithDESEQ2.regress.covs <- function(counts,
       message("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
       break ## stop for loop
     }
-
   } else {
-
     design <- stats::model.matrix(~ y + time0 + y:time0)
     red.design <- stats::model.matrix(~ y + time0)
     dds <- try(DESeq2::DESeqDataSetFromMatrix(counts, colData, design), silent = TRUE)
@@ -1761,8 +1752,8 @@ ngs.fitContrastsWithDESEQ2.regress.covs <- function(counts,
       disp.type <- ifelse(test == "glmGamPoi", "glmGamPoi", "DESeq2")
       dds <- try(DESeq2::estimateDispersionsGeneEst(dds, type = disp.type), silent = TRUE)
       disp.values <- try(GenomicRanges::mcols(dds), silent = TRUE)
-      c1 <- (! "try-error" %in% class(dds))
-      c2 <- (! "try-error" %in% class(disp.values))
+      c1 <- (!"try-error" %in% class(dds))
+      c2 <- (!"try-error" %in% class(disp.values))
       if (c1 & c2) DESeq2::dispersions(dds) <- disp.values$dispGeneEst
       if (test == "LRT") {
         dds <- try(DESeq2::nbinomLRT(dds, reduced = red.design), silent = TRUE)
@@ -1772,7 +1763,6 @@ ngs.fitContrastsWithDESEQ2.regress.covs <- function(counts,
         dds <- try(DESeq2::nbinomWaldTest(dds), silent = TRUE)
       }
     }
-
   }
 
   resx <- try(DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE), silent = TRUE)
@@ -1785,7 +1775,6 @@ ngs.fitContrastsWithDESEQ2.regress.covs <- function(counts,
   }
 
   return(resx)
-
 }
 
 ## =====================================================================================

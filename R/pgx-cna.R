@@ -102,7 +102,6 @@
 ##   logcnv <- log2(cnv[jj, ] / mean(cnv, na.rm = TRUE)) ## logarithmic
 
 
-
 ##   img <- png::readPNG(img.file)
 ##   res <- list(cna = logcnv, chr = chr, pos = pos, png = img)
 

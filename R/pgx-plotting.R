@@ -207,9 +207,7 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
       message("[repelwords] WARNING maximum iterations reached: iter = ", iter)
       boxes[[length(boxes) + 1]] <-
         c(x1 - 0.5 * wid, y1 - 0.5 * ht, wid, ht)
-    } else {
-
-    }
+    } else {}
   }
   result <- do.call(rbind, boxes)
 
@@ -224,7 +222,7 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
 
 
 #' @export
-pgx.plotEnrichmentDotPlot <- function(pgx, contrast, filter = NULL, 
+pgx.plotEnrichmentDotPlot <- function(pgx, contrast, filter = NULL,
                                       ntop = 30, dir = "both",
                                       ptsize = 6,
                                       main = "Enrichment Analysis") {
@@ -269,7 +267,6 @@ pgx.plotEnrichmentDotPlot <- function(pgx, contrast, filter = NULL,
       legend.title = ggplot2::element_text(size = 11),
       legend.text = ggplot2::element_text(size = 8)
     )
-
 }
 
 #' @export
@@ -888,8 +885,6 @@ pgx.SankeyFromPhenotypes.GGPLOT <- function(pgx, phenotypes, mat = NULL, fill = 
 }
 
 
-
-
 #' @title Plot contrasts from a PGX analysis
 #'
 #' @description Generate plots for contrasts from a pharmacogenomic (PGX) analysis.
@@ -1275,7 +1270,6 @@ plot_volcano <- function(x,
 }
 
 
-
 #' @describeIn pgx.plotContrast Create a volcano plot from a PGX object
 #'
 #' @param pgx A PGX object containing differential expression results.
@@ -1305,7 +1299,8 @@ ggVolcano <- function(x,
                       ylab = "significance (-log10q)",
                       lfc = 1,
                       psig = 0.05,
-                      ylim = NULL,
+                      xlim = NULL,
+                      ylim = NULL,                      
                       showlegend = TRUE,
                       marker.size = 2.5,
                       marker.alpha = 0.7,
@@ -1315,11 +1310,37 @@ ggVolcano <- function(x,
                       title = "Volcano plot",
                       colors = c(
                         up = "#f23451",
-                        notsig = "#8F8F8F",
+                        notsig = "#cccccc88",
                         notsel = "#cccccc88",
                         down = "#3181de"
                       ),
-                      girafe = FALSE) {
+                      box.padding = 0.1,
+                      min.segment.length = 0,
+                      label.box = TRUE,
+                      segment.linetype = 1,
+                      girafe = FALSE,
+                      use_hyperbola = FALSE,
+                      hyperbola_k = 1,
+                      use_ggprism = FALSE,
+                      ggprism_palette = "black_and_white",
+                      ggprism_colors = FALSE,
+                      ggprism_border = FALSE,
+                      ggprism_axis_guide = "default",
+                      ggprism_show_legend = FALSE,
+                      ggprism_legend_x = 0.95,
+                      ggprism_legend_y = 0.95,
+                      ggprism_legend_border = FALSE) {
+  ## Handle ggprism colors if enabled
+  if (isTRUE(use_ggprism) && isTRUE(ggprism_colors)) {
+    prism_cols <- ggprism::prism_colour_pal(palette = ggprism_palette)(4)
+    colors <- c(
+      up = prism_cols[1],
+      down = prism_cols[2],
+      notsig = prism_cols[3],
+      notsel = paste0(prism_cols[4], "88")
+    )
+  }
+
   if (is.null(highlight)) highlight <- names
   if (showlegend) {
     legend <- "right"
@@ -1335,17 +1356,43 @@ ggVolcano <- function(x,
   if (!is.null(facet)) {
     df$facet <- facet
   }
-  df$category <- ifelse(
-    df$y > -log10(psig) & df$fc > lfc, "Up",
-    ifelse(df$y > -log10(psig) & df$fc < -lfc, "Down", "Not significant")
-  )
-  df$label <- ifelse(names %in% label | label.names %in% label, label.names, NA)
-  df$category[!(names %in% highlight | label.names %in% highlight)] <- "Not selected"
+  ## Significance classification
+
+  psig_transformed <- -log10(psig)
+
+  if (use_hyperbola) {
+    ## Hyperbolic significance criterion:
+    ## A point is significant if: (y - psig_transformed) * (|fc| - lfc) > k
+    ## This creates a hyperbola with:
+    ##   - Horizontal asymptote at y = psig_transformed
+    ##   - Vertical asymptotes at x = ±lfc
+    ## The curvature parameter k controls how "tight" the hyperbola is
+    hyperbola_sig <- (df$y - psig_transformed) * (abs(df$fc) - lfc) > hyperbola_k
+    hyperbola_sig[abs(df$fc) <= lfc] <- FALSE # Points inside vertical asymptotes are not significant
+
+    ## Classify by significance # RPA1
+    df$category <- ifelse(
+      hyperbola_sig & df$fc > 0, "Up",
+      ifelse(hyperbola_sig & df$fc < 0, "Down", "Not significant")
+    )
+    df$label <- ifelse(names %in% label | label.names %in% label, label.names, NA)
+    highlight <- c(highlight, names[hyperbola_sig])
+    df$category[!(names %in% highlight | label.names %in% highlight)] <- "Not selected"
+  } else {
+    ## Traditional rectangular cutoff
+    df$category <- ifelse(
+      df$y > psig_transformed & df$fc > lfc, "Up",
+      ifelse(df$y > psig_transformed & df$fc < -lfc, "Down", "Not significant")
+    )
+    df$label <- ifelse(names %in% label | label.names %in% label, label.names, NA)
+    df$category[!(names %in% highlight | label.names %in% highlight)] <- "Not selected"
+  }
 
   df$tooltip <- gsub("[\\'\\`-]", "", df$tooltip)
   df$name <- gsub("[\\'\\`-]", "", df$name)
 
   if (is.null(ylim)) ylim <- max(y, na.rm = TRUE) * 1.1
+  if (is.null(xlim)) xlim <- range(x, na.rm = TRUE)  
 
   plt <- ggplot2::ggplot(df, ggplot2::aes(x = fc, y = y)) +
     ggplot2::geom_point(
@@ -1422,21 +1469,81 @@ ggVolcano <- function(x,
       )
   }
 
-  plt <- plt +
-    ggrepel::geom_label_repel(
-      ggplot2::aes(label = label, color = category),
-      size = label.cex, family = "lato", box.padding = 0.1, max.overlaps = 20, show.legend = FALSE
-    )
+  if (label.box) {
+    plt <- plt +
+      ggrepel::geom_label_repel(
+        ggplot2::aes(label = label, color = category),
+        size = label.cex, family = "lato", box.padding = box.padding,
+        min.segment.length = min.segment.length, segment.linetype = segment.linetype,
+        max.overlaps = 20, show.legend = FALSE
+      )
+  } else {
+    plt <- plt +
+      ggrepel::geom_text_repel(
+        ggplot2::aes(label = label, color = category),
+        size = label.cex, family = "lato", box.padding = box.padding,
+        min.segment.length = min.segment.length, segment.linetype = segment.linetype,
+        max.overlaps = 20, show.legend = FALSE
+      )
+  }
+
+  ## Add threshold lines or hyperbola curve
+  if (use_hyperbola) {
+    ## Create hyperbola curve data (separate branches to avoid connecting line)
+    ## Right branch: y = psig_transformed + k / (x - lfc) for x > lfc
+    ## Left branch: y = psig_transformed + k / (-x - lfc) for x < -lfc
+    x_max <- max(abs(df$fc), na.rm = TRUE) * 1.2
+
+    ## Right branch
+    x_right <- seq(lfc + 0.01, x_max, length.out = 200)
+    y_right <- psig_transformed + hyperbola_k / (x_right - lfc)
+    hyperbola_right <- data.frame(x = x_right, y = y_right)
+
+    ## Left branch
+    x_left <- seq(-x_max, -lfc - 0.01, length.out = 200)
+    y_left <- psig_transformed + hyperbola_k / (-x_left - lfc)
+    hyperbola_left <- data.frame(x = x_left, y = y_left)
+
+    ## Clip to ylim
+    if (!is.null(ylim)) {
+      hyperbola_right <- hyperbola_right[hyperbola_right$y <= ylim, ]
+      hyperbola_left <- hyperbola_left[hyperbola_left$y <= ylim, ]
+    }
+
+    plt <- plt +
+      ggplot2::geom_line(
+        data = hyperbola_right,
+        ggplot2::aes(x = x, y = y),
+        linetype = "dashed",
+        color = "gray",
+        linewidth = 0.7
+      ) +
+      ggplot2::geom_line(
+        data = hyperbola_left,
+        ggplot2::aes(x = x, y = y),
+        linetype = "dashed",
+        color = "gray",
+        linewidth = 0.7
+      ) +
+      ggplot2::geom_vline(xintercept = c(-lfc, lfc), linetype = "dotted", color = "gray", alpha = 0.5) +
+      ggplot2::geom_hline(yintercept = psig_transformed, linetype = "dotted", color = "gray", alpha = 0.5) +
+      ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey")
+  } else {
+    plt <- plt +
+      ggplot2::geom_hline(yintercept = psig_transformed, linetype = "dashed", color = "gray") +
+      ggplot2::geom_vline(xintercept = c(-lfc, lfc), linetype = "dashed", color = "gray") +
+      ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey")
+  }
 
   plt <- plt +
-    ggplot2::geom_hline(yintercept = -log10(psig), linetype = "dashed", color = "gray") +
-    ggplot2::geom_vline(xintercept = c(-lfc, lfc), linetype = "dashed", color = "gray") +
-    ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey") +
     ggplot2::scale_y_continuous(
       limits = c(0, ylim),
-      expand = ggplot2::expansion(mult = c(0, 0))
+      expand = ggplot2::expansion(mult = c(0, 0.05))
     ) +
-    ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = c(0.1, 0))) +
+    ggplot2::scale_x_continuous(
+      limits = xlim,
+      expand = ggplot2::expansion(mult = c(0.07, 0.07))
+    ) +
     ggplot2::labs(x = xlab, y = ylab) +
     guides(colour = guide_legend(reverse = T)) +
     ggplot2::theme_minimal(base_size = 15) +
@@ -1451,6 +1558,63 @@ ggVolcano <- function(x,
       axis.text = ggplot2::element_text(family = "lato"),
       plot.margin = ggplot2::margin(l = 9, b = 3, t = 9, r = 9)
     )
+
+  ## Apply ggprism theme if enabled
+  if (isTRUE(use_ggprism)) {
+    plt <- plt +
+      ggprism::theme_prism(
+        palette = ggprism_palette,
+        base_size = axis.text.size,
+        border = ggprism_border
+      )
+
+    ## Apply axis guides
+    if (ggprism_axis_guide == "prism_minor") {
+      plt <- plt + ggplot2::guides(
+        x = ggprism::guide_prism_minor(),
+        y = ggprism::guide_prism_minor()
+      )
+    } else if (ggprism_axis_guide == "prism_offset") {
+      plt <- plt + ggplot2::guides(
+        x = ggprism::guide_prism_offset(),
+        y = ggprism::guide_prism_offset()
+      )
+    } else if (ggprism_axis_guide == "prism_offset_minor") {
+      plt <- plt + ggplot2::guides(
+        x = ggprism::guide_prism_offset_minor(),
+        y = ggprism::guide_prism_offset_minor()
+      )
+    }
+
+    ## Legend positioning
+    if (isTRUE(ggprism_show_legend)) {
+      ## Calculate justification based on position (corners anchor properly)
+      just_x <- if (ggprism_legend_x > 0.5) 1 else 0
+      just_y <- if (ggprism_legend_y > 0.5) 1 else 0
+
+      ## Legend background with optional border
+      legend_bg <- if (isTRUE(ggprism_legend_border)) {
+        ggplot2::element_rect(fill = "white", colour = "black", linewidth = 0.5)
+      } else {
+        ggplot2::element_rect(fill = "white", colour = NA)
+      }
+
+      plt <- plt + ggplot2::theme(
+        legend.position = "inside",
+        legend.position.inside = c(ggprism_legend_x, ggprism_legend_y),
+        legend.justification = c(just_x, just_y),
+        legend.title = ggplot2::element_blank(),
+        legend.background = legend_bg
+      )
+    } else {
+      plt <- plt + ggplot2::theme(legend.position = "none")
+    }
+
+    if (isTRUE(ggprism_border)) {
+      plt <- plt + ggplot2::coord_cartesian(clip = "off")
+    }
+  }
+
   if (!is.null(facet)) {
     ncol_row <- ceiling(sqrt(length(unique(facet))))
     plt <- plt +
@@ -1618,9 +1782,6 @@ plot_MA <- function(x,
     )
   }
 }
-
-
-
 
 
 #' @describeIn pgx.plotContrast Scatter plot of contrast results
@@ -2401,8 +2562,6 @@ pgx.splitHeatmap <- function(ngs, splitx = NULL, top.mode = "specific",
 ## =================================================================================
 
 
-
-
 #' Convert a plotly plot to a ggplot object
 #'
 #' @param plot The plotly plot object to convert
@@ -2747,8 +2906,6 @@ ggenplot <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ylab = NULL) {
       axis.title.y = ggplot2::element_text(size = 9, hjust = +0.5)
     )
 }
-
-
 
 
 #' @title Scatter Plot with Filled Colors
@@ -3584,9 +3741,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     graphics::mtext(title, 3, adj = 0, padj = -0.35, cex = 0.9 * cex.title)
   }
 
-  if (set.par) {
-
-  }
+  if (set.par) {}
   out <- list()
   out$lab.pos <- lab.pos
   invisible(out)
@@ -4626,8 +4781,6 @@ pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, na.co
 }
 
 
-
-
 #' Stacked barplot
 #'
 #' @param x Numeric data matrix. Rows are stacked, columns are groups.
@@ -5475,7 +5628,8 @@ plotlyVolcano_multi <- function(FC,
 #' )
 #' @export
 plotly_build_light <- function(
-    fig, vars_hf = c("x", "y", "text", "hovertext")) {
+  fig, vars_hf = c("x", "y", "text", "hovertext")
+) {
   # check_arguments
   stopifnot(inherits(fig, "plotly"))
   stopifnot(inherits(fig$x$attrs, "list"))
@@ -5744,7 +5898,7 @@ plotlyCytoplot <- function(pgx,
 #' }
 #'
 #' @export
-corclust <- function(x, method="ward.D2") {
+corclust <- function(x, method = "ward.D2") {
   cx <- stats::cor(t(x), use = "pairwise")
   cx[is.na(cx)] <- 0
   hclust(stats::as.dist(1 - cx), method = method)
@@ -6152,7 +6306,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
 }
 
 
-
 #' Box plot using plotly
 #'
 #' @param data Data frame to plot.
@@ -6173,19 +6326,20 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
 #'
 #' @export
 pgx.boxplot.PLOTLY <- function(
-    data,
-    x = NULL,
-    y = NULL,
-    title = NULL,
-    color = "#3181de",
-    fillcolor = "#2fb5e3",
-    linecolor = "#3181de",
-    hoverinfo = "y",
-    hoverformat = ".2f",
-    yaxistitle = FALSE,
-    xaxistitle = FALSE,
-    font_family = "Lato",
-    margin = list(l = 10, r = 10, b = 10, t = 10)) {
+  data,
+  x = NULL,
+  y = NULL,
+  title = NULL,
+  color = "#3181de",
+  fillcolor = "#2fb5e3",
+  linecolor = "#3181de",
+  hoverinfo = "y",
+  hoverformat = ".2f",
+  yaxistitle = FALSE,
+  xaxistitle = FALSE,
+  font_family = "Lato",
+  margin = list(l = 10, r = 10, b = 10, t = 10)
+) {
   plotly::plot_ly(
     data = data,
     x = ~ get(x),
@@ -6236,26 +6390,27 @@ pgx.boxplot.PLOTLY <- function(
 #'
 #' @export
 pgx.barplot.PLOTLY <- function(
-    data,
-    x = NULL,
-    y = NULL,
-    title = NULL,
-    color = "#3181de",
-    fillcolor = "#A6CEE3",
-    linecolor = "#3181de",
-    titlecolor = "#1f77b4",
-    hoverinfo = "y",
-    hoverformat = ".2f",
-    yaxistitle = FALSE,
-    xaxistitle = FALSE,
-    xlen = NULL,
-    yrange = NULL,
-    barmode = "relative",
-    font_family = "Lato",
-    margin = list(l = 0, r = 0, b = 0, t = 0),
-    grouped = TRUE, # true will calculate mean +/- (sd) across groups
-    annotations = NULL,
-    pct.NA = NULL) {
+  data,
+  x = NULL,
+  y = NULL,
+  title = NULL,
+  color = "#3181de",
+  fillcolor = "#A6CEE3",
+  linecolor = "#3181de",
+  titlecolor = "#1f77b4",
+  hoverinfo = "y",
+  hoverformat = ".2f",
+  yaxistitle = FALSE,
+  xaxistitle = FALSE,
+  xlen = NULL,
+  yrange = NULL,
+  barmode = "relative",
+  font_family = "Lato",
+  margin = list(l = 0, r = 0, b = 0, t = 0),
+  grouped = TRUE, # true will calculate mean +/- (sd) across groups
+  annotations = NULL,
+  pct.NA = NULL
+) {
   if (is.null(x)) x <- 1
   if (is.null(y)) y <- 2
 
@@ -6789,7 +6944,6 @@ plotTimeSeries.groups <- function(time,
                                   lwd = 3,
                                   xlab = "time",
                                   time.factor = TRUE) {
-
   if (is.null(group)) group <- rep(1, length(time))
   groups <- sort(unique(group))
   ngroup <- length(groups)
@@ -6843,9 +6997,9 @@ plotTimeSeries.groups <- function(time,
   }
 
   title(main = main)
-  if (ngroup > 1)
+  if (ngroup > 1) {
     legend("bottomright", legend = groups, fill = 2:99, y.intersp = 0.8, cex = 0.9)
-
+  }
 }
 
 
@@ -7120,7 +7274,8 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
                                    xpos = NULL, xlim = NULL, justgraph = FALSE,
                                    edge.cex = 1, edge.alpha = 0.33, xdist = 1,
                                    normalize.edges = FALSE, yheight = 2,
-                                   edge.sign = "both", edge.type = "both",
+                                   edge.sign = c("both","pos","neg","consensus")[1],
+                                   edge.type = c("both","inter","intra","both2")[1],
                                    labpos = NULL, value.name = NULL,
                                    strip.prefix = FALSE, strip.prefix2 = FALSE,
                                    prune = FALSE,
@@ -7140,26 +7295,26 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
     edge.cex <- 1
     edge.alpha <- 0.33
     fc <- "value"
-    xdist = 1
-    normalize.edges = FALSE
-    yheight = 2
-    edge.sign = "both"     
+    xdist <- 1
+    normalize.edges <- FALSE
+    yheight <- 2
+    edge.sign <- "both"
     edge.type <- "both"
     labpos <- NULL
     layout <- c("parallel", "hive")[1]
     normalize.edges <- FALSE
     value.name <- "rho"
     strip.prefix <- FALSE
-    prune = FALSE
+    prune <- FALSE
   }
-  
+
   vattr <- igraph::vertex_attr_names(graph)
   edgeattr <- igraph::edge_attr_names(graph)
-  if(!"rho" %in% edgeattr) message("WARNING: no rho in edge attributes!")
-  if(!"weight" %in% edgeattr) message("WARNING: no weight in edge attributes!")
-  if(!"value" %in% vattr) stop("ERROR: no value in vertex attributes!")
-  if(!"layer" %in% vattr) stop("ERROR: no layer in vertex attributes!")
-  
+  if (!"rho" %in% edgeattr) message("WARNING: no rho in edge attributes!")
+  if (!"weight" %in% edgeattr) message("WARNING: no weight in edge attributes!")
+  if (!"value" %in% vattr) stop("ERROR: no value in vertex attributes!")
+  if (!"layer" %in% vattr) stop("ERROR: no layer in vertex attributes!")
+
   graph <- lasagna.prune_graph(
     graph,
     ntop = ntop,
@@ -7169,20 +7324,21 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
     edge.sign = edge.sign,
     edge.type = edge.type,
     filter = NULL,
-    prune = prune)
+    prune = prune
+  )
 
   layers <- graph$layers
-  layers <- setdiff(layers, c("SOURCE","SINK"))
+  layers <- setdiff(layers, c("SOURCE", "SINK"))
 
   fc <- igraph::V(graph)$value
   names(fc) <- igraph::V(graph)$name
-  
+
   ## layout
   vlayer <- igraph::V(graph)$layer
   if (layout == "parallel") {
     if (is.null(xpos)) xpos <- c(0:(length(layers) - 1))
     xpos <- xpos * xdist
-    xpos <- head(rep(xpos,10),length(layers))
+    xpos <- head(rep(xpos, 10), length(layers))
     x <- xpos[match(vlayer, layers)]
     y <- fc[igraph::V(graph)$name]
     layout.xy <- cbind(x = x, y = y)
@@ -7219,20 +7375,20 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
   ew <- (ewt / max.wt)**2
 
   ## vertex size relative to centrality
-  vx <- log(1000*igraph::page_rank(graph, weights=ewt)$vector)
-  vx <- (0.1+abs(vx)/max(abs(vx)))**1
-  vcol <- c("blue2","red2")[ 1+1*(fc[vv] > 0)]
+  vx <- log(1000 * igraph::page_rank(graph, weights = ewt)$vector)
+  vx <- (0.1 + abs(vx) / max(abs(vx)))**1
+  vcol <- c("blue2", "red2")[1 + 1 * (fc[vv] > 0)]
 
   ## color edges by sign or correlation. set NA edges to grey
-  ecol <- c("darkorange3","magenta4")[ 1+1*(igraph::E(graph)$rho >= 0)]    
+  ecol <- c("darkorange3", "magenta4")[1 + 1 * (igraph::E(graph)$rho >= 0)]
   ii <- which(is.na(igraph::E(graph)$rho))
-  if(length(ii)) ecol[ii] <- "grey70"
+  if (length(ii)) ecol[ii] <- "grey70"
   ecol <- adjustcolor(ecol, edge.alpha)
-  
+
   ## add curvature for intra-edges
-  ecurv <- c(-0.25,0)[1 + 1*grepl("->",igraph::E(graph)$connection_type)]
-  #ecurv <- c(TRUE,FALSE)[1 + 1*grepl("->",igraph::E(graph)$connection_type)]
-  
+  ecurv <- c(-0.25, 0)[1 + 1 * grepl("->", igraph::E(graph)$connection_type)]
+  # ecurv <- c(TRUE,FALSE)[1 + 1*grepl("->",igraph::E(graph)$connection_type)]
+
   igraph::V(graph)$label <- ""
   if (is.null(xlim)) {
     xlim <- range(layout.xy[, 1])
@@ -7355,8 +7511,8 @@ plotHivePlot <- function(X, f, group, groups = NULL,
   gr <- igraph::graph_from_edgelist(ee, directed = FALSE)
   igraph::E(gr)$weight <- abs(R[idx])
   igraph::V(gr)$group <- group[igraph::V(gr)$name]
-  
-  if(length(gr)==0) {
+
+  if (length(gr) == 0) {
     message("[plotHivePlot] ERROR. empty graph.")
     return(NULL)
   }
@@ -7511,3 +7667,4 @@ plotAdjacencyMatrixFromGraph <- function(graph, nmax = 40, binary = FALSE,
     sym = TRUE, ...
   )
 }
+

@@ -246,7 +246,6 @@ scale_color_omics_d <- function(palette = "default", reverse = FALSE, ...) {
 }
 
 
-
 #' Fill scale constructor for discrete omics color palettes
 #'
 #' @param palette Character name of palette in omics_palettes
@@ -285,4 +284,3 @@ color_from_middle <- function(data, color1, color2) {
   max_val <- max(abs(data), na.rm = TRUE)
   DT::JS(sprintf("isNaN(parseFloat(value)) || value < 0 ? 'linear-gradient(90deg, transparent, transparent ' + (50 + value/%s * 50) + '%%, %s ' + (50 + value/%s * 50) + '%%,%s  50%%,transparent 50%%)': 'linear-gradient(90deg, transparent, transparent 50%%, %s 50%%, %s ' + (50 + value/%s * 50) + '%%, transparent ' + (50 + value/%s * 50) + '%%)'", max_val, color1, max_val, color1, color2, color2, max_val, max_val))
 }
-
