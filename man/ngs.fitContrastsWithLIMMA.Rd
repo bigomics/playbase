@@ -8,7 +8,6 @@
 ngs.fitContrastsWithLIMMA(
   X,
   contr.matrix,
-  design,
   covariates = NULL,
   method = c("voom", "limma"),
   trend = TRUE,
