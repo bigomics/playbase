@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-read.R
 \name{read_spectronaut}
 \alias{read_spectronaut}
-\title{Read Spectronaut output abundance file and generates abundance matrix.}
+\title{Read Spectronaut output abundance global proteome data file.}
 \usage{
 read_spectronaut(file)
 }
@@ -13,5 +13,5 @@ read_spectronaut(file)
 abundance data matrix (features on rows; samples on columns)
 }
 \description{
-Read Spectronaut output abundance file and generates abundance matrix.
+Read Spectronaut output abundance global proteome data file.
 }
