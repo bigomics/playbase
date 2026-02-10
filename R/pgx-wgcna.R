@@ -686,8 +686,6 @@ wgcna.compute_multiomics <- function(dataX,
       GMT = GMT,
       filter = NULL
     )
-
-    dbg("[wgcna.compute_multiomics] length(gsea) = ", length(gsea))
     
     ## split up results?? still needed in old formats
     for(k in names(layers)) {
@@ -701,27 +699,14 @@ wgcna.compute_multiomics <- function(dataX,
   lasagna.graph <- NULL
   do.lasagna = TRUE
   if(do.lasagna) {
-    dbg("[wgcna.compute_multiomics] >>> creating lasagna ")
-
-    dbg("[wgcna.compute_multiomics] names(layers) = ", names(layers))
     
     ## Get eigengene matrices, remove grey modules
     ww <- lapply(layers, function(w) t(w$net$MEs))
-    dbg("[wgcna.compute_multiomics] length(ww) = ", length(ww))
-    dbg("[wgcna.compute_multiomics] nrow(ww) = ", sapply(ww,nrow))
-    dbg("[wgcna.compute_multiomics] rownames(ww) = ", sapply(ww,rownames))
-
     ww <- lapply(ww, function(w) w[!grepl("[A-Z]{2}grey$", rownames(w)), , drop=FALSE])
     ww <- ww[which(sapply(ww,nrow)>0)]
     
     datTraits <- layers[[1]]$datTraits    
     gdata <- list( X = ww, samples = datTraits )
-
-    dbg("[wgcna.compute_multiomics] creating model ")
-    dbg("[wgcna.compute_multiomics] length(ww) = ", length(ww))
-    dbg("[wgcna.compute_multiomics] nrow(ww) = ", sapply(ww,nrow))
-    dbg("[wgcna.compute_multiomics] ncol(ww) = ", sapply(ww,ncol))    
-    dbg("[wgcna.compute_multiomics] dim(datTraits) = ", dim(datTraits))
     
     ## Create lasagna model
     lasagna.model <- lasagna.create_model(
@@ -734,8 +719,6 @@ wgcna.compute_multiomics <- function(dataX,
       fully_connect = FALSE,
       add.revpheno = TRUE
     )
-
-    dbg("[wgcna.compute_multiomics] conditioning... ")
     
     ## Multi-condition edge weighting
     lasagna.graph <- lasagna.multisolve(
@@ -751,7 +734,6 @@ wgcna.compute_multiomics <- function(dataX,
 
   report.out <- NULL
   if(report) {
-    dbg("[wgcna.compute_multiomics] >>> creating report")
     ## Create summaries of each module.
     ##
     if(!is.null(progress)) progress$set(message = "Creating report...", value=0.8)
@@ -771,8 +753,6 @@ wgcna.compute_multiomics <- function(dataX,
   ## get some settings
   power <- sapply(layers, function(a) a$net$power, USE.NAMES=FALSE)
   names(power) <- names(layers)
-
-  dbg("[wgcna.compute_multiomics] copying settings...")
   
   ## IK: new structure. like consensus. put datatype wgcna in
   ## layers slot.  
@@ -792,8 +772,6 @@ wgcna.compute_multiomics <- function(dataX,
     #ai_model = ai_model,
     NULL
   ) 
-  
-  dbg("[wgcna.compute_multiomics] creating out list")
 
   out <- list(
     layers = layers,
@@ -1485,8 +1463,6 @@ wgcna.computeModuleEnrichment <- function(wgcna,
   gsea <- list()
   dtype = names(wgcna)[1]
   for(dtype in names(wgcna)) {
-    
-    dbg("[wgcna.computeModuleEnrichment] dtype = ", dtype)
 
     ## collapse features to symbol
     sel <- unique(c(dtype, xref))
@@ -1494,16 +1470,12 @@ wgcna.computeModuleEnrichment <- function(wgcna,
     geneX <- mofa.merge_data2(datExpr, merge.rows="prefix", merge.cols="union")
     geneX <- rename_by2(geneX, annot, symbol.col)
 
-    dbg("[wgcna.computeModuleEnrichment] dim.geneX = ", dim(geneX))
-
     ## check if overlap exists
     bg <- intersect(rownames(geneX), rownames(GMT))
     if (length(bg) == 0) {
       message("[wgcna.computeModuleEnrichment] WARNING. no overlapping genes for ", dtype)
       next()
     }
-
-    dbg("[wgcna.computeModuleEnrichment] length(bg) = ", length(bg))
     
     G1 <- GMT[bg, , drop = FALSE]
     if (!is.null(filter)) {
@@ -1511,8 +1483,6 @@ wgcna.computeModuleEnrichment <- function(wgcna,
       if (length(sel)) G1 <- G1[, sel, drop = FALSE]
     }
     G1 <- G1[, which(Matrix::colSums(G1 != 0) >= min.genes), drop = FALSE]
-
-    dbg("[wgcna.computeModuleEnrichment] dim.G1 = ", dim(G1))
     
     if(nrow(G1)>=3 && ncol(G1)>=3 ) {
       ## get eigengene members. convert to symbols.
@@ -1532,21 +1502,11 @@ wgcna.computeModuleEnrichment <- function(wgcna,
         xtop = xtop,
         min.rho = min.rho
       )
-
-      dbg("[wgcna.computeModuleEnrichment] len.gsea = ", length(gsea))
-      dbg("[wgcna.computeModuleEnrichment] len.dtgsea = ", length(dt.gsea))
-      dbg("[wgcna.computeModuleEnrichment] names.dtgsea = ", names(dt.gsea))
-      dbg("[wgcna.computeModuleEnrichment] dim.dtgsea = ", dim(dt.gsea))
       
       ## add to results
       gsea <- c(gsea, dt.gsea)
-
-      dbg("[wgcna.computeModuleEnrichment] len.gsea = ", length(gsea))      
     }    
   }
-
-  dbg("[wgcna.computeModuleEnrichment] done!")
-
   
   return(gsea)
 }
@@ -1762,8 +1722,6 @@ wgcna.run_enrichment_methods <- function(ME, me.genes, GMT, geneX,
     gse.list[[k]]$overlap <- paste0(n1, "/", n0)
     gse.list[[k]]$genes <- set.genes
   }
-
-  dbg("[wgcna.run_enrichment_methods] done!")
   
   return(gse.list)
 }
@@ -5923,6 +5881,13 @@ Format like a scientific article, use prose as much as possible, minimize the us
       ai_model = ai_model
     )
   }
+
+  # check if title
+  if(!grepl("^#[ ]",report)) {
+    tt <- "# WGCNA Analysis Report\n\n"
+    report <- paste(tt, report)
+  }
+  report <- gsub(intToUtf8("8209"),"-",report)
   
   list(
     descriptions_prompts = descriptions_prompts,

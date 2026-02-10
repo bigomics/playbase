@@ -189,3 +189,40 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
   return(content)
 }
 
+#' Export markdown to PDF 
+#' 
+#' @export
+markdownToPDF <- function(text, file) {
+
+  text <- gsub(intToUtf8("8209"),"-",text)
+  ##text <- gsub("---\n","",text)
+  
+  ## header/frontmatter
+  hdr <- paste0("---\n")
+  hdr <- paste0(hdr, "format:\n")
+  hdr <- paste0(hdr, "  pdf:\n")
+  #hdr <- paste0(hdr, "    documentclass: report\n")  
+  hdr <- paste0(hdr, "    pdf-engine: lualatex\n")
+  hdr <- paste0(hdr, "    documentclass: article\n")
+  hdr <- paste0(hdr, "    papersize: a4\n")
+  hdr <- paste0(hdr, "    geometry:\n")
+  hdr <- paste0(hdr, "      - left=25mm\n")
+  hdr <- paste0(hdr, "      - right=20mm\n")
+  hdr <- paste0(hdr, "      - top=25mm\n")
+  hdr <- paste0(hdr, "      - bottom=25mm\n")
+  hdr <- paste0(hdr, "    mainfont: Lato\n")
+  hdr <- paste0(hdr,"---\n") 
+
+  text <- sub("^#", paste0(hdr,"\n#"), text)
+  
+  curwd <- getwd()
+  tmpdir <- tempdir()
+  setwd(tmpdir)
+  md.file <- file.path(tmpdir,"report.md")
+  write(text, file=md.file)
+  quarto::quarto_render(md.file, output_format="pdf", quiet=TRUE)
+  pdf.file <- file.path(tmpdir,"report.pdf")
+  setwd(curwd)
+  file.copy(pdf.file, file, overwrite=TRUE)
+  return(file)
+}
