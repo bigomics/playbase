@@ -155,6 +155,51 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
   return(X)
 }
 
+#' @title Normalize 450K and EPIC Methylation array data
+#' @description Normalizes a matrix of 450K and EPIC Methylation data.
+#' @param x Matrix of Beta or M-values. We use Beta. Probes in rows; samples in columns.
+#' @param method Normalization method(s) to use. At the moment BMIQ or quantile. To expand.
+#' @return Normalized normalized Beta values matrix.
+#' @export
+normalizeMethylationArray <- function(X, method = "BMIQ", probe.types = NULL) {
+
+  msg <- function(...) message("[playbase::normalizeMethylationArray]", ...)
+
+  m <- method
+  methods <- c("BMIQ", "quantile")
+  if (!m %in% methods) {
+    msg("Unknown mormalization method. Returning input matrix")
+    return(X)
+  }
+  
+  vv <- range(X, na.rm = TRUE)
+  is.beta <- FALSE
+  if (min(vv) == 0 && max(vv) == 1) is.beta <- TRUE
+  if (!is.beta) X <- (2 ^ X) / (2 ^ X + 1)
+  
+  if (m == "BMIQ") {
+    if (is.null(probe.types)) {
+      msg("BMIQ norm: missing probe types. Returning input matrix.")
+      return(X)
+    }
+    if (length(probe.types) != nrow(X)) {
+      message("BMIQ norm: length of probe types vector different than probes. Returning input matrix.")
+      return(X)
+    }
+    msg("Sample-specific BMIQ normalization")
+    for (i in 1:ncol(X)) {
+      norm <- wateRmelon::BMIQ(X[, i], design.v = probe.types, plots = FALSE)
+      X[, i] <- norm$nbeta
+    }
+  } else if (m == "quantile") {
+    msg("Quantile normalization")
+    X <- limma::normalizeQuantiles(X)
+  }
+  
+  return(X)
+  
+}
+
 #' @title Get prior value for normalization for non-gx data.
 #' For other data types (proteomics, metabolomics, lipidomics) we use min positive.
 #'
