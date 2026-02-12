@@ -157,11 +157,13 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
 
 #' @title Normalize 450K and EPIC Methylation array data
 #' @description Normalizes a matrix of 450K and EPIC Methylation data.
-#' @param x Matrix of Beta or M-values. We use Beta. Probes in rows; samples in columns.
+#' @param X Matrix of Beta or M-values. We use Beta. Probes in rows; samples in columns.
 #' @param method Normalization method(s) to use. At the moment BMIQ or quantile. To expand.
+#' @param probe.types Vector of type I and type II probes. Needs to match rownames(X).
+#' @param nfit Number of probes of a given design type to use for the fitting. In most cases, 5000 or 10000 is ok.
 #' @return Normalized normalized Beta values matrix.
 #' @export
-normalizeMethylationArray <- function(X, method = "BMIQ", probe.types = NULL) {
+normalizeMethylationArray <- function(X, method = "BMIQ", probe.types = NULL, nfit = 5000) {
 
   msg <- function(...) message("[playbase::normalizeMethylationArray]", ...)
 
@@ -186,14 +188,17 @@ normalizeMethylationArray <- function(X, method = "BMIQ", probe.types = NULL) {
       message("BMIQ norm: length of probe types vector different than probes. Returning input matrix.")
       return(X)
     }
-    msg("Sample-specific BMIQ normalization")
+    msg("wateRmelon::BMIQ: sample-specific BMIQ normalization")
+    X[which(X <= 0)] <- 0.0001
+    X[which(X >= 1)] <- 0.9999
     for (i in 1:ncol(X)) {
-      norm <- wateRmelon::BMIQ(X[, i], design.v = probe.types, plots = FALSE)
-      X[, i] <- norm$nbeta
+      bmiq <- wateRmelon::BMIQ(X[, i], design.v = probe.types, nfit = nfit, plots = FALSE, pri = FALSE)
+      X[, i] <- bmiq$nbeta
     }
   } else if (m == "quantile") {
-    msg("Quantile normalization")
-    X <- limma::normalizeQuantiles(X)
+    msg("wateRmelon::betaqn: beta quantile normalization")
+    # limma::normalizeQuantiles(X)
+    X <- wateRmelon::betaqn(X)
   }
   
   return(X)
