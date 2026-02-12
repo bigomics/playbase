@@ -163,7 +163,7 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
 #' @param nfit Number of probes of a given design type to use for the fitting. In most cases, 5000 or 10000 is ok.
 #' @return Normalized normalized Beta values matrix.
 #' @export
-normalizeMethylationArray <- function(X, method = "BMIQ", probe.types = NULL, nfit = 5000) {
+normalizeMethylationArray <- function(X, method = "BMIQ", probe.types = NULL, nfit = 3000) {
 
   msg <- function(...) message("[playbase::normalizeMethylationArray]", ...)
 
@@ -173,12 +173,13 @@ normalizeMethylationArray <- function(X, method = "BMIQ", probe.types = NULL, nf
     msg("Unknown mormalization method. Returning input matrix")
     return(X)
   }
-  
+
   vv <- range(X, na.rm = TRUE)
-  is.beta <- FALSE
-  if (min(vv) == 0 && max(vv) == 1) is.beta <- TRUE
-  if (!is.beta) X <- (2 ^ X) / (2 ^ X + 1)
-  
+  is.beta <- all(vv>=0 & vv<=1)
+  if (!is.beta) {
+    msg("Input data seems not to be Beta signal. Assuming is M values. Converting to Beta.")
+    X <- (2 ^ X) / (2 ^ X + 1)
+  }
   if (m == "BMIQ") {
     if (is.null(probe.types)) {
       msg("BMIQ norm: missing probe types. Returning input matrix.")
