@@ -152,8 +152,7 @@ getProbeAnnotation <- function(organism,
     kk <- c("symbol", "genomic_location")
     for(i in 1:ncol(annot[, kk, drop = FALSE])) {
       ff <- lapply(annot[, kk[i]], function(x) strsplit(x, ";")[[1]])
-      ff <- unlist(lapply(ff, function(x) paste0(unique(x), collapse = ";")))
-      annot[, kk[i]] <- ff
+      annot[, kk[i]] <- unlist(lapply(ff, function(x) paste0(unique(x),collapse=";")))
     }
     
     ff <- ifelse(is.na(annot$symbol) | annot$symbol == "", "probe", annot$symbol)
@@ -164,8 +163,7 @@ getProbeAnnotation <- function(organism,
     genes$symbol <- genes$gene_name <- annot$symbol
     kk <- setdiff(colnames(annot), colnames(genes))
     if (length(kk)) genes <- cbind(genes, annot[, kk, drop = FALSE])
-    rm(annot, ff)
-    return(genes)
+    rm(annot, ff); return(genes)
 
   }
 
