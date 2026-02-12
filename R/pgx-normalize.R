@@ -161,16 +161,16 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
 #' @param method Normalization method(s) to use. At the moment BMIQ or quantile. To expand.
 #' @param probe.types Vector of type I and type II probes. Needs to match rownames(X).
 #' @param nfit Number of probes of a given design type to use for the fitting. In most cases, 5000 or 10000 is ok.
-#' @return Normalized normalized Beta values matrix.
+#' @return Normalized Beta values matrix.
 #' @export
-normalizeMethylationArray <- function(X, method = "BMIQ", probe.types = NULL, nfit = 3000) {
+normalizeMethylationArray <- function(X, method = "BMIQ", probe.types = NULL, nfit = 2000) {
 
   msg <- function(...) message("[playbase::normalizeMethylationArray]", ...)
 
   m <- method
   methods <- c("BMIQ", "quantile")
   if (!m %in% methods) {
-    msg("Unknown mormalization method. Returning input matrix")
+    msg("Unknown mormalization method. Must be BMIQ or quantile. Returning input matrix")
     return(X)
   }
 
@@ -178,7 +178,7 @@ normalizeMethylationArray <- function(X, method = "BMIQ", probe.types = NULL, nf
   is.beta <- all(vv>=0 & vv<=1)
   if (!is.beta) {
     msg("Input data seems not to be Beta signal. Assuming is M values. Converting to Beta.")
-    X <- (2 ^ X) / (2 ^ X + 1)
+    X <- (2 ^ X) / (2 ^ X + 1) ## CHECK
   }
   if (m == "BMIQ") {
     if (is.null(probe.types)) {
@@ -198,7 +198,6 @@ normalizeMethylationArray <- function(X, method = "BMIQ", probe.types = NULL, nf
     }
   } else if (m == "quantile") {
     msg("wateRmelon::betaqn: beta quantile normalization")
-    # limma::normalizeQuantiles(X)
     X <- wateRmelon::betaqn(X)
   }
   
