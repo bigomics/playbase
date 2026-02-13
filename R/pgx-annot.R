@@ -137,36 +137,11 @@ getProbeAnnotation <- function(organism,
   annot.unknown <- unknown.organism || unknown.datatype || unknown.probetype
   organism <- normalizeOrganism(organism)
 
-  ## Handle entire annotation for 450K+850K methylomics.
   if (datatype == "methylomics") {
-
-    pkg <- "IlluminaHumanMethylation450kanno.ilmn12.hg19"
-    if (length(probes) > 500000) pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
-    require(pkg, character.only = TRUE)
-    annot <- as.data.frame(minfi::getAnnotation(get(pkg)))
-    kk <- c("chr", "UCSC_RefGene_Name", "UCSC_RefGene_Group", "Relation_to_Island")
-    annot <- annot[probes, intersect(kk, colnames(annot)), drop = FALSE]    
-    colnames(annot)[colnames(annot) == "UCSC_RefGene_Name"] <- "symbol"
-    colnames(annot)[colnames(annot) == "UCSC_RefGene_Group"] <- "genomic_location"    
-
-    kk <- c("symbol", "genomic_location")
-    for(i in 1:ncol(annot[, kk, drop = FALSE])) {
-      ff <- lapply(annot[, kk[i]], function(x) strsplit(x, ";")[[1]])
-      annot[, kk[i]] <- unlist(lapply(ff, function(x) paste0(unique(x),collapse=";")))
-    }
-    
-    ff <- ifelse(is.na(annot$symbol) | annot$symbol == "", "probe", annot$symbol)
-    ff <- playbase::make_unique(ff)
-    genes <- playbase::getGeneAnnotation("Human", ff)
-    genes <- genes[match(ff, genes$feature), ]
-    rownames(genes) <- genes$feature <- rownames(annot)
-    genes$symbol <- genes$gene_name <- annot$symbol
-    kk <- setdiff(colnames(annot), colnames(genes))
-    if (length(kk)) genes <- cbind(genes, annot[, kk, drop = FALSE])
-    rm(annot, ff); return(genes)
-
+    genes <- annotate_methylomics(organism, probes)
+    return(genes)
   }
-
+  
   ## clean probe names
   probes <- trimws(probes)
   probes[probes == "" | is.na(probes)] <- "NA"
@@ -241,6 +216,51 @@ getProbeAnnotation <- function(organism,
 
   return(genes)
 
+}
+
+#' Handle entire annotation for 450K+850K methylomics.
+#' @param organism Strictly human (for now).
+#' @param probes 450K or 850K array methylation probes.
+#' @return Ann. dframe: feature;symbol;gene_name;gene_title;chr;source;position;uniprot;
+#' @export
+annotate_methylomics <- function(organism = "Human", probes = probes) {
+
+  msg <- function(...) message("[playbase::annotate_methylomics] ", ...)
+
+  if (!organism %in% c("Human", "Homo sapiens")) {
+    msg("Error: annotation of methylomics probes limited to only Human.")
+    return(NULL)
+  }
+
+  msg("Annotating methylomics data...")
+  pkg <- "IlluminaHumanMethylation450kanno.ilmn12.hg19"
+  if (length(probes) > 500000) pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
+  require(pkg, character.only = TRUE)
+  annot <- as.data.frame(minfi::getAnnotation(get(pkg)))
+  kk <- c("chr", "UCSC_RefGene_Name", "UCSC_RefGene_Group", "Relation_to_Island")
+  annot <- annot[probes, intersect(kk, colnames(annot)), drop = FALSE]    
+  colnames(annot)[colnames(annot) == "UCSC_RefGene_Name"] <- "symbol"
+  colnames(annot)[colnames(annot) == "UCSC_RefGene_Group"] <- "genomic_location"    
+
+  kk <- c("symbol", "genomic_location")
+  for(i in 1:ncol(annot[, kk, drop = FALSE])) {
+    ff <- lapply(annot[, kk[i]], function(x) strsplit(x, ";")[[1]])
+    annot[, kk[i]] <- unlist(lapply(ff, function(x) paste0(unique(x),collapse=";")))
+  }
+  
+  ff <- ifelse(is.na(annot$symbol) | annot$symbol == "", "probe", annot$symbol)
+  ff <- playbase::make_unique(ff)
+  genes <- playbase::getGeneAnnotation("Human", ff)
+  genes <- genes[match(ff, genes$feature), ]
+  rownames(genes) <- genes$feature <- rownames(annot)
+  genes$symbol <- genes$gene_name <- annot$symbol
+  kk <- setdiff(colnames(annot), colnames(genes))
+  if (length(kk)) genes <- cbind(genes, annot[, kk, drop = FALSE])
+  rm(annot, ff)
+
+  msg("Annotation completed\n")
+  return(genes)
+  
 }
 
 #' Get gene annotation data using annothub or orthogene.
