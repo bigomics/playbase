@@ -159,11 +159,10 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
 #' @description Normalizes a matrix of 450K and EPIC Methylation data.
 #' @param X Matrix of Beta or M-values. We use Beta. Probes in rows; samples in columns.
 #' @param method Normalization method(s) to use. At the moment BMIQ or quantile. To expand.
-#' @param probe.types Vector of type I and type II probes. Needs to match rownames(X).
 #' @param nfit Number of probes of a given design type to use for the fitting. In most cases, 5000 or 10000 is ok.
 #' @return Normalized Beta values matrix.
 #' @export
-normalizeMethylation <- function(X, method = "BMIQ", probe.types = NULL, nfit = 2000) {
+normalizeMethylation <- function(X, method = "BMIQ", nfit = 2000) {
 
   msg <- function(...) message("[playbase::normalizeMethylation]", ...)
 
@@ -180,15 +179,21 @@ normalizeMethylation <- function(X, method = "BMIQ", probe.types = NULL, nfit = 
     msg("Input data seems not to be Beta signal. Assuming is M values. Converting to Beta.")
     X <- (2 ^ X) / (2 ^ X + 1) ## CHECK
   }
+
   if (m == "BMIQ") {
-    if (is.null(probe.types)) {
-      msg("BMIQ norm: missing probe types. Returning input matrix.")
-      return(X)
-    }
+
+    pkg="IlluminaHumanMethylation450kanno.ilmn12.hg19"
+    if (nrow(X) > 600000) pkg="IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
+    require(pkg, character.only = TRUE)
+    annot <- minfi::getAnnotation(get(pkg))
+    probe.types <- as.character(annot[rownames(X), "Type"])
+    names(probe.types) <- rownames(X)[which(rownames(X) %in% rownames(annot))]
+    probe.types <- ifelse(probe.types == "I", 1, ifelse(probe.types == "II", 2, NA))
     if (length(probe.types) != nrow(X)) {
       message("BMIQ norm: length of probe types vector different than probes. Returning input matrix.")
       return(X)
     }
+
     msg("wateRmelon::BMIQ: sample-specific BMIQ normalization")
     X[which(X <= 0)] <- 0.0001
     X[which(X >= 1)] <- 0.9999
@@ -196,9 +201,11 @@ normalizeMethylation <- function(X, method = "BMIQ", probe.types = NULL, nfit = 
       bmiq <- wateRmelon::BMIQ(X[, i], design.v = probe.types, nfit = nfit, plots = FALSE, pri = FALSE)
       X[, i] <- bmiq$nbeta
     }
+
   } else if (m == "quantile") {
     msg("wateRmelon::betaqn: beta quantile normalization")
     X <- wateRmelon::betaqn(X)
+
   }
   
   return(X)
