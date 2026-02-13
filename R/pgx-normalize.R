@@ -164,7 +164,7 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
 #' @export
 normalizeMethylation <- function(X, method = "BMIQ", nfit = 2000) {
 
-  msg <- function(...) message("[playbase::normalizeMethylation]", ...)
+  msg <- function(...) message("[playbase::normalizeMethylation] ", ...)
 
   m <- method
   methods <- c("BMIQ", "quantile")
@@ -190,7 +190,7 @@ normalizeMethylation <- function(X, method = "BMIQ", nfit = 2000) {
     names(probe.types) <- rownames(X)[which(rownames(X) %in% rownames(annot))]
     probe.types <- ifelse(probe.types == "I", 1, ifelse(probe.types == "II", 2, NA))
     if (length(probe.types) != nrow(X)) {
-      message("BMIQ norm: length of probe types vector different than probes. Returning input matrix.")
+      msg("BMIQ norm: length of probe types vector different than probes. Returning input matrix.")
       return(X)
     }
 
@@ -202,12 +202,15 @@ normalizeMethylation <- function(X, method = "BMIQ", nfit = 2000) {
       X[, i] <- bmiq$nbeta
     }
 
+    rm(annot, probe.types, bmiq)
+
   } else if (m == "quantile") {
     msg("wateRmelon::betaqn: beta quantile normalization")
     X <- wateRmelon::betaqn(X)
-
   }
   
+  msg("Normalization completed\n")
+
   return(X)
   
 }
