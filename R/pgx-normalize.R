@@ -163,9 +163,9 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
 #' @param nfit Number of probes of a given design type to use for the fitting. In most cases, 5000 or 10000 is ok.
 #' @return Normalized Beta values matrix.
 #' @export
-normalizeMethylationArray <- function(X, method = "BMIQ", probe.types = NULL, nfit = 2000) {
+normalizeMethylation <- function(X, method = "BMIQ", probe.types = NULL, nfit = 2000) {
 
-  msg <- function(...) message("[playbase::normalizeMethylationArray]", ...)
+  msg <- function(...) message("[playbase::normalizeMethylation]", ...)
 
   m <- method
   methods <- c("BMIQ", "quantile")
