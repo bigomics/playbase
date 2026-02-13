@@ -165,7 +165,7 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
 normalizeMethylation <- function(X, method = "BMIQ", nfit = 2000) {
 
   msg <- function(...) message("[playbase::normalizeMethylation] ", ...)
-
+  
   m <- method
   methods <- c("BMIQ", "quantile")
   if (!m %in% methods) {
@@ -173,6 +173,8 @@ normalizeMethylation <- function(X, method = "BMIQ", nfit = 2000) {
     return(X)
   }
 
+  msg("Input data: ", nrow(X), " probes; ", ncol(X), " samples.")
+  
   vv <- range(X, na.rm = TRUE)
   is.beta <- all(vv>=0 & vv<=1)
   if (!is.beta) {
