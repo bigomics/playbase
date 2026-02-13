@@ -1900,7 +1900,8 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
                              title = NULL, zfix = FALSE,
                              set.par = TRUE, par.sq = FALSE,
                              level = "gene", plotlib = "ggplot",
-                             data = FALSE, labeltype = "feature") {
+                             data = FALSE, labeltype = "feature",
+                             col = NULL) {
   if (!is.null(contrast)) {
     if (is.numeric(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
     res <- NULL
@@ -1988,6 +1989,7 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
       pos,
       var = f1,
       type = "numeric",
+      col = col,
       xlab = "UMAP-x  (genes)",
       ylab = "UMAP-y  (genes)",
       hilight = this.hilight,
@@ -6010,7 +6012,8 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
                                        colors = NULL, lmar = 60, na_text = NULL,
                                        rowcex = 1, colcex = 1, show_legend = TRUE,
                                        zlim = NULL, symm = NULL,
-                                       return_x_matrix = FALSE) {
+                                       return_x_matrix = FALSE,
+                                       splitx_order = NULL) {
   ## constants
   col_annot_height <- 0.021
   if (!is.null(idx)) idx <- as.character(idx)
@@ -6097,6 +6100,12 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   ## ------ split X-axis by some group factor
   if (!is.null(splitx)) {
     xx <- tapply(colnames(X), splitx, function(i) X[, i, drop = FALSE])
+    ## Apply custom group ordering if provided
+    if (!is.null(splitx_order)) {
+      ordered_names <- intersect(splitx_order, names(xx))
+      remaining <- setdiff(names(xx), ordered_names)
+      xx <- xx[c(ordered_names, remaining)]
+    }
   } else {
     xx <- list("Samples" = X)
   }
