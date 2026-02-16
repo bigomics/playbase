@@ -155,7 +155,46 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
   return(X)
 }
 
-#' @title Normalize 450K and EPIC Methylation array data
+#' @title betaToM
+#' @description Convert Beta to M values; 450K+850K Meth Array.
+#' @param X Matrix of Beta values. Probes in rows; samples in columns.
+#' @return Matrix of M values.
+#' @export
+betaToM <- function(beta, offset = 1e-6) {
+  message("[playbase::betaToM] Methylomics: converting Beta values to M values.")
+  vv <- range(beta, na.rm = TRUE)
+  is.beta <- (vv[1] >= 0 & vv[2] <= 1)
+  if (!is.beta) {
+    message("[playbase::betaToM] Error: input data seems not be beta values. Returning input matrix.")
+    return(beta)
+  } else {
+    beta <- pmin(pmax(beta, offset), 1 - offset)
+    m <- log2(beta / (1 - beta))
+    message("[playbase::betaToM] Methylomics: Beta to M values conversion completed.\n")
+    rm(beta); return(m)
+  }
+}
+
+#' @title mToBeta
+#' @description Convert  M to Beta values; 450K+850K Meth Array.
+#' @param X Matrix of M values. Probes in rows; samples in columns.
+#' @return Matrix of Beta values.
+#' @export
+mToBeta <- function(m) {
+  message("[playbase::mToBeta] Methylomics: converting M values to Beta values.")
+  vv <- range(m, na.rm = TRUE)
+  is.beta <- (vv[1] >= 0 & vv[2] <= 1)
+  if (is.beta) {
+    message("[playbase::mtoBeta] Input data seems already beta values. Returning input matrix.")
+    return(m)
+  } else {
+    beta <- (2^m / (1 + 2^m))
+    message("[playbase::mToBeta] Methylomics: M to Beta values conversion completed.\n")
+    rm(m); return(beta)
+  }
+}
+
+#' @title normalizeMethylation
 #' @description Normalizes a matrix of 450K and EPIC Methylation data.
 #' @param X Matrix of Beta or M-values. We use Beta. Probes in rows; samples in columns.
 #' @param method Normalization method(s) to use. At the moment BMIQ or quantile. To expand.
@@ -174,14 +213,9 @@ normalizeMethylation <- function(X, method = "BMIQ", nfit = 2000) {
   }
 
   msg("Input data: ", nrow(X), " probes; ", ncol(X), " samples.")
-  
-  vv <- range(X, na.rm = TRUE)
-  is.beta <- all(vv>=0 & vv<=1)
-  if (!is.beta) {
-    msg("Input data seems not to be Beta signal. Assuming is M values. Converting to Beta.")
-    X <- (2 ^ X) / (2 ^ X + 1) ## CHECK
-  }
 
+  X <- mToBeta(X)
+  
   if (m == "BMIQ") {
 
     pkg="IlluminaHumanMethylation450kanno.ilmn12.hg19"
