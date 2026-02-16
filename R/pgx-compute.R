@@ -831,6 +831,9 @@ pgx.computePGX <- function(pgx,
     user_input_dir = user_input_dir
   )
 
+  ## methylomics: ensure all OPG graphics & tables use beta.
+  if (pgx$datatype == "methylomics") pgx$X <- playbase::mToBeta(pgx$X)
+  
   info("[pgx.computePGX] DONE")
   return(pgx)
 }
