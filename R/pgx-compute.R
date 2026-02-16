@@ -753,11 +753,6 @@ pgx.computePGX <- function(pgx,
     pgx <- pgx.clusterGenes(pgx, methods = mm, level = "gene")
   }
 
-  ## -----------------------------------------------------------------------------
-  ## Filter genes (previously in compute_testGenesSingleOmics). NEED
-  ## RETHINK?? MOVE TO PGXCREATE??
-  ## -----------------------------------------------------------------------------
-
   ## Shrink number of genes (highest SD/var)
   if (max.genes > 0 && nrow(pgx$counts) > max.genes) {
     message("shrinking data matrices: n= ", max.genes)
@@ -772,10 +767,6 @@ pgx.computePGX <- function(pgx,
   gg <- intersect(rownames(pgx$counts), rownames(pgx$X))
   pgx$counts <- pgx$counts[gg, ]
   pgx$X <- pgx$X[gg, ]
-
-  ## ======================================================================
-  ## ================= Run tests ==========================================
-  ## ======================================================================
 
   pgx$timings <- c()
   GENETEST.METHODS <- c(
