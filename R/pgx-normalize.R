@@ -159,7 +159,7 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
 #' @description Normalizes a matrix of 450K and EPIC Methylation data.
 #' @param X Matrix of Beta or M-values. We use Beta. Probes in rows; samples in columns.
 #' @param method Normalization method(s) to use. At the moment BMIQ or quantile. To expand.
-#' @param nfit Number of probes of a given design type to use for the fitting. In most cases, 5000 or 10000 is ok.
+#' @param nfit Number of probes type I and II for the fitting. In most cases, 5000 or 10000 is ok.
 #' @return Normalized Beta values matrix.
 #' @export
 normalizeMethylation <- function(X, method = "BMIQ", nfit = 2000) {
