@@ -142,11 +142,13 @@ compute_testGenes <- function(pgx,
   message("Testing differential expression methods: ", paste(methods, collapse = ", "))
   PRIOR.CPM <- 1
 
-  if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {
-    X <- playbase::betaToM(counts)
+  if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {    
     if ("Differentially methylated regions" %in% pgx$dma) {
       message("[playbase::compute_testGenes] Methylomics, DMRs. Collapse CpG probes into genes... ")
       X <- playbase::mergeCpG(X)
+      X <- playbase::betaToM(X)
+    } else {
+      X <- playbase::betaToM(counts)
     }
   }
 
