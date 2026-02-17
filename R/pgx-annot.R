@@ -121,13 +121,13 @@ normalizeOrganism <- function(organism) {
 
 #' Get probetype annotation for organism and datatype. For multi-omics
 #' probe names must be prefixed with data type.
-#'
 #' @export
 getProbeAnnotation <- function(organism,
                                probes,
                                datatype,
                                probetype = "",
                                annot_table = NULL) {
+
   if (is.null(datatype)) datatype <- "unknown"
   if (is.null(probetype)) probetype <- "unknown"
 
@@ -135,18 +135,20 @@ getProbeAnnotation <- function(organism,
   unknown.datatype <- (datatype %in% c("custom", "unkown"))
   unknown.probetype <- (probetype %in% c("custom", "unkown"))
   annot.unknown <- unknown.organism || unknown.datatype || unknown.probetype
-  annot.unknown
-
   organism <- normalizeOrganism(organism)
 
+  if (datatype == "methylomics") {
+    genes <- annotate_methylomics(organism, probes)
+    return(genes)
+  }
+  
   ## clean probe names
   probes <- trimws(probes)
   probes[probes == "" | is.na(probes)] <- "NA"
   probes0 <- make_unique(probes) ## make unique but do not clean
-  #  probes <- make_unique(clean_probe_names(probes0))  ## NEED RETHINK!! really???
   if (!is.null(annot_table)) {
     rownames(annot_table) <- make_unique(rownames(annot_table))
-  }
+  }    
 
   genes <- NULL
   if (annot.unknown) {
@@ -160,9 +162,7 @@ getProbeAnnotation <- function(organism,
       all.db = c("playdata", "annothub", "refmet"), check.first = TRUE
     )
     mx.check <- mean(!is.na(mx.check)) > 0.01
-    mx.check
     if (mx.check) {
-      ## Directly annotate if probes are recognized
       genes <- getMetaboliteAnnotation(
         probes,
         extra_annot = TRUE,
@@ -173,7 +173,6 @@ getProbeAnnotation <- function(organism,
       dbg("[getProbeAnnotation] WARNING: not able to map metabolomics probes")
     }
   } else if (datatype == "lipidomics") {
-    ## Directly annotate if probes are recognized
     genes <- getLipidAnnotation(
       probes,
       extra_annot = TRUE,
@@ -211,20 +210,60 @@ getProbeAnnotation <- function(organism,
     genes <- merge_annot_table(genes, annot_table, priority = 2)
   }
 
-  ## ensure full dimensions
   genes <- genes[match(probes, genes$feature), ]
-
-  ## restore original probe names
   rownames(genes) <- probes0
-
-  ## cleanup entries and reorder columns
   genes <- cleanupAnnotation(genes)
 
   return(genes)
+
+}
+
+#' Handle entire annotation for 450K+850K methylomics.
+#' @param organism Strictly human (for now).
+#' @param probes 450K or 850K array methylation probes.
+#' @return Ann. dframe: feature;symbol;gene_name;gene_title;chr;source;position;uniprot;
+#' @export
+annotate_methylomics <- function(organism = "Human", probes = probes) {
+
+  msg <- function(...) message("[playbase::annotate_methylomics] ", ...)
+
+  if (!organism %in% c("Human", "Homo sapiens")) {
+    msg("Error: annotation of methylomics probes limited to only Human.")
+    return(NULL)
+  }
+
+  msg("Annotating methylomics data...")
+  pkg <- "IlluminaHumanMethylation450kanno.ilmn12.hg19"
+  if (length(probes) > 500000) pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
+  require(pkg, character.only = TRUE)
+  annot <- as.data.frame(minfi::getAnnotation(get(pkg)))
+  kk <- c("chr", "UCSC_RefGene_Name", "UCSC_RefGene_Group", "Relation_to_Island")
+  annot <- annot[probes, intersect(kk, colnames(annot)), drop = FALSE]    
+  colnames(annot)[colnames(annot) == "UCSC_RefGene_Name"] <- "symbol"
+  colnames(annot)[colnames(annot) == "UCSC_RefGene_Group"] <- "genomic_location"    
+
+  kk <- c("symbol", "genomic_location")
+  for(i in 1:ncol(annot[, kk, drop = FALSE])) {
+    ff <- lapply(annot[, kk[i]], function(x) strsplit(x, ";")[[1]])
+    annot[, kk[i]] <- unlist(lapply(ff, function(x) paste0(unique(x),collapse=";")))
+  }
+  
+  ff <- ifelse(is.na(annot$symbol) | annot$symbol == "", "probe", annot$symbol)
+  ff <- playbase::make_unique(ff)
+  genes <- playbase::getGeneAnnotation("Human", ff)
+  genes <- genes[match(ff, genes$feature), ]
+  rownames(genes) <- genes$feature <- rownames(annot)
+  genes$symbol <- genes$gene_name <- annot$symbol
+  kk <- setdiff(colnames(annot), colnames(genes))
+  if (length(kk)) genes <- cbind(genes, annot[, kk, drop = FALSE])
+  rm(annot, ff)
+
+  msg("Annotation completed\n")
+  return(genes)
+  
 }
 
 #' Get gene annotation data using annothub or orthogene.
-#'
 #' @export
 getGeneAnnotation <- function(
     organism,
@@ -304,6 +343,7 @@ getGeneAnnotation <- function(
 
   return(annot)
 }
+
 
 
 #' Get gene annotation data using AnnotationHub
@@ -639,14 +679,6 @@ uniprot2gene <- function(uniprots, organism) {
   res[uniprots]
 }
 
-## #' Clean up inline duplicated features: eg: feature1;feature1;....
-## #'
-## #' @export
-## clean_dups_inline_probenames <- function(probes) {
-##   probes[is.na(probes)] <- ""
-##   probes <- sapply(strsplit(probes,split="[;,._]"),function(s) paste(unique(s),collapse=";"))
-##   return (probes)
-## }
 
 #' non-greedy removal of numerical postfix. Postfix is defined as (1)
 #' last numerical substring after - (minus), or (2) any substring

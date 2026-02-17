@@ -99,12 +99,13 @@ compute_testGenes <- function(pgx,
   samples <- pgx$samples[ss, ]
   X <- pgx$X[gg, ss, drop = FALSE]
 
-  ## -----------------------------------------------------------------------------
-  ## Do the fitting
-  ## -----------------------------------------------------------------------------
   methods <- test.methods
   message("Testing differential expression methods: ", paste(methods, collapse = ", "))
   PRIOR.CPM <- 1
+
+  if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {
+    X <- playbase::betaToM(counts) 
+  }
   
   ## Run all test methods
   message("[compute_testGenes] start fitting... ")

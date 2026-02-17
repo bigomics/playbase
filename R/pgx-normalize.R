@@ -155,6 +155,102 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
   return(X)
 }
 
+#' @title betaToM
+#' @description Convert Beta to M values; 450K+850K Meth Array.
+#' @param X Matrix of Beta values. Probes in rows; samples in columns.
+#' @return Matrix of M values.
+#' @export
+betaToM <- function(beta, offset = 1e-6) {
+  message("[playbase::betaToM] Methylomics: converting Beta values to M values.")
+  vv <- range(beta, na.rm = TRUE)
+  is.beta <- (vv[1] >= 0 & vv[2] <= 1)
+  if (!is.beta) {
+    message("[playbase::betaToM] Error: input data seems not be beta values. Returning input matrix.")
+    return(beta)
+  } else {
+    beta <- pmin(pmax(beta, offset), 1 - offset)
+    m <- log2(beta / (1 - beta))
+    message("[playbase::betaToM] Methylomics: Beta to M values conversion completed.\n")
+    rm(beta); return(m)
+  }
+}
+
+#' @title mToBeta
+#' @description Convert  M to Beta values; 450K+850K Meth Array.
+#' @param X Matrix of M values. Probes in rows; samples in columns.
+#' @return Matrix of Beta values.
+#' @export
+mToBeta <- function(m) {
+  message("[playbase::mToBeta] Methylomics: converting M values to Beta values.")
+  vv <- range(m, na.rm = TRUE)
+  is.beta <- (vv[1] >= 0 & vv[2] <= 1)
+  if (is.beta) {
+    message("[playbase::mtoBeta] Input data seems already beta values. Returning input matrix.")
+    return(m)
+  } else {
+    beta <- (2^m / (1 + 2^m))
+    message("[playbase::mToBeta] Methylomics: M to Beta values conversion completed.\n")
+    rm(m); return(beta)
+  }
+}
+
+#' @title normalizeMethylation
+#' @description Normalizes a matrix of 450K and EPIC Methylation data.
+#' @param X Matrix of Beta or M-values. We use Beta. Probes in rows; samples in columns.
+#' @param method Normalization method(s) to use. At the moment BMIQ or quantile. To expand.
+#' @param nfit Number of probes type I and II for the fitting. In most cases, 5000 or 10000 is ok.
+#' @return Normalized Beta values matrix.
+#' @export
+normalizeMethylation <- function(X, method = "BMIQ", nfit = 2000) {
+
+  msg <- function(...) message("[playbase::normalizeMethylation] ", ...)
+  
+  m <- method
+  methods <- c("BMIQ", "quantile")
+  if (!m %in% methods) {
+    msg("Unknown mormalization method. Must be BMIQ or quantile. Returning input matrix")
+    return(X)
+  }
+
+  msg("Input data: ", nrow(X), " probes; ", ncol(X), " samples.")
+
+  X <- mToBeta(X)
+  
+  if (m == "BMIQ") {
+
+    pkg="IlluminaHumanMethylation450kanno.ilmn12.hg19"
+    if (nrow(X) > 600000) pkg="IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
+    require(pkg, character.only = TRUE)
+    annot <- minfi::getAnnotation(get(pkg))
+    probe.types <- as.character(annot[rownames(X), "Type"])
+    names(probe.types) <- rownames(X)[which(rownames(X) %in% rownames(annot))]
+    probe.types <- ifelse(probe.types == "I", 1, ifelse(probe.types == "II", 2, NA))
+    if (length(probe.types) != nrow(X)) {
+      msg("BMIQ norm: length of probe types vector different than probes. Returning input matrix.")
+      return(X)
+    }
+
+    msg("wateRmelon::BMIQ: sample-specific BMIQ normalization")
+    X[which(X <= 0)] <- 0.0001
+    X[which(X >= 1)] <- 0.9999
+    for (i in 1:ncol(X)) {
+      bmiq <- wateRmelon::BMIQ(X[, i], design.v = probe.types, nfit = nfit, plots = FALSE, pri = FALSE)
+      X[, i] <- bmiq$nbeta
+    }
+
+    rm(annot, probe.types, bmiq)
+
+  } else if (m == "quantile") {
+    msg("wateRmelon::betaqn: beta quantile normalization")
+    X <- wateRmelon::betaqn(X)
+  }
+  
+  msg("Normalization completed\n")
+
+  return(X)
+  
+}
+
 #' @title Get prior value for normalization for non-gx data.
 #' For other data types (proteomics, metabolomics, lipidomics) we use min positive.
 #'
