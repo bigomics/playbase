@@ -145,7 +145,7 @@ compute_testGenes <- function(pgx,
   if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {    
     if ("Differentially methylated regions" %in% pgx$dma) {
       message("[playbase::compute_testGenes] Methylomics, DMRs. Collapse CpG probes into genes... ")
-      X <- playbase::mergeCpG(X)
+      X <- playbase::mergeCpG(X = X, genes = pgx$genes)
       X <- playbase::betaToM(X)
     } else {
       X <- playbase::betaToM(counts)
