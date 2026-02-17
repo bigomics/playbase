@@ -6035,7 +6035,7 @@ wgcna.create_module_infographic <- function(rpt, module, prompt = NULL,
                                             model="gemini-3-pro-image-preview",
                                             filename = "module-infographic.png") {  
   if(!module %in% names(rpt$summaries)) {
-    stop(paste("module",m,"not in report summaries"))
+    stop(paste("module",module,"not in report summaries"))
   }
   mm <- paste0("**",module,"**: ",rpt$summaries[[module]])
   prompt <- paste(prompt, "Create an infographic summarizing the biological narrative of the following WGCNA module. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. Match the background with the name of the module with a very light shade. Include the module name in the title or image. \n\n", mm)
