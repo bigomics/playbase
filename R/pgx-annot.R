@@ -237,7 +237,7 @@ annotate_methylomics <- function(organism = "Human", probes = probes) {
   if (length(probes) > 500000) pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
   require(pkg, character.only = TRUE)
   annot <- as.data.frame(minfi::getAnnotation(get(pkg)))
-  kk <- c("chr", "UCSC_RefGene_Name", "UCSC_RefGene_Group", "Relation_to_Island")
+  kk <- c("chr", "pos", "strand", "UCSC_RefGene_Name", "UCSC_RefGene_Group", "Relation_to_Island")
   annot <- annot[probes, intersect(kk, colnames(annot)), drop = FALSE]    
   colnames(annot)[colnames(annot) == "UCSC_RefGene_Name"] <- "symbol"
   colnames(annot)[colnames(annot) == "UCSC_RefGene_Group"] <- "genomic_location"    
