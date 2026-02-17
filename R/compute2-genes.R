@@ -4,10 +4,8 @@
 ##
 
 #' Compute Test Genes
-#'
 #' This function computes gene tests based on the input data and contrast matrix.
 #' It performs different test methods depending on whether the data is single-omics or multi-omics.
-#'
 #' @param pgx An object containing the input data for analysis.
 #' @param contr.matrix The contrast matrix for the gene tests.
 #' @param max.features The maximum number of features to consider in the gene tests.
@@ -29,9 +27,7 @@ compute_testGenes <- function(pgx,
 
   message("[compute_testGenes] detecting stat groups...")
 
-  ## -----------------------------------------------------------------------------
   ## Check parameters, decide group level
-  ## -----------------------------------------------------------------------------
   if (!("counts" %in% names(pgx))) {
     stop("[compute_testGenes] FATAL: cannot find counts in pgx object")
   }
@@ -79,10 +75,7 @@ compute_testGenes <- function(pgx,
   contr.matrix <- contr.matrix[, sel, drop = FALSE]
   contr.matrix[is.na(contr.matrix)] <- 0
 
-  ## -----------------------------------------------------------------------------
-  ## normalize contrast matrix to zero mean and signed sums to one
-  ## -----------------------------------------------------------------------------
-  ## normalize?? why??
+  ## Normalize contrast matrix to zero mean and signed sums to one
   message("[compute_testGenes] normalizing contrasts")
   for (i in seq_len(ncol(contr.matrix))) {
     m <- contr.matrix[, i]
@@ -90,9 +83,7 @@ compute_testGenes <- function(pgx,
     contr.matrix[, i] <- 1 * (m > 0) / sum(m > 0) - 1 * (m < 0) / sum(m < 0)
   }
 
-  ## -----------------------------------------------------------------------------
-  ## create design matrix from defined contrasts (group or clusters)
-  ## -----------------------------------------------------------------------------
+  ## Create design matrix from defined contrasts (group or clusters)
   no.design <- all(stat.group %in% rownames(pgx$samples)) ## sample-wise design
   design <- NULL
 
@@ -139,9 +130,7 @@ compute_testGenes <- function(pgx,
     stop("[compute_testGenes] FATAL2:: stat.group must have names")
   }
 
-  ## -----------------------------------------------------------------------------
   ## Conform data matrices
-  ## -----------------------------------------------------------------------------
   ## notice original counts will not be affected
   ss <- names(stat.group)
   gg <- intersect(rownames(pgx$X), rownames(pgx$counts))
@@ -154,10 +143,14 @@ compute_testGenes <- function(pgx,
   PRIOR.CPM <- 1
 
   if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {
-    X <- playbase::betaToM(counts) 
+    X <- playbase::betaToM(counts)
+    if ("Differentially methylated regions" %in% pgx$dma) {
+      message("[playbase::compute_testGenes] Methylomics, DMRs. Collapse CpG probes into genes... ")
+      X <- playbase::mergeCpG(X)
+    }
   }
-  
-  ## Run all test methods
+
+  ## Run methods
   message("[compute_testGenes] start fitting... ")
   gx.meta <- ngs.fitContrastsWithAllMethods(
     counts = counts,
@@ -169,8 +162,8 @@ compute_testGenes <- function(pgx,
     covariates = pgx$covariates,
     contr.matrix = contr.matrix,
     prune.samples = prune.samples,
-    prior.cpm = PRIOR.CPM, ## prior count regularization
-    remove.batch = FALSE, ## we do explicit batch correction instead
+    prior.cpm = PRIOR.CPM,
+    remove.batch = FALSE,
     conform.output = TRUE,
     do.filter = FALSE,
     correct.AveExpr = TRUE,
@@ -180,11 +173,8 @@ compute_testGenes <- function(pgx,
   )
 
   message("[compute_testGenes]: fitting completed!")
-
   
-  ## --------------------------------------------------------------------------------
-  ## set default matrices
-  ## --------------------------------------------------------------------------------
+  ## Set default matrices
   rownames(gx.meta$timings) <- paste0("[test.genes]", rownames(gx.meta$timings))
   pgx$timings <- rbind(pgx$timings, gx.meta$timings)
   gx.meta$timings <- NULL
