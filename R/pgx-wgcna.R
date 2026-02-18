@@ -6018,11 +6018,16 @@ Layout in TB direction. Do not use any special characters, without headers or fo
 wgcna.create_infographic <- function(report,  diagram=NULL, prompt=NULL,
                                      #model = "gemini-2.5-flash-image"
                                      model="gemini-3-pro-image-preview",
+                                     add.fallback = FALSE,
                                      filename = "infographic.png") {  
 
   prompt <- paste(prompt, "\nCreate a graphical abstract according to the given diagram and information in the WGCNA report. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. \n\n", report, "\n---------------\n\n", diagram)
   if(is.null(model) || model=="") {
     model <- ai.get_image_models()
+  }
+  if(add.fallback) {
+    ## add fallback models
+    model <- unique(c(model,playbase::ai.get_image_models()))  
   }
   outfile <- try(ai.create_image(
     prompt = prompt,  model = model, 
@@ -6036,6 +6041,7 @@ wgcna.create_infographic <- function(report,  diagram=NULL, prompt=NULL,
 wgcna.create_module_infographic <- function(rpt, module, prompt = NULL,
                                             #model = "gemini-2.5-flash-image"
                                             model="gemini-3-pro-image-preview",
+                                            add.fallback = FALSE,
                                             filename = "module-infographic.png") {  
   if(!module %in% names(rpt$summaries)) {
     stop(paste("module",module,"not in report summaries"))
@@ -6044,6 +6050,10 @@ wgcna.create_module_infographic <- function(rpt, module, prompt = NULL,
   prompt <- paste(prompt, "Create an infographic summarizing the biological narrative of the following WGCNA module. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. Match the background with the name of the module with a very light shade. Include the module name in the title or image. \n\n", mm)
   if(is.null(model) || model=="") {
     model <- ai.get_image_models()
+  }
+  if(add.fallback) {
+    ## add fallback models
+    model <- unique(c(model,playbase::ai.get_image_models()))  
   }
   outfile <- try(ai.create_image(prompt, model, filename = filename))
   if(inherits(outfile,"try-error")) return(NULL)

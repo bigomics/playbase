@@ -98,6 +98,7 @@ ai.create_image <- function(prompt,
   } else {
     message("[ai.create_image] successfully created image with model = ",m)
   }
+  
   if(format == "file" && is.null(res)) {
     
     
