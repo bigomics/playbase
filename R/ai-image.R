@@ -3,11 +3,11 @@
 ## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
-
 IMAGE_MODELS <- c(
   "gemini-3-pro-image-preview",
   "gemini-2.5-flash-image",
-  "xai:grok-imagine-image"
+  "xai:grok-imagine-image",
+  "openai:gpt-image-1"
 )
 
 #' Return list of available remote models. 
@@ -39,7 +39,71 @@ ai.get_image_models <- function(models=NULL) {
   models
 }
 
+#' Generate image with generative AI model. When specified with
+#' multiple models, it will try next model if a model fails.
+#'
+#' @export
+ai.create_image <- function(prompt,
+                            model = IMAGE_MODELS,
+                            format = c("file","base64","raw")[1], 
+                            filename = "image.png",
+                            aspect_ratio = "16:9" )
+{
+  res <- NULL
+  for(m in model) {
+    message("[ai.create_image] reaching model: ",m)
+    
+    if(grepl("gemini",m)) {
+      res <- try(ai.create_image_gemini(
+        prompt = prompt,
+        model = m,
+        api_key = Sys.getenv("GEMINI_API_KEY"),
+        format = format,
+        filename = filename,
+        aspect_ratio = aspect_ratio
+      ))
+    }
 
+    if(grepl("^xai:grok",m)) {
+      res <- try(ai.create_image_grok(
+        prompt = prompt,
+        model = m,
+        api_key = Sys.getenv("XAI_API_KEY"),
+        format = format,
+        filename = filename,
+        aspect_ratio = aspect_ratio
+      ))        
+    }    
+
+    if(grepl("^openai:gpt",m)) {
+      res <- try(ai.create_image_openai(
+        prompt = prompt,
+        model = "openai:gpt-image-1",
+        #model = model,
+        api_key = Sys.getenv("OPENAI_API_KEY"),
+        format = format,
+        filename = filename
+        ##aspect_ratio = aspect_ratio
+      ))        
+    }
+    if(inherits(res,"try-error")) {
+      message("[ai.create_image] failed model: ",m)
+      res <- NULL
+    }
+    if(!is.null(res)) break
+  }
+
+  if(is.null(res)) {
+    message("[ai.create_image] WARNING: all models failed")
+  } else {
+    message("[ai.create_image] successfully created image with model = ",m)
+  }
+  if(format == "file" && is.null(res)) {
+    
+    
+  }
+  return(res)
+}
 
 #' Generate image with Gemini (aka Nano Banana). Note this model
 #' handles very large prompts correctly.
@@ -50,7 +114,7 @@ ai.create_image_gemini <- function(prompt,
                                    api_key = Sys.getenv("GEMINI_API_KEY"),
                                    format = c("file","base64","raw")[1], 
                                    filename = "image.png",
-                                   aspectRatio = "16:9", imageSize = "1K",
+                                   aspect_ratio = "16:9", image_size = "1K",
                                    base_url = "https://generativelanguage.googleapis.com/v1beta"
                                    ) {
 
@@ -87,13 +151,13 @@ ai.create_image_gemini <- function(prompt,
     ),
     generationConfig = list(
       responseModalities = list("TEXT", "IMAGE"),
-      imageConfig =  list( aspectRatio = aspectRatio, imageSize = imageSize )      
+      imageConfig =  list( aspectRatio = aspect_ratio, imageSize = image_size )      
     )
   )
 
   if(grepl("gemini-2.5",model)) {
     ##body$generationConfig$imageConfig <- list( aspectRatio = "16:9", imageSize = "1K" )
-    body$generationConfig$imageConfig <- list(aspectRatio = aspectRatio)
+    body$generationConfig$imageConfig <- list(aspectRatio = aspect_ratio)
   }
   
   response <- httr::POST(
@@ -150,7 +214,7 @@ ai.create_image_gemini <- function(prompt,
   if(format=="base64") {
     return(invisible(b64))
   }
-  stop("return error")
+  return(NULL)
 }
 
 
@@ -158,7 +222,8 @@ ai.create_image_gemini <- function(prompt,
 #' prompt of about 1000 characters. 
 #'
 #' @export
-ai.create_image_openai <- function (prompt, model=NULL, 
+ai.create_image_openai <- function (prompt,
+                                    model = "gpt-image-1", 
                                     size = c("auto","1024x1024")[1], 
                                     aspect_ratio = NULL,
                                     format = c("file","base64","raw"),
@@ -191,7 +256,6 @@ ai.create_image_openai <- function (prompt, model=NULL,
     return(NULL)
   }
   model <- sub("^openai:","",model)
-
   
   if(grepl("api.x.ai",base_url,fixed=TRUE)) {
     message("calling grok (warning: $0.07 per image)")    
@@ -253,8 +317,7 @@ ai.create_image_openai <- function (prompt, model=NULL,
   if(format == "base64") {
     return(invisible(b64))
   }
-  stop("return error")
-  
+  stop("return error")  
 }
 
 
@@ -279,14 +342,14 @@ ai.create_image_grok <- function(prompt,
       paste("Summarize the following prompt to less than 8000 characters. Retain all information and instructions to faithfully create the image. This is the prompt: ",prompt),
       model = model2)
   }
-  nchar(prompt2)
 
   if (!grepl("grok",model)) {
     message("ERROR: not a Grok model")
-    return(NULL)
+    return(FALSE)
   }
   model <- sub("^grok:|^xai:","",model)
-  ai.create_image_openai (
+  unlink(filename, force=TRUE)
+  res <- try(ai.create_image_openai (
     prompt2, 
     size = "default",
     aspect_ratio = aspect_ratio,
@@ -297,8 +360,9 @@ ai.create_image_grok <- function(prompt,
     response_format <- "b64_json",
     api_key = api_key,
     user = user,
-    organization = organization) 
+    organization = organization))
 
+  return(res)  
 }
 
 

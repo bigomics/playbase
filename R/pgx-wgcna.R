@@ -6021,8 +6021,10 @@ wgcna.create_infographic <- function(report,  diagram=NULL, prompt=NULL,
                                      filename = "infographic.png") {  
 
   prompt <- paste(prompt, "\nCreate a graphical abstract according to the given diagram and information in the WGCNA report. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. \n\n", report, "\n---------------\n\n", diagram)
-
-  outfile <- try(ai.create_image_gemini(
+  if(is.null(model) || model=="") {
+    model <- ai.get_image_models()
+  }
+  outfile <- try(ai.create_image(
     prompt = prompt,  model = model, 
     format = "file", filename = filename
   ))
@@ -6040,8 +6042,11 @@ wgcna.create_module_infographic <- function(rpt, module, prompt = NULL,
   }
   mm <- paste0("**",module,"**: ",rpt$summaries[[module]])
   prompt <- paste(prompt, "Create an infographic summarizing the biological narrative of the following WGCNA module. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. Match the background with the name of the module with a very light shade. Include the module name in the title or image. \n\n", mm)
-  outfile <- ai.create_image_gemini(prompt, model, filename = filename)
-  message("saving to ", outfile)
+  if(is.null(model) || model=="") {
+    model <- ai.get_image_models()
+  }
+  outfile <- try(ai.create_image(prompt, model, filename = filename))
+  if(inherits(outfile,"try-error")) return(NULL)
   return(invisible(outfile))
 }
 
