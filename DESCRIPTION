@@ -124,6 +124,7 @@ Imports:
     psych,
     purrr,
     qlcMatrix,
+    quarto,
     R.utils,
     R6,
     RaMP,

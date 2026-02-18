@@ -191,6 +191,7 @@ ai.create_image_openai <- function (prompt, model=NULL,
     return(NULL)
   }
   model <- sub("^openai:","",model)
+
   
   if(grepl("api.x.ai",base_url,fixed=TRUE)) {
     message("calling grok (warning: $0.07 per image)")    
@@ -284,7 +285,6 @@ ai.create_image_grok <- function(prompt,
     message("ERROR: not a Grok model")
     return(NULL)
   }
-
   model <- sub("^grok:|^xai:","",model)
   ai.create_image_openai (
     prompt2, 
