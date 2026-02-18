@@ -6013,9 +6013,13 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
                                        rowcex = 1, colcex = 1, show_legend = TRUE,
                                        zlim = NULL, symm = NULL,
                                        return_x_matrix = FALSE,
-                                       splitx_order = NULL) {
+                                       splitx_order = NULL,
+                                       heatmap_colors = NULL) {
   ## constants
   col_annot_height <- 0.021
+  if (is.null(heatmap_colors)) {
+    heatmap_colors <- c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))
+  }
   if (!is.null(idx)) idx <- as.character(idx)
   if (!is.null(splitx)) splitx <- as.character(splitx)
 
@@ -6174,7 +6178,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     colorbar_grid = grid_params,
     x = xtips[colnames(x1)],
     y = ytips[rownames(x1)],
-    colors = c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")),
+    colors = heatmap_colors,
     zmid = zmid,
     zmin = zlim[1],
     zmax = zlim[2],
@@ -6227,7 +6231,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
           name = "expression",
           x = xtips[colnames(x1)],
           y = ytips[rownames(x1)],
-          colors = c("royalblue3", "#EEEEE4", "indianred3"),
+          colors = heatmap_colors,
           zmid = zmid,
           zmin = zlim[1],
           zmax = zlim[2],
