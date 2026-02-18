@@ -5,6 +5,10 @@
 
 table_to_content <- function(df) {
   if(is.null(df)) return(NULL)
+  rownames(df) <- iconv2ascii(rownames(df))
+  for(i in seq_len(ncol(df))) {
+    if(is.character(df[[i]])) df[[i]] <- iconv2ascii(df[[i]])
+  }
   paste(as.character(knitr::kable(df,format="markdown")),collapse="\n")
 }
 
