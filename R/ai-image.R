@@ -5,8 +5,9 @@
 
 
 IMAGE_MODELS <- c(
+  "gemini-3-pro-image-preview",
   "gemini-2.5-flash-image",
-  "gemini-3-pro-image-preview"
+  "xai:grok-imagine-image"
 )
 
 #' Return list of available remote models. 
@@ -60,6 +61,10 @@ ai.create_image_gemini <- function(prompt,
   
   if (nchar(api_key) == 0) {
     stop("GEMINI_API_KEY environment variable is not set", call. = FALSE)
+  }
+  if (!grepl("gemini",model)) {
+    message("ERROR: not a gemini model")
+    return(NULL)
   }
 
   message("calling gemini image (warning: $0.134 per image)")
@@ -154,11 +159,13 @@ ai.create_image_gemini <- function(prompt,
 #'
 #' @export
 ai.create_image_openai <- function (prompt, model=NULL, 
-                                    size = c("512x512","1024x1024","256x256")[1], 
+                                    size = c("auto","1024x1024")[1], 
+                                    aspect_ratio = NULL,
                                     format = c("file","base64","raw"),
                                     filename = "image.png",
                                     api_key = Sys.getenv("OPENAI_API_KEY"),
                                     base_url = "https://api.openai.com/v1",
+                                    response_format = NULL,
                                     user = NULL, organization = NULL) 
 {
   ##    size <- match.arg(size)
@@ -178,6 +185,11 @@ ai.create_image_openai <- function (prompt, model=NULL,
       assertthat::noNA(organization))
   }
 
+  if(is.null(model)) stop("must provide model")
+  if (!grepl("openai|gpt",model)) {
+    message("ERROR: not an OpenAI/GPT model")
+    return(NULL)
+  }
   model <- sub("^openai:","",model)
   
   if(grepl("api.x.ai",base_url,fixed=TRUE)) {
@@ -202,8 +214,9 @@ ai.create_image_openai <- function (prompt, model=NULL,
   body[["model"]] <- model
   body[["prompt"]] <- prompt
   body[["n"]] <- 1
-  body[["response_format"]] <- "b64_json"
+  if(!is.null(response_format)) body[["response_format"]] <- "b64_json"
   body[["size"]] <- size
+  if(!is.null(aspect_ratio)) body[["aspect_ratio"]] <- aspect_ratio
   body[["user"]] <- user
   response <- httr::POST(url = url, httr::add_headers(.headers = headers), 
     body = body, encode = "json")
@@ -248,21 +261,40 @@ ai.create_image_openai <- function (prompt, model=NULL,
 #' the prompt of about 1000 characters.
 #'
 #' @export
-ai.create_image_grok <- function(prompt, model="grok-2-image-1212", 
+ai.create_image_grok <- function(prompt,
+                                 model = "grok-imagine-image", 
+                                 model2 = "xai:grok-4-1-fast-non-reasoning",
                                  format = c("file","base64","raw")[1], 
                                  api_key = Sys.getenv("XAI_API_KEY"),
                                  base_url = "https://api.x.ai/v1",
                                  filename = "image.png",
+                                 aspect_ratio = "1:1",
                                  user = NULL, organization = NULL) {
 
-  model <- sub("^grok:","",model)
+
+  prompt2 <- prompt
+  if(nchar(prompt) > 7800) {
+    prompt2 <- ai.ask(
+      paste("Summarize the following prompt to less than 8000 characters. Retain all information and instructions to faithfully create the image. This is the prompt: ",prompt),
+      model = model2)
+  }
+  nchar(prompt2)
+
+  if (!grepl("grok",model)) {
+    message("ERROR: not a Grok model")
+    return(NULL)
+  }
+
+  model <- sub("^grok:|^xai:","",model)
   ai.create_image_openai (
-    prompt, 
+    prompt2, 
     size = "default",
+    aspect_ratio = aspect_ratio,
     format = format,
     filename = filename,
     model = model, ##size=NULL,
     base_url = base_url,
+    response_format <- "b64_json",
     api_key = api_key,
     user = user,
     organization = organization) 

@@ -1431,6 +1431,7 @@ wgcna.computeModuleEnrichment <- function(wgcna,
 
   if(!multi) {
     wgcna <- list(gx = wgcna)
+    if(!is.null(annot)) rownames(annot) <- paste0("gx:",rownames(annot))
   }
 
   if(is.null(GMT)) {  
