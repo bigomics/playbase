@@ -2688,6 +2688,8 @@ wgcna.runPreservationWGCNA <- function(exprList,
     drop.ref = FALSE,
     compute.stats = FALSE,
     compute.enrichment = FALSE,
+    summary = FALSE,
+    ai_model = NULL,
     gsea.mingenes = 10,
     gset.methods = gset.methods
   )
