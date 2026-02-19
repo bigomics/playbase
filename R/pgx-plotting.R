@@ -36,6 +36,7 @@ heatmapWithAnnot <- function(F, anno.type = c("boxplot", "barplot"),
                              row_fontsize = 9, column_fontsize = 9,
                              inset = c(-0.025, -0.1),
                              mar = c(0, 0, 0, 0), legend = TRUE,
+                             heatmap_colors = NULL,
                              ...) {
   col1 <- 1:ncol(F)
   anno.type <- anno.type[1]
@@ -62,10 +63,15 @@ heatmapWithAnnot <- function(F, anno.type = c("boxplot", "barplot"),
     )
   }
 
+  heatmap_col <- if (!is.null(heatmap_colors)) {
+    circlize::colorRamp2(colors = heatmap_colors, breaks = c(-10, 0, 10))
+  } else {
+    circlize::colorRamp2(colors = c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")), breaks = c(-10, 0, 10))
+  }
   ht <- ComplexHeatmap::Heatmap(
     t(F),
     name = "logFC",
-    col = circlize::colorRamp2(colors = c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")), breaks = c(-10, 0, 10)),
+    col = heatmap_col,
     top_annotation = ha,
     row_names_gp = grid::gpar(fontsize = row_fontsize),
     column_names_gp = grid::gpar(fontsize = column_fontsize),
