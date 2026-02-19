@@ -1321,13 +1321,36 @@ wgcna.getGeneStats <- function(wgcna, trait, module = NULL, plot = TRUE,
   if (is.null(trait)) trait <- tt.cols
   trait <- intersect(trait, tt.cols)
 
+  ## Safe column selector: returns NA column when trait is missing from a stats
+  ## matrix (e.g. foldChange drops constant-within-group traits like
+  ## condition=Basal for the Basal split, while traitSignificance keeps them).
+  ## When length(tr)==1 returns a named vector so do.call(cbind, lapply(stats[p2],
+  ## safe_col)) preserves the list element names (p2 names) as column names.
+  safe_col <- function(x, tr) {
+    if (length(tr) == 1) {
+      if (is.null(x) || !tr %in% colnames(x)) {
+        return(setNames(rep(NA_real_, length(features)), features))
+      }
+      return(x[, tr])
+    }
+    if (is.null(x)) return(matrix(NA_real_, nrow = length(features), ncol = length(tr), dimnames = list(features, tr)))
+    present <- intersect(tr, colnames(x))
+    absent  <- setdiff(tr, colnames(x))
+    out <- x[, present, drop = FALSE]
+    if (length(absent)) {
+      pad <- matrix(NA_real_, nrow = nrow(x), ncol = length(absent), dimnames = list(rownames(x), absent))
+      out <- cbind(out, pad)[, tr, drop = FALSE]
+    }
+    out
+  }
+
   if (length(trait) > 1) {
-    A2 <- lapply(stats[p2], function(x) x[, trait])
+    A2 <- lapply(stats[p2], function(x) safe_col(x, trait))
     for (i in 1:length(A2)) colnames(A2[[i]]) <- paste0(names(A2)[i], ".", colnames(A2[[i]]))
     A2 <- do.call(cbind, A2)
     df <- cbind(df, A2)
   } else if (length(trait) == 1) {
-    A2 <- lapply(stats[p2], function(x) x[, trait])
+    A2 <- lapply(stats[p2], function(x) safe_col(x, trait))
     A2 <- do.call(cbind, A2)
     df <- cbind(df, A2)
   } else {
@@ -2263,6 +2286,9 @@ wgcna.getConsensusGeneStats <- function(cons, stats, trait, module=NULL) {
     )
   }
 
+  ## If any layer returned NULL (trait not in stats), propagate NULL
+  if (any(sapply(gstats, is.null))) return(NULL)
+
   ## Align rows
   ff <- gstats[[1]]$feature
   for(k in names(gstats)) {
@@ -2673,6 +2699,8 @@ wgcna.runPreservationWGCNA <- function(exprList,
     drop.ref = FALSE,
     compute.stats = FALSE,
     compute.enrichment = FALSE,
+    summary = FALSE,
+    ai_model = NULL,
     gsea.mingenes = 10,
     gset.methods = gset.methods
   )
@@ -3462,6 +3490,11 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL,
 
   calcKMEcolors <- function(X, Y) {
     kme <- cor(X, Y, use="pairwise")
+    ## Drop constant/degenerate columns (produce NaN in cor). This happens when
+    ## a trait is constant within a condition-split group (e.g. all samples in
+    ## the "Basal" split share condition=Basal, giving zero variance).
+    kme <- kme[, colSums(is.nan(kme)) == 0, drop = FALSE]
+    if (ncol(kme) == 0) return(matrix("white", nrow = length(gg), ncol = 0, dimnames = list(gg, NULL)))
     sdx <- matrixStats::colSds(X,na.rm=TRUE)
     if(sd.wt>0) kme <- kme * (sdx / max(abs(sdx),na.rm=TRUE))**sd.wt
     if(nmax>0 && nmax<ncol(kme)) {
@@ -3471,10 +3504,12 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL,
     kmeColors <- rho2bluered(kme)
     kmeColors <- kmeColors[gg,,drop=FALSE]
     if(clust && ncol(kme)>2) {
-      ii <- hclust(as.dist(1-cor(kme,use="pairwise")))$order
+      cc <- cor(kme, use="pairwise")
+      cc[!is.finite(cc)] <- 0  ## guard against NaN/Inf from any constant columns
+      ii <- hclust(as.dist(1-cc))$order
       kmeColors <- kmeColors[,ii,drop=FALSE]
     }
-    kmeColors 
+    kmeColors
   }
   
   if(!is.multi) {
