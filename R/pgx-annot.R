@@ -263,6 +263,59 @@ annotate_methylomics <- function(organism = "Human", probes = probes) {
   
 }
 
+#' @title mergeCpG
+#' @description Collapse CpG into genes. Use average beta value.
+#' @param X Matrix of methyation values. Can be M or Beta. Beta values will be used.
+#' @param genes Annotation matrix: pgx$genes. if NULL, automatically retrieved.
+#' @return Matrix of CpG collapsed.
+#' @export
+mergeCpG <- function(X, genes = genes, collapse.by = "gene") {
+
+  msg <- function(...) message("[playbase::mergeCpG] ", ...)
+
+  message("Methylomics: collapsing CpG into genes.")
+
+  if (!collapse.by %in% c("gene")) {
+    message("'collapse.by' must be one of gene,... Returning input matrix.\n")
+    return(X)
+  }
+  
+  X <- playbase::mToBeta(X)
+
+  if (is.null(genes)) {
+    genes <- playbase::annotate_methylomics(probes = rownames(X))
+  }
+  
+  jj <- which(!as.character(genes$symbol) %in% c("", "NA", NA))
+  genes <- genes[jj, , drop = FALSE]
+  if ("genomic_location" %in% colnames(genes)) {
+    hh <- grep("Body|3'UTR", genes$genomic_location, ignore.case = TRUE)
+    if (length(hh) > 0) genes <- genes[-hh, , drop = FALSE]
+  }
+
+  kk <- intersect(rownames(X),rownames(genes))
+  if (length(kk) == 0) {
+    message("No shared features between X and annotation. Returning input matrix.\n")
+    return(X)
+  }
+  X <- X[kk, , drop = FALSE]
+  genes <- genes[kk, , drop = FALSE]
+
+  ## Map
+  ff <- unique(as.character(genes$symbol))
+  i=1; LL=list()
+  for(i in 1:length(ff)) {
+    jj <- which(genes$symbol == ff[i])
+    LL[[ff[i]]] <- t(as.matrix(colMeans(X[jj, , drop = FALSE], na.rm = TRUE)))
+  }
+  X <- do.call(rbind, LL)
+  rownames(X) <- ff
+
+  message("Completed. Final matrix contains ", nrow(X), " regions.\n")
+  rm(LL); gc(); return(X)
+
+}
+
 #' Get gene annotation data using annothub or orthogene.
 #' @export
 getGeneAnnotation <- function(
