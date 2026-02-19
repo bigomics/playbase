@@ -311,7 +311,7 @@ mergeCpG <- function(X, genes = NULL, collapse.by = "gene") {
   X <- do.call(rbind, LL)
   rownames(X) <- ff
 
-  message("Mapping completed. Final matrix contains ", nrow(X), " regions.\n")
+  message("Mapping completed. Final matrix:", nrow(X), " regions.\n")
   rm(LL); gc(); return(X)
 
 }
