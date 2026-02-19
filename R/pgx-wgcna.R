@@ -3462,6 +3462,11 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL,
 
   calcKMEcolors <- function(X, Y) {
     kme <- cor(X, Y, use="pairwise")
+    ## Drop constant/degenerate columns (produce NaN in cor). This happens when
+    ## a trait is constant within a condition-split group (e.g. all samples in
+    ## the "Basal" split share condition=Basal, giving zero variance).
+    kme <- kme[, colSums(is.nan(kme)) == 0, drop = FALSE]
+    if (ncol(kme) == 0) return(matrix("white", nrow = length(gg), ncol = 0, dimnames = list(gg, NULL)))
     sdx <- matrixStats::colSds(X,na.rm=TRUE)
     if(sd.wt>0) kme <- kme * (sdx / max(abs(sdx),na.rm=TRUE))**sd.wt
     if(nmax>0 && nmax<ncol(kme)) {
@@ -3471,10 +3476,12 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL,
     kmeColors <- rho2bluered(kme)
     kmeColors <- kmeColors[gg,,drop=FALSE]
     if(clust && ncol(kme)>2) {
-      ii <- hclust(as.dist(1-cor(kme,use="pairwise")))$order
+      cc <- cor(kme, use="pairwise")
+      cc[!is.finite(cc)] <- 0  ## guard against NaN/Inf from any constant columns
+      ii <- hclust(as.dist(1-cc))$order
       kmeColors <- kmeColors[,ii,drop=FALSE]
     }
-    kmeColors 
+    kmeColors
   }
   
   if(!is.multi) {
