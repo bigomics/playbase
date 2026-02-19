@@ -1324,7 +1324,15 @@ wgcna.getGeneStats <- function(wgcna, trait, module = NULL, plot = TRUE,
   ## Safe column selector: returns NA column when trait is missing from a stats
   ## matrix (e.g. foldChange drops constant-within-group traits like
   ## condition=Basal for the Basal split, while traitSignificance keeps them).
+  ## When length(tr)==1 returns a named vector so do.call(cbind, lapply(stats[p2],
+  ## safe_col)) preserves the list element names (p2 names) as column names.
   safe_col <- function(x, tr) {
+    if (length(tr) == 1) {
+      if (is.null(x) || !tr %in% colnames(x)) {
+        return(setNames(rep(NA_real_, length(features)), features))
+      }
+      return(x[, tr])
+    }
     if (is.null(x)) return(matrix(NA_real_, nrow = length(features), ncol = length(tr), dimnames = list(features, tr)))
     present <- intersect(tr, colnames(x))
     absent  <- setdiff(tr, colnames(x))
@@ -2277,6 +2285,9 @@ wgcna.getConsensusGeneStats <- function(cons, stats, trait, module=NULL) {
       main = NULL
     )
   }
+
+  ## If any layer returned NULL (trait not in stats), propagate NULL
+  if (any(sapply(gstats, is.null))) return(NULL)
 
   ## Align rows
   ff <- gstats[[1]]$feature
