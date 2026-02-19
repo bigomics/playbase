@@ -269,7 +269,7 @@ annotate_methylomics <- function(organism = "Human", probes = probes) {
 #' @param genes Annotation matrix: pgx$genes. if NULL, automatically retrieved.
 #' @return Matrix of CpG collapsed.
 #' @export
-mergeCpG <- function(X, genes = genes, collapse.by = "gene") {
+mergeCpG <- function(X, genes = NULL, collapse.by = "gene") {
 
   msg <- function(...) message("[playbase::mergeCpG] ", ...)
 
@@ -303,7 +303,7 @@ mergeCpG <- function(X, genes = genes, collapse.by = "gene") {
 
   ## Map
   ff <- unique(as.character(genes$symbol))
-  i=1; LL=list()
+  LL=list()  
   for(i in 1:length(ff)) {
     jj <- which(genes$symbol == ff[i])
     LL[[ff[i]]] <- t(as.matrix(colMeans(X[jj, , drop = FALSE], na.rm = TRUE)))
@@ -311,7 +311,7 @@ mergeCpG <- function(X, genes = genes, collapse.by = "gene") {
   X <- do.call(rbind, LL)
   rownames(X) <- ff
 
-  message("Completed. Final matrix contains ", nrow(X), " regions.\n")
+  message("Mapping completed. Final matrix contains ", nrow(X), " regions.\n")
   rm(LL); gc(); return(X)
 
 }
