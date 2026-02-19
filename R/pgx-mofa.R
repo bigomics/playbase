@@ -93,7 +93,7 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
       ntop = ntop,
       nc = 20,
       annot = pgx$genes,
-      use.graphite = FALSE
+      mask.graphite = FALSE
     )
   }
 
@@ -2596,7 +2596,7 @@ snf.heatmap <- function(snf, X, samples, nmax = 50, do.split = TRUE, legend = TR
 lasagna.create_from_pgx <- function(pgx, xdata = NULL, layers = NULL,
                                     add_gsets = FALSE, gsetX = NULL, gset_filter = NULL,
                                     pheno = "pheno", ntop = 1000, nc = 20,
-                                    annot = NULL, use.gmt = TRUE, use.graphite = TRUE,
+                                    annot = NULL, mask.gmt = TRUE, mask.graphite = TRUE,
                                     add.sink = FALSE, intra = TRUE, fully_connect = FALSE,
                                     add.revpheno = TRUE) {
   if (is.null(xdata)) {
@@ -2646,8 +2646,8 @@ lasagna.create_from_pgx <- function(pgx, xdata = NULL, layers = NULL,
     ntop = ntop,
     nc = nc,
     annot = annot,
-    use.gmt = use.gmt,
-    use.graphite = use.graphite,
+    mask.gmt = mask.gmt,
+    mask.graphite = mask.graphite,
     add.sink = add.sink,
     intra = intra,
     fully_connect = fully_connect,
@@ -2660,7 +2660,7 @@ lasagna.create_from_pgx <- function(pgx, xdata = NULL, layers = NULL,
 #'
 #' @export
 lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
-                                 annot=NULL, mask.gmt=TRUE, mask.graphite=TRUE,
+                                 annot=NULL, mask.gmt=FALSE, mask.graphite=FALSE,
                                  add.sink=FALSE, intra=TRUE, fully_connect=FALSE,
                                  add.revpheno = TRUE, condition.edges=TRUE
                                  ) {
