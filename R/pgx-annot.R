@@ -280,10 +280,10 @@ mergeCpG <- function(X, genes = NULL, collapse.by = "gene") {
     return(X)
   }
   
-  X <- playbase::mToBeta(X)
+  X <- mToBeta(X)
 
   if (is.null(genes)) {
-    genes <- playbase::annotate_methylomics(probes = rownames(X))
+    genes <- annotate_methylomics(probes = rownames(X))
   }
   
   jj <- which(!as.character(genes$symbol) %in% c("", "NA", NA))
