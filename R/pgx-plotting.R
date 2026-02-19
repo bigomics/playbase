@@ -6358,10 +6358,8 @@ pgx.boxplot.PLOTLY <- function(
     x = ~ get(x),
     y = ~ get(y),
     type = "box",
-    marker = list(
-      color = color,
-      fillcolor = fillcolor
-    ),
+    fillcolor = fillcolor,
+    marker = list(color = color),
     line = list(color = linecolor),
     hoverinfo = hoverinfo
   ) %>%
