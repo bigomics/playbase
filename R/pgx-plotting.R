@@ -6566,7 +6566,8 @@ pgx.plotActivation <- function(pgx,
                                tl.cex = 0.85,
                                row.nchar = 60,
                                showscale = TRUE,
-                               cexBar = 0.66) {
+                               cexBar = 0.66,
+                               heatmap_colors = NULL) {
   if (what == "geneset") {
     score <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
   }
@@ -6646,6 +6647,9 @@ pgx.plotActivation <- function(pgx,
   bluered.pal <- colorRamp(colors = c("royalblue3", "#ebeffa", "white", "#faeeee", "indianred3"))
   bluered.pal <- colorRamp(colors = c("royalblue3", "grey90", "indianred3"))
   bluered.pal <- colorRamp(omics_pal_c("blue_red_grey", reverse = TRUE)(30))
+  if (!is.null(heatmap_colors)) {
+    bluered.pal <- colorRamp(heatmap_colors)
+  }
 
   score <- score[nrow(score):1, , drop = FALSE]
   x_axis <- colnames(score)
