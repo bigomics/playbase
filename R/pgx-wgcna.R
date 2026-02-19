@@ -1321,13 +1321,28 @@ wgcna.getGeneStats <- function(wgcna, trait, module = NULL, plot = TRUE,
   if (is.null(trait)) trait <- tt.cols
   trait <- intersect(trait, tt.cols)
 
+  ## Safe column selector: returns NA column when trait is missing from a stats
+  ## matrix (e.g. foldChange drops constant-within-group traits like
+  ## condition=Basal for the Basal split, while traitSignificance keeps them).
+  safe_col <- function(x, tr) {
+    if (is.null(x)) return(matrix(NA_real_, nrow = length(features), ncol = length(tr), dimnames = list(features, tr)))
+    present <- intersect(tr, colnames(x))
+    absent  <- setdiff(tr, colnames(x))
+    out <- x[, present, drop = FALSE]
+    if (length(absent)) {
+      pad <- matrix(NA_real_, nrow = nrow(x), ncol = length(absent), dimnames = list(rownames(x), absent))
+      out <- cbind(out, pad)[, tr, drop = FALSE]
+    }
+    out
+  }
+
   if (length(trait) > 1) {
-    A2 <- lapply(stats[p2], function(x) x[, trait])
+    A2 <- lapply(stats[p2], function(x) safe_col(x, trait))
     for (i in 1:length(A2)) colnames(A2[[i]]) <- paste0(names(A2)[i], ".", colnames(A2[[i]]))
     A2 <- do.call(cbind, A2)
     df <- cbind(df, A2)
   } else if (length(trait) == 1) {
-    A2 <- lapply(stats[p2], function(x) x[, trait])
+    A2 <- lapply(stats[p2], function(x) safe_col(x, trait))
     A2 <- do.call(cbind, A2)
     df <- cbind(df, A2)
   } else {
