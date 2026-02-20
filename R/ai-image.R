@@ -100,9 +100,21 @@ ai.create_image <- function(prompt,
   }
   
   if(format == "file" && is.null(res)) {
-    
-    
+    ## create empty image with warning
+    res <- paste0(tempfile("img"),".png")
+    png(res, w=800, h=450)
+    plot.new()
+    text(0.5,0.5, paste("Could not reach image model.\nPlease try",
+      "again later or choose a different model"), cex=1.6)
+    dev.off()
   }
+  if(format == "base64" && is.null(res)) {
+    ## fill me...
+  }
+  if(format == "raw" && is.null(res)) {
+    ## fill me...
+  }
+
   return(res)
 }
 

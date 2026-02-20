@@ -5911,6 +5911,7 @@ Format like a scientific article, use prose as much as possible, minimize the us
     ##-------------------------------------------------------------------
     if(!is.null(progress)) progress$set(message = "Mashing up diagram...", value=0.8)  
     if(verbose) message("Mashing up diagram...")
+    if(is.null(graph) && !is.null(wgcna$graph)) graph <- wgcna$graph
     diagram <- wgcna.create_diagram(
       report,
       graph = graph,
