@@ -12,6 +12,7 @@ wgcna.create_infographic(
   diagram = NULL,
   prompt = NULL,
   model = "gemini-3-pro-image-preview",
+  add.fallback = FALSE,
   filename = "infographic.png"
 )
 }

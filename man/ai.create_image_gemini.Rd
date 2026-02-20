@@ -11,8 +11,8 @@ ai.create_image_gemini(
   api_key = Sys.getenv("GEMINI_API_KEY"),
   format = c("file", "base64", "raw")[1],
   filename = "image.png",
-  aspectRatio = "16:9",
-  imageSize = "1K",
+  aspect_ratio = "16:9",
+  image_size = "1K",
   base_url = "https://generativelanguage.googleapis.com/v1beta"
 )
 }
