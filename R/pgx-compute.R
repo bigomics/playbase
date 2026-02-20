@@ -469,6 +469,9 @@ pgx.createPGX <- function(counts,
   }
 
   ## Methylomics arrays: if user-specified, remove X- & Y-linked CpG probes.
+  message("----------------------pgx$datatype=",pgx$datatype)
+  message("---------is.null(remove.xy.probes)=",is.null(remove.xy.probes))  
+  message("----------------------remove.xy.probes=",remove.xy.probes)
   if (pgx$datatype == "methylomics" & remove.xy.probes) {
     kk <- intersect(c("chr", "map"), colnames(pgx$genes))[1]
     if (length(kk) > 0) {
@@ -478,6 +481,8 @@ pgx.createPGX <- function(counts,
         pgx$counts <- pgx$counts[-jj, , drop = FALSE]
         pgx$X <- pgx$X[-jj, , drop = FALSE]
         pgx$genes <- pgx$genes[-jj, , drop = FALSE]
+      } else {
+        message("---------------------------no XY probes found")
       }
     }
   }
