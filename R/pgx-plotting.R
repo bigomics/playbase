@@ -36,6 +36,7 @@ heatmapWithAnnot <- function(F, anno.type = c("boxplot", "barplot"),
                              row_fontsize = 9, column_fontsize = 9,
                              inset = c(-0.025, -0.1),
                              mar = c(0, 0, 0, 0), legend = TRUE,
+                             heatmap_colors = NULL,
                              ...) {
   col1 <- 1:ncol(F)
   anno.type <- anno.type[1]
@@ -62,10 +63,15 @@ heatmapWithAnnot <- function(F, anno.type = c("boxplot", "barplot"),
     )
   }
 
+  heatmap_col <- if (!is.null(heatmap_colors)) {
+    circlize::colorRamp2(colors = heatmap_colors, breaks = c(-10, 0, 10))
+  } else {
+    circlize::colorRamp2(colors = c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")), breaks = c(-10, 0, 10))
+  }
   ht <- ComplexHeatmap::Heatmap(
     t(F),
     name = "logFC",
-    col = circlize::colorRamp2(colors = c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")), breaks = c(-10, 0, 10)),
+    col = heatmap_col,
     top_annotation = ha,
     row_names_gp = grid::gpar(fontsize = row_fontsize),
     column_names_gp = grid::gpar(fontsize = column_fontsize),
@@ -1900,7 +1906,8 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
                              title = NULL, zfix = FALSE,
                              set.par = TRUE, par.sq = FALSE,
                              level = "gene", plotlib = "ggplot",
-                             data = FALSE, labeltype = "feature") {
+                             data = FALSE, labeltype = "feature",
+                             col = NULL) {
   if (!is.null(contrast)) {
     if (is.numeric(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
     res <- NULL
@@ -1988,6 +1995,7 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
       pos,
       var = f1,
       type = "numeric",
+      col = col,
       xlab = "UMAP-x  (genes)",
       ylab = "UMAP-y  (genes)",
       hilight = this.hilight,
@@ -6010,9 +6018,14 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
                                        colors = NULL, lmar = 60, na_text = NULL,
                                        rowcex = 1, colcex = 1, show_legend = TRUE,
                                        zlim = NULL, symm = NULL,
-                                       return_x_matrix = FALSE) {
+                                       return_x_matrix = FALSE,
+                                       splitx_order = NULL,
+                                       heatmap_colors = NULL) {
   ## constants
   col_annot_height <- 0.021
+  if (is.null(heatmap_colors)) {
+    heatmap_colors <- c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))
+  }
   if (!is.null(idx)) idx <- as.character(idx)
   if (!is.null(splitx)) splitx <- as.character(splitx)
 
@@ -6097,6 +6110,12 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   ## ------ split X-axis by some group factor
   if (!is.null(splitx)) {
     xx <- tapply(colnames(X), splitx, function(i) X[, i, drop = FALSE])
+    ## Apply custom group ordering if provided
+    if (!is.null(splitx_order)) {
+      ordered_names <- intersect(splitx_order, names(xx))
+      remaining <- setdiff(names(xx), ordered_names)
+      xx <- xx[c(ordered_names, remaining)]
+    }
   } else {
     xx <- list("Samples" = X)
   }
@@ -6165,7 +6184,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     colorbar_grid = grid_params,
     x = xtips[colnames(x1)],
     y = ytips[rownames(x1)],
-    colors = c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")),
+    colors = heatmap_colors,
     zmid = zmid,
     zmin = zlim[1],
     zmax = zlim[2],
@@ -6218,7 +6237,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
           name = "expression",
           x = xtips[colnames(x1)],
           y = ytips[rownames(x1)],
-          colors = c("royalblue3", "#EEEEE4", "indianred3"),
+          colors = heatmap_colors,
           zmid = zmid,
           zmin = zlim[1],
           zmax = zlim[2],
@@ -6345,10 +6364,8 @@ pgx.boxplot.PLOTLY <- function(
     x = ~ get(x),
     y = ~ get(y),
     type = "box",
-    marker = list(
-      color = color,
-      fillcolor = fillcolor
-    ),
+    fillcolor = fillcolor,
+    marker = list(color = color),
     line = list(color = linecolor),
     hoverinfo = hoverinfo
   ) %>%
@@ -6555,7 +6572,8 @@ pgx.plotActivation <- function(pgx,
                                tl.cex = 0.85,
                                row.nchar = 60,
                                showscale = TRUE,
-                               cexBar = 0.66) {
+                               cexBar = 0.66,
+                               heatmap_colors = NULL) {
   if (what == "geneset") {
     score <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
   }
@@ -6635,6 +6653,9 @@ pgx.plotActivation <- function(pgx,
   bluered.pal <- colorRamp(colors = c("royalblue3", "#ebeffa", "white", "#faeeee", "indianred3"))
   bluered.pal <- colorRamp(colors = c("royalblue3", "grey90", "indianred3"))
   bluered.pal <- colorRamp(omics_pal_c("blue_red_grey", reverse = TRUE)(30))
+  if (!is.null(heatmap_colors)) {
+    bluered.pal <- colorRamp(heatmap_colors)
+  }
 
   score <- score[nrow(score):1, , drop = FALSE]
   x_axis <- colnames(score)

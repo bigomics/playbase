@@ -244,6 +244,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         scale = "row",
                         softmax = 0,
                         order.groups = "clust",
+                        splitx_order = NULL,
                         symm.scale = FALSE,
                         cluster_rows = TRUE,
                         cluster_columns = TRUE,
@@ -390,6 +391,12 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   }
   if (!is.null(idx2)) {
     grp <- tapply(colnames(gx), idx2, list)
+    ## Apply custom group ordering if provided
+    if (!is.null(splitx_order)) {
+      ordered_names <- intersect(splitx_order, names(grp))
+      remaining <- setdiff(names(grp), ordered_names)
+      grp <- grp[c(ordered_names, remaining)]
+    }
     ngrp <- length(grp)
   } else {
     grp <- list(colnames(gx))
@@ -594,7 +601,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 
   ## ------------- cluster blocks
   grp.order <- 1:ngrp
-  if (!is.null(order.groups) && ngrp > 1 && order.groups[1] == "clust") {
+  if (is.null(splitx_order) && !is.null(order.groups) && ngrp > 1 && order.groups[1] == "clust") {
     ## Reorder cluster indices based on similarity clustering
     mx <- do.call(cbind, lapply(grp, function(i) rowMeans(gx[, i, drop = FALSE], na.rm = TRUE)))
     mx <- t(scale(t(mx)))
