@@ -843,6 +843,7 @@ pgx.createSingleCellPGX <- function(counts,
   }
 
   message("[pgx.createSingleCellPGX] Azimuth reference atlas: ", azimuth_ref)
+  library(Seurat) # DO NOT REMOVE THIS LINE (Azimuth fails if not sourcing Seurat)
   azm <- pgx.runAzimuth(counts, reference = azimuth_ref)
   azm <- azm[, grep("predicted", colnames(azm))]
   ntype <- apply(azm, 2, function(a) length(unique(a)))
