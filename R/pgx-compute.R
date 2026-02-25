@@ -800,7 +800,7 @@ pgx.computePGX <- function(pgx,
     max.features = max.genes,
     test.methods = gx.methods,
     custom_fc = custom_fc,
-    use.design = use.design,
+    ## use.design = use.design,
     prune.samples = prune.samples,
     timeseries = timeseries,
     remove.outputs = TRUE

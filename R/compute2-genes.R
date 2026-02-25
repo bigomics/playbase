@@ -12,7 +12,6 @@
 #' @param contr.matrix The contrast matrix for the gene tests.
 #' @param max.features The maximum number of features to consider in the gene tests.
 #' @param test.methods The test methods to use for gene testing.
-#' @param use.design A logical value indicating whether to use the design matrix in the analysis.
 #' @param prune.samples A logical value indicating whether to prune samples with missing data.
 #' @param remove.outputs A logical value indicating whether to remove intermediate outputs.
 #' @return An updated object with gene test results.
@@ -22,7 +21,6 @@ compute_testGenes <- function(pgx,
                               max.features = 1000,
                               test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
                               custom_fc = NULL,
-                              use.design = FALSE,
                               prune.samples = TRUE,
                               remove.outputs = TRUE,
                               timeseries = FALSE) {
@@ -50,28 +48,9 @@ compute_testGenes <- function(pgx,
   }
 
   stat.group <- NULL
-  if (use.design) {
-    message("[compute_testGenes] detecting stat groups...")
-    stat.group <- pgx.getConditions(contr.matrix, nmax = 0) ## !!!
-    names(stat.group) <- rownames(contr.matrix)
-    nlev <- length(unique(stat.group))
-    if (nlev >= nrow(contr.matrix)) {
-      message("[compute_testGenes] cannot use groups, switching to no design")
-      use.design <- FALSE
-    }
-  }
-
-  if (use.design) {
-    message("[compute_testGenes] contrasts on groups (use design)")
-    ## convert sample-wise contrasts to group-wise contrasts
-    stat0 <- sort(unique(stat.group))
-    contr.matrix <- contr.matrix[match(stat0, stat.group), , drop = FALSE]
-    rownames(contr.matrix) <- stat0
-  } else {
-    message("[compute_testGenes] contrasts on samples (no design)")
-    stat.group <- rownames(contr.matrix)
-    names(stat.group) <- rownames(contr.matrix)
-  }
+  message("[compute_testGenes] contrasts on samples (no design)")
+  stat.group <- rownames(contr.matrix)
+  names(stat.group) <- rownames(contr.matrix)
 
   message("[compute_testGenes] pruning unused contrasts")
   ## take out any empty comparisons
@@ -93,39 +72,10 @@ compute_testGenes <- function(pgx,
   ## -----------------------------------------------------------------------------
   ## create design matrix from defined contrasts (group or clusters)
   ## -----------------------------------------------------------------------------
-  no.design <- all(stat.group %in% rownames(pgx$samples)) ## sample-wise design
+  message("[compute_testGenes] no design matrix ")
+  ## SAMPLE-WISE DESIGN
   design <- NULL
-
-  if (no.design || !use.design) {
-    message("[compute_testGenes] no design matrix ")
-    ## SAMPLE-WISE DESIGN
-    design <- NULL
-    exp.matrix <- contr.matrix
-  } else {
-    message("[compute_testGenes] creating model design matrix ")
-
-    ## GROUP DESIGN
-    notk <- which(!stat.group %in% rownames(contr.matrix))
-    if (length(notk)) stat.group[notk] <- "_"
-    design <- stats::model.matrix(~ 0 + stat.group) ## clean design no batch effects...
-    colnames(design) <- sub("^stat.group", "", colnames(design))
-    if (is.null(names(stat.group))) {
-      stop("[compute_testGenes] FATAL:: stat.group must have names")
-    }
-    rownames(design) <- names(stat.group)
-
-    ## make sure matrix align and compute experiment matrix
-    design <- design[, match(rownames(contr.matrix), colnames(design)), drop = FALSE]
-    colnames(design) <- rownames(contr.matrix)
-    exp.matrix <- (design %*% contr.matrix)
-
-    ## check contrasts for sample sizes (at least 2 in each group) and
-    ## remove otherwise
-    keep <- rep(TRUE, ncol(contr.matrix))
-    keep <- (Matrix::colSums(exp.matrix > 0) >= 1 & Matrix::colSums(exp.matrix < 0) >= 1)
-    contr.matrix <- contr.matrix[, keep, drop = FALSE]
-    exp.matrix <- exp.matrix[, keep, drop = FALSE]
-  }
+  exp.matrix <- contr.matrix
 
   model.parameters <- list(
     design = design,
@@ -164,7 +114,6 @@ compute_testGenes <- function(pgx,
     samples = samples,
     genes = NULL,
     methods = methods,
-    design = design,
     covariates = pgx$covariates,
     contr.matrix = contr.matrix,
     prune.samples = prune.samples,

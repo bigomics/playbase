@@ -33,7 +33,7 @@ jobs:
       -
         name: Update documentation
         run: |
-          docker run --rm -v "$PWD":/playbase -w /playbase rocker/tidyverse:4.3 \
+          docker run --rm -v "$PWD":/playbase -w /playbase bigomics/omicsplayground:devel \
             Rscript -e "install.packages('devtools', repos='https://cloud.r-project.org'); devtools::document()"
       -
         name: Commit updated documentation
