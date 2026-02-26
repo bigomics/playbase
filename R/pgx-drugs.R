@@ -4,43 +4,6 @@
 ##
 
 
-#' Create annotation for drug combinations
-#'
-#' @title Create annotation for drug combinations
-#'
-#' @param combo Character vector of drug combinations (separated by '+')
-#' @param annot0 Data frame with annotation for individual drugs
-#'
-#' @return Data frame with annotation for the drug combinations
-#'
-#' @description Creates annotation for drug combinations by combining annotation
-#'   from individual drugs.
-#'
-#' @details This function takes a vector of drug combinations and an annotation
-#'   data frame for individual drugs. It splits the combinations into individual
-#'   drugs, looks up their annotation, and combines it into annotation for the combos.
-#'
-#'   For example, if combo is 'DrugA + DrugB', it will look up mode of action (moa)
-#'   and targets for DrugA and DrugB, and combine them into moa and targets for
-#'   the combination. NA values are removed.
-#'
-#' @export
-pgx.createComboDrugAnnot <- function(combo, annot0) {
-  drugs <- strsplit(combo, split = "[+]")
-  drug1 <- sapply(drugs, "[", 1)
-  drug2 <- sapply(drugs, "[", 2)
-  j1 <- match(drug1, rownames(annot0))
-  j2 <- match(drug2, rownames(annot0))
-  cmoa <- paste(annot0[j1, "moa"], "+", annot0[j2, "moa"])
-  ctarget <- paste(annot0[j1, "target"], "+", annot0[j2, "target"])
-  cmoa <- gsub("NA [+] NA", "", cmoa)
-  ctarget <- gsub("NA [+] NA", "", ctarget)
-  annot1 <- data.frame(drug = combo, moa = cmoa, target = ctarget)
-  rownames(annot1) <- combo
-  return(annot1)
-}
-
-
 #' @title Compute drug enrichment from expression data
 #'
 #' @param X Numeric gene expression matrix
@@ -196,6 +159,65 @@ pgx.computeDrugEnrichment <- function(pgx, X, xdrugs, drug_info = NULL,
   return(results)
 }
 
+pgx.computeDrugEnrichment2 <- function(pgx, X = NULL, xdrugs = NULL,
+                                       drug_info = NULL,
+                                       nmin = 15, nprune = 250, contrast = NULL) {
+  ## 'pgx'   : can be ngs object or fold-change matrix
+  ## X       : drugs profiles (may have multiple for one drug)
+  ## xdrugs  : drug associated with profile
+
+  if (!all(c("gx.meta", "genes") %in% names(pgx))) {
+    stop("[pgx.computeDrugEnrichment] FATAL. not a pgx object")
+  }
+
+  if (is.null(X)) {
+    X <- playdata::L1000_ACTIVITYS_N20D1011    
+  }
+  if(is.null(xdrugs)) {
+    xdrugs <- gsub("[_@].*$", "", colnames(X))
+  }
+
+  FC <- pgx.getMetaMatrix(pgx)$fc
+  FC <- FC[!duplicated(rownames(FC)), , drop = FALSE]
+  FC <- collapse_by_humansymbol(FC, annot = pgx$genes)
+
+  if (is.null(contrast)) {
+    contrast <- colnames(FC)
+  }
+  contrast <- intersect(contrast, colnames(FC))
+  FC <- FC[, contrast, drop = FALSE]
+
+  ## test for overlap
+  gg <- intersect(rownames(X), rownames(FC))
+  if (length(gg) < 20) {
+    message("WARNING::: pgx.computeDrugEnrichment : not enough common genes!!")
+    return(NULL)
+  }
+
+  colnames(X) <- paste0(xdrugs,"_",colnames(X))
+  enr <- metaLINCS::computeConnectivityEnrichment(
+    FC, names = NULL, mDrugEnrich = X, 
+    nmin = nmin, nprune = nprune) 
+  
+  ## Now compute the MoA enrichment (if not done)
+  moa <- NULL
+  if(!is.null(drug_info)) {
+    moa <- metaLINCS::computeMoaEnrichment(
+      enr, annot = drug_info)
+  }
+
+  results <- list()
+  results$cor <- list(NULL)
+  results$GSEA <- enr[c("X","Q","P","size")]
+  results$stats <- enr$stats
+  results$drug <- enr$drug
+  results$moa <- moa
+  
+  message("[pgx.computeDrugEnrichment] done!")
+
+  return(results)
+}
+
 
 #' @export
 pgx.plotDrugConnectivity <- function(pgx, contrast,
@@ -335,4 +357,60 @@ pgx.plotDrugConnectivity <- function(pgx, contrast,
   } else if (moatype == "drug") {
     plotTopDrugs(db, ntop = ntop)
   }
+}
+
+
+#' Create annotation for drug combinations
+#'
+#' @title Create annotation for drug combinations
+#'
+#' @param combo Character vector of drug combinations (separated by '+')
+#' @param annot0 Data frame with annotation for individual drugs
+#'
+#' @return Data frame with annotation for the drug combinations
+#'
+#' @description Creates annotation for drug combinations by combining annotation
+#'   from individual drugs.
+#'
+#' @details This function takes a vector of drug combinations and an annotation
+#'   data frame for individual drugs. It splits the combinations into individual
+#'   drugs, looks up their annotation, and combines it into annotation for the combos.
+#'
+#'   For example, if combo is 'DrugA + DrugB', it will look up mode of action (moa)
+#'   and targets for DrugA and DrugB, and combine them into moa and targets for
+#'   the combination. NA values are removed.
+#'
+#' @export
+pgx.createComboDrugAnnot <- function(combo, annot0) {
+  drugs <- strsplit(combo, split = "[+]")
+  drug1 <- sapply(drugs, "[", 1)
+  drug2 <- sapply(drugs, "[", 2)
+  j1 <- match(drug1, rownames(annot0))
+  j2 <- match(drug2, rownames(annot0))
+  cmoa <- paste(annot0[j1, "moa"], "+", annot0[j2, "moa"])
+  ctarget <- paste(annot0[j1, "target"], "+", annot0[j2, "target"])
+  cmoa <- gsub("NA [+] NA", "", cmoa)
+  ctarget <- gsub("NA [+] NA", "", ctarget)
+  annot1 <- data.frame(drug = combo, moa = cmoa, target = ctarget)
+  rownames(annot1) <- combo
+  return(annot1)
+}
+
+
+#' Returns MOA enrichment matrix from pgx object
+#'
+#' @export
+pgx.getMOAmatrix <- function(pgx, db=1, level=c("drugClass","targetGene")[1]) {
+  if(is.null(pgx$drugs[[1]]$moa)) {
+    message("[pgx.getMOAmatrix] ERROR: pgx object has not MOA results")
+    return(NULL)
+  }
+  moa <- pgx$drugs[[db]][['moa']] 
+  mm <- lapply(moa, function(m) m[[level]])
+  pp <- lapply(mm, function(m) m$pathway)
+  pp <- Reduce(intersect, pp)
+  mm <- lapply(mm, function(m) m[match(pp,m$pathway),])
+  X <- sapply(mm, function(m) m$NES)
+  rownames(X) <- pp
+  X
 }
