@@ -4,6 +4,7 @@
 ##
 
 IMAGE_MODELS <- c(
+  "gemini-3.1-flash-image-preview",
   "gemini-3-pro-image-preview",
   "gemini-2.5-flash-image",
   "xai:grok-imagine-image",
@@ -123,7 +124,7 @@ ai.create_image <- function(prompt,
 #'
 #' @export
 ai.create_image_gemini <- function(prompt,
-                                   model = "gemini-2.5-flash-image",
+                                   model = "gemini-3.1-flash-image-preview",
                                    api_key = Sys.getenv("GEMINI_API_KEY"),
                                    format = c("file","base64","raw")[1], 
                                    filename = "image.png",
