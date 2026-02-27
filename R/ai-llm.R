@@ -1,16 +1,8 @@
+##
+## This file is part of the Omics Playground project.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
+##
 
-DEFAULT_LLM = "gpt-5-nano"
-DEFAULT_LLM = NULL
-
-REMOTE_MODELS <- c(
-  "openai:gpt-5-nano",
-  "xai:grok-4-1-fast-non-reasoning", 
-  "groq:llama-3.1-8b-instant",
-  "groq:meta-llama/llama-4-scout-17b-16e-instruct",  
-  "groq:openai/gpt-oss-20b",
-  "groq:openai/gpt-oss-120b",
-  "google:gemini-2.5-flash-lite"
-)
 
 #'
 #' @export
@@ -47,7 +39,18 @@ ai.get_ollama_models <- function(models=NULL, size=NULL) {
 }
 OLLAMA_MODELS = ai.get_ollama_models()
 
+REMOTE_MODELS <- c(
+  "openai:gpt-5-nano",
+  "xai:grok-4-fast-non-reasoning", 
+  "groq:llama-3.1-8b-instant",
+  "groq:meta-llama/llama-4-scout-17b-16e-instruct",  
+  "groq:openai/gpt-oss-20b",
+  "groq:openai/gpt-oss-120b",
+  "google:gemini-2.5-flash-lite"
+)
 
+#' Return list of available remote models. 
+#'
 #' @export
 ai.get_remote_models <- function(models = NULL) {
   keys <- NULL
@@ -85,7 +88,9 @@ ai.get_remote_models <- function(models = NULL) {
 ai.get_models <- function(models=NULL) {
   local.models  <- sort(ai.get_ollama_models(models))
   remote.models <- sort(ai.get_remote_models(models))   
-  models <- list( local = local.models, remote = remote.models)
+  models <- list()
+  if(length(local.models))  models$local <- local.models
+  if(length(remote.models)) models$remote <- remote.models  
   return(models)
 }
 

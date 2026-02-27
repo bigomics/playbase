@@ -7326,6 +7326,20 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
     filter = NULL,
     prune = prune
   )
+  # WGCNA-lasagna plot shows error in OPG when prinning is too aggresive.
+  if (igraph::vcount(graph) == 0) {
+    hints <- character(0)
+    if (min.rho > 0.3) hints <- c(hints, paste0("lower the edge threshold (currently ", round(min.rho, 2), ")"))
+    if (isTRUE(prune)) hints <- c(hints, "disable 'Prune nodes'")
+    if (edge.sign %in% c("consensus", "pos", "neg")) hints <- c(hints, paste0("change edge sign filter (currently '", edge.sign, "')"))
+    hint_line <- if (length(hints)) paste0("\nTry: ", paste(hints, collapse = ", or "), ".") else ""
+    plot.new()
+    text(0.5, 0.5,
+      paste0("No edges remain after filtering — nothing to plot.", hint_line),
+      cex = 1.0, col = "grey40", adj = c(0.5, 0.5)
+    )
+    return(invisible(NULL))
+  }
 
   layers <- graph$layers
   layers <- setdiff(layers, c("SOURCE", "SINK"))
