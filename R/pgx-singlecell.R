@@ -346,20 +346,30 @@ pgx.supercell <- function(counts,
   ii <- setdiff(match(colnames(meta), colnames(sc.meta)), NA)
   sc.meta <- sc.meta[, ii, drop = FALSE]
 
-  ## Compute metacall expression as sum of counts
-  counts <- as.matrix(counts)
-  if (log.transform) {
-    sc.counts <- SuperCell::supercell_GE(
-      counts,
-      mode = "sum",
-      groups = SC$membership
-    )
+  ## Aggregate raw counts into metacell expression.
+  ## For sparse matrices avoid as.matrix() on the full (potentially huge) matrix:
+  ## use indicator-matrix multiply to sum/average counts per metacell group.
+  ## Result is genes x n_metacells — small enough to be dense.
+  if (inherits(counts, "sparseMatrix")) {
+    message("[pgx.supercell] Sparse aggregation: ", ncol(counts), " cells -> ", max(SC$membership), " metacells")
+    mc_levels <- sort(unique(SC$membership))
+    f <- factor(SC$membership, levels = mc_levels)
+    ## ind_mat: cells x n_metacells indicator matrix
+    ind_mat <- Matrix::sparse.model.matrix(~ f - 1)
+    colnames(ind_mat) <- mc_levels
+    ## genes x n_metacells (dense result is small: ~18k x 2k)
+    sc.counts <- as.matrix(counts %*% ind_mat)
+    if (!log.transform) {
+      ## average mode: divide each metacell column by its cell count
+      sc.counts <- sweep(sc.counts, 2, Matrix::colSums(ind_mat), "/")
+    }
   } else {
-    sc.counts <- SuperCell::supercell_GE(
-      counts,
-      mode = "average",
-      groups = SC$membership
-    )
+    counts <- as.matrix(counts)
+    if (log.transform) {
+      sc.counts <- SuperCell::supercell_GE(counts, mode = "sum",     groups = SC$membership)
+    } else {
+      sc.counts <- SuperCell::supercell_GE(counts, mode = "average", groups = SC$membership)
+    }
   }
 
   message("[pgx.supercell] SuperCell::supercell_GE completed")
@@ -651,13 +661,11 @@ pgx.runAzimuth <- function(counts, k.weight = NULL, reference = NULL) {
 
   options(future.globals.maxSize = 4 * 1024^4)
 
-  obj <- pgx.justSeuratObject(counts, samples = NULL)
-
   if (is.null(k.weight)) k.weight <- 20
+  if (is.null(reference)) reference <- "pbmcref"
 
   message("[pgx.runAzimuth] k.weight = ", k.weight)
-
-  if (is.null(reference)) reference <- "pbmcref"
+  obj <- pgx.justSeuratObject(counts, samples = NULL)
 
   obj1 <- try(Azimuth::RunAzimuth(
     obj,
@@ -666,15 +674,14 @@ pgx.runAzimuth <- function(counts, k.weight = NULL, reference = NULL) {
     verbose = FALSE
   ))
 
-  if (!"try-error" %in% class(obj1)) {
-    k1 <- !(colnames(obj1@meta.data) %in% colnames(obj@meta.data))
-    k2 <- !grepl("score$|refAssay$", colnames(obj1@meta.data))
-    meta1 <- obj1@meta.data[, (k1 & k2)]
-    return(meta1)
-  } else {
+  if ("try-error" %in% class(obj1)) {
     dbg("[pgx.runAzimuth] Azimuth failed: ref.atlas might be incorrect.")
     return(NULL)
   }
+
+  k1 <- !(colnames(obj1@meta.data) %in% colnames(obj@meta.data))
+  k2 <- !grepl("score$|refAssay$", colnames(obj1@meta.data))
+  return(obj1@meta.data[, (k1 & k2), drop = FALSE])
 
 }
 
@@ -843,35 +850,31 @@ pgx.createSingleCellPGX <- function(counts,
   }
 
   message("[pgx.createSingleCellPGX] Azimuth reference atlas: ", azimuth_ref)
+  message("[pgx.createSingleCellPGX] counts: ", nrow(counts), " genes x ", ncol(counts), " cells")
   library(Seurat) # DO NOT REMOVE THIS LINE (Azimuth fails if not sourcing Seurat)
+
   azm <- pgx.runAzimuth(counts, reference = azimuth_ref)
+  message("[pgx.createSingleCellPGX] Azimuth done")
+
   azm <- azm[, grep("predicted", colnames(azm))]
   ntype <- apply(azm, 2, function(a) length(unique(a)))
   sel <- ifelse(min(ntype) > 10, which.min(ntype), tail(which(ntype <= 10), 1))
   samples <- as.data.frame(samples)
   samples$celltype <- azm[, sel]
 
-  ## because the samples get downsamples, also the sample and
-  ## contrasts matrices get downsampled (by majority label).
   samplesx <- cbind(samples, contrasts)
 
   sc.membership <- NULL
   do.supercells <- sc_compute_settings[["compute_supercells"]]
-  if (is.null(do.supercells)) {
-    do.supercells <- FALSE
-  }
+  if (is.null(do.supercells)) do.supercells <- FALSE
 
   if (do.supercells || ncol(counts) > 10000) {
-    if (do.supercells) {
-      message("[pgx.createSingleCellPGX] User choice: performing SuperCell")
-    }
-    if (ncol(counts) > 10000) {
-      message("[pgx.createSingleCellPGX] >10K cells: performing SuperCell")
-    }
+    if (do.supercells) message("[pgx.createSingleCellPGX] User choice: performing SuperCell")
+    if (ncol(counts) > 10000) message("[pgx.createSingleCellPGX] >10K cells: performing SuperCell")
+
 
     ct <- samplesx[, "celltype"]
     group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse = "_"))
-    ##  group <- paste0(samples[, "celltype"], ":", samples[, pheno])
     if (!is.null(batch)) group <- paste0(group, ":", samples[, batch])
 
     q10 <- quantile(table(group), probs = 0.25)
@@ -879,9 +882,8 @@ pgx.createSingleCellPGX <- function(counts,
       nb <- round(ncol(counts) / 2000)
     } else {
       d <- round(ncol(counts) / 8, 1)
-      nb <- round(ncol(counts) / d) ## temporary...
+      nb <- round(ncol(counts) / d)
     }
-    ## nb <- ceiling(round( q10 / 20 ))
     message("[pgx.createSingleCellPGX] running SuperCell. nb = ", nb)
     sc <- pgx.supercell(counts, samplesx, group = group, gamma = nb)
     message("[pgx.createSingleCellPGX] SuperCell done: ", ncol(counts), " -> ", ncol(sc$counts))
@@ -889,6 +891,7 @@ pgx.createSingleCellPGX <- function(counts,
     samplesx <- sc$meta
     sc.membership <- sc$membership
     remove(sc)
+    gc()
   }
 
   ## Create full Seurat object. Optionally integrate by batch.
@@ -898,7 +901,7 @@ pgx.createSingleCellPGX <- function(counts,
     batch.vec <- as.vector(unlist(samplesx[, batch]))
   }
 
-  message("[pgx.createSingleCellPGX] Creating Seurat object ...")
+  message("[pgx.createSingleCellPGX] Creating Seurat object: ", nrow(counts), " x ", ncol(counts))
   obj <- pgx.createSeuratObject(
     counts = counts,
     samples = samplesx,
