@@ -498,8 +498,11 @@ read_h5_counts <- function(h5.file) {
         x_data    <- rhdf5::h5read(h5.file, "/X/data")
         x_indices <- rhdf5::h5read(h5.file, "/X/indices")
         x_indptr  <- rhdf5::h5read(h5.file, "/X/indptr")
-        obs_names <- rhdf5::h5read(h5.file, "/obs/_index")
-        var_names <- rhdf5::h5read(h5.file, "/var/_index")
+        ## rhdf5::h5read returns 1D arrays (with a dim attribute), not plain
+        ## character vectors. Seurat's LogMap[[<-]] dispatch fails when dimnames
+        ## are arrays rather than vectors. Strip with as.character().
+        obs_names <- as.character(rhdf5::h5read(h5.file, "/obs/_index"))
+        var_names <- as.character(rhdf5::h5read(h5.file, "/var/_index"))
         n_obs  <- length(obs_names)
         n_vars <- length(var_names)
         message("[playbase::read_h5_counts] AnnData sparse CSR detected")
