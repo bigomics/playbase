@@ -421,7 +421,7 @@ pgx.supercell2 <- function(counts, meta, group, target_n = 20) {
 #' @export
 pgx.justSeuratObject <- function(counts, samples) {
   options(Seurat.object.assay.calcn = TRUE)
-  getOption("Seurat.object.assay.calcn")
+  library(Seurat) ## DO NOT REMOVE THIS LINE (Azimuth fails if not sourcing Seurat)
   Seurat::CreateSeuratObject(counts = counts, meta.data = samples)
 }
 
