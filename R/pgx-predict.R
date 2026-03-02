@@ -44,6 +44,15 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
   }
   y <- y[!is.na(y)]
 
+  if (length(unique(y)) < 2) {
+    message("[pgx.compute_importance] Less than 2 phenotype levels after sample filtering. Returning NULL.")
+    return(NULL)
+  }
+  if (length(y) < 4) {
+    message("[pgx.compute_importance] Not enough samples after filtering (n=", length(y), "). Returning NULL.")
+    return(NULL)
+  }
+
   ## -------------------------------------------
   ## select features
   ## -------------------------------------------
@@ -88,6 +97,11 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     }
     pp <- intersect(pp, rownames(X))
     X <- X[pp, , drop = FALSE]
+  }
+
+  if (nrow(X) == 0) {
+    message("[pgx.compute_importance] No features remaining after filtering. Returning NULL.")
+    return(NULL)
   }
 
   ## ----------- restrict to top SD -----------
