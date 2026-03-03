@@ -454,8 +454,8 @@ ai.create_report_drug_connectivity <- function(pgx, model, model2=NULL, db=1,
   ## create bullets
   B <- lapply(summaries, function(x) x$bullets)
   B <- collate_as_sections(B)
-  prompt2 <- paste0("**Instructions**: Below are bullet points for drug connectivity analysis results for different comparisons. Extract 3 short bullet points that are consistent across all. Keep short sentences. Only give list items.")
-  prompt2 <- paste0(prompt2, "\n\n**Bullets**: ", B)
+  prompt2 <- paste0("**Instructions**: Below are bullet points for drug connectivity analysis results for different comparisons. Extract 3 short bullet points that are consistent across all. Keep short sentences. Give only the list items.")
+  prompt2 <- paste0(prompt2, "\n\n**Bullet points**: ", B)
   bullets <- ai.ask(prompt2, model = model)
 
   out <- list(
