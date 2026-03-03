@@ -7,7 +7,7 @@ handles very large prompts correctly.}
 \usage{
 ai.create_image_gemini(
   prompt,
-  model = "gemini-2.5-flash-image",
+  model = "gemini-3.1-flash-image-preview",
   api_key = Sys.getenv("GEMINI_API_KEY"),
   format = c("file", "base64", "raw")[1],
   filename = "image.png",
