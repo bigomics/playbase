@@ -364,7 +364,7 @@ metaLINCS.plotlyActivationMap <- function(res, contrast = NULL,
 
 
 ## ======================================================================
-## ========================== REPORT ====================================
+## ======================= AI REPORT ====================================
 ## ======================================================================
 
 
@@ -407,7 +407,8 @@ ai.summarize_drug_connectivity <- function(pgx, ct, model, drugs=NULL, db=1,
     )
   }
 
-  prompt <- paste("**Instructions**: Give an overall summary of the following results from a drug connectivity MOA analysis. Create an integrated pharmacological narrative focussing on inferred mechanisms-of-action class and possible drug targets. Validate inferred drug MOA with the given (measured) enriched up/down gene sets. Do not describe gene sets on its own, only in connection with drug pharmacological MOA. Do not include tables, be concise, write in prose is preferred. \n\n**Analysis results**: ",results)
+  prompt <- paste("**Instructions**: Give an overall summary of the following results from a drug connectivity MOA analysis. Create an integrated pharmacological narrative focussing on inferred mechanisms-of-action class and possible drug targets. Validate inferred drug MOA with the given (measured) enriched up/down gene sets. Do not describe gene sets on its own, only in connection with drug pharmacological MOA. Do not include tables, be concise, write in prose is preferred. Format in markdown with title and sections.")
+  prompt <- paste(prompt, "\n\n**Analysis results**: ",results)
   summary <- ai.ask(prompt, model = model)
 
   bullets <- ai.ask(paste("Give a short 2-3 bullet point summary of the following text. Focus on similarity with drugs MOA. Use very short sentences, no titles. :",summary),  model = model)
