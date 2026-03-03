@@ -445,9 +445,11 @@ ai.create_report_drug_connectivity <- function(pgx, model, model2=NULL, db=1,
   S <- collate_as_sections(S)
 
   ## Ask LLM
-  prompt <- paste("**Instructions**: Below are drug connectivity analysis results for different comparisons. Summarize this into a single report. The database used is", db.name, ". Minimize use of tables, writing in prose is preferred. Use scientific style. Format in markdown with title and sections.")
+  prompt <- paste("**Instructions**: Below are drug connectivity analysis results for different comparisons. Summarize this into a single report. Minimize use of tables, writing in prose is preferred. Use scientific style. Format in markdown with title and sections.")
   if(!is.null(user.prompt)) prompt <- paste(prompt, user.prompt)
-  prompt <- paste0(prompt, "\n\n**Analysis**: ", S)
+  prompt <- paste0(prompt, "\nExperiment description: ", pgx$description)
+  prompt <- paste0(prompt, "\nDatabase: ", db.name)
+  prompt <- paste0(prompt, "\n\n**CMap analysis**: ", S)
   rpt <- ai.ask(prompt, model = model2)
   rpt
 
