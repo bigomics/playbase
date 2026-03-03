@@ -222,10 +222,13 @@ markdownToPDF <- function(text, file) {
   hdr <- paste0(hdr, "      - bottom=25mm\n")
   hdr <- paste0(hdr, "    mainfont: Lato\n")
   hdr <- paste0(hdr,"---\n") 
-
   text <- sub("^#", paste0(hdr,"\n#"), text)
   
   curwd <- getwd()
+  on.exit(setwd(curwd))
+
+  ## because quarto writes into the same folder, we temporarily go to a
+  ## temp folder not to polute main code
   tmpdir <- tempdir()
   setwd(tmpdir)
   md.file <- file.path(tmpdir,"report.md")
@@ -234,6 +237,8 @@ markdownToPDF <- function(text, file) {
   pdf.file <- file.path(tmpdir,"report.pdf")
   setwd(curwd)
   file.copy(pdf.file, file, overwrite=TRUE)
+  unlink(pdf.file)
+  
   return(file)
 }
 

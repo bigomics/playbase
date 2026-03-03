@@ -121,11 +121,12 @@ ai.create_ellmer_chat <- function(model, system_prompt) {
 ai.ask <- function(question, model, engine=c("ellmer","tidyprompt")[2]) {
   if(model == "ellmer" && grepl("grok",model)) model <- "tidyprompt"
   if(engine=="ellmer") {
-    resp <- ai.ask_ellmer(question=question, model=model, prompt=NULL) 
+    resp <- try(ai.ask_ellmer(question=question, model=model, prompt=NULL))
   }
   if(engine=="tidyprompt") {
-    resp <- ai.ask_tidyprompt(question=question, model=model) 
+    resp <- try(ai.ask_tidyprompt(question=question, model=model)) 
   }
+  if(inherits(resp, "try-error")) resp <- "Error: could not get response"
   return(resp)
 }
 
