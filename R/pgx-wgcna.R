@@ -5786,8 +5786,8 @@ wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
 wgcna.create_report <- function(wgcna, ai_model,
                                 graph = NULL, annot=NULL, multi=FALSE,
                                 ntop=100, topratio=0.85, psig=0.05,
-                                format="markdown", verbose=1,
-                                progress=NULL) {
+                                userprompt='', format="markdown",
+                                verbose=1, progress=NULL) {
   if(0) {
     graph = NULL; annot=NULL; multi=FALSE;
     ntop=100; topratio=0.85; psig=0.05;
@@ -5901,7 +5901,8 @@ Format like a scientific article, use prose as much as possible, minimize the us
     if(tolower(format)=="html") {
       qq <- paste(qq, "Format text and sections as HTML.")
     }
-    qq <- paste(qq, "\n\nnHere are the results: <results>",all.results,"\n</results>")
+    qq <- paste(qq, userprompt)
+    qq <- paste(qq, "\n\n<results>",all.results,"\n</results>")
     ## Finally ask LLM
     report <- ai.ask(qq, model = ai_model)
     report <- gsub("^```html|```$","",report)
@@ -5917,6 +5918,11 @@ Format like a scientific article, use prose as much as possible, minimize the us
       graph = graph,
       ai_model = ai_model
     )
+
+    ## create bullet points
+    bullet_prompt = paste0("**Instructions**: From the given report, extract 3 one-line  bullet points summarizing key take home messages. Keep sentences short. Give just the list items. \n\n***Report***:",report)
+    bullets <- ai.ask(bullet_prompt, model = ai_model)
+    
   }
 
   # check if title
@@ -5933,7 +5939,8 @@ Format like a scientific article, use prose as much as possible, minimize the us
     summaries = summaries,
     report_prompt = qq,
     report = report,
-    diagram = diagram    
+    diagram = diagram,
+    bullets = bullets
   )
 }
 
@@ -6002,7 +6009,7 @@ wgcna.create_diagram <- function(wgcna_report, ai_model, graph=NULL,
     dot <- wgcna.graph2dot(graph) 
     qq <- paste0("Create a directed diagram connecting modules according to the following WGCNA report. Use the given undirected graph as starting point and use known scientific information to infer connectivity and directionality. All modules must be connected with at least one other module. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add extra nodes for inferred intermediate phenotypes. Determine which phenotypes are causal and which phenotypes are observed effects. Suggest cause and effect relations that explain phenotypes and modules. Group modules with same biological functions. Give just the code in clean DOT format.
 
-Layout in TB direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Do not use hexadecimal color coding. Use solid lines for positive regulation, use dashed lines for negative regulation. Annotate modules with module name, biological function and key gene/protein or metabolite. Use rectangular shapes for module nodes, use oval shapes for phenotype nodes. Color fill nodes matching the module names with light palette so we can still read well the text. Never use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow. ")
+Layout in TB direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Do not use hexadecimal color coding. Use solid lines for positive regulation, use dashed lines for negative regulation. Annotate modules with module name, biological function and key gene/protein or metabolite. Color fill nodes matching the module names with light palette so we can still read well the text. Never use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow. Use rectangular shapes for module nodes, use oval shapes for phenotype nodes. ")
     qq <- paste(qq,
       "\n\n<report>", wgcna_report, "</report>",
       "\n\n<dot>", dot, "</dot>" )
@@ -6011,7 +6018,7 @@ Layout in TB direction. Do not use any special characters, without headers or fo
     ## If we do not pass a graph (from e.g. Lasagna) we let the LLM
     ## connect the modules itself based on its external knowledge.
     message("[wgcna.create_diagram] no graph template...")
-    qq <- paste0("Create a diagram connecting modules in the following WGCNA report. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add phenotype nodes. Suggest cause and effect relations that explain the phenotypes. Group modules with same biological functions. Give just the code in clean DOT format. Layout in TB direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Do not use hexadecimal color coding. Use solid lines for positive regulation, use dashed lines for negative regulation. Color fill nodes matching the module names with light palette so we can still read well the text. Never use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow.")
+    qq <- paste0("Create a diagram connecting modules in the following WGCNA report. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add phenotype nodes. Suggest cause and effect relations that explain the phenotypes. Group modules with same biological functions. Give just the code in clean DOT format. Layout in TB direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Do not use hexadecimal color coding. Use solid lines for positive regulation, use dashed lines for negative regulation. Color fill nodes matching the module names with light palette so we can still read well the text. Never use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow. Use rectangular shapes for module nodes, use oval shapes for phenotype nodes.")
     qq <- paste(qq, "\n\n<report>", wgcna_report, "</report>")
   }
 
@@ -6057,7 +6064,7 @@ wgcna.create_infographic <- function(report,  diagram=NULL, prompt=NULL,
                                      add.fallback = FALSE,
                                      filename = "infographic.png") {  
 
-  prompt <- paste(prompt, "\nCreate a graphical abstract according to the given diagram and information in the WGCNA report. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. \n\n", report, "\n---------------\n\n", diagram)
+  prompt <- paste(prompt, "\nCreate a graphical abstract according to the given diagram and information in the WGCNA report. Use scientific infographic style. Illustrate biological concepts with small graphics. \n\n", report, "\n---------------\n\n", diagram)
   if(is.null(model) || model=="") {
     model <- ai.get_image_models()
   }
