@@ -407,7 +407,8 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
 #' a correlation plot of the significance (-log10 p-values) is also generated.
 #'
 #' @export
-pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE) {
+pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE,
+                                     color_up = NULL, color_down = NULL) {
   cl <- sapply(df, class)
   nlev <- apply(df, 2, function(x) length(unique(x[!is.na(x)])))
   cvar <- which(cl %in% c("numeric", "integer") & nlev >= 2)
@@ -521,7 +522,9 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE
     Q <- (Q + t(Q)) / 2
   }
 
-  BLUERED <- grDevices::colorRampPalette(c(omics_colors("brand_blue"), "white", omics_colors("red")))
+  up_col   <- if (!is.null(color_up))   color_up   else omics_colors("red")
+  down_col <- if (!is.null(color_down)) color_down else omics_colors("brand_blue")
+  BLUERED <- grDevices::colorRampPalette(c(down_col, "white", up_col))
 
   if (plot == TRUE) {
     if (compute.pv) {
