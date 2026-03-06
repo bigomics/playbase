@@ -224,7 +224,7 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
 #' @export
 pgx.plotEnrichmentDotPlot <- function(pgx, contrast, filter = NULL,
                                       ntop = 30, dir = "both",
-                                      ptsize = 6,
+                                      ptsize = 6, cex=1,
                                       main = "Enrichment Analysis") {
   gs <- pgx$gset.meta$meta[[contrast]]
   df <- data.frame(
@@ -261,11 +261,11 @@ pgx.plotEnrichmentDotPlot <- function(pgx, contrast, filter = NULL,
     ggplot2::labs(x = "Enrichment score", y = NULL, color = "p-value", size = "score") +
     ggplot2::ggtitle(main) +
     ggplot2::theme(
-      axis.title = ggplot2::element_text(size = 11),
-      axis.text = ggplot2::element_text(size = 11),
-      title = ggplot2::element_text(size = 14),
-      legend.title = ggplot2::element_text(size = 11),
-      legend.text = ggplot2::element_text(size = 8)
+      axis.title = ggplot2::element_text(size = 11*cex),
+      axis.text = ggplot2::element_text(size = 11*cex),
+      title = ggplot2::element_text(size = 14*cex),
+      legend.title = ggplot2::element_text(size = 11*cex),
+      legend.text = ggplot2::element_text(size = 8*cex)
     )
 }
 
