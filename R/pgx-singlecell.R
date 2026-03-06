@@ -340,8 +340,7 @@ pgx.supercell <- function(counts,
   csel <- which(sapply(meta, class) %in% c("numeric", "integer"))
   group.mean <- function(x) tapply(x, SC$membership, function(x) mean(x, na.rm = TRUE))
   cmeta <- apply(meta[, csel, drop = FALSE], 2, function(x) group.mean(x))
-
-  sc.meta <- data.frame(dmeta)
+  sc.meta <- data.frame(dmeta, check.names = FALSE)
   if (length(csel) > 0) sc.meta <- cbind(sc.meta, cmeta)
   ii <- setdiff(match(colnames(meta), colnames(sc.meta)), NA)
   sc.meta <- sc.meta[, ii, drop = FALSE]
