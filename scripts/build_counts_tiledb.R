@@ -67,7 +67,7 @@ cat("Overwrite:", overwrite, "\n\n")
 
 start_time <- Sys.time()
 
-metadata <- playbase::pgx.buildTileDB(
+metadata <- playbase::buildTileDB(
   pgx_folder = pgx_folder,
   tiledb_path = tiledb_path,
   overwrite = overwrite,
