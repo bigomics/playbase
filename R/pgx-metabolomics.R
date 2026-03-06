@@ -243,10 +243,10 @@ getMetaboliteAnnotation <- function(probes,
   }
   probes <- trimws(probes)
 
-  ## strip postfix after underscore
-  probes <- sub("_.*", "", probes)
+  ## strip postfix after underscore (NEED RETHINK!)
+  ## probes <- sub("[ _.-].*", "", probes)
 
-  ## missing probes
+  ## missing probes as 'minus'
   probes[probes %in% c("", "-", "NA", NA)] <- "-"
   names(orig.probes) <- probes
 
@@ -1148,10 +1148,8 @@ ramp.annotate_metabolites <- function(id) {
   table(pfx)
 
   ## check connection
-  res <- try(suppressMessages(suppressWarnings(
-    RaMP::getChemicalProperties("chebi:12345")
-  )))
-  if ("try-error" %in% class(res)) {
+  rampDB <- try(suppressMessages(suppressWarnings(RaMP::RaMP())))
+  if ("try-error" %in% class(rampDB)) {
     message("WARNING:: failed to connect github server")
     return(NULL)
   }
@@ -1161,7 +1159,7 @@ ramp.annotate_metabolites <- function(id) {
   idx <- iconv2utf8(idx)
 
   ## chem properties
-  suppressMessages(chemprop <- RaMP::getChemicalProperties(idx))
+  suppressMessages(chemprop <- RaMP::getChemicalProperties(idx, db=rampDB))
   chemdata <- chemprop$chem_props
   colnames(chemdata)
   sel.chem <- c("chem_source_id", "common_name", "mol_formula", "monoisotop_mass")
@@ -1169,10 +1167,9 @@ ramp.annotate_metabolites <- function(id) {
   annot <- data.frame(input_id = id, chemdata[ii, sel.chem])
   colnames(annot) <- c("Input.name", "Matched.name", "Standardized.name", "Formula", "Exact.mass")
   rownames(annot) <- NULL
-  head(annot)
 
   ## add lipid class info
-  chem <- suppressMessages(RaMP::getChemClass(mets = idx, inferIdMapping = TRUE))
+  chem <- suppressMessages(RaMP::getChemClass(mets = idx, inferIdMapping = TRUE, db=rampDB))
   metclass <- chem$met_classes
   dim(metclass)
   if (nrow(metclass)) {
@@ -1374,6 +1371,13 @@ ramp.get_metabolite_sets <- function(id, db = c("pathway", "onto", "class"),
     gmin <- 0
   }
 
+  ## check connection
+  rampDB <- try(suppressMessages(suppressWarnings(RaMP::RaMP())))
+  if ("try-error" %in% class(rampDB)) {
+    message("WARNING:: failed to connect github server")
+    return(NULL)
+  }
+  
   ## Query RaMP for patways
   gmt.pathway <- list()
   if ("pathway" %in% db) {
@@ -1385,6 +1389,7 @@ ramp.get_metabolite_sets <- function(id, db = c("pathway", "onto", "class"),
       includeSmpdb = FALSE,
       minPathwaySize = (metmin + gmin),
       maxPathwaySize = 400,
+      db = rampDB
     )))
 
     if (!inherits(pw, "try-error") && !is.null(pw) && nrow(pw) > 0) {
@@ -1397,7 +1402,7 @@ ramp.get_metabolite_sets <- function(id, db = c("pathway", "onto", "class"),
   ## Query RaMP for Ontology
   gmt.onto <- list()
   if ("onto" %in% db) {
-    suppressMessages(onto <- try(RaMP::getOntoFromMeta(mets = idx)))
+    suppressMessages(onto <- try(RaMP::getOntoFromMeta(mets = idx, db = rampDB)))
     if (!inherits(onto, "try-error") && !is.null(onto) && nrow(onto)) {
       onto_id <- paste0(onto$Ontology, " [", onto$HMDBOntologyType, "]")
       gmt.onto <- tapply(onto$sourceId, onto_id, function(s) unique(s))
@@ -1411,7 +1416,8 @@ ramp.get_metabolite_sets <- function(id, db = c("pathway", "onto", "class"),
     suppressMessages(
       chem <- try(RaMP::getChemClass(
         mets = idx,
-        inferIdMapping = TRUE
+        inferIdMapping = TRUE,
+        db = rampDB
       ))
     )
     if (!inherits(chem, "try-error")) {
