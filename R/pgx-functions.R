@@ -3,6 +3,13 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
+#' @export
+is.multiomics <- function(pgx) {
+  t1=t2=TRUE
+  if(!is.null(pgx$datatype)) t1 <- (pgx$datatype %in% c("multiomics","multi-omics"))
+  t2 <- all(grepl("[:]",rownames(pgx$X)))
+  t1 || t2
+}
 
 #' Default merge by columns (cbind) with shared features on
 #' rows. Features are union of input matrices.
@@ -1464,7 +1471,8 @@ pgx.getGeneSetCollections <- function(gsets = rownames(playdata::GSETxGENE)) {
 #' @export
 filterProbes <- function(annot, genes) {
   ## check probe name, short probe name or gene name for match
-  p0 <- (toupper(sub(".*:", "", rownames(annot))) %in% toupper(genes))
+  a0 <- mofa.strip_prefix(rownames(annot))
+  p0 <- (toupper(a0) %in% toupper(genes))
   p1 <- (toupper(rownames(annot)) %in% toupper(genes))
 
   p_list <- list(p0, p1)
@@ -1507,10 +1515,10 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
                        na.rm = TRUE, unique = TRUE, keep.prefix = FALSE) {
   ## new_id="symbol";na.rm=TRUE;unique=TRUE;keep.prefix=FALSE
 
-  ## add rownames
+  ## add rownames and extra columns
   annot_table$rownames <- rownames(annot_table)
   annot_table$rownames2 <- sub("^[A-Za-z]+:", "", rownames(annot_table)) ## strip prefix
-
+  
   if (is.matrix(counts) || inherits(counts, "Matrix") ||
     is.data.frame(counts) || !is.null(dim(counts))) {
     type <- "matrix"
@@ -1519,44 +1527,51 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
     type <- "vector"
     probes <- names(counts)
   }
+
+  ## handle old style annot without symbol column
+  if(new_id=="symbol" && !"symbol" %in% colnames(annot_table) &&
+    "gene_name" %in% colnames(annot_table)) new_id <- "gene_name"
+
+  ## strip prefix ??
+  probes0 <- probes
+  probes <- mofa.strip_prefix(probes0)  
+
+  ## iterative matching of probes.
+  idx <- rep(NA, length(probes))  
+  names(idx) <- probes0
   probe_match <- apply(annot_table, 2, function(x) sum(probes %in% x))
-  if (max(probe_match, na.rm = TRUE) == 0) {
+  match.cols <- names(sort(probe_match,decreasing=TRUE))
+  pp <- probes
+  for (k in match.cols) {  
+    ##from_id <- names(which.max(probe_match))
+    from <- annot_table[, k]
+    ii <- match(pp, from)
+    if(any(!is.na(ii))) {
+      kk <- which(!is.na(ii))
+      idx[match(pp[kk],probes)] <- ii[kk]
+    }
+    pp <- probes[is.na(idx)]
+    if(length(pp)==0) break
+  }
+
+  ## bail out if no match at all
+  if(all(is.na(idx))) {
     return(counts)
   }
-
-  if (type == "vector") {
+    
+  ## make sure matrix
+  if( type == "vector") {
     counts <- cbind(counts)
   }
-
-  from_id <- names(which.max(probe_match))
-  if (new_id == "symbol" && !"symbol" %in% colnames(annot_table) &&
-    "gene_name" %in% colnames(annot_table)) {
-    new_id <- "gene_name"
-  }
-
-  ## dummy do-noting return
-  if (new_id == from_id) {
-    sel <- which(probes %in% annot_table[, from_id])
-    counts <- counts[sel, , drop = FALSE]
-    if (type == "vector") counts <- counts[, 1]
-    return(counts)
-  }
-
-  if (type == "vector") {
-    counts <- cbind(counts)
-  }
-
-  keep.prefix <- (keep.prefix && all(grepl(":", probes)))
-
-  from <- annot_table[, from_id]
-  ##  if (!any(duplicated(from)) || unique) {
-  ii <- match(probes, from)
+  
+  ## create matched counts/data table
+  keep.prefix <- (keep.prefix && all(grepl(":", probes0)))
   if (keep.prefix) {
-    dt <- mofa.get_prefix(probes)
-    new.name <- annot_table[ii, new_id]
+    dt <- mofa.get_prefix(probes0)
+    new.name <- annot_table[idx, new_id]
     new.name <- paste0(dt, ":", new.name)
   } else {
-    new.name <- annot_table[ii, new_id]
+    new.name <- annot_table[idx, new_id]
   }
   rownames(counts) <- new.name
 
@@ -2613,3 +2628,5 @@ match.dataframe <- function(id, df, parallel = TRUE) {
 ## ==========================================================================
 ## ==================== END OF FILE =========================================
 ## ==========================================================================
+
+
