@@ -5751,6 +5751,7 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
 wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
                                 multi=FALSE) {
 
+  if(is.null(topratio)) topratio <- 0.85
   if(!multi) {    
     ww <- list(gx = wgcna)  ## single-omics wgcna object
   } else {
@@ -5786,6 +5787,7 @@ wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
 wgcna.create_report <- function(wgcna, ai_model,
                                 graph = NULL, annot=NULL, multi=FALSE,
                                 ntop=100, topratio=0.85, psig=0.05,
+                                do.diagram = TRUE,
                                 userprompt='', format="markdown",
                                 verbose=1, progress=NULL) {
   if(0) {
@@ -5796,7 +5798,8 @@ wgcna.create_report <- function(wgcna, ai_model,
   }
   
   if(is.null(ai_model)) ai_model <- ""
-
+  if(is.null(topratio)) topratio <- 0.85
+  
   if(!multi) {
     layers <- list(gx = wgcna)
   } else if(!is.null(wgcna$layers)) {
@@ -5878,7 +5881,8 @@ wgcna.create_report <- function(wgcna, ai_model,
   if(!is.null(progress)) progress$set(message = "Baking full report...", value=0.6)
   if(verbose) message("Baking full report...")
 
-  qq=diagram=report=NULL
+  qq=diagram=report=NULL;bullets=""
+
   if(ai_model == "") {
     report <- all.results
   } else {
@@ -5910,14 +5914,16 @@ Format like a scientific article, use prose as much as possible, minimize the us
     ##--------------------------------------------------------------------
     ## Step 4: Create diagram from report
     ##-------------------------------------------------------------------
-    if(!is.null(progress)) progress$set(message = "Mashing up diagram...", value=0.8)  
-    if(verbose) message("Mashing up diagram...")
-    if(is.null(graph) && !is.null(wgcna$graph)) graph <- wgcna$graph
-    diagram <- wgcna.create_diagram(
-      report,
-      graph = graph,
-      ai_model = ai_model
-    )
+    if(do.diagram) {
+      if(!is.null(progress)) progress$set(message = "Mashing up diagram...", value=0.8)  
+      if(verbose) message("Mashing up diagram...")
+      if(is.null(graph) && !is.null(wgcna$graph)) graph <- wgcna$graph
+      diagram <- wgcna.create_diagram(
+        report,
+        graph = graph,
+        ai_model = ai_model
+      )
+    }
 
     ## create bullet points
     bullet_prompt = paste0("**Instructions**: From the given report, extract 3 one-line  bullet points summarizing key take home messages. Keep sentences short. Give just the list items. \n\n***Report***:",report)
@@ -6001,6 +6007,9 @@ dot.rankdir <- function(dot, dir) {
 wgcna.create_diagram <- function(wgcna_report, ai_model, graph=NULL,
                                  rankdir="TB", correct=TRUE, double.check=TRUE) {
 
+  ## cleanup
+  wgcna_report <- iconv2ascii(wgcna_report)
+  
   if(!is.null(graph)) {
     ## If we pass a graph (from e.g. Lasagna) we tell the LLM to use
     ## the graph as starting point or template. This constrains the
