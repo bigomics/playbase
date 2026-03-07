@@ -325,13 +325,90 @@ pgx.supercell <- function(counts,
     if (NCOL(group) > 1) group <- apply(group, 1, paste, collapse = ".")
   }
 
-  SC <- SuperCell::SCimplify(X,
-    gamma = gamma,
-    n.var.genes = nvargenes,
-    cell.split.condition = group
-  )
-  message("[pgx.supercell] SuperCell::SCimplify completed")
+  ncells <- ncol(X)
 
+  if (ncells < 40000) {
+    message("[pgx.supercell] SuperCell::SCimplify. Less than ", ncells, ". Use standard SCimplify..")    
+    SC <- SuperCell::SCimplify(
+      X,
+      gamma = gamma,
+      n.var.genes = nvargenes,
+      cell.split.condition = group,
+      return.singlecell.NW = FALSE,
+      return.hierarchical.structure = FALSE
+    )
+  } else {
+    ## For large datasets, SCimplify is slow due to:
+    ## 1. do.approx subscript-out-of-bounds bug for > 40K cells
+    ## 2. build_knn_graph_nn2 computes per-edge distances via apply() — one R call per edge
+    ## Fix: bypass SuperCell's kNN — use irlba PCA + RANN kNN + louvain.
+    message("[pgx.supercell] SuperCell::SCimplify. More than ", ncells, ". Using Louvain clustering..")
+    message("[pgx.supercell] Fast path for ", ncells, " cells (irlba + RANN + louvain)")
+
+    nvg <- min(nvargenes, nrow(X))
+
+    if (inherits(X, "sparseMatrix")) {
+      rv <- Matrix::rowMeans(X^2) - Matrix::rowMeans(X)^2
+    } else {
+      rv <- matrixStats::rowVars(X)
+    }
+
+    ## PCA via irlba  (sparse-matrix OK)
+    ff <- rownames(X)[order(rv, decreasing = TRUE)[seq_len(nvg)]]
+    X1 <- Matrix::t(X[ff, , drop = FALSE])  ## cells x genes
+    pca.res <- irlba::prcomp_irlba(X1, n = 10L, center = TRUE, scale. = TRUE)
+    emb <- pca.res$x  ## cells x n.pc
+    rownames(emb) <- colnames(X)
+
+    ## Subsample for kNN graph only for very large datasets, to avoid O(N^2) on full matrix.
+    ## Subsampling allows community size and group mixing match SCimplify's behavior.
+    ## RANN kNN is very fast regardless.
+    set.seed(1234)
+    approx.N <- if (ncells > 100000L) 20000L else ncells
+    pre.idx <- sort(sample(ncells, approx.N))
+    rest.idx <- setdiff(seq_len(ncells), pre.idx)
+    emb.pre <- emb[pre.idx, , drop = FALSE]
+
+    ## kNN via RANN (C++ kd-tree) — replaces SuperCell's slow per-edge apply loop
+    nn.res <- RANN::nn2(data = emb.pre, k = 6L)  ## k+1: nn2 includes self as first neighbor
+    nn.idx <- nn.res$nn.idx[, -1L, drop = FALSE] ## drop self
+    adj <- lapply(seq_len(nrow(nn.idx)), function(i) nn.idx[i, ])
+    gg <- igraph::graph_from_adj_list(adj, duplicate = FALSE, mode = "all")
+    gg <- igraph::simplify(gg, remove.multiple = TRUE)
+    igraph::E(gg)$weight <- 1
+
+    ## Louvain with resolution tuned to target ncells/gamma communities.
+    cl <- igraph::cluster_louvain(gg, resolution = gamma)
+    membership.pre <- cl$membership
+    names(membership.pre) <- rownames(emb.pre)
+
+    ## Map remaining cells to nearest metacell centroid via RANN
+    mc.levels <- sort(unique(membership.pre))
+    centroids <- do.call(rbind, lapply(mc.levels, function(mc) {
+      colMeans(emb.pre[membership.pre == mc, , drop = FALSE])
+    }))
+    if (length(rest.idx) > 0) {
+      nn.rest <- RANN::nn2(data = centroids, query = emb[rest.idx, , drop = FALSE], k = 1L)
+      membership.rest <- mc.levels[nn.rest$nn.idx[, 1L]]
+      names(membership.rest) <- rownames(emb)[rest.idx]
+    } else {
+      membership.rest <- integer(0)
+    }
+
+    ## Combine and optionally enforce cell.split.condition
+    membership <- c(membership.pre, membership.rest)[colnames(X)]
+    if (!is.null(group)) {
+      names(group) <- colnames(X)
+      membership <- as.integer(factor(paste(membership, group, sep = "_")))
+      names(membership) <- colnames(X)
+    }
+
+    SC <- list(membership = membership)
+    
+  }
+
+  message("[pgx.supercell] SuperCell::SCimplify completed")
+  
   meta <- as.data.frame(meta)
   dsel <- which(sapply(meta, class) %in% c("factor", "character", "logical"))
   group.argmax <- function(x) tapply(x, SC$membership, function(x) names(which.max(table(x))))
@@ -341,7 +418,7 @@ pgx.supercell <- function(counts,
   group.mean <- function(x) tapply(x, SC$membership, function(x) mean(x, na.rm = TRUE))
   cmeta <- apply(meta[, csel, drop = FALSE], 2, function(x) group.mean(x))
 
-  sc.meta <- data.frame(dmeta)
+  sc.meta <- data.frame(dmeta, check.names = FALSE)
   if (length(csel) > 0) sc.meta <- cbind(sc.meta, cmeta)
   ii <- setdiff(match(colnames(meta), colnames(sc.meta)), NA)
   sc.meta <- sc.meta[, ii, drop = FALSE]
@@ -366,7 +443,7 @@ pgx.supercell <- function(counts,
   } else {
     counts <- as.matrix(counts)
     if (log.transform) {
-      sc.counts <- SuperCell::supercell_GE(counts, mode = "sum",     groups = SC$membership)
+      sc.counts <- SuperCell::supercell_GE(counts, mode = "sum", groups = SC$membership)
     } else {
       sc.counts <- SuperCell::supercell_GE(counts, mode = "average", groups = SC$membership)
     }
@@ -377,6 +454,12 @@ pgx.supercell <- function(counts,
   colnames(sc.counts) <- paste0("mc", 1:ncol(sc.counts))
   rownames(sc.meta) <- colnames(sc.counts)
 
+  ## it may weirdily be needed
+  for(i in 1:ncol(sc.meta)) {
+    jj <- which(sc.meta[,i] == "NULL")
+    if (length(jj)) sc.meta[jj,i] <- NA
+  }
+  
   list(counts = sc.counts, meta = sc.meta, membership = sc.membership)
 
 }
@@ -872,19 +955,20 @@ pgx.createSingleCellPGX <- function(counts,
     if (do.supercells) message("[pgx.createSingleCellPGX] User choice: performing SuperCell")
     if (ncol(counts) > 10000) message("[pgx.createSingleCellPGX] >10K cells: performing SuperCell")
 
-
     ct <- samplesx[, "celltype"]
     group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse = "_"))
     if (!is.null(batch)) group <- paste0(group, ":", samples[, batch])
 
-    q10 <- quantile(table(group), probs = 0.25)
     if (ncol(counts) > 2000) {
-      nb <- round(ncol(counts) / 2000)
+      nb <- round(ncol(counts) / 1000)
     } else {
       d <- round(ncol(counts) / 8, 1)
       nb <- round(ncol(counts) / d)
     }
+
     message("[pgx.createSingleCellPGX] running SuperCell. nb = ", nb)
+    saveRDS(list(counts=counts,samplex=samplesx,group=group,gamma=nb), "~/Desktop/rr.RDS")
+    message("[pgx.createSingleCellPGX] -------------- rr SAVED")
     sc <- pgx.supercell(counts, samplesx, group = group, gamma = nb)
     message("[pgx.createSingleCellPGX] SuperCell done: ", ncol(counts), " -> ", ncol(sc$counts))
     counts <- sc$counts
