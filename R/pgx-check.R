@@ -18,31 +18,52 @@ pgx.checkINPUT <- function(
   check_return <- list()
 
   if (datatype == "COUNTS" || datatype == "EXPRESSION") {
-    df.class <- apply(df_clean, 2, class)
-    if (any(df.class == "character")) {
-      # remove special characters before converting to numeric (keep
-      # commas, dots) as they define the decimal separator
-      jj <- which(df.class == "character")
-      df_clean[, jj] <- apply(df_clean[, jj], 2, function(x) gsub("[^0-9,.]", "", x))
+    ## Sparse matrices (e.g. dgCMatrix from h5 scRNA-seq reads) cannot have character
+    ## columns by definition, so skip the character-class check entirely. This avoids
+    ## both the O(n_cols) vapply overhead and R's internal as.matrix() coercion that
+    ## apply() triggers on any S4 object.
+    if (!inherits(df_clean, "sparseMatrix")) {
+      df.class <- apply(df_clean, 2, class)
+      if (any(df.class == "character")) {
+        # remove special characters before converting to numeric (keep
+        # commas, dots) as they define the decimal separator
+        jj <- which(df.class == "character")
+        df_clean[, jj] <- apply(df_clean[, jj], 2, function(x) gsub("[^0-9,.]", "", x))
 
-      # convert matrix from character to numeric, sometimes we receive
-      # character matrix from read.csv function
-      df_clean[, jj] <- apply(df_clean[, jj], 2, as.numeric, simplify = TRUE)
+        # convert matrix from character to numeric, sometimes we receive
+        # character matrix from read.csv function
+        df_clean[, jj] <- apply(df_clean[, jj], 2, as.numeric, simplify = TRUE)
+      }
     }
 
     rownames(df_clean) <- rownames(df)
     sample_names <- colnames(df_clean)
 
-    # check if any value in df had a non-NA value that was converted to NA in df_clean
-    ANY_NON_NUMERIC <- which(!is.na(df) & is.na(df_clean), arr.ind = TRUE)
-
-    if (length(ANY_NON_NUMERIC) > 0 && PASS) {
-      check_return$e27 <- paste("gene:", rownames(ANY_NON_NUMERIC), " and ", "sample:", colnames(df_clean)[ANY_NON_NUMERIC[, 2]])
+    # check if any value in df had a non-NA value that was converted to NA in df_clean.
+    # Skip for sparse matrices: the character-stripping conversion that introduces NAs
+    # is skipped for sparse input, so the result is always empty and !is.na() on a
+    # sparse matrix densifies (structural FALSE -> TRUE covers the full matrix).
+    if (!inherits(df_clean, "sparseMatrix")) {
+      ANY_NON_NUMERIC <- which(!is.na(df) & is.na(df_clean), arr.ind = TRUE)
+      if (length(ANY_NON_NUMERIC) > 0 && PASS) {
+        check_return$e27 <- paste("gene:", rownames(ANY_NON_NUMERIC), " and ", "sample:", colnames(df_clean)[ANY_NON_NUMERIC[, 2]])
+      }
     }
 
     # check if there are any infinite values. replace infinite values
     # in counts by NA.
-    ANY_INFINITE <- which(df_clean == Inf | df_clean == -Inf, arr.ind = TRUE)
+    # For sparse matrices scan only the stored non-zero values (@x slot) to avoid
+    # a full sparse->dense comparison that creates a dense logical of the same size.
+    if (inherits(df_clean, "sparseMatrix")) {
+      inf_in_x <- which(is.infinite(df_clean@x))
+      ANY_INFINITE <- if (length(inf_in_x) > 0) {
+        Matrix::which(is.infinite(df_clean), arr.ind = TRUE)
+      } else {
+        integer(0)
+      }
+    } else {
+      ANY_INFINITE <- which(df_clean == Inf | df_clean == -Inf, arr.ind = TRUE)
+    }
 
     if (length(ANY_INFINITE) > 0 && PASS) {
       ## replace Inf with NA
@@ -205,7 +226,7 @@ pgx.checkINPUT <- function(
   # check for empty df
   IS_DF_EMPTY <- any(dim(df_clean) == 0)
 
-  if (!IS_DF_EMPTY) {
+  if (!IS_DF_EMPTY && !inherits(df_clean, "sparseMatrix")) {
     df_clean <- as.matrix(df_clean)
   }
 
