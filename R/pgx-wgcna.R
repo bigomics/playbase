@@ -191,6 +191,9 @@ pgx.wgcna <- function(
   return(wgcna)
 }
 
+
+
+
 #' Get merged multiomics geneset x feature matrix. Combines geneset
 #' and metabolite sets.
 #' 
@@ -467,6 +470,30 @@ wgcna.compute <- function(X,
 
   return(results)
 }
+
+
+wgcna.init <- function(wgcna, sv.tom=40) {
+    
+  if (is.null(wgcna$svTOM) && !is.null(wgcna$TOM)) {
+    ## sv.tom <- ceiling(min(sv.tom,dim(datExpr)/2))
+    message("[wgcna.init] reducing computin svTOM")
+    sv.tom <- min(sv.tom, ncol(TOM) - 1)
+    sv <- irlba::irlba(wgcna$TOM, nv = sv.tom)
+    svTOM <- sv$v %*% diag(sqrt(sv$d))
+    rownames(svTOM) <- colnames(datExpr)
+    wgcna$svTOM <- svTOM
+    wgcna$TOM <- NULL
+  }
+  
+  if (is.null(wgcna$stats)) {
+    message("[wgcna.init] computing gene statistics...")
+    wgcna$stats <- wgcna.computeGeneStats(
+      wgcna$net, wgcna$datExpr, wgcna$datTraits, TOM = wgcna$svTOM)
+  }
+  
+  wgcna
+}
+
 
 #' @export
 wgcna.compute_multiomics <- function(dataX,
@@ -1219,19 +1246,22 @@ wgcna.computeGeneStats <- function(net, datExpr, datTraits, TOM) {
   foldChangePvalue <- cbind(foldChangePvalue, foldChangePvalue.cont)
 
   ## Gene Centrality. Compute centrality of gene in Module subgraph
-  ## using TOM matrix.
+  ## using TOM matrix. Warning: TOM matrix really large. Reduced KNN
+  ## matrix could be better.
   geneCentrality <- NULL
   if (!is.null(TOM)) {
+    if (nrow(TOM) != ncol(TOM)) {
+      ## given TOM is svTOM, convert to full TOM
+      TOM <- tcrossprod(TOM)
+    }
     if (is.null(dimnames(TOM))) dimnames(TOM) <- list(colnames(datExpr), colnames(datExpr))
-    adj <- TOM
-    diag(adj) <- 0
-    adj[which(abs(adj) < 0.01)] <- 0
+    diag(TOM) <- 0
+    TOM[which(abs(TOM) < 0.01)] <- 0
     gr <- igraph::graph_from_adjacency_matrix(
-      adj,
-      mode = "undirected", weighted = TRUE, diag = FALSE
+      TOM, mode = "undirected", weighted = TRUE, diag = FALSE
     )
-    geneCentrality <- rep(NA, nrow(adj))
-    names(geneCentrality) <- rownames(adj)
+    geneCentrality <- rep(NA, nrow(TOM))
+    names(geneCentrality) <- rownames(TOM)
     me.genes <- tapply(names(net$colors), net$colors, list)
     for (gg in me.genes) {
       gr1 <- igraph::subgraph(gr, gg)
@@ -2778,8 +2808,7 @@ wgcna.runPreservationWGCNA <- function(exprList,
     ref <- reference.name
     wnet <- list(MEs = MEx[[ref]], colors = pres$colors[, ref])
     pres$stats <- wgcna.computeGeneStats(wnet, pres$datExpr[[ref]],
-      pres$datTraits,
-      TOM = NULL
+      pres$datTraits, TOM = NULL
     )
   }
 

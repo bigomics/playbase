@@ -21,13 +21,15 @@ list_to_content <- function(a, newline=FALSE) {
   paste(cc,'\n')
 }
 
-collate_as_sections <- function(a, level=2) {
+collate_as_sections <- function(a, level=2, csep=NULL) {
   if(is.null(a)) return("")
   hdr <- paste(rep("#",level),collapse="")
   for(i in 1:length(a)) {
-    a[[i]] <- paste(hdr,names(a)[i],"\n\n",a[[i]],'\n')
+    a[[i]] <- paste0(hdr," ",names(a)[i],"\n\n",a[[i]])
   }
-  paste(a, collapse="\n\n")
+  if(!is.null(csep)) a <- paste0(a,"\n",csep,"\n")
+  a <- paste0(a, collapse="\n")
+  return(a)
 }
 
 #'
