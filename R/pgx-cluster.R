@@ -390,6 +390,7 @@ pgx.clusterMatrix <- function(X,
                               find.clusters = FALSE,
                               umap.pkg = "uwot",
                               verbose = 1) {
+
   methods <- intersect(methods, c("pca", "tsne", "umap", "pacmap"))
   if (length(methods) == 0) methods <- "pca"
 
@@ -417,6 +418,7 @@ pgx.clusterMatrix <- function(X,
   if (center.features && NCOL(X) >= 2) {
     X <- X - rowMeans(X, na.rm = TRUE) ## do??
   }
+
   if (scale.features && NCOL(X) >= 2) {
     X <- X / matrixStats::rowSds(X, na.rm = TRUE)
   }
@@ -431,7 +433,7 @@ pgx.clusterMatrix <- function(X,
   res.svd <- NULL
   if (reduce.pca > 0) {
     reduce.pca <- max(3, min(c(reduce.pca, dim(X) - 1)))
-    if (verbose > 0) message("Reducing to ", reduce.pca, " PCA dimensions...")
+    if (verbose > 0) message("[pgx.clusterMatrix] Reducing to ", reduce.pca, " PCA dimensions...")
     cnx <- colnames(X)
     suppressMessages(suppressWarnings(res.svd <- irlba::irlba(X, nv = reduce.pca)))
     X <- t(res.svd$v) * res.svd$d ## really weight with D??
@@ -441,12 +443,11 @@ pgx.clusterMatrix <- function(X,
   all.pos <- list()
 
   if ("pca" %in% methods) {
-    if (verbose > 0) message("[pgx.clusterMatrix] Calculating PCA...")
     if (is.null(res.svd)) {
       suppressMessages(suppressWarnings(res.svd <- irlba::irlba(X, nv = 3)))
     }
     if (2 %in% dims) {
-      if (verbose > 0) message("[pgx.clusterMatrix] PCA 2D...")
+      if (verbose > 0) message("[pgx.clusterMatrix] Calculating PCA 2D...")
       pos <- res.svd$v[, 1:2]
       rownames(pos) <- colnames(X)
       pos <- pos[1:dimx[2], , drop = FALSE] ## if augmented
@@ -458,7 +459,7 @@ pgx.clusterMatrix <- function(X,
       all.pos[["pca2d.varexp"]] <- varexp
     }
     if (3 %in% dims) {
-      if (verbose > 0) message("[pgx.clusterMatrix] PCA 3D...")
+      if (verbose > 0) message("[pgx.clusterMatrix] Calculating PCA 3D...")
       pos <- res.svd$v[, 1:3]
       rownames(pos) <- colnames(X)
       pos <- pos[1:dimx[2], , drop = FALSE] ## if augmented
@@ -467,12 +468,15 @@ pgx.clusterMatrix <- function(X,
     }
   }
 
+  if (is.null(perplexity) || perplexity == 0) perplexity = 30 
+  perplexity <- pmax(pmin(perplexity, dimx[2] / 4, 50), 10)
+  
   if ("tsne" %in% methods && 2 %in% dims) {
-    if (verbose > 0) message("[pgx.clusterMatrix] Calculating t-SNE 2D...")
-    perplexity <- pmax(min(min(dimx) / 4, perplexity), 2)
+    if (verbose > 0) message("[pgx.clusterMatrix] Calculating t-SNE 2D. Perplexity = ", perplexity)
     res1 <- Rtsne::Rtsne(
       t(X),
       dims = 2,
+      pca = FALSE,
       is_distance = FALSE,
       check_duplicates = FALSE,
       perplexity = perplexity,
@@ -486,12 +490,11 @@ pgx.clusterMatrix <- function(X,
   }
 
   if ("tsne" %in% methods && 3 %in% dims) {
-    if (verbose > 0) message("[pgx.clusterMatrix] Calculating t-SNE 3D...")
-    if (verbose > 0) message("[pgx.clusterMatrix] Perplexity = ", perplexity)
-    perplexity <- pmax(min(min(dimx) / 4, perplexity), 2)
+    if (verbose > 0) message("[pgx.clusterMatrix] Calculating t-SNE 3D. Perplexity = ", perplexity)
     pos <- Rtsne::Rtsne(
       t(X),
       dims = 3,
+      pca = FALSE,
       is_distance = FALSE,
       check_duplicates = FALSE,
       perplexity = perplexity,
@@ -504,7 +507,7 @@ pgx.clusterMatrix <- function(X,
   }
 
   if ("umap" %in% methods && 2 %in% dims) {
-    if (verbose > 0) message("calculating UMAP 2D...")
+    if (verbose > 0) message("[pgx.clusterMatrix] Calculating UMAP 2D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
       pos <- uwot::tumap(t(X),
@@ -556,6 +559,7 @@ pgx.clusterMatrix <- function(X,
 
   gc()
   return(all.pos)
+
 }
 
 #' @export
