@@ -967,8 +967,6 @@ pgx.createSingleCellPGX <- function(counts,
     }
 
     message("[pgx.createSingleCellPGX] running SuperCell. nb = ", nb)
-    saveRDS(list(counts=counts,samplex=samplesx,group=group,gamma=nb), "~/Desktop/rr.RDS")
-    message("[pgx.createSingleCellPGX] -------------- rr SAVED")
     sc <- pgx.supercell(counts, samplesx, group = group, gamma = nb)
     message("[pgx.createSingleCellPGX] SuperCell done: ", ncol(counts), " -> ", ncol(sc$counts))
     counts <- sc$counts
