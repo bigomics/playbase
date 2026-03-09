@@ -40,12 +40,13 @@ ai.get_ollama_models <- function(models=NULL, size=NULL) {
 OLLAMA_MODELS = ai.get_ollama_models()
 
 REMOTE_MODELS <- c(
-  "openai:gpt-5-nano",
-  "xai:grok-4-fast-non-reasoning", 
-  "groq:llama-3.1-8b-instant",
-  "groq:meta-llama/llama-4-scout-17b-16e-instruct",  
-  "groq:openai/gpt-oss-20b",
+  "groq:meta-llama/llama-4-maverick-17b-128e-instruct",
   "groq:openai/gpt-oss-120b",
+#  "groq:llama-3.1-8b-instant",
+#  "groq:meta-llama/llama-4-scout-17b-16e-instruct",  
+  "groq:openai/gpt-oss-20b",
+  "xai:grok-4-1-fast-non-reasoning", 
+  "openai:gpt-5-nano",
   "google:gemini-2.5-flash-lite"
 )
 

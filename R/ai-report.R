@@ -1,41 +1,21 @@
 ##---------------------------------------------------------------------
-##----------------------- CONTENT CREATION ----------------------------
+##------------------------ REPORT CREATION ----------------------------
 ##---------------------------------------------------------------------
 
-
-table_to_content <- function(df) {
-  if(is.null(df)) return(NULL)
-  rownames(df) <- iconv2ascii(rownames(df))
-  for(i in seq_len(ncol(df))) {
-    if(is.character(df[[i]])) df[[i]] <- iconv2ascii(df[[i]])
-  }
-  paste(as.character(knitr::kable(df,format="markdown")),collapse="\n")
-}
-
-list_to_content <- function(a, newline=FALSE) {
-  if(is.null(a)) return("")
-  aa <- sapply(a, function(s) paste(unlist(s), collapse='; '))
-  pp <- paste0("- **",names(a),"**: ")
-  if(newline) pp <- paste0(pp, '\n\n')
-  cc <- paste(paste0(pp,aa), collapse='\n')
-  paste(cc,'\n')
-}
-
-collate_as_sections <- function(a, level=2, csep=NULL) {
-  if(is.null(a)) return("")
-  hdr <- paste(rep("#",level),collapse="")
-  for(i in 1:length(a)) {
-    a[[i]] <- paste0(hdr," ",names(a)[i],"\n\n",a[[i]])
-  }
-  if(!is.null(csep)) a <- paste0(a,"\n",csep,"\n")
-  a <- paste0(a, collapse="\n")
-  return(a)
+#' @export
+ai.create_report <- function(pgx, ...) {
+  ai.create_full_report(pgx, ...) 
 }
 
 #'
 #'
 #' @export
-ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
+ai.create_full_report <- function(pgx, ntop=20, llm=NULL,
+                                  sections=NULL, collate=FALSE) {
+
+  if(0) {
+    ntop=20;sections=NULL;collate=FALSE
+  }
   
   contrasts <- pgx.getContrasts(pgx)
   samples <- rownames(pgx$samples)
@@ -99,7 +79,8 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
       "Up-regulated genes (top hits). The top most most positively differentially expressed genes are:" = F.up,
       "Down-regulated genes (top hits). The top most negatively differentially expressed genes are:" = F.dn
     )
-    differential_expression <- lapply(differential_expression, table_to_content)
+    differential_expression <- lapply(differential_expression, round, digits=3)
+    differential_expression <- lapply(differential_expression, table_to_content)    
   }
   
   ##-------------------------------------------------------------------
@@ -130,20 +111,23 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
       "Top most positively enriched pathways:" = PW.up,
       "Top most negatively enriched pathways:" = PW.dn
     )
+    geneset_enrichment <- lapply(geneset_enrichment, round, digits=3)
     geneset_enrichment <- lapply(geneset_enrichment, table_to_content)
   }
-  
+
   ##-------------------------------------------------------------------
   drug_similarity <- NULL
   if("drug_similarity" %in% sections && !is.null(pgx$drugs)) {
     ## NEED RETHINK: Only reports first contrast at the moment
     D <- pgx.getTopDrugs(pgx, ct, n=ntop, na.rm=TRUE)    
     drug_similarity <- list(
-      "Drug Mechanism of Action. Drug Connectivity Map (CMap) analysis of selected comparison. Similarity of the mechanism of action (MOA) is based on correlation enrichment with drug perturbation profiles of LINCS L1000 database. The top most similar (i.e. positively correlated) drugs are:" =
-        table_to_content(pgx.getTopDrugs(pgx, ct, n=ntop, dir=+1, na.rm=TRUE)), 
-      "The top most inhibitory (i.e. negative correlated) drugs are:" = 
-        table_to_content(pgx.getTopDrugs(pgx, ct, n=ntop, dir=-1, na.rm=TRUE))
+      "Drug Mechanism of Action. Drug Connectivity Map (CMap) analysis of selected comparison. Similarity of the mechanism of action (MOA) is based on correlation enrichment with drug perturbation profiles of LINCS L1000 database. The top most similar (i.e. positively correlated) drugs are:\n\n" =
+        pgx.getTopDrugs(pgx, ct, n=ntop, dir=+1, na.rm=TRUE), 
+      "The top most inhibitory (i.e. negative correlated) drugs are:\n\n" = 
+        pgx.getTopDrugs(pgx, ct, n=ntop, dir=-1, na.rm=TRUE)
     )
+    #drug_similarity <- lapply(drug_similarity, round, digits=3)    
+    drug_similarity <- lapply(drug_similarity, table_to_content)    
   }
   
   ##-------------------------------------------------------------------
@@ -169,7 +153,7 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
     ) 
 
     names(out)
-    wgcna_report <- list_to_content(out$answers)
+    wgcna_report <- list_to_content(out$answers, newline=TRUE)
   }
     
   ##-----------------------------------------------------------
@@ -181,54 +165,82 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
     description = list_to_content(description),
     dataset_info = list_to_content(dataset_info),
     compute_settings = list_to_content(compute_settings),
-    differential_expression = list_to_content(differential_expression),
-    geneset_enrichment = list_to_content(geneset_enrichment),
-    drug_similarity = list_to_content(drug_similarity),
+    differential_expression = list_to_content(differential_expression, newline=TRUE),
+    geneset_enrichment = list_to_content(geneset_enrichment, newline=TRUE),
+    drug_similarity = list_to_content(drug_similarity, newline=TRUE),
     pcsf_report = list_to_content(pcsf_report),
     wgcna_report = wgcna_report
   )
+
+  ## clean-up
+  #content <- lapply(content, function(s) gsub("[-=_]+{4}","",s))
+  content <- lapply(content, function(s) gsub("[=]+{3}","",s))
   
   if(collate) {
-    content <- collate_as_sections(content,level=2) 
+    content <- collate_as_sections(
+      content, level=3, csep='\\newpage', hdr="SECTION")
   }
 
   return(content)
 }
 
-#' Export markdown to PDF 
-#' 
+
+#' Format and render contents as section.
+#'
 #' @export
-markdownToPDF <- function(text, file) {
-
-  text <- gsub(intToUtf8("8209"),"-",text)
-  ##text <- gsub("---\n","",text)
+md.render_section <- function(contents) {
   
-  ## header/frontmatter
-  hdr <- paste0("---\n")
-  hdr <- paste0(hdr, "format:\n")
-  hdr <- paste0(hdr, "  pdf:\n")
-  #hdr <- paste0(hdr, "    documentclass: report\n")  
-  hdr <- paste0(hdr, "    pdf-engine: lualatex\n")
-  hdr <- paste0(hdr, "    documentclass: article\n")
-  hdr <- paste0(hdr, "    papersize: a4\n")
-  hdr <- paste0(hdr, "    geometry:\n")
-  hdr <- paste0(hdr, "      - left=25mm\n")
-  hdr <- paste0(hdr, "      - right=20mm\n")
-  hdr <- paste0(hdr, "      - top=25mm\n")
-  hdr <- paste0(hdr, "      - bottom=25mm\n")
-  hdr <- paste0(hdr, "    mainfont: Lato\n")
-  hdr <- paste0(hdr,"---\n") 
+  div.description <- contents$description
+  div.bullets <- contents$bullets
 
-  text <- sub("^#", paste0(hdr,"\n#"), text)
+  ## render report with slight grey background
+  div.report <- contents$report
+  div.report <- gsub("\n---","\n",div.report)  ## remove hline
+  div.report <- paste("\n::: {style='background-color: #eee;'}",
+    div.report, ":::\n",sep="\n\n")
   
-  curwd <- getwd()
-  tmpdir <- tempdir()
-  setwd(tmpdir)
-  md.file <- file.path(tmpdir,"report.md")
-  write(text, file=md.file)
-  quarto::quarto_render(md.file, output_format="pdf", quiet=TRUE)
-  pdf.file <- file.path(tmpdir,"report.pdf")
-  setwd(curwd)
-  file.copy(pdf.file, file, overwrite=TRUE)
-  return(file)
+  div.methods <- contents$methods
+  div.settings <- list_to_list(contents$settings)
+
+  div.references <- contents$references
+  div.references <- list_to_list(
+    as.list(div.references),
+    type = 'ol',
+    add.name = FALSE
+  )
+
+  div.figures <- as.list(contents$figures)
+  div.figures <- md.list_to_figs(div.figures)  
+
+  div.tables <- list()
+  for(i in 1:length(contents$tables)) {
+    tbl <- table_to_content(
+      contents$tables[[i]]
+      #caption = names(contents$tables)[i]
+    )
+    tbl <- paste("\n::: {style='font-size: 8pt;'}",
+      tbl, ":::\n",sep="\n\n")    
+    div.tables[[i]] <- tbl
+  }
+  names(div.tables) <- names(contents$tables)
+  div.tables <- list_to_content(div.tables, newline=TRUE) 
+  
+  divs <- list(
+    "Description" = div.description,
+    "Bullet points" = div.bullets,
+    "AI Report" = div.report,
+    "Methods" = div.methods,  
+    "Settings" = div.settings,
+    "References" = div.references,
+    "\\newpage",             
+    "Figures" = div.figures,
+    "\\newpage",         
+    "Tables" = div.tables
+  )
+  names(divs) <- toupper(names(divs))
+  names(divs) <- paste0("[",names(divs),"]{.underline}") 
+  collate_as_sections(divs, csep="\n---\n", level=3 )
+  
 }
+
+

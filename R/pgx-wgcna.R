@@ -5929,10 +5929,10 @@ Format like a scientific article, use prose as much as possible, minimize the us
     qq <- paste(pp, qq)
     
     if(format=="markdown") {
-      qq <- paste(qq, "Format text and sections as markdown.")
+      qq <- paste(qq, "Format as markdown. Divide text in sections using hash.")
     }
     if(tolower(format)=="html") {
-      qq <- paste(qq, "Format text and sections as HTML.")
+      qq <- paste(qq, "Format as HTML. Divide text in sections using header tags.")
     }
     qq <- paste(qq, userprompt)
     qq <- paste(qq, "\n\n<results>",all.results,"\n</results>")
@@ -5980,6 +5980,11 @@ Format like a scientific article, use prose as much as possible, minimize the us
 }
 
 correct_dot_diagram <- function(diagram) {
+
+  diagram <- iconv2ascii(diagram)
+  diagram <- gsub(".*```(mermaid|dot)\n|```","",diagram)
+  diagram <- gsub(".*<[a-z]+>|</[a-z]+>.*","",diagram)
+
   ## force as digraph
   diagram <- sub("^graph","digraph",diagram)
   
@@ -6034,50 +6039,57 @@ dot.rankdir <- function(dot, dir) {
 
 #' @export
 wgcna.create_diagram <- function(wgcna_report, ai_model, graph=NULL,
-                                 rankdir="TB", correct=TRUE, double.check=TRUE) {
+                                 format=c("dot","mermaid")[1], rankdir="TB",
+                                 correct=TRUE, double.check=TRUE) {
 
   ## cleanup
   wgcna_report <- iconv2ascii(wgcna_report)
-  
+
+  dot = NULL
   if(!is.null(graph)) {
     ## If we pass a graph (from e.g. Lasagna) we tell the LLM to use
     ## the graph as starting point or template. This constrains the
     ## connections and minimizes 'hallucinations'
     message("[wgcna.create_diagram] using graph template...")
     dot <- wgcna.graph2dot(graph) 
-    qq <- paste0("Create a directed diagram connecting modules according to the following WGCNA report. Use the given undirected graph as starting point and use known scientific information to infer connectivity and directionality. All modules must be connected with at least one other module. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add extra nodes for inferred intermediate phenotypes. Determine which phenotypes are causal and which phenotypes are observed effects. Suggest cause and effect relations that explain phenotypes and modules. Group modules with same biological functions. Give just the code in clean DOT format.
-
-Layout in TB direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Do not use hexadecimal color coding. Use solid lines for positive regulation, use dashed lines for negative regulation. Annotate modules with module name, biological function and key gene/protein or metabolite. Color fill nodes matching the module names with light palette so we can still read well the text. Never use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow. Use rectangular shapes for module nodes, use oval shapes for phenotype nodes. ")
-    qq <- paste(qq,
-      "\n\n<report>", wgcna_report, "</report>",
-      "\n\n<dot>", dot, "</dot>" )
-
+    qq <- "Create a directed diagram connecting modules according to the following WGCNA report. Use the given undirected graph as starting point."
   } else {
     ## If we do not pass a graph (from e.g. Lasagna) we let the LLM
     ## connect the modules itself based on its external knowledge.
     message("[wgcna.create_diagram] no graph template...")
-    qq <- paste0("Create a diagram connecting modules in the following WGCNA report. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add phenotype nodes. Suggest cause and effect relations that explain the phenotypes. Group modules with same biological functions. Give just the code in clean DOT format. Layout in TB direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Do not use hexadecimal color coding. Use solid lines for positive regulation, use dashed lines for negative regulation. Color fill nodes matching the module names with light palette so we can still read well the text. Never use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow. Use rectangular shapes for module nodes, use oval shapes for phenotype nodes.")
-    qq <- paste(qq, "\n\n<report>", wgcna_report, "</report>")
+    qq <- "Create a diagram connecting modules in the following WGCNA report."
   }
+  qq <- paste(qq, "All modules must be connected with at least one other module. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add extra nodes for inferred intermediate phenotypes. Use known scientific information to infer connectivity and directionality. Determine which phenotypes are causal and which phenotypes are observed effects. Suggest cause and effect relations that explain phenotypes and modules. Group modules with same biological functions.\n\n")
+  if(format == "mermaid") {
+    qq <- paste(qq, "Give the result in Mermaid format.")
+  } else {
+    qq <- paste(qq, "Give the result in DOT format.")
+  }
+  qq <- paste(qq, "Just give the code. Do not use comments. Layout in TB direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Use solid lines for positive regulation, use dashed lines for negative regulation. Annotate modules with module name, biological function and key gene/protein or metabolite. Color fill nodes matching the WGCNA module names with light palette or with high transparency so we can still read well the text. Use hexadecimal color coding, add hash sign and put inside single quotes. Never use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow. Use rectangular shapes for module nodes, use oval shapes for phenotype nodes. I repeat, do not just copy the input graph.")
+    
+  qq <- paste(qq,"\n\n<report>", wgcna_report, "</report>")
+  if(!is.null(dot)) qq <- paste(qq,"\n\n<dot>", dot, "</dot>")
 
   aa <- ai.ask(qq, model = ai_model)
 
   ## cleanup a little bit
-  aa <- gsub("```","",aa)
-  diagram <- gsub("mermaid\n|dot\n","",aa)
+  aa <- iconv2ascii(aa)
+  aa <- gsub(".*<[a-z]+>|</[a-z]+>.*","",aa)
+  diagram <- gsub(".*```(mermaid|dot)\n|```","",aa)
   diagram <- gsub("&","and",diagram)
   diagram <- dot.rankdir(diagram, dir=rankdir)   
-  if(correct) {
+
+  if(correct && format=="dot") {
     diagram <- correct_dot_diagram(diagram) 
   }
 
-  if(double.check) {  
+  if(double.check && format=="dot") {  
     code.error <- TRUE
     ntry <- 1
     while(code.error && ntry <= 5) {
       ## check valid code
       dg <- DiagrammeR::grViz(diagram)
-      out <- try(DiagrammeRsvg::export_svg(dg))
+      out <- try(DiagrammeRsvg::export_svg(dg))      
       code.error <- inherits(out, "try-error")
       if(code.error) {
         ## try to correct
