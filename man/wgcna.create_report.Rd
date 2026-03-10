@@ -13,6 +13,8 @@ wgcna.create_report(
   ntop = 100,
   topratio = 0.85,
   psig = 0.05,
+  do.diagram = TRUE,
+  userprompt = "",
   format = "markdown",
   verbose = 1,
   progress = NULL
