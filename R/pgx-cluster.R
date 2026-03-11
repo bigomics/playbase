@@ -469,8 +469,9 @@ pgx.clusterMatrix <- function(X,
   }
 
   if (is.null(perplexity) || perplexity == 0) perplexity = 30 
-  perplexity <- pmax(pmin(perplexity, dimx[2] / 4, 50), 10)
-  
+  max_perplexity <- floor((ncol(X)- 1) / 3)
+  perplexity <- pmax(pmin(perplexity, dimx[2] / 4, 50, max_perplexity), min(10, max_perplexity)) 
+    
   if ("tsne" %in% methods && 2 %in% dims) {
     if (verbose > 0) message("[pgx.clusterMatrix] Calculating t-SNE 2D. Perplexity = ", perplexity)
     res1 <- Rtsne::Rtsne(
