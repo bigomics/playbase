@@ -1271,8 +1271,31 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   G <- normalize_cols(G)
 
   pgx$GMT <- G
+
+  ## Remap GMT rownames from symbol to counts ID space. On non-human
+  ## organisms the GMT is built with gene symbols (e.g. daf-2) while
+  ## counts uses systematic IDs (e.g. WBGene00000898). The genes table
+  ## bridges both: rownames = counts IDs, $symbol = GMT IDs. We only
+  ## remap when it strictly improves overlap, so human/mouse are unaffected.
+  counts_ids <- rownames(pgx$counts)
+  current_overlap <- sum(rownames(pgx$GMT) %in% counts_ids)
+  if (current_overlap < nrow(pgx$GMT)) {
+    map <- setNames(rownames(pgx$genes), pgx$genes$symbol)
+    new_ids <- map[rownames(pgx$GMT)]
+    keep <- !is.na(new_ids)
+    remap_overlap <- sum(new_ids[keep] %in% counts_ids)
+    if (remap_overlap > current_overlap) {
+      dbg(glue::glue(
+        "[pgx.add_GMT] remapping GMT rownames to counts ID space: ",
+        "{current_overlap}/{nrow(pgx$GMT)} -> {remap_overlap}/{sum(keep)}"
+      ))
+      pgx$GMT <- pgx$GMT[keep, , drop = FALSE]
+      rownames(pgx$GMT) <- new_ids[keep]
+    }
+  }
+
   pgx$custom.geneset <- custom.geneset
-  message(glue::glue("[pgx.add_GMT] Final GMT: {nrow(G)} x {ncol(G)}"))
+  message(glue::glue("[pgx.add_GMT] Final GMT: {nrow(pgx$GMT)} x {ncol(pgx$GMT)}"))
   rm(G)
 
   gc()

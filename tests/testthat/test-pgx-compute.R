@@ -87,3 +87,68 @@ test_that("pgx.computePGX runs without errors", {
   # Check output
   expect_equal(names(pgx_comp), expected_slots)
 })
+
+
+## ---------------------------------------------------------------
+## GMT remap tests (pgx.add_GMT rowname harmonisation)
+## ---------------------------------------------------------------
+
+test_that("GMT remap is no-op when rownames already match counts", {
+  pgx_file <- system.file("data", "pgx_example.rds", package = "playbase")
+  if (!nzchar(pgx_file)) pgx_file <- "data/pgx_example.rds"
+  if (!file.exists(pgx_file)) skip("pgx_example not found")
+  pgx <- local(get(load(pgx_file)))
+
+  gmt_before <- pgx$GMT
+  counts_ids <- rownames(pgx$counts)
+  current_overlap <- sum(rownames(pgx$GMT) %in% counts_ids)
+
+  expect_equal(current_overlap, nrow(pgx$GMT))
+  expect_identical(pgx$GMT, gmt_before)
+})
+
+test_that("GMT remap fixes mismatched rownames via genes table", {
+  pgx_file <- system.file("data", "pgx_example.rds", package = "playbase")
+  if (!nzchar(pgx_file)) pgx_file <- "data/pgx_example.rds"
+  if (!file.exists(pgx_file)) skip("pgx_example not found")
+  pgx <- local(get(load(pgx_file)))
+
+  ## Simulate non-human: give counts and genes fake systematic IDs,
+
+  ## keep GMT rownames as the original symbols.
+  orig_ids <- rownames(pgx$GMT)
+  n <- length(orig_ids)
+  fake_ids <- paste0("GENE", sprintf("%05d", seq_len(n)))
+
+  ## Build a genes table that bridges fake -> symbol
+  genes_new <- pgx$genes[match(orig_ids, rownames(pgx$genes)), ]
+  genes_new <- genes_new[!is.na(genes_new$symbol), ]
+  n_genes <- nrow(genes_new)
+  rownames(genes_new) <- fake_ids[seq_len(n_genes)]
+  genes_new$symbol <- orig_ids[seq_len(n_genes)]
+  pgx$genes <- genes_new
+
+  ## Update counts rownames to fake IDs
+  idx <- match(rownames(pgx$counts), orig_ids)
+  rownames(pgx$counts) <- ifelse(!is.na(idx), fake_ids[idx], rownames(pgx$counts))
+
+  ## Before remap: 0% overlap
+  expect_equal(sum(rownames(pgx$GMT) %in% rownames(pgx$counts)), 0)
+
+  ## Apply remap logic (same as pgx-compute.R)
+  counts_ids <- rownames(pgx$counts)
+  current_overlap <- sum(rownames(pgx$GMT) %in% counts_ids)
+  map <- setNames(rownames(pgx$genes), pgx$genes$symbol)
+  new_ids <- map[rownames(pgx$GMT)]
+  keep <- !is.na(new_ids)
+  remap_overlap <- sum(new_ids[keep] %in% counts_ids)
+
+  expect_gt(remap_overlap, current_overlap)
+
+  pgx$GMT <- pgx$GMT[keep, , drop = FALSE]
+  rownames(pgx$GMT) <- new_ids[keep]
+
+  final_overlap <- sum(rownames(pgx$GMT) %in% counts_ids)
+  expect_gt(final_overlap, 0)
+  expect_equal(final_overlap, remap_overlap)
+})

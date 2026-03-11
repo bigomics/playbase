@@ -429,8 +429,16 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     pv <- P[[i]]
     qv <- Q[[i]]
     fc <- S[[i]]
-    meta.p <- apply(pv, 1, max, na.rm = TRUE) ## maximum p-statistic (simple & fast)
-    meta.q <- apply(qv, 1, max, na.rm = TRUE) ## maximum q-statistic (simple & fast)
+    ## Drop zero-power methods (0 sig at q<0.05) so they don't veto
+    ## real discoveries. No-op when all methods have power (human/mouse).
+    has.power <- colSums(qv < 0.05, na.rm = TRUE) > 0
+    if (any(!has.power)) {
+      dbg("[gset.meta] dropping zero-power methods:", paste(names(which(!has.power)), collapse = ", "))
+    }
+    pv2 <- pv[, has.power, drop = FALSE]
+    qv2 <- qv[, has.power, drop = FALSE]
+    meta.p <- apply(pv2, 1, max, na.rm = TRUE)
+    meta.q <- apply(qv2, 1, max, na.rm = TRUE)
     ss.rank <- function(x) scale(sign(x) * rank(abs(x), na.last = "keep"), center = FALSE)
     if (nrow(S[[i]]) == 1) {
       meta.fx <- S[[i]]
