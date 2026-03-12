@@ -4525,42 +4525,44 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   ## plot hilighted points with label
   if (!is.null(hilight2)) {
     jj <- which(rownames(df) %in% hilight2)
-    plt <- plt %>%
-      plotly::add_markers(
-        data = df[jj, ],
-        x = ~x,
-        y = ~y,
-        color = ~value,
-        colors = cpal,
-        key = ~name,
-        mode = "markers",
-        type = "scattergl", #
-        ## text = ~text,
-        ## hoverinfo = hoverinfo,
-        marker = list(
-          ## color = col1,
-          opacity = 1,
-          size = 5 * hilight.cex,
-          showlegend = FALSE,
-          showscale = FALSE,
-          line = list(
-            color = "#000000",
-            width = 1.0 * hilight2.lwd
+    if (length(jj) > 0) {
+      plt <- plt %>%
+        plotly::add_markers(
+          data = df[jj, ],
+          x = ~x,
+          y = ~y,
+          color = ~value,
+          colors = cpal,
+          key = ~name,
+          mode = "markers",
+          type = "scattergl", #
+          ## text = ~text,
+          ## hoverinfo = hoverinfo,
+          marker = list(
+            ## color = col1,
+            opacity = 1,
+            size = 5 * hilight.cex,
+            showlegend = FALSE,
+            showscale = FALSE,
+            line = list(
+              color = "#000000",
+              width = 1.0 * hilight2.lwd
+            )
           )
+        ) %>%
+        plotly::add_annotations(
+          data = df[jj, , drop = FALSE],
+          x = ~x,
+          y = ~y,
+          text = ~label,
+          yanchor = "bottom",
+          xanchor = "center", ## left,center,right
+          showarrow = FALSE,
+          showlegend = FALSE,
+          font = list(size = 12 * cex.lab),
+          xref = "x", yref = "y"
         )
-      ) %>%
-      plotly::add_annotations(
-        data = df[jj, , drop = FALSE],
-        x = ~x,
-        y = ~y,
-        text = ~label,
-        yanchor = "bottom",
-        xanchor = "center", ## left,center,right
-        showarrow = FALSE,
-        showlegend = FALSE,
-        font = list(size = 12 * cex.lab),
-        xref = "x", yref = "y"
-      )
+    }
   }
 
   ## cluster labels
