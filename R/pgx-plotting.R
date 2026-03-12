@@ -3823,7 +3823,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
                                      tooltip = NULL, theme = NULL, set.par = TRUE,
                                      label.type = c("text", "box"), base_size = 11,
                                      title = NULL, barscale = 0.8, axis = TRUE, box = TRUE,
-                                     guide = "legend", girafe = FALSE, ...) {
+                                     guide = "legend", girafe = FALSE, facet = NULL, ...) {
   if (!is.null(var) && !is.null(ncol(var))) {
     var <- var[, 1]
   }
@@ -3834,8 +3834,10 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     var <- rep("_", nrow(pos))
     names(var) <- rownames(pos)
   }
-  var <- var[match(rownames(pos), names(var))]
-  names(var) <- rownames(pos)
+  if (is.null(facet)) {
+    var <- var[match(rownames(pos), names(var))]
+    names(var) <- rownames(pos)
+  }
 
   if (is.null(type)) {
     type <- c("numeric", "factor")[1 + class(var) %in% c("factor", "character")]
@@ -3949,6 +3951,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       text = tooltip,
       label = label1
     )
+    if (!is.null(facet)) df$facet <- facet
     jj <- order(-table(pt.col)[pt.col]) ## plot less frequent points last...
     df <- df[jj, ]
     pt.col <- pt.col[jj]
@@ -4055,6 +4058,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       text = tooltip,
       label = label1
     )
+    if (!is.null(facet)) df$facet <- facet
     jj <- order(abs(z), na.last = FALSE)
     df <- df[jj, ] ## strongest last??
     cex1 <- ifelse(length(cex) > 1, cex[jj], cex)
@@ -4093,6 +4097,11 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       ) +
       ggplot2::expand_limits(color = zr + c(-0.01, 0.01))
 
+    if (!is.null(theme)) {
+      plt <- plt + theme
+    } else {
+      plt <- plt + ggplot2::theme_bw(base_size = base_size)
+    }
 
     ## colorscale bar
     if (legend) {
@@ -4193,15 +4202,19 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   plt <- plt +
     ggplot2::xlim(xlim[1], xlim[2]) +
     ggplot2::ylim(ylim[1], ylim[2]) +
-    ggplot2::xlab(xlab) + ggplot2::ylab(ylab) + ggplot2::ggtitle(title) +
-    ggplot2::theme(
-      plot.title = ggplot2::element_text(size = 22 * cex.title, hjust = 0, vjust = -1),
-      axis.text.x = ggplot2::element_text(size = 12 * cex.axis),
-      axis.text.y = ggplot2::element_text(size = 12 * cex.axis),
-      axis.title.x = ggplot2::element_text(size = 18 * cex.axis, vjust = -3),
-      axis.title.y = ggplot2::element_text(size = 18 * cex.axis, vjust = +5),
-      plot.margin = ggplot2::margin(1, 1, 10, 10, "mm") ## ??
-    )
+    ggplot2::xlab(xlab) + ggplot2::ylab(ylab) + ggplot2::ggtitle(title)
+
+  if (is.null(theme)) {
+    plt <- plt +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(size = 22 * cex.title, hjust = 0, vjust = -1),
+        axis.text.x = ggplot2::element_text(size = 12 * cex.axis),
+        axis.text.y = ggplot2::element_text(size = 12 * cex.axis),
+        axis.title.x = ggplot2::element_text(size = 18 * cex.axis, vjust = -3),
+        axis.title.y = ggplot2::element_text(size = 18 * cex.axis, vjust = +5),
+        plot.margin = ggplot2::margin(1, 1, 10, 10, "mm")
+      )
+  }
 
   if (axis == FALSE) {
     plt <- plt +
@@ -4213,6 +4226,10 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
         axis.text.y = ggplot2::element_blank(),
         axis.ticks.y = ggplot2::element_blank()
       )
+  }
+
+  if (!is.null(facet)) {
+    plt <- plt + ggplot2::facet_wrap(~ facet)
   }
 
   if (girafe) {
