@@ -22,7 +22,9 @@ pgx.splitHeatmapFromMatrix(
   show_legend = TRUE,
   zlim = NULL,
   symm = NULL,
-  return_x_matrix = FALSE
+  return_x_matrix = FALSE,
+  splitx_order = NULL,
+  heatmap_colors = NULL
 )
 }
 \arguments{

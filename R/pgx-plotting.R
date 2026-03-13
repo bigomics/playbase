@@ -36,6 +36,7 @@ heatmapWithAnnot <- function(F, anno.type = c("boxplot", "barplot"),
                              row_fontsize = 9, column_fontsize = 9,
                              inset = c(-0.025, -0.1),
                              mar = c(0, 0, 0, 0), legend = TRUE,
+                             heatmap_colors = NULL,
                              ...) {
   col1 <- 1:ncol(F)
   anno.type <- anno.type[1]
@@ -62,10 +63,15 @@ heatmapWithAnnot <- function(F, anno.type = c("boxplot", "barplot"),
     )
   }
 
+  heatmap_col <- if (!is.null(heatmap_colors)) {
+    circlize::colorRamp2(colors = heatmap_colors, breaks = c(-10, 0, 10))
+  } else {
+    circlize::colorRamp2(colors = c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")), breaks = c(-10, 0, 10))
+  }
   ht <- ComplexHeatmap::Heatmap(
     t(F),
     name = "logFC",
-    col = circlize::colorRamp2(colors = c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")), breaks = c(-10, 0, 10)),
+    col = heatmap_col,
     top_annotation = ha,
     row_names_gp = grid::gpar(fontsize = row_fontsize),
     column_names_gp = grid::gpar(fontsize = column_fontsize),
@@ -1900,7 +1906,8 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
                              title = NULL, zfix = FALSE,
                              set.par = TRUE, par.sq = FALSE,
                              level = "gene", plotlib = "ggplot",
-                             data = FALSE, labeltype = "feature") {
+                             data = FALSE, labeltype = "feature",
+                             col = NULL) {
   if (!is.null(contrast)) {
     if (is.numeric(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
     res <- NULL
@@ -1988,6 +1995,7 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
       pos,
       var = f1,
       type = "numeric",
+      col = col,
       xlab = "UMAP-x  (genes)",
       ylab = "UMAP-y  (genes)",
       hilight = this.hilight,
@@ -3815,7 +3823,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
                                      tooltip = NULL, theme = NULL, set.par = TRUE,
                                      label.type = c("text", "box"), base_size = 11,
                                      title = NULL, barscale = 0.8, axis = TRUE, box = TRUE,
-                                     guide = "legend", girafe = FALSE, ...) {
+                                     guide = "legend", girafe = FALSE, facet = NULL, ...) {
   if (!is.null(var) && !is.null(ncol(var))) {
     var <- var[, 1]
   }
@@ -3826,8 +3834,10 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     var <- rep("_", nrow(pos))
     names(var) <- rownames(pos)
   }
-  var <- var[match(rownames(pos), names(var))]
-  names(var) <- rownames(pos)
+  if (is.null(facet)) {
+    var <- var[match(rownames(pos), names(var))]
+    names(var) <- rownames(pos)
+  }
 
   if (is.null(type)) {
     type <- c("numeric", "factor")[1 + class(var) %in% c("factor", "character")]
@@ -3941,6 +3951,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       text = tooltip,
       label = label1
     )
+    if (!is.null(facet)) df$facet <- facet
     jj <- order(-table(pt.col)[pt.col]) ## plot less frequent points last...
     df <- df[jj, ]
     pt.col <- pt.col[jj]
@@ -4047,6 +4058,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       text = tooltip,
       label = label1
     )
+    if (!is.null(facet)) df$facet <- facet
     jj <- order(abs(z), na.last = FALSE)
     df <- df[jj, ] ## strongest last??
     cex1 <- ifelse(length(cex) > 1, cex[jj], cex)
@@ -4085,6 +4097,11 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       ) +
       ggplot2::expand_limits(color = zr + c(-0.01, 0.01))
 
+    if (!is.null(theme)) {
+      plt <- plt + theme
+    } else {
+      plt <- plt + ggplot2::theme_bw(base_size = base_size)
+    }
 
     ## colorscale bar
     if (legend) {
@@ -4185,15 +4202,19 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   plt <- plt +
     ggplot2::xlim(xlim[1], xlim[2]) +
     ggplot2::ylim(ylim[1], ylim[2]) +
-    ggplot2::xlab(xlab) + ggplot2::ylab(ylab) + ggplot2::ggtitle(title) +
-    ggplot2::theme(
-      plot.title = ggplot2::element_text(size = 22 * cex.title, hjust = 0, vjust = -1),
-      axis.text.x = ggplot2::element_text(size = 12 * cex.axis),
-      axis.text.y = ggplot2::element_text(size = 12 * cex.axis),
-      axis.title.x = ggplot2::element_text(size = 18 * cex.axis, vjust = -3),
-      axis.title.y = ggplot2::element_text(size = 18 * cex.axis, vjust = +5),
-      plot.margin = ggplot2::margin(1, 1, 10, 10, "mm") ## ??
-    )
+    ggplot2::xlab(xlab) + ggplot2::ylab(ylab) + ggplot2::ggtitle(title)
+
+  if (is.null(theme)) {
+    plt <- plt +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(size = 22 * cex.title, hjust = 0, vjust = -1),
+        axis.text.x = ggplot2::element_text(size = 12 * cex.axis),
+        axis.text.y = ggplot2::element_text(size = 12 * cex.axis),
+        axis.title.x = ggplot2::element_text(size = 18 * cex.axis, vjust = -3),
+        axis.title.y = ggplot2::element_text(size = 18 * cex.axis, vjust = +5),
+        plot.margin = ggplot2::margin(1, 1, 10, 10, "mm")
+      )
+  }
 
   if (axis == FALSE) {
     plt <- plt +
@@ -4205,6 +4226,10 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
         axis.text.y = ggplot2::element_blank(),
         axis.ticks.y = ggplot2::element_blank()
       )
+  }
+
+  if (!is.null(facet)) {
+    plt <- plt + ggplot2::facet_wrap(~ facet)
   }
 
   if (girafe) {
@@ -4517,42 +4542,44 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   ## plot hilighted points with label
   if (!is.null(hilight2)) {
     jj <- which(rownames(df) %in% hilight2)
-    plt <- plt %>%
-      plotly::add_markers(
-        data = df[jj, ],
-        x = ~x,
-        y = ~y,
-        color = ~value,
-        colors = cpal,
-        key = ~name,
-        mode = "markers",
-        type = "scattergl", #
-        ## text = ~text,
-        ## hoverinfo = hoverinfo,
-        marker = list(
-          ## color = col1,
-          opacity = 1,
-          size = 5 * hilight.cex,
-          showlegend = FALSE,
-          showscale = FALSE,
-          line = list(
-            color = "#000000",
-            width = 1.0 * hilight2.lwd
+    if (length(jj) > 0) {
+      plt <- plt %>%
+        plotly::add_markers(
+          data = df[jj, ],
+          x = ~x,
+          y = ~y,
+          color = ~value,
+          colors = cpal,
+          key = ~name,
+          mode = "markers",
+          type = "scattergl", #
+          ## text = ~text,
+          ## hoverinfo = hoverinfo,
+          marker = list(
+            ## color = col1,
+            opacity = 1,
+            size = 5 * hilight.cex,
+            showlegend = FALSE,
+            showscale = FALSE,
+            line = list(
+              color = "#000000",
+              width = 1.0 * hilight2.lwd
+            )
           )
+        ) %>%
+        plotly::add_annotations(
+          data = df[jj, , drop = FALSE],
+          x = ~x,
+          y = ~y,
+          text = ~label,
+          yanchor = "bottom",
+          xanchor = "center", ## left,center,right
+          showarrow = FALSE,
+          showlegend = FALSE,
+          font = list(size = 12 * cex.lab),
+          xref = "x", yref = "y"
         )
-      ) %>%
-      plotly::add_annotations(
-        data = df[jj, , drop = FALSE],
-        x = ~x,
-        y = ~y,
-        text = ~label,
-        yanchor = "bottom",
-        xanchor = "center", ## left,center,right
-        showarrow = FALSE,
-        showlegend = FALSE,
-        font = list(size = 12 * cex.lab),
-        xref = "x", yref = "y"
-      )
+    }
   }
 
   ## cluster labels
@@ -4948,6 +4975,7 @@ plotlyMA <- function(x,
         x = x[i0],
         y = y[i0],
         text = names[i0],
+        key = names[i0],
         type = marker.type,
         mode = "markers",
         marker = list(
@@ -4968,6 +4996,7 @@ plotlyMA <- function(x,
           x = x[i1][upreg],
           y = y[i1][upreg],
           text = names[i1][upreg],
+          key = names[i1][upreg],
           type = marker.type,
           mode = "markers",
           marker = list(
@@ -4982,6 +5011,7 @@ plotlyMA <- function(x,
           x = x[i1][dwreg],
           y = y[i1][dwreg],
           text = names[i1][dwreg],
+          key = names[i1][dwreg],
           type = marker.type,
           mode = "markers",
           marker = list(
@@ -4997,6 +5027,7 @@ plotlyMA <- function(x,
           x = x[i1],
           y = y[i1],
           text = names[i1],
+          key = names[i1],
           type = marker.type,
           mode = "markers",
           marker = list(
@@ -6010,9 +6041,14 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
                                        colors = NULL, lmar = 60, na_text = NULL,
                                        rowcex = 1, colcex = 1, show_legend = TRUE,
                                        zlim = NULL, symm = NULL,
-                                       return_x_matrix = FALSE) {
+                                       return_x_matrix = FALSE,
+                                       splitx_order = NULL,
+                                       heatmap_colors = NULL) {
   ## constants
   col_annot_height <- 0.021
+  if (is.null(heatmap_colors)) {
+    heatmap_colors <- c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))
+  }
   if (!is.null(idx)) idx <- as.character(idx)
   if (!is.null(splitx)) splitx <- as.character(splitx)
 
@@ -6097,6 +6133,12 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   ## ------ split X-axis by some group factor
   if (!is.null(splitx)) {
     xx <- tapply(colnames(X), splitx, function(i) X[, i, drop = FALSE])
+    ## Apply custom group ordering if provided
+    if (!is.null(splitx_order)) {
+      ordered_names <- intersect(splitx_order, names(xx))
+      remaining <- setdiff(names(xx), ordered_names)
+      xx <- xx[c(ordered_names, remaining)]
+    }
   } else {
     xx <- list("Samples" = X)
   }
@@ -6165,7 +6207,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     colorbar_grid = grid_params,
     x = xtips[colnames(x1)],
     y = ytips[rownames(x1)],
-    colors = c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")),
+    colors = heatmap_colors,
     zmid = zmid,
     zmin = zlim[1],
     zmax = zlim[2],
@@ -6218,7 +6260,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
           name = "expression",
           x = xtips[colnames(x1)],
           y = ytips[rownames(x1)],
-          colors = c("royalblue3", "#EEEEE4", "indianred3"),
+          colors = heatmap_colors,
           zmid = zmid,
           zmin = zlim[1],
           zmax = zlim[2],
@@ -6345,10 +6387,8 @@ pgx.boxplot.PLOTLY <- function(
     x = ~ get(x),
     y = ~ get(y),
     type = "box",
-    marker = list(
-      color = color,
-      fillcolor = fillcolor
-    ),
+    fillcolor = fillcolor,
+    marker = list(color = color),
     line = list(color = linecolor),
     hoverinfo = hoverinfo
   ) %>%
@@ -6555,7 +6595,8 @@ pgx.plotActivation <- function(pgx,
                                tl.cex = 0.85,
                                row.nchar = 60,
                                showscale = TRUE,
-                               cexBar = 0.66) {
+                               cexBar = 0.66,
+                               heatmap_colors = NULL) {
   if (what == "geneset") {
     score <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
   }
@@ -6635,6 +6676,9 @@ pgx.plotActivation <- function(pgx,
   bluered.pal <- colorRamp(colors = c("royalblue3", "#ebeffa", "white", "#faeeee", "indianred3"))
   bluered.pal <- colorRamp(colors = c("royalblue3", "grey90", "indianred3"))
   bluered.pal <- colorRamp(omics_pal_c("blue_red_grey", reverse = TRUE)(30))
+  if (!is.null(heatmap_colors)) {
+    bluered.pal <- colorRamp(heatmap_colors)
+  }
 
   score <- score[nrow(score):1, , drop = FALSE]
   x_axis <- colnames(score)
