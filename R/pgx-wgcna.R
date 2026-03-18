@@ -587,7 +587,14 @@ wgcna.init <- function(wgcna, llm=NULL, img_model=NULL, annot=NULL,
       model = img_model,
       add.fallback = FALSE,
       filename = tempfile(fileext='.png'))
-    img <- png::readPNG(tmp)
+    if(grepl("png$",ignore.case=TRUE)) {
+      img <- png::readPNG(tmp)
+    } else if(grepl("jpg$|jpeg$",ignore.case=TRUE)) {
+      img <- jpeg::readJPEG(tmp)
+    } else {
+      message("[wgcna.init] Error: invalid output image")
+      img <- NULL
+    }
     dim(img)
     wgcna$report$infographic <- img
   }
