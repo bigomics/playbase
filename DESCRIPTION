@@ -127,6 +127,7 @@ Imports:
     RaMP,
     randomForest,
     randomForestSRC,
+    RANN,
     RColorBrewer,
     RcppML,
     recount,
