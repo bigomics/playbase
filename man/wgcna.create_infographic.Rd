@@ -9,9 +9,9 @@ diagram (in DOT format).}
 \usage{
 wgcna.create_infographic(
   report,
+  model,
   diagram = NULL,
   prompt = NULL,
-  model = "gemini-3-pro-image-preview",
   add.fallback = FALSE,
   filename = "infographic.png"
 )

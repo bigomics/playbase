@@ -4,10 +4,8 @@
 ##
 
 IMAGE_MODELS <- c(
-  "gemini-3.1-flash-image-preview",
-  "gemini-3-pro-image-preview",
-  "gemini-2.5-flash-image",
-  "xai:grok-imagine-image",
+  "google:gemini-3.1-flash-image-preview",
+  "google:gemini-3-pro-image-preview",
   "openai:gpt-image-1"
 )
 

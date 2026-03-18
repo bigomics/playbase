@@ -49,6 +49,8 @@ REMOTE_MODELS <- c(
   "openai:gpt-5-nano",
   "google:gemini-2.5-flash-lite"
 )
+DEFAULT_LLM = NULL
+
 
 #' Return list of available remote models. 
 #'
