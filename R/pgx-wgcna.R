@@ -6130,24 +6130,23 @@ wgcna.create_diagram <- function(wgcna, ai_model, graph=NULL,
     ## connections and minimizes 'hallucinations'
     message("[wgcna.create_diagram] using graph template...")
     dot <- wgcna.graph2dot(graph) 
-    qq <- "Create a directed diagram connecting modules according to the following WGCNA report. Use the given undirected graph as starting point."
+    qq <- "Create annotated directed diagram connecting modules according to the following WGCNA report. Use the given input graph as backbone. Use only strong connections."
   } else {
     ## If we do not pass a graph (from e.g. Lasagna) we let the LLM
     ## connect the modules itself based on its external knowledge.
     message("[wgcna.create_diagram] no graph template...")
-    qq <- "Create a diagram connecting modules in the following WGCNA report."
+    qq <- "Create a annotated diagram connecting modules in the following WGCNA report."
   }
-  qq <- paste(qq, "All modules must be connected with at least one other module. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add extra nodes for inferred intermediate phenotypes. Use known scientific information to infer connectivity and directionality. Determine which phenotypes are causal and which phenotypes are observed effects. Suggest cause and effect relations that explain phenotypes and modules. Group modules with same biological functions.\n\n")
+  qq <- paste(qq, "All modules must be connected with at least one other module. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add extra nodes for inferred intermediate phenotypes. Use known scientific information to infer connectivity and directionality. Determine which phenotypes are causal and which phenotypes are observed effects. Suggest cause and effect relations that explain phenotypes and modules. Group modules with same biological functions.")
   if(format == "mermaid") {
-    qq <- paste(qq, "Give the result in Mermaid format.")
+    qq <- paste(qq, "\n\nGive the result in Mermaid format.")
   } else {
-    qq <- paste(qq, "Give the result in DOT format.")
+    qq <- paste(qq, "\n\nGive the result in DOT format.")
   }
-  qq <- paste(qq, "Just give the code. Do not use comments. Layout in TB direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Edge weights correspond to correlation. Use solid lines for positive correlation, use dashed lines for negative correlation. Annotate modules with module name, biological function and key gene/protein or metabolite. Color fill nodes matching the WGCNA module names with light palette or with high transparency so we can still read well the text. Use hexadecimal color coding, add hash sign and put inside single quotes. Never use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow. Use rectangular shapes for module nodes, use oval shapes for phenotype nodes. I repeat, do not just copy the input graph.")
+  qq <- paste(qq, "Do not use comments. Layout in TB direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Edge weights correspond to correlation. Use solid lines for positive correlation, use dashed lines for negative correlation. Annotate modules with module name, biological function and key gene/protein or metabolite. Color fill nodes matching the WGCNA module names with light palette or with high transparency so we can still read well the text. Use hexadecimal color coding, add hash sign and put inside single quotes. Never use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow. Use rectangular shapes for module nodes, use oval shapes for phenotype nodes. I repeat, do not just copy the input graph.")
     
   qq <- paste(qq,"\n\n<report>", wgcna_report, "</report>")
-  if(!is.null(dot)) qq <- paste(qq,"\n\n<dot>", dot, "</dot>")
-
+  if(!is.null(dot)) qq <- paste(qq,"\n\nbackbone:", dot)
 
   code.error <- TRUE
   ntry <- 1
