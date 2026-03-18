@@ -2670,6 +2670,7 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
 
   cc <- sign(fc) * rank(abs(fc))
   df <- data.frame(x = rank(-fc), y = fc, trace = rnk.trace, cc = cc)
+  rownames(df) <- make.unique(names(fc))
 
   ## downsample
   ii <- which(rownames(df) %in% gset)
