@@ -201,7 +201,7 @@ mToBeta <- function(m) {
 #' @param nfit Number of probes type I and II for the fitting. In most cases, 5000 or 10000 is ok.
 #' @return Normalized Beta values matrix.
 #' @export
-normalizeMethylation <- function(X, method = "BMIQ", nfit = 2000) {
+normalizeMethylation <- function(X, method = "BMIQ", meth_type = "450K array", nfit = 2000) {
 
   msg <- function(...) message("[playbase::normalizeMethylation] ", ...)
   
@@ -217,9 +217,11 @@ normalizeMethylation <- function(X, method = "BMIQ", nfit = 2000) {
   X <- mToBeta(X)
   
   if (m == "BMIQ") {
-
-    pkg="IlluminaHumanMethylation450kanno.ilmn12.hg19"
-    if (nrow(X) > 600000) pkg="IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
+    c1 <- is.null(meth_type)
+    c2 <- !meth_type %in% c("450K array", "EPIC array")
+    if (c1 | c2) meth_type = "450K array"
+    pkg <- "IlluminaHumanMethylation450kanno.ilmn12.hg19"
+    if (meth_type == "EPIC array") pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
     require(pkg, character.only = TRUE)
     annot <- minfi::getAnnotation(get(pkg))
     probe.types <- as.character(annot[rownames(X), "Type"])
