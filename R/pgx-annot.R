@@ -142,7 +142,6 @@ getProbeAnnotation <- function(organism,
     c1 <- is.null(meth_type)
     c2 <- !meth_type %in% c("450K array", "EPIC array")
     if (c1 | c2) meth_type = "450K array"
-    message("======================================meth_type=", meth_type)
     genes <- annotate_methylomics(organism, probes, meth_type = meth_type)
     return(genes)
   }

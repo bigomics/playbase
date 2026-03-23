@@ -406,8 +406,6 @@ pgx.createPGX <- function(counts,
   pgx$genes <- NULL
   pgx$probe_type <- probe_type
 
-  dbg("--------------meth_type=",meth_type)
-  
   message("[createPGX] annotating genes")
   pgx$genes <- getProbeAnnotation(
     organism = pgx$organism,
