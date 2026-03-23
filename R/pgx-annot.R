@@ -125,6 +125,7 @@ normalizeOrganism <- function(organism) {
 getProbeAnnotation <- function(organism,
                                probes,
                                datatype,
+                               meth_type = NULL, 
                                probetype = "",
                                annot_table = NULL) {
 
@@ -138,7 +139,10 @@ getProbeAnnotation <- function(organism,
   organism <- normalizeOrganism(organism)
 
   if (datatype == "methylomics") {
-    genes <- annotate_methylomics(organism, probes)
+    c1 <- is.null(meth_type)
+    c2 <- !meth_type %in% c("450K", "EPIC")
+    if (c1 | c2) meth_type = "450K"
+    genes <- annotate_methylomics(organism, probes, meth_type = meth_type)
     return(genes)
   }
   
@@ -223,7 +227,7 @@ getProbeAnnotation <- function(organism,
 #' @param probes 450K or 850K array methylation probes.
 #' @return Ann. dframe: feature;symbol;gene_name;gene_title;chr;source;position;uniprot;
 #' @export
-annotate_methylomics <- function(organism = "Human", probes = probes) {
+annotate_methylomics <- function(organism = "Human", probes = probes, meth_type = "450K") {
 
   msg <- function(...) message("[playbase::annotate_methylomics] ", ...)
 
@@ -233,9 +237,11 @@ annotate_methylomics <- function(organism = "Human", probes = probes) {
   }
 
   msg("Annotating methylomics data...")
+
   pkg <- "IlluminaHumanMethylation450kanno.ilmn12.hg19"
-  if (length(probes) > 500000) pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
+  if (meth_type == "EPIC") pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
   require(pkg, character.only = TRUE)
+
   annot <- as.data.frame(minfi::getAnnotation(get(pkg)))
   kk <- c("chr", "pos", "strand", "UCSC_RefGene_Name", "UCSC_RefGene_Group", "Relation_to_Island")
   annot <- annot[probes, intersect(kk, colnames(annot)), drop = FALSE]    
@@ -283,7 +289,7 @@ mergeCpG <- function(X, genes = NULL, collapse.by = "gene") {
   X <- mToBeta(X)
 
   if (is.null(genes)) {
-    genes <- annotate_methylomics(probes = rownames(X))
+    genes <- annotate_methylomics(probes = rownames(X), meth_type = "450K")
   }
   
   jj <- which(!as.character(genes$symbol) %in% c("", "NA", NA))

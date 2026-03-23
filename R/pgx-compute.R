@@ -72,7 +72,6 @@ pgx.createFromFiles <- function(counts.file,
     batch.correct.method = "no_batch_correct",
     batch.pars = "<autodetect>",
     covariates = NULL,
-    dma = NULL, ## new
     auto.scale = TRUE,
     filter.genes = TRUE,
     prune.samples = FALSE,
@@ -180,6 +179,7 @@ pgx.createPGX <- function(counts,
                           covariates = NULL,
                           dma = NULL, ## new
                           remove.xy.probes = FALSE, ## new
+                          meth_type = NULL, ## new
                           auto.scale = TRUE,
                           filter.genes = TRUE,
                           exclude.genes = NULL,
@@ -406,11 +406,14 @@ pgx.createPGX <- function(counts,
   pgx$genes <- NULL
   pgx$probe_type <- probe_type
 
+  dbg("--------------meth_type=",meth_type)
+  
   message("[createPGX] annotating genes")
   pgx$genes <- getProbeAnnotation(
     organism = pgx$organism,
     probes = rownames(pgx$counts),
     datatype = pgx$datatype,
+    meth_type = meth_type,
     probetype = pgx$probe_type,
     annot_table = annot_table
   )
