@@ -16,7 +16,6 @@ ngs.fitContrastsWithAllMethods(
   counts,
   X = NULL,
   samples,
-  design,
   covariates = NULL,
   contr.matrix,
   genes = NULL,
@@ -37,12 +36,11 @@ ngs.fitContrastsWithAllMethods(
 ngs.fitContrastsWithTTEST(
   X,
   contr.matrix,
-  design,
   method = "welch",
   conform.output = 0
 )
 
-ngs.fitContrastsWithWILCOXON(X, contr.matrix, design, conform.output = 0)
+ngs.fitContrastsWithWILCOXON(X, contr.matrix, conform.output = 0)
 
 ngs.fitContrastsWithEDGER(
   counts,
@@ -131,8 +129,6 @@ ngs.fitContrastsWithDESEQ2(
 \item{X}{Covariates to include in the design matrix. Default is NULL.}
 
 \item{samples}{A vector of sample names that match the columns in \code{counts}.}
-
-\item{design}{The design matrix, with samples in columns.}
 
 \item{covariates}{Variables to be regressed out. Only valid for linear model-based DGE tests. Default is NULL.}
 

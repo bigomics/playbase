@@ -361,7 +361,9 @@ logCPM <- function(counts, total = 1e6, prior = 1, log = TRUE) {
   if (any(class(counts) == "dgCMatrix")) {
     ## fast/sparse calculate CPM
     cpm <- counts
-    cpm[is.na(cpm)] <- 0 ## OK??
+    ## NAs can only appear in @x (stored non-zero values); replace them via the slot
+    ## directly to avoid cpm[lgCMatrix] <- 0 which uses undefined S4 [<- dispatch.
+    cpm@x[is.na(cpm@x)] <- 0
     cpm@x <- total * cpm@x / rep.int(Matrix::colSums(cpm), diff(cpm@p)) ## fast divide by columns sum
     if (log) cpm@x <- log2(prior + cpm@x)
     return(cpm)

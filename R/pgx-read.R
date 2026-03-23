@@ -460,27 +460,25 @@ read_Olink_NPX <- function(NPX_data) {
 #' Attempts multiple ways.
 #' @export
 read_h5_counts <- function(h5.file) {
+
   message("[playbase::read_h5_counts] Reading h5 file: ", h5.file)
   df <- NULL
 
   FF <- tryCatch(
-    {
-      rhdf5::h5ls(h5.file)
-    },
-    error = function(w) {
-      NULL
-    }
+  {
+    rhdf5::h5ls(h5.file)
+  },
+  error = function(w) {
+    NULL
+  }
   )
 
   if (!is.null(FF) && all(c("group", "name") %in% colnames(FF))) {
     h5.ems <- paste0(FF[, "group"], "/", FF[, "name"])
     LL <- lapply(h5.ems, function(ems) rhdf5::h5read(file = h5.file, name = ems))
-
     dims <- unlist(lapply(LL, function(x) length(dim(x))))
     ll <- lapply(LL, length)
-
     if (any(dims == 2)) df <- LL[[which(dims == 2)[1]]]
-
     if (!is.null(df)) {
       if (is.null(rownames(df)) && any(ll == nrow(df))) {
         rownames(df) <- as.character(LL[[which(ll == nrow(df))[1]]])
@@ -491,35 +489,70 @@ read_h5_counts <- function(h5.file) {
     }
   }
 
+  # AnnData h5ad: /X stored as sparse CSR (data + indices + indptr)
+  if (is.null(df) && !is.null(FF)) {
+    h5.paths <- paste0(FF[, "group"], "/", FF[, "name"])
+    is_anndata <- all(c("/X/data", "/X/indices", "/X/indptr") %in% h5.paths)
+    if (is_anndata) {
+      df <- tryCatch({
+        x_data    <- rhdf5::h5read(h5.file, "/X/data")
+        x_indices <- rhdf5::h5read(h5.file, "/X/indices")
+        x_indptr  <- rhdf5::h5read(h5.file, "/X/indptr")
+        ## rhdf5::h5read returns 1D arrays (with a dim attribute), not plain
+        ## character vectors. Seurat's LogMap[[<-]] dispatch fails when dimnames
+        ## are arrays rather than vectors. Strip with as.character().
+        obs_names <- as.character(rhdf5::h5read(h5.file, "/obs/_index"))
+        var_names <- as.character(rhdf5::h5read(h5.file, "/var/_index"))
+        n_obs  <- length(obs_names)
+        n_vars <- length(var_names)
+        message("[playbase::read_h5_counts] AnnData sparse CSR detected")
+        message("[playbase::read_h5_counts] Size: ", n_obs, " cells; ", n_vars, " features")
+        row_idx <- rep(seq_len(n_obs), diff(as.integer(x_indptr)))
+        mat <- Matrix::sparseMatrix(
+          i = row_idx,
+          j = as.integer(x_indices) + 1L,
+          x = as.numeric(x_data),
+          dims = c(n_obs, n_vars),
+          dimnames = list(obs_names, var_names)
+        )
+        Matrix::t(mat)  # transpose to genes x cells (standard counts convention)
+      }, error = function(w) {
+        message("[playbase::read_h5_counts] AnnData read failed: ", conditionMessage(w))
+        NULL
+      })
+    }
+  }
+
   if (is.null(df)) {
     df <- tryCatch(
-      {
-        Seurat::Read10X_h5(h5.file)
-      },
-      error = function(w) {
-        NULL
-      }
+    {
+      Seurat::Read10X_h5(h5.file)
+    },
+    error = function(w) {
+      NULL
+    }
     )
   }
 
   if (is.null(df)) {
     df <- tryCatch(
-      {
-        playbase::h5.readMatrix(h5.file)
-      },
-      error = function(w) {
-        NULL
-      }
+    {
+      playbase::h5.readMatrix(h5.file)
+    },
+    error = function(w) {
+      NULL
+    }
     )
   }
 
-  if (!is.null(df) & all(class(df) %in% c("matrix", "array"))) {
-    message("[playbase::read_h5_counts] success!")
+  if (!is.null(df) & (all(class(df) %in% c("matrix", "array")) || is(df, "sparseMatrix"))) {
+    message("[playbase::read_h5_counts] Reading operation successfully completed. \n")
   } else {
     message("[playbase::read_h5_counts] df is null!")
   }
 
   return(df)
+
 }
 
 
