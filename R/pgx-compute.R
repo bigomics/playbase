@@ -121,6 +121,7 @@ pgx.createFromFiles <- function(counts.file,
 #' @param covariates variables to regress out. Valid only for linear model-based tests.
 #' @param dma Differential methylation analysis. If datatype=="methylomics", can be DMP (default) vs. DMR. Else NULL.
 #' @param remove.xy.probes Logical. Only activated when datatype=="methylomics". Remove X- and Y-linked CpG probes.
+#' @param meth_type Type of array: 450K array or EPIC array
 #' @param auto.scale Logical indicating whether to automatically scale/center genes. Default is TRUE.
 #' @param filter.genes Logical indicating whether to filter lowly expressed genes. Default is TRUE.
 #' @param prune.samples Logical indicating whether to remove samples without contrasts. Default is FALSE.
