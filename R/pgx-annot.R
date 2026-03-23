@@ -140,8 +140,9 @@ getProbeAnnotation <- function(organism,
 
   if (datatype == "methylomics") {
     c1 <- is.null(meth_type)
-    c2 <- !meth_type %in% c("450K", "EPIC")
-    if (c1 | c2) meth_type = "450K"
+    c2 <- !meth_type %in% c("450K array", "EPIC array")
+    if (c1 | c2) meth_type = "450K array"
+    message("======================================meth_type=", meth_type)
     genes <- annotate_methylomics(organism, probes, meth_type = meth_type)
     return(genes)
   }
@@ -227,7 +228,7 @@ getProbeAnnotation <- function(organism,
 #' @param probes 450K or 850K array methylation probes.
 #' @return Ann. dframe: feature;symbol;gene_name;gene_title;chr;source;position;uniprot;
 #' @export
-annotate_methylomics <- function(organism = "Human", probes = probes, meth_type = "450K") {
+annotate_methylomics <- function(organism = "Human", probes = probes, meth_type = "450K array") {
 
   msg <- function(...) message("[playbase::annotate_methylomics] ", ...)
 
@@ -239,7 +240,7 @@ annotate_methylomics <- function(organism = "Human", probes = probes, meth_type 
   msg("Annotating methylomics data...")
 
   pkg <- "IlluminaHumanMethylation450kanno.ilmn12.hg19"
-  if (meth_type == "EPIC") pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
+  if (meth_type == "EPIC array") pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
   require(pkg, character.only = TRUE)
 
   annot <- as.data.frame(minfi::getAnnotation(get(pkg)))
