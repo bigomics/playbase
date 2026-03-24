@@ -6626,7 +6626,7 @@ pgx.plotActivation <- function(pgx,
   }
 
   dim(score)
-  colnames(score) <- substring(colnames(score), 1, 30)
+  colnames(score) <- make.unique(shortstring(colnames(score), n = 30, dots = 3))
   rownames(score) <- substring(rownames(score), 1, row.nchar)
   colnames(score) <- paste0(colnames(score), " ")
 
