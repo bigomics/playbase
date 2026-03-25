@@ -99,8 +99,10 @@ compute_testGenes <- function(pgx,
       message("[playbase::compute_testGenes] Methylomics, DMRs. Collapse CpG probes into genes... ")
       X <- playbase::mergeCpG(X = X, genes = pgx$genes)
       X <- playbase::betaToM(X)
+      counts <- playbase::mergeCpG(counts, genes = pgx$genes)
+      counts <- playbase::betaToM(counts)
     } else {
-      X <- playbase::betaToM(counts)
+      counts <- X <- playbase::betaToM(counts)
     }
   }
 

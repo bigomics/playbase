@@ -158,7 +158,7 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
 #' @title betaToM
 #' @description Convert Beta to M values; 450K+850K Meth Array.
 #' @param X Matrix of Beta values. Probes in rows; samples in columns.
-#' @return Matrix of M values.
+#' @return Matrix of M values in log2-scale
 #' @export
 betaToM <- function(beta, offset = 1e-6) {
   message("[playbase::betaToM] Methylomics: converting Beta values to M values.")
