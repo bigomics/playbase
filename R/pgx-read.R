@@ -745,7 +745,7 @@ read_cellranger_output <- function(file) {
   dir.create(tmp)
   on.exit(unlink(tmp, recursive = TRUE), add = TRUE) # deletes tmp always.
 
-  if (grepl("\\.tar\\.gz$", file)) {
+  if (grepl("\\.tar\\.gz$|\\.gz$", file)) {
     msg(".tar or .gz compressed file detected...")
     utils::untar(file, exdir = tmp)
     dir <- tmp
