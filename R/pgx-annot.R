@@ -273,9 +273,10 @@ annotate_methylomics <- function(organism = "Human", probes = probes, meth_type 
 #' @description Collapse CpG into genes. Use average beta value.
 #' @param X Matrix of methyation values. Can be M or Beta. Beta values will be used.
 #' @param genes Annotation matrix: pgx$genes. if NULL, automatically retrieved.
-#' @return Matrix of CpG collapsed.
+#' @param collapse.by collapse.by variable. Can be later flexibly user-defined.
+#' @return List of 2 elements: [[1]] collapsed CpG matrix; [[2]] updated annotation dataframe.
 #' @export
-mergeCpG <- function(X, genes = NULL, collapse.by = "gene", ) {
+mergeCpG <- function(X, genes = NULL, collapse.by = "gene") {
 
   msg <- function(...) message("[playbase::mergeCpG] ", ...)
 
