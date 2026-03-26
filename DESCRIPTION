@@ -84,6 +84,7 @@ Imports:
     IntNMF,
     irlba,
     isva,
+    jpeg,
     jsonlite,
     knitr,
     lazyeval,
