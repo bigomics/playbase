@@ -279,7 +279,7 @@ mergeCpG <- function(X, genes = NULL, collapse.by = "gene") {
 
   msg <- function(...) message("[playbase::mergeCpG] ", ...)
 
-  message("Methylomics: collapsing CpG into genes.")
+  msg("Methylomics: collapsing CpG into genes.")
 
   if (!collapse.by %in% c("gene")) {
     message("'collapse.by' must be one of gene,... Returning input matrix.\n")
