@@ -86,6 +86,54 @@ pgx.computeDrugEnrichment <- function(pgx, X = NULL, xdrugs = NULL,
   return(results)
 }
 
+#' Update older versions of pgx$drugs with MOA, report and infographic
+#'
+#' @export
+pgx.update_drugs_results <- function(pgx, model, img_model) {
+
+  if(is.null(pgx$drugs[[1]]$moa)) {
+    dbg("[pgx.update_drugs_results] updating MOA enrichment...")
+    for(db in names(pgx$drugs)) {
+      res <- pgx$drugs[[db]]
+      pgx$drugs[[db]][['moa']] <- metaLINCS::computeMoaEnrichment(res) 
+    }
+  }
+  
+  if(is.null(pgx$drugs[[1]]$report)) {
+    dbg("[pgx.update_drugs_results] updating reports...")
+    for(db in names(pgx$drugs)) {
+      pgx$drugs[[db]]$report <- ai.create_report_drug_connectivity(
+        pgx, model=model, model2=NULL, db=db, user.prompt = NULL)
+    }
+  }
+
+  ## check infographic
+  rpt <- pgx$drugs[[1]]$report
+  if(is.null(rpt$infographic)) {
+    dbg("[pgx.update_drugs_results] updating infographics...")    
+    for(db in names(pgx$drugs)) {    
+      rpt <- pgx$drugs[[db]]$report
+      outfile <- ai.cmap_create_infographic(
+        report = rpt$report,
+        model = img_model,
+        filename = "/tmp/drug-infographic.png",
+        aspectRatio = "16:9",
+        add.fallback = TRUE
+      )
+      if(grepl("jpg$",outfile,ignore.case=TRUE)) {
+        img <- jpeg::readJPEG(outfile)
+      }
+      if(grepl("png$",outfile,ignore.case=TRUE)) {
+        img <- png::readPNG(outfile)
+      }
+      pgx$drugs[[db]]$report$infographic <- img
+    }
+  }
+
+  return(pgx)
+}
+
+
 #' @export
 pgx.getDrugConnectivityTable <- function(pgx, contrast, db=1,
                                          drugs = NULL,
@@ -171,9 +219,10 @@ pgx.plotDrugMOA <- function(pgx, contrast,
 
   if (!"moa" %in% names(pgx$drugs[[db]])) {
     stop("pgx$drugs missing MOA tables")
+    moa <- metaLINCS::computeMoaEnrichment(pgx$drugs[[db]])     
+  } else {
+    moa <- pgx$drugs[[db]]$moa
   }
-
-  moa <- pgx$drugs[[db]]$moa
   metaLINCS::plotMOA(moa, contr=contrast, ntop=ntop, type=type)
 }
 
@@ -218,11 +267,11 @@ pgx.createComboDrugAnnot <- function(combo, annot0) {
 #'
 #' @export
 pgx.getMOAmatrix <- function(pgx, db=1, type=c("drugClass","targetGene")[1]) {
-  if(is.null(pgx$drugs[[1]]$moa)) {
-    message("[pgx.getMOAmatrix] ERROR: pgx object has not MOA results")
-    return(NULL)
+  moa <- pgx$drugs[[db]]$moa
+  if(is.null(moa)) {
+    message("[pgx.getMOAmatrix] WARNING: pgx object has no MOA results")
+    moa <- metaLINCS::computeMoaEnrichment(pgx$drugs[[db]]) 
   }
-  moa <- pgx$drugs[[db]][['moa']] 
   mm <- lapply(moa, function(m) m[[type]])
   pp <- lapply(mm, function(m) m$pathway)
   pp <- Reduce(intersect, pp)
@@ -256,6 +305,37 @@ pgx.getDrugMOATable <- function(pgx, contrast, db=1, drugs=NULL,
 
 
 #' @export
+pgx.plotMOAactivationMap <- function(pgx,
+                                     db = 1,
+                                     type=c("drugClass","targetGene")[1],
+                                     contrast = NULL,
+                                     nterms = 40,
+                                     nfc = 20,
+                                     normalize = FALSE,
+                                     colorbar = FALSE,
+                                     rotate = FALSE,
+                                     plotlib = "plotly") {
+  if (is.null(pgx$drugs)) {
+    return(NULL)
+  }
+
+  M <- pgx.getMOAmatrix(pgx, db=db, type=type)
+  
+  res <- pgx$drugs[[dmethod]]
+
+  if(plotlib == "plotly") {
+    metaLINCS.plotlyActivationMap(
+      res, contrast=contrast, nterms=nterms, nfc=nfc,
+      normalize = normalize, drugs = drugs,
+      colorbar = colorbar, rotate = rotate)
+  } else {
+    metaLINCS::plotActivationMap(
+      res, nterms=nterms, nfc=nfc, rot = rotate)    
+  }
+}
+
+
+#' @export
 pgx.plotDrugActivationMap <- function(pgx,
                                       dmethod = 1,
                                       contrast = NULL,
@@ -264,18 +344,22 @@ pgx.plotDrugActivationMap <- function(pgx,
                                       normalize = FALSE,
                                       drugs = NULL,
                                       colorbar = FALSE,
-                                      rotate = FALSE) {
+                                      rotate = FALSE,
+                                      plotlib = "plotly") {
   if (is.null(pgx$drugs)) {
     return(NULL)
   }
   res <- pgx$drugs[[dmethod]]
 
-  metaLINCS.plotlyActivationMap(
-    res, nterms=nterms, nfc=nfc,
-    normalize = normalize, drugs = drugs,
-    colorbar = colorbar, rotate = rotate)
-
-
+  if(plotlib == "plotly") {
+    metaLINCS.plotlyActivationMap(
+      res, contrast=contrast, nterms=nterms, nfc=nfc,
+      normalize = normalize, drugs = drugs,
+      colorbar = colorbar, rotate = rotate)
+  } else {
+    metaLINCS::plotActivationMap(
+      res, nterms=nterms, nfc=nfc, rot = rotate)    
+  }
 }
 
 
@@ -375,7 +459,7 @@ ai.summarize_drug_connectivity <- function(pgx, ct, model, drugs=NULL, db=1,
 
   if(is.null(drugs)) drugs <- pgx$drugs
   if(is.numeric(db)) db <- names(drugs)[db]
-  
+
   toplist <- list(
     "Top most positively enriched MOA classes are" =
       table_to_content(pgx.getTopMOA(pgx, ct, n=ntop, dir=+1, db=db, level=1)), 
@@ -431,10 +515,19 @@ ai.create_report_drug_connectivity <- function(pgx, model, model2=NULL, db=1,
   db.name <- db
   if(is.numeric(db)) db.name <- names(pgx$drugs)[db]
   db.name
+
+  ## check if moa results are there
+  has.moa <- !is.null(pgx$drugs[[db]]$moa)
+  if(!has.moa) {
+    res <- pgx$drugs[[db]]
+    pgx$drugs[[db]][['moa']] <- metaLINCS::computeMoaEnrichment(res) 
+  }
   
   ## Create summaries for all contrasts
   summaries <- list()
+  ct=colnames(pgx$contrasts)[1]
   for(ct in colnames(pgx$contrasts)) {
+    message("summarizing drug connectivity results for ",ct,"...")
     summaries[[ct]] <- ai.summarize_drug_connectivity(pgx, ct, model,
       drugs=NULL, db=db, ntop=10, ntop2=50)   
   }
@@ -451,10 +544,9 @@ ai.create_report_drug_connectivity <- function(pgx, model, model2=NULL, db=1,
   prompt <- paste0(prompt, "\nDatabase: ", db.name)
   prompt <- paste0(prompt, "\n\n**CMap analysis**: ", S)
   rpt <- ai.ask(prompt, model = model2)
-  rpt
-
+  
   ## create bullets
-  prompt2 <- paste0("**Instructions**: Extract 3 short bullet points for the give drug connectivity report. Return only the list items. No markup.")
+  prompt2 <- paste0("**Instructions**: Extract 3 short bullet points for the following drug connectivity report. Return only the list items.")
   prompt2 <- paste0(prompt2, "\n\n**Report**: ", rpt)
   bullets <- ai.ask(prompt2, model = model)
 
@@ -487,5 +579,4 @@ ai.cmap_create_infographic <- function(report, model, filename,
   if(is.null(out) || !file.exists(out)) return(NULL)
   return(out)
 }
-
 

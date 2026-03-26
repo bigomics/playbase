@@ -9,33 +9,6 @@
 ##---------------------------------------------------------------------
 
 
-table_to_content <- function(df) {
-  if(is.null(df)) return(NULL)
-  rownames(df) <- iconv2ascii(rownames(df))
-  for(i in seq_len(ncol(df))) {
-    if(is.character(df[[i]])) df[[i]] <- iconv2ascii(df[[i]])
-  }
-  paste(as.character(knitr::kable(df,format="markdown")),collapse="\n")
-}
-
-list_to_content <- function(a, newline=FALSE) {
-  if(is.null(a)) return("")
-  aa <- sapply(a, function(s) paste(unlist(s), collapse='; '))
-  pp <- paste0("- **",names(a),"**: ")
-  if(newline) pp <- paste0(pp, '\n\n')
-  cc <- paste(paste0(pp,aa), collapse='\n')
-  paste(cc,'\n')
-}
-
-collate_as_sections <- function(a, level=2) {
-  if(is.null(a)) return("")
-  hdr <- paste(rep("#",level),collapse="")
-  for(i in 1:length(a)) {
-    a[[i]] <- paste(hdr,names(a)[i],"\n\n",a[[i]],'\n')
-  }
-  paste(a, collapse="\n\n")
-}
-
 #'
 #'
 #' @export
@@ -199,47 +172,216 @@ ai.create_report <- function(pgx, ntop=20, sections=NULL, collate=FALSE) {
   return(content)
 }
 
-#' Export markdown to PDF 
-#' 
+
+#' Format and render contents as section.
+#'
 #' @export
-markdownToPDF <- function(text, file) {
+rpt.compile_sections <- function(contents, hlevel=2, shift=TRUE) {
+  
+  div.description <- contents$description
+  div.bullets <- contents$bullets
 
-  text <- gsub(intToUtf8("8209"),"-",text)
-  ##text <- gsub("---\n","",text)
+  ## render report with slight grey background
+  div.report <- contents$report
+  div.report <- gsub("\n---","\n",div.report)  ## remove hline
+  div.report <- paste("\n::: {style='background-color: #eee;'}",
+    div.report, ":::\n",sep="\n\n")
   
-  ## header/frontmatter
-  hdr <- paste0("---\n")
-  hdr <- paste0(hdr, "format:\n")
-  hdr <- paste0(hdr, "  pdf:\n")
-  #hdr <- paste0(hdr, "    documentclass: report\n")  
-  hdr <- paste0(hdr, "    pdf-engine: lualatex\n")
-  hdr <- paste0(hdr, "    documentclass: article\n")
-  hdr <- paste0(hdr, "    papersize: a4\n")
-  hdr <- paste0(hdr, "    geometry:\n")
-  hdr <- paste0(hdr, "      - left=25mm\n")
-  hdr <- paste0(hdr, "      - right=20mm\n")
-  hdr <- paste0(hdr, "      - top=25mm\n")
-  hdr <- paste0(hdr, "      - bottom=25mm\n")
-  hdr <- paste0(hdr, "    mainfont: Lato\n")
-  hdr <- paste0(hdr,"---\n") 
-  text <- sub("^#", paste0(hdr,"\n#"), text)
-  
-  curwd <- getwd()
-  on.exit(setwd(curwd))
+  div.methods <- contents$methods
+  div.settings <- list_to_list(contents$settings)
 
-  ## because quarto writes into the same folder, we temporarily go to a
-  ## temp folder not to polute main code
-  tmpdir <- tempdir()
-  setwd(tmpdir)
-  md.file <- file.path(tmpdir,"report.md")
-  write(text, file=md.file)
-  quarto::quarto_render(md.file, output_format="pdf", quiet=TRUE)
-  pdf.file <- file.path(tmpdir,"report.pdf")
-  setwd(curwd)
-  file.copy(pdf.file, file, overwrite=TRUE)
-  unlink(pdf.file)
+  div.references <- contents$references
+  div.references <- list_to_list(
+    as.list(div.references),
+    type = 'ol',
+    add.name = FALSE
+  )
+
+  div.figures <- as.list(contents$figures)
+  div.figures <- md.list_to_figs(div.figures, labels=NULL)  
+
+  div.tables <- list()
+  for(i in 1:length(contents$tables)) {
+    tbl <- table_to_content(
+      contents$tables[[i]]
+      #caption = names(contents$tables)[i]
+    )
+    tbl <- paste("\n::: {style='font-size: 8pt;'}",
+      tbl, ":::\n",sep="\n\n")    
+    div.tables[[i]] <- tbl
+  }
+  names(div.tables) <- names(contents$tables)
+  div.tables <- list_to_content(div.tables, newline=TRUE) 
   
-  return(file)
+  divs <- list(
+    "Description" = div.description,
+    "Highlights" = div.bullets,
+    "AI Report" = div.report,
+    "Methods" = div.methods,  
+    "Settings" = div.settings,
+    "References" = div.references,    
+    "Figures" = div.figures,
+    "Tables" = div.tables
+  )
+  names(divs) <- toupper(names(divs))
+  names(divs) <- paste0("[",names(divs),"]{.underline}")  ## sometimes problemati
+
+  for(i in 1:length(divs)) {
+    divname <- names(divs)[i]
+    divs[[i]] <- paste(divs[[i]], "\n\n---\n\n")
+    if(hlevel>1 && grepl("references|figures", divname, ignore.case=TRUE) ) {
+      #divs[[i]] <- paste0(divs[[i]], "\\newpage\n")
+      divs[[i]] <- paste0(divs[[i]], "\n\n{{< pagebreak >}} &nbsp; \n\n")
+    }
+  }
+
+  collate_as_sections(divs, csep="", hlevel=hlevel, shift=shift)  
 }
 
 
+
+
+#'
+#'
+#' @export
+rpt.compile_drugconnectivity_report <- function(obj, which.db = 1, report = NULL, 
+                                                hlevel = 2, shift = TRUE,
+                                                model = NULL, pgx=NULL,
+                                                title = "Drug Connectivity Map Analysis") {
+
+  rpt <- NULL
+  if(!is.null(obj)) {  
+    if(all(c("drugs","genes","counts") %in% names(obj))) {
+      ## is pgx object
+      drugs <- obj$drugs
+    } else {
+      ## is drugs slot object
+      drugs <- obj
+    }
+    ## take selected database
+    if(is.numeric(which.db)) {
+      which.db <- names(drugs)[which.db]
+    }
+    rpt <- drugs[[which.db]]$report
+  } else if(!is.null(report))  {
+    ## check if we have valid report results    
+    rpt <- report
+  } else {
+    stop("invalid parameters: missing obj or report")
+  }
+  
+  has.report <- !is.null(rpt)
+  has.report
+  if(!has.report) {
+    if(!is.null(model)) {
+      message("Warning: missing report results. Computing...")
+      rpt <- ai.create_report_drug_connectivity(
+        pgx, model, model2 = NULL, db = which.db,
+        user.prompt = NULL)
+    } else {
+      stop("Error: missing report results. recompute pgx$drugs or specify LLM model.")
+    }
+  }
+
+  has.infographic <- has.report && "infographic" %in% names(rpt)    
+  has.infographic
+  if(!has.infographic) {
+    message("Warning: missing infographic")
+    ##return(NULL)
+  }
+  
+  ##------- description -------------
+  div.description <- 
+    "The Drug Connectivity Map (Drug CMap) is a resource and tool in the field of pharmacogenomics and drug discovery. It was developed by the Broad Institute (Lamb et al, 2006), and it provides a large-scale collection of gene expression profiles in response to more than 5000 compounds, for a total of more than a million gene expression profiles. The primary goal of the Drug CMap is to help researchers identify connections between drugs, genes, and diseases, facilitating the discovery of new therapeutic targets and repurposing existing drugs for different indications."
+  
+  div.methods <-
+    "Log2 fold-changes (log2FC) were extracted for all computed contrasts. Common genes between the log2FC matrix and L1000 database are identified. If less than 20 genes are shared, the analysis is not conducted due to lack of statistical power. Drug meta sets are defined from available drugs by assigning each drug into principal drug classes. Only drug classes containing at least 10 distinct drug reports are retained for analyses. For expression data and L1000 drug matrix the rank of genes is calculated for each sample and drug, respectively, using the colRanks function from the matrixStats R package, with 'average' as method to treat ties. Rank pairwise Pearson's correlation (R) is then computed between the two rank matrices. Small, random gaussian noise is added to the correlation matrix. A sparse, binary (absence/presence) drug model matrix is created and rank correlation between the rank correlation matrix R and the drug model matrix is computed to assess potential association with drug profile and drug-response. A p-value and FDR are also computed for each drug. Drug set enrichment is also performed for each contrast using fgsea on the pre-defined drug meta sets and the rank correlation matrix. GSEA normalized enrichment score (NES) along with p and q-values for each drug are computed. For both rank correlation and GSEA analysis, the drugs are ranked (by correlation or NES) to identify the top 1000 matching drugs for each contrast. Further analyses and visualizations are conducted using the rank correlation values (R) and GSEA NES scores."
+  
+  div.refs <- c("Subramanian, A., Tamayo, P., Mootha, V. K., .... & Mesirov, J. P. (2005). Gene set enrichment analysis: A knowledge-based approach for interpreting genome-wide expression profiles. PNAS, 102(43), 15545-15550. https://www.pnas.org/doi/10.1073/pnas.0506580102",
+    "Korotkevich, G., Sukhov, V., Budin, N., .... & Sergushichev, A. (2021). Fast gene set enrichment analysis BioRxiv. https://www.biorxiv.org/content/10.1101/060012v3")
+  
+  ##------- figures -------------
+  
+  rx=2  ## resolution parameter
+  fig1 <- tempfile(fileext='.png')
+  png(fig1, width=700*rx, height=300*rx, pointsize=14*rx)
+  pgx.plotDrugActivationMap(
+    pgx,
+    dmethod = which.db,
+    contrast = NULL,
+    nterms = 40,
+    nfc = 20,
+    normalize = FALSE,
+    drugs = NULL,
+    colorbar = FALSE,
+    rotate = FALSE,
+    plotlib = "base"
+  )
+  dev.off()
+
+  fig2 = NULL
+  fig2 <- tempfile(fileext='.png')
+  if(!is.null(rpt$infographic)) {
+    img <- rpt$infographic
+    if(class(img) == 'array' && length(dim(img))==3 ) {
+      png::writePNG(img, target=fig2)
+    } else if(is.character(rpt$infographic[1])) {
+      fig2 <- rpt$infographic
+      if(!file.exists(fig2)) fig2 <- NULL
+    }
+  } else {
+    png(fig2,w=800,h=450)
+    par(mar=c(0,0,0,0))
+    plot.new()
+    text(0.5,0.5,"missing infographic")
+    dev.off()
+  }
+
+  figs <- list(
+    "The Activation Matrix visualizes the activation of drug activation enrichment across the conditions. The size of the circles correspond to their relative activation, and are colored according to their upregulation (red) or downregulation (blue) in the contrast profile." = fig1,
+    "Infographic (AI generated)" = fig2
+  )
+  figs <- figs[!sapply(figs,is.null)]
+  figs <- lapply(figs, function(f) paste0('/',f))
+  
+  ##------- tables -------------
+
+  df1 <- pgx.getMOAmatrix(pgx, db=which.db, type="drugClass")
+  df2 <- pgx.getMOAmatrix(pgx, db=which.db, type="targetGene")
+  df1 <- round(df1, digits=3)
+  df2 <- round(df2, digits=3)  
+  
+  order1 <- order(-rowMeans(df1))
+  df1.up <- head(df1[order1,,drop=FALSE],10)
+  df1.dn <- head(df1[rev(order1),,drop=FALSE],10)  
+
+  order2 <- order(-rowMeans(df2))
+  df2.up <- head(df2[order2,,drop=FALSE],15)
+  df2.dn <- head(df2[rev(order2),,drop=FALSE],15) 
+  
+  div.tables <- list(
+    "Top similar MOA drug class" = df1.up,
+    "Top opposite MOA drug class" = df1.dn,    
+    "Top similar MOA target gene" = df2.up,
+    "Top opposite MOA target gene" = df2.dn    
+  )
+  
+  ##------- create sections -------------
+  contents <- list(
+    description = div.description,
+    bullets = rpt$bullets,
+    report = rpt$report,
+    methods = div.methods,  
+    ##settings = wgcna$settings,
+    references = div.refs,
+    figures = figs,
+    tables = div.tables
+  )
+  txt <- rpt.compile_sections(contents, hlevel=hlevel, shift=shift)
+  
+  ## add title
+  title <- paste(title,": ",which.db)
+  txt <- paste0("# ",title,"\n\n", txt)
+
+  return(txt)
+}
