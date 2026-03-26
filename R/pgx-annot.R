@@ -282,7 +282,7 @@ mergeCpG <- function(X, genes = NULL, collapse.by = "gene") {
   msg("Methylomics: collapsing CpG into genes.")
 
   if (!collapse.by %in% c("gene")) {
-    message("'collapse.by' must be one of gene,... Returning input matrix.\n")
+    msg("'collapse.by' must be one of gene,... Returning input matrix.\n")
     return(X)
   }
   
@@ -301,7 +301,7 @@ mergeCpG <- function(X, genes = NULL, collapse.by = "gene") {
 
   kk <- intersect(rownames(X),rownames(genes))
   if (length(kk) == 0) {
-    message("No shared features between X and annotation. Returning input matrix.\n")
+    msg("No shared features between X and annotation. Returning input matrix.\n")
     return(X)
   }
   X <- X[kk, , drop = FALSE]
@@ -317,7 +317,7 @@ mergeCpG <- function(X, genes = NULL, collapse.by = "gene") {
   X <- do.call(rbind, LL)
   rownames(X) <- ff
 
-  message("Mapping completed. Final matrix:", nrow(X), " regions.\n")
+  msg("Mapping completed. Final matrix:", nrow(X), " regions.\n")
   rm(LL); gc(); return(X)
 
 }
