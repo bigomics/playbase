@@ -275,7 +275,7 @@ annotate_methylomics <- function(organism = "Human", probes = probes, meth_type 
 #' @param genes Annotation matrix: pgx$genes. if NULL, automatically retrieved.
 #' @return Matrix of CpG collapsed.
 #' @export
-mergeCpG <- function(X, genes = NULL, collapse.by = "gene") {
+mergeCpG <- function(X, genes = NULL, collapse.by = "gene", ) {
 
   msg <- function(...) message("[playbase::mergeCpG] ", ...)
 
@@ -289,7 +289,7 @@ mergeCpG <- function(X, genes = NULL, collapse.by = "gene") {
   X <- mToBeta(X)
 
   if (is.null(genes)) {
-    genes <- annotate_methylomics(probes = rownames(X), meth_type = "450K")
+    genes <- annotate_methylomics(probes = rownames(X), meth_type = "450K array")
   }
   
   jj <- which(!as.character(genes$symbol) %in% c("", "NA", NA))
