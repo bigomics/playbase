@@ -276,11 +276,12 @@ annotate_methylomics <- function(organism = "Human", probes = probes, meth_type 
 #' @param collapse.by collapse.by variable. Can be later flexibly user-defined.
 #' @return List of 2 elements: [[1]] collapsed CpG matrix; [[2]] updated annotation dataframe.
 #' @export
-mergeCpG <- function(X, genes = NULL, collapse.by = "gene") {
+mergeCpG <- function(data, genes = NULL, collapse.by = "gene") {
 
   msg <- function(...) message("[playbase::mergeCpG] ", ...)
-
   msg("Methylomics: collapsing CpG into genes.")
+
+  X <- data
 
   if (!collapse.by %in% c("gene")) {
     msg("'collapse.by' must be one of gene,... Returning input matrix.\n")
@@ -300,7 +301,7 @@ mergeCpG <- function(X, genes = NULL, collapse.by = "gene") {
     if (length(hh) > 0) genes <- genes[-hh, , drop = FALSE]
   }
 
-  kk <- intersect(rownames(X),rownames(genes))
+  kk <- intersect(rownames(X), rownames(genes))
   if (length(kk) == 0) {
     msg("No shared features between X and annotation. Returning input matrix.\n")
     return(X)
@@ -308,18 +309,45 @@ mergeCpG <- function(X, genes = NULL, collapse.by = "gene") {
   X <- X[kk, , drop = FALSE]
   genes <- genes[kk, , drop = FALSE]
 
-  ## Map
   ff <- unique(as.character(genes$symbol))
-  LL=list()  
+
+  ## Collapse CpGs
+  LL=list()
   for(i in 1:length(ff)) {
     jj <- which(genes$symbol == ff[i])
     LL[[ff[i]]] <- t(as.matrix(colMeans(X[jj, , drop = FALSE], na.rm = TRUE)))
   }
   X <- do.call(rbind, LL)
   rownames(X) <- ff
+  rm(LL); gc()
 
+  ## Collapse annotation
+  LL=list()
+  for(i in 1:length(ff)) {
+    jj <- which(genes$symbol == ff[i])
+    genes1 <- genes[jj[1], , drop = FALSE]
+    rownames(genes1) <- genes1$feature <- ff[i]
+    genes1$cpg_probe <- paste0(unique(genes$feature[jj]), collapse=";")
+    uniprots <- unlist(lapply(genes$uniprot[jj], function(x) strsplit(x, split=";")[[1]]))
+    uniprots <- uniprots[!is.na(uniprots)]
+    genes1$uniprot <- paste0(unique(uniprots), collapse=";")
+    kk <- c("pos", "strand", "genomic_location", "Relation_to_Island")
+    kk <- intersect(kk, colnames(genes))
+    for(k in 1:length(kk)) {
+      genes1[, kk[k]] <- paste0(unique(genes[jj, kk[k]]), collapse=";")
+    }
+    LL[[ff[i]]] <- genes1
+  }
+  genes <- do.call(rbind, LL)
+  rm(LL); gc()
+
+  ## Safety alignment
+  kk <- intersect(rownames(X), rownames(genes))
+  X <- X[kk, , drop = FALSE]
+  genes <- genes[kk, , drop = FALSE]
+  
   msg("Mapping completed. Final matrix:", nrow(X), " regions.\n")
-  rm(LL); gc(); return(X)
+  return(list(data = X, genes = genes))
 
 }
 

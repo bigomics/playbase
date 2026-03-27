@@ -94,13 +94,25 @@ compute_testGenes <- function(pgx,
   message("Testing differential expression methods: ", paste(methods, collapse = ", "))
   PRIOR.CPM <- 1
 
-  if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {    
+  if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {
+
     if ("Differentially methylated regions" %in% pgx$dma) {
-      message("[playbase::compute_testGenes] Methylomics, DMRs. Collapse CpG probes into genes... ")
-      X <- playbase::mergeCpG(X = X, genes = pgx$genes)
-      X <- playbase::betaToM(X)
-      counts <- playbase::mergeCpG(counts, genes = pgx$genes)
-      counts <- playbase::betaToM(counts)
+
+      message("[playbase::compute_testGenes] Methylomics: DMRs...")
+      saveRDS(list(X=X,counts=counts,pgx=pgx),"~/Desktop/AA.RDS")
+
+      vv <- range(counts, na.rm = TRUE)
+      is.beta <- (vv[1] >= 0 & vv[2] <= 1) ## original counts
+      MG <- playbase::mergeCpG(data = counts, genes = pgx$genes)
+      counts <- playbase::betaToM(MG$data)
+      if (is.beta) pgx$counts=MG$data else pgx$counts=counts ## restore as original (beta or m)
+      rm(MG); gc()
+
+      MG <- playbase::mergeCpG(data = X, genes = pgx$genes)
+      X <- playbase::betaToM(MG$data)
+      pgx$genes <- MG$genes
+      rm(MG); gc()
+      
     } else {
       counts <- X <- playbase::betaToM(counts)
     }
