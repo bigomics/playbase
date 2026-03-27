@@ -4,14 +4,14 @@
 \alias{mergeCpG}
 \title{mergeCpG}
 \usage{
-mergeCpG(X, genes = NULL, collapse.by = "gene")
+mergeCpG(data, genes = NULL, collapse.by = "gene")
 }
 \arguments{
-\item{X}{Matrix of methyation values. Can be M or Beta. Beta values will be used.}
-
 \item{genes}{Annotation matrix: pgx$genes. if NULL, automatically retrieved.}
 
 \item{collapse.by}{collapse.by variable. Can be later flexibly user-defined.}
+
+\item{X}{Matrix of methyation values. Can be M or Beta. Beta values will be used.}
 }
 \value{
 List of 2 elements: [[1]] collapsed CpG matrix; [[2]] updated annotation dataframe.
