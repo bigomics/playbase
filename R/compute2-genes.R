@@ -99,22 +99,21 @@ compute_testGenes <- function(pgx,
     if ("Differentially methylated regions" %in% pgx$dma) {
 
       message("[playbase::compute_testGenes] Methylomics: DMRs...")
-      saveRDS(list(X=X,counts=counts,pgx=pgx),"~/Desktop/AA.RDS")
 
       vv <- range(counts, na.rm = TRUE)
       is.beta <- (vv[1] >= 0 & vv[2] <= 1) ## original counts
-      MG <- playbase::mergeCpG(data = counts, genes = pgx$genes)
-      counts <- playbase::betaToM(MG$data)
+      MG <- mergeCpG(data = counts, genes = pgx$genes)
+      counts <- betaToM(MG$data)
       if (is.beta) pgx$counts=MG$data else pgx$counts=counts ## restore as original (beta or m)
       rm(MG); gc()
 
-      MG <- playbase::mergeCpG(data = X, genes = pgx$genes)
-      X <- playbase::betaToM(MG$data)
+      MG <- mergeCpG(data = X, genes = pgx$genes)
+      X <- betaToM(MG$data)
       pgx$genes <- MG$genes
       rm(MG); gc()
       
     } else {
-      counts <- X <- playbase::betaToM(counts)
+      counts <- X <- betaToM(counts)
     }
   }
 
