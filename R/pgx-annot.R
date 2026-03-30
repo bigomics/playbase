@@ -319,7 +319,6 @@ mergeCpG <- function(data, genes = NULL, collapse.by = "gene") {
   }
   X <- do.call(rbind, LL)
   rownames(X) <- ff
-  rm(LL); gc()
 
   ## Collapse annotation
   LL=list()
@@ -339,7 +338,7 @@ mergeCpG <- function(data, genes = NULL, collapse.by = "gene") {
     LL[[ff[i]]] <- genes1
   }
   genes <- do.call(rbind, LL)
-  rm(LL); gc()
+  rm(LL)
 
   ## Safety alignment
   kk <- intersect(rownames(X), rownames(genes))
