@@ -238,8 +238,13 @@ annotate_methylomics <- function(organism = "Human", probes = probes, meth_type 
 
   msg("Annotating methylomics data...")
 
+  if (!meth_type %in% c("450K array", "EPIC array", "850K array")) {
+    msg("meth_type not recognized. Must be one of '450K array', 'EPIC array', '850K array'")
+  }
+  
   pkg <- "IlluminaHumanMethylation450kanno.ilmn12.hg19"
-  if (meth_type == "EPIC array") pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
+  if (meth_type %in% c("EPIC array", "850K array"))
+    pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
   require(pkg, character.only = TRUE)
 
   annot <- as.data.frame(minfi::getAnnotation(get(pkg)))
