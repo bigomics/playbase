@@ -242,7 +242,6 @@ annotate_methylomics <- function(organism = "Human", probes = probes, meth_type 
     msg("meth_type not recognized. Must be one of '450K array', 'EPIC array', '850K array'")
     msg("Defaulting to '450K array'")
   }
-  
   pkg <- "IlluminaHumanMethylation450kanno.ilmn12.hg19"
   if (meth_type %in% c("EPIC array", "850K array"))
     pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
