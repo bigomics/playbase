@@ -206,7 +206,6 @@ pgx.getTopGeneSets <- function(pgx, n = 10, ng = 100, dir = 0, sym = FALSE, filt
     top.genes[[i]] <- gg
   }
   out <- list(gsets = topgs, genes = gs.genes, top.genes = top.genes)
-
   return(out)
 }
 
@@ -289,8 +288,10 @@ pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
 }
 
 
+
 #' @export
 pgx.getTopDrugs <- function(pgx, ct, n = 10, dir = 1, na.rm = TRUE, db = 1) {
+  if(is.null(pgx$drugs)) return(NULL)
   x <- pgx$drugs[[db]]$X[, ct]
   q <- pgx$drugs[[db]]$Q[, ct]
   annot <- pgx$drugs[[db]]$annot[, ]
@@ -302,4 +303,47 @@ pgx.getTopDrugs <- function(pgx, ct, n = 10, dir = 1, na.rm = TRUE, db = 1) {
   df$drug <- NULL
   colnames(df) <- sub("moa", "mechanism_of_action", colnames(df))
   head(df, n)
+}
+
+pgx.getTopMOA <- function(pgx, ct, moa=NULL, n = 10, dir = 1, psig=0.1,
+                          db=1, level=c("drugClass","targetGene")[1]) {
+  if(is.null(moa) && !is.null(pgx)) {
+    moa <- pgx$drugs[[db]]$moa
+  }
+  df <- moa[[ct]][[level]]
+  df <- df[,c("pathway","pval","padj","NES")]
+  if(dir > 0) {
+    df <- df[order(-df$NES), ,drop=FALSE]
+    sel <- which(df$padj <= psig & df$NES > 0)
+  }
+  if(dir < 0) {
+    df <- df[order(df$NES), ,drop=FALSE]      
+    sel <- which(df$padj <= psig & df$NES < 0)
+  }
+  df <- df[sel,,drop=FALSE]
+  head(df,n)
+}
+
+pgx.getTopGS <- function(pgx, ct, n = 20, dir = 1, psig=0.1) {
+  F <- pgx.getMetaMatrix(pgx, level="geneset")$fc
+  P <- pgx.getMetaMatrix(pgx, level="geneset")$qv
+  P <- 1*(P < psig)
+  if(is.null(ct)) ct <- colnames(F)
+  if(is.numeric(ct)) ct <- colnames(F)[ct]
+  ct <- intersect(ct, colnames(F))
+  xx <- F[,ct,drop=FALSE] * P[,ct,drop=FALSE]
+  ##sum(rowMeans(xx**2)>0)
+  sel <- which(rowMeans(xx**2)>0)
+  xx <- xx[sel,,drop=FALSE]
+  if(length(ct)>1) {
+    ord <- order(-rowMeans(xx**2))
+  } else if(dir > 0) {
+    ord <- order(-xx[,1])
+  } else if(dir < 0) {
+    ord <- order(xx[,1])
+  } else if(dir == 0) {
+    ord <- order(-abs(xx[,1]))
+  }
+  xx <- xx[ord,,drop=FALSE]
+  head(rownames(xx), n)
 }

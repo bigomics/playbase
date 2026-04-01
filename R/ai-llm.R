@@ -3,13 +3,15 @@ DEFAULT_LLM = "gpt-5-nano"
 DEFAULT_LLM = NULL
 
 REMOTE_MODELS <- c(
-  "openai:gpt-5-nano",
+  "openai:gpt-5.4-nano",
+  "openai:gpt-5.4-mini",  
   "xai:grok-4-1-fast-non-reasoning", 
-  "groq:llama-3.1-8b-instant",
-  "groq:meta-llama/llama-4-scout-17b-16e-instruct",  
-  "groq:openai/gpt-oss-20b",
+#  "groq:llama-3.1-8b-instant",
+#  "groq:meta-llama/llama-4-scout-17b-16e-instruct",  
+#  "groq:openai/gpt-oss-20b",
   "groq:openai/gpt-oss-120b",
-  "google:gemini-2.5-flash-lite"
+  "google:gemini-3-flash-preview",
+  "google:gemini-3.1-flash-lite-preview"  
 )
 
 #'
@@ -121,11 +123,12 @@ ai.create_ellmer_chat <- function(model, system_prompt) {
 ai.ask <- function(question, model, engine=c("ellmer","tidyprompt")[2]) {
   if(model == "ellmer" && grepl("grok",model)) model <- "tidyprompt"
   if(engine=="ellmer") {
-    resp <- ai.ask_ellmer(question=question, model=model, prompt=NULL) 
+    resp <- try(ai.ask_ellmer(question=question, model=model, prompt=NULL))
   }
   if(engine=="tidyprompt") {
-    resp <- ai.ask_tidyprompt(question=question, model=model) 
+    resp <- try(ai.ask_tidyprompt(question=question, model=model)) 
   }
+  if(inherits(resp, "try-error")) resp <- "Error: could not get response"
   return(resp)
 }
 
