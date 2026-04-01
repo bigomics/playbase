@@ -2527,14 +2527,30 @@ is_logged <- function(x, verbose = 0) {
     is.ratio <- (sd(rowx.mean) / mean(rowx.mean)) < 0.01
   }
 
-  ## check raw count data: if all values are integer
-  fraction.diff <- (x - round(x)) / mean(x, na.rm = TRUE)
-  all.integer <- max(fraction.diff, na.rm = TRUE) < 1e-8
+  ## check raw count data: if all values are integer.
+  ## For sparse matrices avoid mean(sparseMatrix) which dispatches to mean.default,
+  ## returns NA, and then (x - round(x)) / NA densifies the full matrix by forcing
+  ## every structural zero to an explicit NA. Instead operate on x@x directly.
+  if (inherits(x, "sparseMatrix")) {
+    xv <- x@x
+    xv_mean <- if (length(xv) > 0) mean(abs(xv)) else 1
+    all.integer <- length(xv) == 0 ||
+      max(abs(xv - round(xv)), na.rm = TRUE) / xv_mean < 1e-8
+  } else {
+    fraction.diff <- (x - round(x)) / mean(x, na.rm = TRUE)
+    all.integer <- max(fraction.diff, na.rm = TRUE) < 1e-8
+  }
   is.counts <- all.pos && all.integer
 
   ## check for low-count single-cell data: they may be all <60
-  ## so they look like log
-  zero.inflated <- mean((is.na(x) | x == 0)) > 0.5
+  ## so they look like log.
+  ## For sparse matrices use nnzero(): avoids is.na(x)|x==0 which creates a
+  ## dense-like logical matrix and then mean() densifies it again.
+  if (inherits(x, "sparseMatrix")) {
+    zero.inflated <- Matrix::nnzero(x) / (as.numeric(nrow(x)) * ncol(x)) < 0.5
+  } else {
+    zero.inflated <- mean((is.na(x) | x == 0)) > 0.5
+  }
   is.singlecell <- NCOL(x) > 1000 && all.pos && all.lt60 && zero.inflated
 
   if (verbose > 0) {

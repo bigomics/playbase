@@ -2670,6 +2670,7 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
 
   cc <- sign(fc) * rank(abs(fc))
   df <- data.frame(x = rank(-fc), y = fc, trace = rnk.trace, cc = cc)
+  rownames(df) <- make.unique(names(fc))
 
   ## downsample
   ii <- which(rownames(df) %in% gset)
@@ -6626,7 +6627,7 @@ pgx.plotActivation <- function(pgx,
   }
 
   dim(score)
-  colnames(score) <- substring(colnames(score), 1, 30)
+  colnames(score) <- make.unique(shortstring(colnames(score), n = 30, dots = 3))
   rownames(score) <- substring(rownames(score), 1, row.nchar)
   colnames(score) <- paste0(colnames(score), " ")
 
