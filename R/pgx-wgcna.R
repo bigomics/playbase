@@ -13,7 +13,27 @@
 #' @param deepsplit Number of splits for module dendrogram
 #' @param ngenes Number of genes to use (most variable)
 #'
-#' @return List containing WGCNA network and module results
+#' @return A list with the following components:
+#' \describe{
+#'   \item{datExpr}{Transposed expression matrix used for WGCNA.}
+#'   \item{datTraits}{Numeric trait matrix derived from sample metadata.}
+#'   \item{svTOM}{Singular vectors of the TOM matrix (low-rank approximation).}
+#'   \item{net}{WGCNA network object from \code{blockwiseModules}.}
+#'   \item{me.genes}{Gene-to-module membership vectors.}
+#'   \item{me.colors}{Module color assignments.}
+#'   \item{W}{Module eigengene matrix.}
+#'   \item{modTraits}{Module-trait correlation results.}
+#'   \item{stats}{Module-level statistics and test results.}
+#'   \item{power}{Effective soft-thresholding power used.}
+#'   \item{minModSize}{Effective minimum module size (may be capped for small datasets).}
+#'   \item{mergeCutHeight}{Merge cut height for module merging.}
+#'   \item{minKME}{Minimum eigengene connectivity to stay in a module.}
+#'   \item{networktype}{Network type used (\code{"signed"}, \code{"unsigned"}, etc.).}
+#'   \item{tomtype}{TOM type used.}
+#'   \item{clust}{Clustering results from dimensionality reduction on TOM.}
+#'   \item{annot}{Gene annotation table from the PGX object.}
+#'   \item{experiment}{Experiment description from the PGX object.}
+#' }
 #'
 #' @description Constructs a weighted gene coexpression network and detects
 #' modules using WGCNA on a PGX object.
@@ -163,8 +183,6 @@ pgx.wgcna <- function(
 
   ## add to results object
   wgcna$clust <- clust
-  wgcna$networktype <- networktype
-  wgcna$tomtype <- tomtype
   wgcna$annot <- pgx$genes
   wgcna$experiment <- pgx$description
 
@@ -172,6 +190,45 @@ pgx.wgcna <- function(
 }
 
 
+#' @title Core WGCNA computation
+#'
+#' @description Constructs a weighted gene coexpression network and detects
+#' modules from an expression matrix. This is the lower-level workhorse called
+#' by \code{\link{pgx.wgcna}} and \code{wgcna.runConsensusWGCNA}.
+#'
+#' @param X Gene expression matrix (genes x samples).
+#' @param samples Sample metadata data.frame.
+#' @param contrasts Contrast matrix (optional).
+#' @param ngenes Number of most-variable genes to retain.
+#' @param minmodsize Minimum module size (may be capped for small datasets).
+#' @param power Soft-thresholding power.
+#' @param mergeCutHeight Cut height for merging similar modules.
+#' @param deepsplit Deep-split sensitivity for module detection.
+#' @param minKME Minimum eigengene connectivity to retain a gene in a module.
+#' @param networktype Network type (\code{"signed"}, \code{"unsigned"}, etc.).
+#' @param tomtype TOM type (\code{"signed"}, \code{"unsigned"}, etc.).
+#' @param calcMethod TOM calculation method (\code{"fast"}, \code{"cor"}).
+#' @param verbose Verbosity level.
+#'
+#' @return A list with the following components:
+#' \describe{
+#'   \item{datExpr}{Transposed expression matrix used for WGCNA.}
+#'   \item{datTraits}{Numeric trait matrix derived from sample metadata.}
+#'   \item{svTOM}{Singular vectors of the TOM matrix (low-rank approximation).}
+#'   \item{net}{WGCNA network object from \code{blockwiseModules}.}
+#'   \item{me.genes}{Gene-to-module membership vectors.}
+#'   \item{me.colors}{Module color assignments.}
+#'   \item{W}{Module eigengene matrix.}
+#'   \item{modTraits}{Module-trait correlation results.}
+#'   \item{stats}{Module-level statistics and test results.}
+#'   \item{power}{Effective soft-thresholding power used.}
+#'   \item{minModSize}{Effective minimum module size (may be capped for small datasets).}
+#'   \item{mergeCutHeight}{Merge cut height for module merging.}
+#'   \item{minKME}{Minimum eigengene connectivity to stay in a module.}
+#'   \item{networktype}{Network type (\code{"signed"}, \code{"unsigned"}, etc.).}
+#'   \item{tomtype}{TOM type (\code{"signed"}, \code{"unsigned"}, etc.).}
+#' }
+#'
 #' @export
 wgcna.compute <- function(X,
                           samples,
@@ -426,12 +483,18 @@ wgcna.compute <- function(X,
     ## TOM = TOM,  ## this can be BIG!!! generally no need, just for plotting
     svTOM = svTOM, ## smaller singular vectors
     net = net,
-    # power = net$power,
     me.genes = me.genes,
     me.colors = me.colors,
     W = MVs,
     modTraits = modTraits,
-    stats = stats
+    stats = stats,
+    ## effective compute parameters (post-adjustment values)
+    power = net$power,
+    minModSize = minmodsize,
+    mergeCutHeight = mergeCutHeight,
+    minKME = minKME,
+    networktype = networktype,
+    tomtype = tomtype
   )
 
   message("[wgcna.compute] completed. \n\n")
