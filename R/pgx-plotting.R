@@ -1392,7 +1392,10 @@ ggVolcano <- function(x,
   df$name <- gsub("[\\'\\`-]", "", df$name)
 
   if (is.null(ylim)) ylim <- max(y, na.rm = TRUE) * 1.1
-  if (is.null(xlim)) xlim <- range(x, na.rm = TRUE)  
+  if (is.null(xlim)) {
+    max.absx <- max(abs(x), na.rm = TRUE)
+    xlim <- c(-1, 1) * max.absx
+  }
 
   plt <- ggplot2::ggplot(df, ggplot2::aes(x = fc, y = y)) +
     ggplot2::geom_point(
