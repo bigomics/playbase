@@ -291,6 +291,7 @@ pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
 
 #' @export
 pgx.getTopDrugs <- function(pgx, ct, n = 10, dir = 1, na.rm = TRUE, db = 1) {
+  if(is.null(pgx$drugs)) return(NULL)
   x <- pgx$drugs[[db]]$X[, ct]
   q <- pgx$drugs[[db]]$Q[, ct]
   annot <- pgx$drugs[[db]]$annot[, ]
