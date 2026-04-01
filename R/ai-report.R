@@ -179,7 +179,7 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
   
   if(collate) {
     content <- collate_as_sections(
-      content, level=3, csep='\\newpage', hdr="SECTION")
+      content, csep='\\newpage')
   }
 
   return(content)
