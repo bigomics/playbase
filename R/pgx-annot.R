@@ -286,14 +286,12 @@ mergeCpG <- function(data, genes = NULL, collapse.by = "gene") {
   msg <- function(...) message("[playbase::mergeCpG] ", ...)
   msg("Methylomics: collapsing CpG into genes.")
 
-  X <- data
-
   if (!collapse.by %in% c("gene")) {
     msg("'collapse.by' must be one of gene,... Returning input matrix.\n")
     return(X)
   }
-  
-  X <- mToBeta(X)
+
+  X <- mToBeta(data)
 
   if (is.null(genes)) {
     genes <- annotate_methylomics(probes = rownames(X), meth_type = "450K array")
