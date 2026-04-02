@@ -208,7 +208,7 @@ normalizeMethylation <- function(X, method = "BMIQ", meth_type = "450K array", n
   m <- method
   methods <- c("BMIQ", "quantile")
   if (!m %in% methods) {
-    msg("Unknown mormalization method. Must be BMIQ or quantile. Returning input matrix")
+    msg("Unknown mormalization method. Must be BMIQ or quantile. Returning input matrix.")
     return(X)
   }
 
@@ -224,13 +224,15 @@ normalizeMethylation <- function(X, method = "BMIQ", meth_type = "450K array", n
     if (meth_type == "EPIC array") pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
     require(pkg, character.only = TRUE)
     annot <- minfi::getAnnotation(get(pkg))
-    probe.types <- as.character(annot[rownames(X), "Type"])
-    names(probe.types) <- rownames(X)[which(rownames(X) %in% rownames(annot))]
-    probe.types <- ifelse(probe.types == "I", 1, ifelse(probe.types == "II", 2, NA))
-    if (length(probe.types) != nrow(X)) {
-      msg("BMIQ norm: length of probe types vector different than probes. Returning input matrix.")
+    kk <- intersect(rownames(annot), rownames(X))
+    if (length(kk) == 0) {
+      msg("BMIQ: no CpG probes in common between X and annotation manifesto. Returning input matrix.")
       return(X)
     }
+    X <- X[kk, , drop = FALSE]
+    probe.types <- as.character(annot[kk, "Type"])
+    names(probe.types) <- rownames(X)
+    probe.types <- ifelse(probe.types == "I", 1, ifelse(probe.types == "II", 2, NA))
 
     msg("wateRmelon::BMIQ: sample-specific BMIQ normalization")
     X[which(X <= 0)] <- 0.0001
