@@ -397,7 +397,7 @@ infer_sex_methyl <- function(data, genes = NULL, meth_type = "450K array") {
   if (!is.null(y_med)) {
     pred_sex <- ifelse(y_med > 0.1, "M", "F")
   } else if (!is.null(x_med)) {
-    pred_sex <- ifelse(x_med > 0.1, "M", "F")
+    pred_sex <- ifelse(x_med > 0.4, "M", "F")
   }
   names(pred_sex) <- colnames(X)
   
