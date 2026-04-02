@@ -274,6 +274,8 @@ annotate_methylomics <- function(organism = "Human", probes = probes, meth_type 
   
 }
 
+## ADD meth_type to mergeCpG!!
+
 #' @title mergeCpG
 #' @description Collapse CpG into genes. Use average beta value.
 #' @param X Matrix of methyation values. Can be M or Beta. Beta values will be used.
@@ -350,6 +352,56 @@ mergeCpG <- function(data, genes = NULL, collapse.by = "gene") {
   
   msg("Mapping completed. Final matrix:", nrow(X), " regions.\n")
   return(list(data = X, genes = genes))
+
+}
+
+#' @title infer_sex_methyl
+#' @description Infer biological sex from array methylomics data
+#' @param X Matrix of methyation values. Can be M or Beta. Beta values will be used.
+#' @param genes Annotation matrix: pgx$genes. if NULL, automatically retrieved.
+#' @param meth_type Array type. '450K array' or 'EPIC array'
+#' @return list of 3 elements: named vector of sex, chrX and chrY median beta values.
+#' @export
+infer_sex_methyl <- function(data, genes = NULL, meth_type = "450K array") {
+
+  msg <- function(...) message("[playbase::infer_sex_methyl] ", ...)
+  msg("Methylomics: infer biological sex using sex-linked CpG methylation profiles.")
+
+  X <- mToBeta(data)
+
+  if (is.null(genes)) {
+    c1 <- is.null(meth_type)
+    c2 <- !meth_type %in% c("450K array", "EPIC array")
+    if (c1 | c2) meth_type = "450K array"
+    pkg <- "IlluminaHumanMethylation450kanno.ilmn12.hg19"
+    if (meth_type == "EPIC array") pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
+    require(pkg, character.only = TRUE)
+    genes <- as.data.frame(minfi::getAnnotation(get(pkg)))
+  }
+  genes <- genes[grep("X|chrX|Y|chrY", rownames(genes)), , drop = FALSE]
+  kk <- intersect(rownames(X), rownames(genes))
+  if (length(kk) == 0) {
+    msg("No X- or Y-linked CpG probes detected in input matrix. Exiting")
+    return(NULL)
+  }
+  X <- X[kk, , drop = FALSE]
+  genes <- genes[kk, , drop = FALSE]
+
+  chrX <- rownames(genes)[grep("X|chrX", rownames(genes))]
+  chrY <- rownames(genes)[grep("Y|chrY", rownames(genes))]
+
+  x_med <- y_med <- pred_sex <- NULL
+  if (length(chrX) > 0) x_med <- colMedians(X[chrX, , drop = FALSE ], na.rm = TRUE)
+  if (length(chrY) > 0) y_med <- colMedians(X[chrY, , drop = FALSE ], na.rm = TRUE)
+
+  if (!is.null(y_med)) {
+    pred_sex <- ifelse(y_med > 0.1, "M", "F")
+  } else if (!is.null(x_med)) {
+    pred_sex <- ifelse(x_med > 0.1, "M", "F")
+  }
+  names(pred_sex) <- colnames(X)
+  
+  return(list(pred_sex = pred_sex, x_med = x_med, y_med = y_med))
 
 }
 
