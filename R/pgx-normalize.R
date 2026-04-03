@@ -156,7 +156,7 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
 }
 
 #' @title betaToM
-#' @description Convert Beta to M values; 450K+850K Meth Array.
+#' @description Convert Beta to M values; 450K+850K (EPIC) Meth Array.
 #' @param X Matrix of Beta values. Probes in rows; samples in columns.
 #' @return Matrix of M values in log2-scale
 #' @export
@@ -176,7 +176,7 @@ betaToM <- function(beta, offset = 1e-6) {
 }
 
 #' @title mToBeta
-#' @description Convert  M to Beta values; 450K+850K Meth Array.
+#' @description Convert  M to Beta values; 450K+850K (EPIC) Meth Array.
 #' @param X Matrix of M values. Probes in rows; samples in columns.
 #' @return Matrix of Beta values.
 #' @export

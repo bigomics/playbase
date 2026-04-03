@@ -224,7 +224,7 @@ getProbeAnnotation <- function(organism,
 
 #' Handle entire annotation for 450K+850K methylomics.
 #' @param organism Strictly human (for now).
-#' @param probes 450K or 850K array methylation probes.
+#' @param probes 450K or 850K array methylation probes. 850K is the EPIC array.
 #' @return Ann. dframe: feature;symbol;gene_name;gene_title;chr;source;position;uniprot;
 #' @export
 annotate_methylomics <- function(organism = "Human", probes = probes, meth_type = "450K array") {
@@ -238,13 +238,12 @@ annotate_methylomics <- function(organism = "Human", probes = probes, meth_type 
 
   msg("Annotating methylomics data...")
 
-  if (!meth_type %in% c("450K array", "EPIC array", "850K array")) {
-    msg("meth_type not recognized. Must be one of '450K array', 'EPIC array', '850K array'")
+  if (!meth_type %in% c("450K array", "EPIC array")) {
+    msg("meth_type not recognized. Must be '450K array' or 'EPIC array'")
     msg("Defaulting to '450K array'")
   }
   pkg <- "IlluminaHumanMethylation450kanno.ilmn12.hg19"
-  if (meth_type %in% c("EPIC array", "850K array"))
-    pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
+  if (meth_type == "EPIC array") pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
   require(pkg, character.only = TRUE)
 
   annot <- as.data.frame(minfi::getAnnotation(get(pkg)))
