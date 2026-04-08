@@ -2,7 +2,9 @@
 % Please edit documentation in R/pgx-compute.R
 \name{pgx.createFromFiles}
 \alias{pgx.createFromFiles}
-\title{Create a pgx object}
+\title{Create a pgx object
+This function creates a pgx object from files, which is the core object in the
+OmicsPlayground. It then runs the specified differential expression methods.}
 \usage{
 pgx.createFromFiles(
   counts.file,
@@ -32,17 +34,16 @@ pgx.createFromFiles(
 list. represents a pgx object. It contains the data and analysis results.
 }
 \description{
+Create a pgx object
 This function creates a pgx object from files, which is the core object in the
 OmicsPlayground. It then runs the specified differential expression methods.
 }
 \examples{
 \dontrun{
-
 library(playbase)
 counts <- system.file("extdata", "counts.csv", package = "playbase")
 contrasts <- system.file("extdata", "contrasts.csv", package = "playbase")
 samples <- system.file("extdata", "samples.csv", package = "playbase")
-
 mypgx <- pgx.createFromFiles(counts, samples, contrasts)
 }
 }
