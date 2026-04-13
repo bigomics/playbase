@@ -13,7 +13,7 @@ annotate_methylomics(
 \arguments{
 \item{organism}{Strictly human (for now).}
 
-\item{probes}{450K or 850K array methylation probes.}
+\item{probes}{450K or 850K array methylation probes. 850K is the EPIC array.}
 }
 \value{
 Ann. dframe: feature;symbol;gene_name;gene_title;chr;source;position;uniprot;

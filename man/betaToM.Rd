@@ -13,5 +13,5 @@ betaToM(beta, offset = 1e-06)
 Matrix of M values in log2-scale
 }
 \description{
-Convert Beta to M values; 450K+850K Meth Array.
+Convert Beta to M values; 450K+850K (EPIC) Meth Array.
 }

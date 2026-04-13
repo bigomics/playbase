@@ -13,5 +13,5 @@ mToBeta(m)
 Matrix of Beta values.
 }
 \description{
-Convert  M to Beta values; 450K+850K Meth Array.
+Convert  M to Beta values; 450K+850K (EPIC) Meth Array.
 }
