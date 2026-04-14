@@ -2457,7 +2457,9 @@ convert_probetype <- function(organism, probes, target_id, from_id = NULL,
 #' data type unless classical transcriptomics/proteomics.
 #'
 getMultiOmicsProbeAnnotation <- function(organism, probes) {
-  if (all(grepl("^[A-Za-z]+:", probes))) {
+  
+  is.prefixed <- mean(grepl("^[A-Za-z]+:", probes)) > 0.8
+  if (is.prefixed) {
     dtype <- sub(":.*", "", probes)
   } else {
     ## no colon in names it is single type probes. try to guess by

@@ -181,7 +181,7 @@ getLipidAnnotation <- function(probes,
     annot_table = annot_table,
     prefix.symbol = FALSE
   )
-  annot$datatype <- "lipidomics"
+  annot$data_type <- "lipidomics"
 
   ## shorthand notation as symbol
   annot$symbol <- annot$gene_alias

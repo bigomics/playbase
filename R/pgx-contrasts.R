@@ -907,6 +907,18 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   is.numeric.df <- inherits(contrasts, "data.frame") &&
     all(apply(contrasts, 2, class) %in% c("integer", "numeric"))
   is.numeric.contrast <- is.numeric.matrix | is.numeric.df
+  ## Preserve numeric group labels (e.g. "1","2","3") as character
+  if (is.numeric.contrast) {
+    vals <- unique(as.vector(as.matrix(contrasts)))
+    vals <- vals[!is.na(vals)]
+    if (!all(vals %in% c(-1, 0, 1))) {
+      rn <- rownames(contrasts)
+      contrasts <- apply(contrasts, 2, as.character)
+      contrasts[contrasts == "NA"] <- NA
+      rownames(contrasts) <- rn
+      is.numeric.contrast <- FALSE
+    }
+  }
   if (is.numeric.contrast) {
     has.negpos <- any(contrasts < 0, na.rm = TRUE) && any(contrasts > 0, na.rm = TRUE)
     if (has.negpos) {
