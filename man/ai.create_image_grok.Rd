@@ -7,11 +7,13 @@ the prompt of about 1000 characters.}
 \usage{
 ai.create_image_grok(
   prompt,
-  model = "grok-2-image-1212",
+  model = "grok-imagine-image",
+  model2 = "xai:grok-4-1-fast-non-reasoning",
   format = c("file", "base64", "raw")[1],
   api_key = Sys.getenv("XAI_API_KEY"),
   base_url = "https://api.x.ai/v1",
   filename = "image.png",
+  aspect_ratio = "1:1",
   user = NULL,
   organization = NULL
 )

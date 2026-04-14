@@ -53,6 +53,7 @@ pgx.scatterPlotXY.GGPLOT(
   box = TRUE,
   guide = "legend",
   girafe = FALSE,
+  facet = NULL,
   ...
 )
 }
