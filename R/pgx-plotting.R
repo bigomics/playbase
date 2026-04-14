@@ -7710,12 +7710,8 @@ plotMethylIdeogram <-  function(beta_matrix,
   kk <- grep("chr", annot[, kk1])
   if (length(kk) == 0) annot[, kk1] <- paste0("chr", annot[, kk1])
 
-  if (is.null(chromosomes)) {
-    chroms <- paste0("chr", c(1:22, "X", "Y"))
-  } else {  
-    kk <- grep("chr", chromosomes)
-    if (length(kk) == 0) chroms <- paste0("chr", unique(chromosomes))
-  }
+  if (is.null(chromosomes)) chromosomes <- c(1:22, "X", "Y")
+  chroms <- unique(paste0("chr", sub("^chr", "", as.character(chromosomes))))
   kk <- intersect(chroms, annot[, kk1])
   if (length(kk) == 0) {
     msg("Specified chromosomes not found in provided annotation. Exiting.\n")
@@ -7807,13 +7803,10 @@ plotMethylIdeogram <-  function(beta_matrix,
   })
 
   ## Panel 1: scatter
+  tp <- c(0, 0.2, 0.5, 0.8, 1)
+  lb <- c("0", "0.2", "0.5", "0.8", "1")
   karyoploteR::kpDataBackground(kp, data.panel = 1, color = "#f9f9f9")
-
-  karyoploteR::kpAxis(kp, ymin = 0, ymax = 1, cex = 0.5,
-    tick.pos = c(0, 0.2, 0.5, 0.8, 1),
-    labels = c("0", "0.2", "0.5", "0.8", "1"),
-    )
-
+  karyoploteR::kpAxis(kp, ymin = 0, ymax = 1, cex = 0.8, tick.len = 0.015, tick.pos = tp, labels = lb)
   karyoploteR::kpAbline(kp, h = 0.2, col = "#4575b450", lty = 2, ymin = 0, ymax = 1)
   karyoploteR::kpAbline(kp, h = 0.8, col = "#d7302750", lty = 2, ymin = 0, ymax = 1)
 
@@ -7829,8 +7822,7 @@ plotMethylIdeogram <-  function(beta_matrix,
     ymax = 1,
     col = pt_col[idx],
     pch = 16,
-    cex = 0.15,
-    data.panel = 1
+    cex = 0.15
   )
 
   ## Smoothed mean line per chromosome
@@ -7842,8 +7834,7 @@ plotMethylIdeogram <-  function(beta_matrix,
       ymin = 0,
       ymax = 1,
       col = "#333333",
-      lwd = 1.2,
-      data.panel = 1
+      lwd = 1.2
     )
   }
 
@@ -7880,9 +7871,9 @@ plotMethylIdeogram <-  function(beta_matrix,
     ymax = 1,
     data.panel = 2,
     tick.pos = c(0, 0.5, 1),
+    tick.len = 0.015,
     labels = c("0", "0.5", "1"),
-    cex = 0.4,
-    side = 1
+    cex = 0.8
   )
 
   msg("Completed.\n")
