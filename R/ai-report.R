@@ -15,7 +15,8 @@ ai.create_report <- function(pgx, ...) {
   rpt.create_full_report(pgx, ...) 
 }
 
-#'
+#' This is a full report of all analyses of the experiment and can
+#' serve as data source for LLM questions.
 #'
 #' @export
 rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
@@ -81,8 +82,7 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
     ii <- match(rownames(F),pgx$genes$symbol)
     rownames(F) <- paste0(pgx$genes$gene_title[ii]," (",rownames(F),")")
     F.up <- head( F[order(-rowMeans(F)),,drop=FALSE], 2*ntop )
-    F.dn <- head( F[order(rowMeans(F)),,drop=FALSE], 2*ntop )
-    
+    F.dn <- head( F[order(rowMeans(F)),,drop=FALSE], 2*ntop )    
     differential_expression <- list(
       "Up-regulated genes (top hits). The top most most positively differentially expressed genes are:" = F.up,
       "Down-regulated genes (top hits). The top most negatively differentially expressed genes are:" = F.dn
@@ -95,29 +95,19 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
   geneset_enrichment <- NULL
   if("geneset_enrichment" %in% sections) {
     G <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
-    G <- G[order(-rowMeans(G)),,drop=FALSE]  ## NEED RETHINK: rowmeans is not good...
-    revtail <- function(A,n) {
-      if(nrow(A)==0) return(A[0,,drop=FALSE])
-      head(A[nrow(A):1,,drop=FALSE],n)
-    }
-    BP.up <- head( G[grep("GOBP|GO_BP",rownames(G)),,drop=FALSE], ntop)
-    BP.dn <- revtail( G[grep("GOBP|GO_BP",rownames(G)),,drop=FALSE], ntop)
-    MF.up <- head( G[grep("GOMF|GO_MF",rownames(G)),,drop=FALSE], ntop)
-    MF.dn <- revtail( G[grep("GOMF|GO_MF",rownames(G)),,drop=FALSE], ntop)
-    CC.up <- head( G[grep("GOCC|GO_CC",rownames(G)),,drop=FALSE], ntop)
-    CC.dn <- revtail( G[grep("GOCC|GO_CC",rownames(G)),,drop=FALSE], ntop)
-    PW.up <- head( G[grep("PATHWAY",rownames(G)),,drop=FALSE], ntop)
-    PW.dn <- revtail( G[grep("PATHWAY",rownames(G)),,drop=FALSE], ntop)
+    G <- G[order(-rowMeans(G**2)),,drop=FALSE] 
+    BP <- head( G[grep("GOBP|GO_BP",rownames(G)),,drop=FALSE], ntop)
+    MF <- head( G[grep("GOMF|GO_MF",rownames(G)),,drop=FALSE], ntop)
+    CC <- head( G[grep("GOCC|GO_CC",rownames(G)),,drop=FALSE], ntop)
+    PW <- head( G[grep("^PATHWAY",rownames(G)),,drop=FALSE], ntop)
+    #DR <- head( G[grep("^DRUG",rownames(G)),,drop=FALSE], ntop)
+    #DS <- head( G[grep("^DISEASE",rownames(G)),,drop=FALSE], ntop)        
     
     geneset_enrichment <- list(
-      "Top most positively enriched GO biological process (BP) gene sets:" = BP.up,
-      "Top most negatively enriched GO biological process (BP) gene sets:" = BP.dn,
-      "Top most positively enriched GO molecular function (MF) gene sets:" = MF.up,
-      "Top most negatively enriched GO molecular function (MF) gene sets:" = MF.dn,
-      "Top most positively enriched GO cellular component (CC) gene sets:" = CC.up,
-      "Top most negatively enriched GO cellulare component (CC) gene sets:" = CC.dn,
-      "Top most positively enriched pathways:" = PW.up,
-      "Top most negatively enriched pathways:" = PW.dn
+      "Top enriched GO biological process (BP) gene sets:" = BP,
+      "Top enriched GO molecular function (MF) gene sets:" = MF,
+      "Top enriched GO cellular component (CC) gene sets:" = CC,
+      "Top enriched pathways:" = PW
     )
     geneset_enrichment <- lapply(geneset_enrichment, round, digits=3)
     geneset_enrichment <- lapply(geneset_enrichment, table_to_content)
@@ -126,6 +116,7 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
   ##-------------------------------------------------------------------
   drug_similarity <- NULL
   if("drug_similarity" %in% sections && !is.null(pgx$drugs)) {
+
     ## NEED RETHINK: Only reports first contrast at the moment
     D <- pgx.getTopDrugs(pgx, ct, n=ntop, na.rm=TRUE)    
     drug_similarity <- list(
@@ -136,6 +127,8 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
     )
     #drug_similarity <- lapply(drug_similarity, round, digits=3)    
     drug_similarity <- lapply(drug_similarity, table_to_content)    
+
+
   }
   
   ##-------------------------------------------------------------------
@@ -153,7 +146,7 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
       pgx$wgcna,
       modules = NULL,
       multi = FALSE, 
-      ntop = 40,
+      ntop = 50,
       annot = pgx$genes, 
       experiment = pgx$description,
       verbose = FALSE,
