@@ -208,7 +208,7 @@ pgx.plotDrugConnectivity <- function(pgx, contrast,
 pgx.plotDrugMOA <- function(pgx, contrast,
                             db = "L1000/activity",
                             type=c("drugClass","targetGene")[1],
-                            ntop = ntop) {
+                            ntop = 20) {
   if (!"drugs" %in% names(pgx)) {
     stop("pgx does not have drug enrichment results")
   }
@@ -306,7 +306,7 @@ pgx.getDrugMOATable <- function(pgx, contrast, db=1, drugs=NULL,
 
 #' @export
 pgx.plotMOAactivationMap <- function(pgx,
-                                     db = 1,
+                                     dmethod = 1,
                                      type=c("drugClass","targetGene")[1],
                                      contrast = NULL,
                                      nterms = 40,
@@ -314,24 +314,28 @@ pgx.plotMOAactivationMap <- function(pgx,
                                      normalize = FALSE,
                                      colorbar = FALSE,
                                      rotate = FALSE,
-                                     plotlib = "plotly") {
+                                     plotlib = "base") {
   if (is.null(pgx$drugs)) {
     return(NULL)
   }
 
-  M <- pgx.getMOAmatrix(pgx, db=db, type=type)
-  
+  ## get MOA matrix
+  M <- pgx.getMOAmatrix(pgx, db=dmethod, type=type)
   res <- pgx$drugs[[dmethod]]
+  res$X <- M
+  res$Q <- M*0  
 
+  plt <- NULL  
   if(plotlib == "plotly") {
-    metaLINCS.plotlyActivationMap(
+    plt <- metaLINCS.plotlyActivationMap(
       res, contrast=contrast, nterms=nterms, nfc=nfc,
-      normalize = normalize, drugs = drugs,
+      normalize = normalize, drugs = pgx$drugs,
       colorbar = colorbar, rotate = rotate)
-  } else {
+  } else {    
     metaLINCS::plotActivationMap(
-      res, nterms=nterms, nfc=nfc, rot = rotate)    
+      res, nterms=nterms, nfc=nfc, rot = !rotate)    
   }
+  return(plt)
 }
 
 
@@ -567,14 +571,14 @@ ai.cmap_create_infographic <- function(report, model, filename,
                                        add.fallback = TRUE)
 {
   prompt <- paste("**Instructions**: Create an infographic for the following pharmacological mechanism-of-action analysis report.\n\n**summary**:", report)
-  out <- playbase::ai.create_image_gemini(
+  out <- ai.create_image_gemini(
     prompt,
     model = model,
     api_key = Sys.getenv("GEMINI_API_KEY"),
     format = "file",
     filename = filename,
-    aspectRatio = aspectRatio,
-    imageSize = "1K"
+    aspect_ratio = aspectRatio,
+    image_size = "1K"
   )
   if(is.null(out) || !file.exists(out)) return(NULL)
   return(out)

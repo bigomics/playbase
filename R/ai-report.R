@@ -218,11 +218,7 @@ rpt.compile_sections <- function(contents, hlevel=2, shift=TRUE) {
   )
 
   div.figures <- as.list(contents$figures)
-<<<<<<< HEAD
   div.figures <- md.list_to_figs(div.figures, labels=NULL)  
-=======
-  div.figures <- md.list_to_figs(div.figures)  
->>>>>>> devel
 
   div.tables <- list()
   for(i in 1:length(contents$tables)) {
@@ -263,54 +259,6 @@ rpt.compile_sections <- function(contents, hlevel=2, shift=TRUE) {
 }
 
 
-<<<<<<< HEAD
-
-
-#'
-#'
-#' @export
-rpt.compile_drugconnectivity_report <- function(obj, which.db = 1, report = NULL, 
-                                                hlevel = 2, shift = TRUE,
-                                                model = NULL, pgx=NULL,
-                                                title = "Drug Connectivity Map Analysis") {
-
-  rpt <- NULL
-  if(!is.null(obj)) {  
-    if(all(c("drugs","genes","counts") %in% names(obj))) {
-      ## is pgx object
-      drugs <- obj$drugs
-    } else {
-      ## is drugs slot object
-      drugs <- obj
-    }
-    ## take selected database
-    if(is.numeric(which.db)) {
-      which.db <- names(drugs)[which.db]
-    }
-    rpt <- drugs[[which.db]]$report
-  } else if(!is.null(report))  {
-    ## check if we have valid report results    
-    rpt <- report
-  } else {
-    stop("invalid parameters: missing obj or report")
-  }
-  
-  has.report <- !is.null(rpt)
-  has.report
-  if(!has.report) {
-    if(!is.null(model)) {
-      message("Warning: missing report results. Computing...")
-      rpt <- ai.create_report_drug_connectivity(
-        pgx, model, model2 = NULL, db = which.db,
-        user.prompt = NULL)
-    } else {
-      stop("Error: missing report results. recompute pgx$drugs or specify LLM model.")
-    }
-  }
-
-  has.infographic <- has.report && "infographic" %in% names(rpt)    
-  has.infographic
-=======
 #'
 #'
 #' @export
@@ -325,7 +273,7 @@ rpt.compile_wgcna_report <- function(obj, report = NULL,
     ## is wgcna slot object
     wgcna <- obj
   }
-
+  
   rpt <- wgcna$report
   if(!is.null(report))  rpt <- report
   
@@ -338,60 +286,14 @@ rpt.compile_wgcna_report <- function(obj, report = NULL,
     message("Error: missing report results. Please run wgcna.init()")
     return(NULL)
   }
->>>>>>> devel
   if(!has.infographic) {
     message("Warning: missing infographic")
     ##return(NULL)
   }
   
-<<<<<<< HEAD
   ##------- description -------------
   div.description <- 
-    "The Drug Connectivity Map (Drug CMap) is a resource and tool in the field of pharmacogenomics and drug discovery. It was developed by the Broad Institute (Lamb et al, 2006), and it provides a large-scale collection of gene expression profiles in response to more than 5000 compounds, for a total of more than a million gene expression profiles. The primary goal of the Drug CMap is to help researchers identify connections between drugs, genes, and diseases, facilitating the discovery of new therapeutic targets and repurposing existing drugs for different indications."
-  
-  div.methods <-
-    "Log2 fold-changes (log2FC) were extracted for all computed contrasts. Common genes between the log2FC matrix and L1000 database are identified. If less than 20 genes are shared, the analysis is not conducted due to lack of statistical power. Drug meta sets are defined from available drugs by assigning each drug into principal drug classes. Only drug classes containing at least 10 distinct drug reports are retained for analyses. For expression data and L1000 drug matrix the rank of genes is calculated for each sample and drug, respectively, using the colRanks function from the matrixStats R package, with 'average' as method to treat ties. Rank pairwise Pearson's correlation (R) is then computed between the two rank matrices. Small, random gaussian noise is added to the correlation matrix. A sparse, binary (absence/presence) drug model matrix is created and rank correlation between the rank correlation matrix R and the drug model matrix is computed to assess potential association with drug profile and drug-response. A p-value and FDR are also computed for each drug. Drug set enrichment is also performed for each contrast using fgsea on the pre-defined drug meta sets and the rank correlation matrix. GSEA normalized enrichment score (NES) along with p and q-values for each drug are computed. For both rank correlation and GSEA analysis, the drugs are ranked (by correlation or NES) to identify the top 1000 matching drugs for each contrast. Further analyses and visualizations are conducted using the rank correlation values (R) and GSEA NES scores."
-  
-  div.refs <- c("Subramanian, A., Tamayo, P., Mootha, V. K., .... & Mesirov, J. P. (2005). Gene set enrichment analysis: A knowledge-based approach for interpreting genome-wide expression profiles. PNAS, 102(43), 15545-15550. https://www.pnas.org/doi/10.1073/pnas.0506580102",
-    "Korotkevich, G., Sukhov, V., Budin, N., .... & Sergushichev, A. (2021). Fast gene set enrichment analysis BioRxiv. https://www.biorxiv.org/content/10.1101/060012v3")
-  
-  ##------- figures -------------
-  
-  rx=2  ## resolution parameter
-  fig1 <- tempfile(fileext='.png')
-  png(fig1, width=700*rx, height=300*rx, pointsize=14*rx)
-  pgx.plotDrugActivationMap(
-    pgx,
-    dmethod = which.db,
-    contrast = NULL,
-    nterms = 40,
-    nfc = 20,
-    normalize = FALSE,
-    drugs = NULL,
-    colorbar = FALSE,
-    rotate = FALSE,
-    plotlib = "base"
-  )
-  dev.off()
-
-  fig2 = NULL
-  fig2 <- tempfile(fileext='.png')
-  if(!is.null(rpt$infographic)) {
-    img <- rpt$infographic
-    if(class(img) == 'array' && length(dim(img))==3 ) {
-      png::writePNG(img, target=fig2)
-    } else if(is.character(rpt$infographic[1])) {
-      fig2 <- rpt$infographic
-      if(!file.exists(fig2)) fig2 <- NULL
-    }
-  } else {
-    png(fig2,w=800,h=450)
-=======
-  
-  ##------- description -------------
-  div.description <- 
-    "**Weighted Gene Co-expression Network Analysis (WGCNA) is a systems biology method for finding clusters (modules) of highly correlated genes in high-dimensional data, such as RNA-seq or microarray samples. It identifies modules based on similar expression patterns, relates them to external sample traits, and finds key hub genes, enabling the transition from simple gene l
-ists to functional biological insights.**"
+    "**Weighted Gene Co-expression Network Analysis (WGCNA) is a systems biology method for finding clusters (modules) of highly correlated genes in high-dimensional data, such as RNA-seq or microarray samples. It identifies modules based on similar expression patterns, relates them to external sample traits, and finds key hub genes, enabling the transition from simple gene lists to functional biological insights.**"
   
   div.methods <-
     "WGCNA computation was done in Omics Playground (BigOmics Analytics, Switzerland) using the `WGCNAplus` R package. The optimal soft threshold β was determined by optimizing the IQR of the dendrogram heights. The adjacency matrix was transformed into a topological overlapping matrix (TOM) and used for hierarchical clustering of the features. Subsequently, the dynamic tree‐cutting algorithm was employed to identify gene modules, each comprising a minimum of genes. Similar modules were merged using a shear height threshold. Finally, modules were distinguished by different colours and represented by their module eigengene (ME). Module-trait relationship was determined based on the Pearson correlation between ME and clinical features. Gene significance (GS) values were computed as the product of the Module Membership (MM) (correlation between expression and module eigengene) and maximum Trait Significance (TS) (correlation between expression and clinical characteristics) values."
@@ -399,12 +301,12 @@ ists to functional biological insights.**"
   div.refs <- c(
     "Langfelder, P., Horvath, S. WGCNA: an R package for weighted correlation network analysis. BMC Bioinformatics 9, 559 (2008). https://doi.org/10.1186/1471-2105-9-559",
     "Langfelder P, Luo R, Oldham MC, Horvath S (2011) Is My Network Module Preserved and Reproducible? PLoS Comput Biol 7(1): e1001057. https://doi.org/10.1371/journal.pcbi.1001057",
-  "WGCNAplus R package: `https://github.com/bigomics/WGCNAplus`"
-)
-
+    "WGCNAplus R package: `https://github.com/bigomics/WGCNAplus`"
+  )
+  
   is.mox <- all(c("layers","lasagna") %in% names(wgcna))
   is.mox
-
+  
   modTraits <- wgcna$modTraits
   if(is.mox) {
     mm <- lapply(wgcna$layers, function(w) w$modTraits)
@@ -414,7 +316,7 @@ ists to functional biological insights.**"
   
   ##------- figures -------------
   rx=2  ## resolution parameter
-
+  
   fig1 <- tempfile(fileext='.png')
   if(is.mox) {
     nr <- ceiling(length(wgcna$layers)/2)
@@ -456,58 +358,33 @@ ists to functional biological insights.**"
     }
   } else {
     png(fig3,w=800,h=450)
->>>>>>> devel
-    par(mar=c(0,0,0,0))
     plot.new()
     text(0.5,0.5,"missing infographic")
     dev.off()
   }
 
-<<<<<<< HEAD
-  figs <- list(
-    "The Activation Matrix visualizes the activation of drug activation enrichment across the conditions. The size of the circles correspond to their relative activation, and are colored according to their upregulation (red) or downregulation (blue) in the contrast profile." = fig1,
-    "Infographic (AI generated)" = fig2
-  )
-  figs <- figs[!sapply(figs,is.null)]
-  figs <- lapply(figs, function(f) paste0('/',f))
-  
-  ##------- tables -------------
-
-  df1 <- pgx.getMOAmatrix(pgx, db=which.db, type="drugClass")
-  df2 <- pgx.getMOAmatrix(pgx, db=which.db, type="targetGene")
-  df1 <- round(df1, digits=3)
-  df2 <- round(df2, digits=3)  
-  
-  order1 <- order(-rowMeans(df1))
-  df1.up <- head(df1[order1,,drop=FALSE],10)
-  df1.dn <- head(df1[rev(order1),,drop=FALSE],10)  
-
-  order2 <- order(-rowMeans(df2))
-  df2.up <- head(df2[order2,,drop=FALSE],15)
-  df2.dn <- head(df2[rev(order2),,drop=FALSE],15) 
-  
-  div.tables <- list(
-    "Top similar MOA drug class" = df1.up,
-    "Top opposite MOA drug class" = df1.dn,    
-    "Top similar MOA target gene" = df2.up,
-    "Top opposite MOA target gene" = df2.dn    
-=======
-  fig4 = NULL
+  fig4 <- NULL
   if(!is.null(rpt$diagram)) {
     fig4svg <- tempfile(fileext='.svg')
     fig4 <- tempfile(fileext='.png')
     dd <- DiagrammeR::grViz(rpt$diagram)
-    svg <- DiagrammeRsvg::export_svg(dd)
-    write(svg, file=fig4svg)
-    rsvg::rsvg_png(fig4svg, file=fig4, width=2400)
-  } else {
+    svg <- try(DiagrammeRsvg::export_svg(dd))
+    if(!"try-error" %in% class(svg)) {
+      write(svg, file=fig4svg)
+      rsvg::rsvg_png(fig4svg, file=fig4, width=2400)
+    } else {
+      fig4 <- NULL
+    }
+  }
+
+  if(is.null(fig4)) {
     fig4 <- tempfile(fileext='.png')
     png(fig4,w=800,h=450)
     plot.new()
     text(0.5,0.5,"missing diagram")
     dev.off()
   }
-
+  
   fig5 = NULL
   if(FALSE && is.mox && !is.null(wgcna$graph)) {
     fig5 <- tempfile(fileext='.png')
@@ -536,13 +413,15 @@ ists to functional biological insights.**"
   ##------- tables -------------
   df1 <- data.frame(size = sapply(wgcna$me.genes,length))
   df1 <- df1[order(-df1$size),,drop=FALSE]
-  df2 <- calculateCompoundSignificance(wgcna, collapse=TRUE,
-    sort.by="score1") 
-  
-  div.tables <- list(
-    "WGCNA module sizes" = df1,
-    "Feature scores" = head(df2,40)
->>>>>>> devel
+
+  df2 <- wgcna.calculateSignificanceScore(wgcna, collapse=FALSE,
+    sort.by="score", annot.cols="symbol") 
+  df2 <- lapply(df2, head, 10)
+  names(df2) <- paste0("Top significance scores (",names(df2),")")
+
+  div.tables <- c(
+    list("WGCNA module sizes" = df1),
+    df2
   )
   
   ##------- create sections -------------
@@ -551,27 +430,173 @@ ists to functional biological insights.**"
     bullets = rpt$bullets,
     report = rpt$report,
     methods = div.methods,  
-<<<<<<< HEAD
-    ##settings = wgcna$settings,
-=======
     settings = wgcna$settings,
->>>>>>> devel
     references = div.refs,
     figures = figs,
     tables = div.tables
   )
   txt <- rpt.compile_sections(contents, hlevel=hlevel, shift=shift)
-<<<<<<< HEAD
-  
+    
   ## add title
-  title <- paste(title,": ",which.db)
   txt <- paste0("# ",title,"\n\n", txt)
 
   return(txt)
 }
-=======
+
+  
+#'
+#'
+#' @export
+rpt.compile_drugconnectivity_report <- function(obj, which.db = 1, report = NULL, 
+                                                hlevel = 2, shift = TRUE,
+                                                model = NULL, pgx=NULL,
+                                                title = "Drug Connectivity Analysis") {
+
+  rpt <- NULL
+  if(!is.null(obj)) {  
+    if(all(c("drugs","genes","counts") %in% names(obj))) {
+      ## is pgx object
+      drugs <- obj$drugs
+    } else {
+      ## is drugs slot object
+      drugs <- obj
+    }
+    ## take selected database
+    if(is.numeric(which.db)) {
+      which.db <- names(drugs)[which.db]
+    }
+    rpt <- drugs[[which.db]]$report
+  } else if(!is.null(report))  {
+    ## check if we have valid report results    
+    rpt <- report
+  } else {
+    stop("invalid parameters: missing obj or report")
+  }
+  
+  has.report <- !is.null(rpt)
+  has.report
+  if(!has.report) {
+    if(!is.null(model)) {
+      message("Warning: missing report results. Computing...")
+      rpt <- ai.create_report_drug_connectivity(
+        pgx, model, model2 = NULL, db = which.db,
+        user.prompt = NULL)
+    } else {
+      stop("Error: missing report results. recompute pgx$drugs or specify LLM model.")
+    }
+  }
+
+  has.infographic <- has.report && "infographic" %in% names(rpt)    
+  has.infographic
+  if(!has.infographic) {
+    message("Warning: missing infographic")
+    ##return(NULL)
+  }
+  
+  ##------- description -------------
+  div.description <- 
+    "The Drug Connectivity Map (Drug CMap) is a resource and tool in the field of pharmacogenomics and drug discovery. It was developed by the Broad Institute (Lamb et al, 2006), and it provides a large-scale collection of gene expression profiles in response to more than 5000 compounds, for a total of more than a million gene expression profiles. The primary goal of the Drug CMap is to help researchers identify connections between drugs, genes, and diseases, facilitating the discovery of new therapeutic targets and repurposing existing drugs for different indications."
+  
+  div.methods <-
+    "Log2 fold-changes (log2FC) were extracted for all computed contrasts. Common genes between the log2FC matrix and L1000 database are identified. If less than 20 genes are shared, the analysis is not conducted due to lack of statistical power. Drug meta sets are defined from available drugs by assigning each drug into principal drug classes. Only drug classes containing at least 10 distinct drug reports are retained for analyses. For expression data and L1000 drug matrix the rank of genes is calculated for each sample and drug, respectively, using the colRanks function from the matrixStats R package, with 'average' as method to treat ties. Rank pairwise Pearson's correlation (R) is then computed between the two rank matrices. Small, random gaussian noise is added to the correlation matrix. A sparse, binary (absence/presence) drug model matrix is created and rank correlation between the rank correlation matrix R and the drug model matrix is computed to assess potential association with drug profile and drug-response. A p-value and FDR are also computed for each drug. Drug set enrichment is also performed for each contrast using fgsea on the pre-defined drug meta sets and the rank correlation matrix. GSEA normalized enrichment score (NES) along with p and q-values for each drug are computed. For both rank correlation and GSEA analysis, the drugs are ranked (by correlation or NES) to identify the top 1000 matching drugs for each contrast. Further analyses and visualizations are conducted using the rank correlation values (R) and GSEA NES scores."
+  
+  div.refs <- c("Subramanian, A., Tamayo, P., Mootha, V. K., .... & Mesirov, J. P. (2005). Gene set enrichment analysis: A knowledge-based approach for interpreting genome-wide expression profiles. PNAS, 102(43), 15545-15550. https://www.pnas.org/doi/10.1073/pnas.0506580102",
+    "Korotkevich, G., Sukhov, V., Budin, N., .... & Sergushichev, A. (2021). Fast gene set enrichment analysis BioRxiv. https://www.biorxiv.org/content/10.1101/060012v3")
+  
+  ##------- figures -------------
+  
+  rx=2  ## resolution parameter
+  fig1 <- tempfile(fileext='.png')
+  png(fig1, width=700*rx, height=300*rx, pointsize=14*rx)
+  pgx.plotDrugActivationMap(
+    pgx,
+    dmethod = which.db,
+    contrast = NULL,
+    nterms = 40,
+    nfc = 20,
+    normalize = FALSE,
+    drugs = NULL,
+    colorbar = FALSE,
+    rotate = FALSE,
+    plotlib = "base"
+  )
+  dev.off()
+
+  fig2 = NULL
+  fig2 <- tempfile(fileext='.png')
+  if(!is.null(rpt$infographic)) {
+    img <- rpt$infographic
+    if(class(img) == 'array' && length(dim(img))==3 ) {
+      png::writePNG(img, target=fig2)
+    } else if(is.character(rpt$infographic[1])) {
+      fig2 <- rpt$infographic
+      if(!file.exists(fig2)) fig2 <- NULL
+    }
+  } else {
+    png(fig2,w=800,h=450)  
+    par(mar=c(0,0,0,0))
+    plot.new()
+    text(0.5,0.5,"missing infographic")
+    dev.off()
+  }
+
+  rx=2  ## resolution parameter
+  fig3 <- tempfile(fileext='.png')
+  png(fig3, width=700*rx, height=300*rx, pointsize=14*rx)
+  pgx.plotMOAactivationMap(pgx, type="drugClass", plotlib='base', rotate=TRUE)
+  dev.off()
+
+  fig4 <- tempfile(fileext='.png')
+  png(fig4, width=700*rx, height=300*rx, pointsize=14*rx)
+  pgx.plotMOAactivationMap(pgx, type="targetGene", plotlib='base', rotate=TRUE)
+  dev.off()
+  
+  figs <- list(
+    "The Activation Matrix visualizes the drug activation enrichment across the conditions. The size of the circles correspond to their relative enrichment, and are colored according to their positive (red) or negative (blue) correlation with the contrast profile." = fig1,
+    "The Activation Matrix visualizes the drugClass MOA enrichment across the conditions. The size of the circles correspond to their relative enrichment, and are colored according to their positive (red) or negative (blue) correlation with the contrast profile." = fig3,
+    "The Activation Matrix visualizes the MOA targetGene enrichment across the conditions. The size of the circles correspond to their relative enrichment, and are colored according to their positive (red) or negative (blue) correlation with the contrast profile." = fig4,
+    "Infographic (AI generated)" = fig2
+  )
+  figs <- figs[!sapply(figs,is.null)]
+  figs <- lapply(figs, function(f) paste0('/',f))
+  
+  ##------- tables -------------
+
+  df1 <- pgx.getMOAmatrix(pgx, db=which.db, type="drugClass")
+  df2 <- pgx.getMOAmatrix(pgx, db=which.db, type="targetGene")
+  df1 <- round(df1, digits=3)
+  df2 <- round(df2, digits=3)  
+  
+  order1 <- order(-rowMeans(df1**2))
+  df1.top <- head(df1[order1,,drop=FALSE],15)
+
+  order2 <- order(-rowMeans(df2**2))
+  df2.top <- head(df2[order2,,drop=FALSE],20)
+  
+  div.tables <- list(
+    "Top enriched MOA drug class" = df1.top,
+    "Top enriched MOA target" = df2.top
+  )
+
+  settings <- list(
+    database = which.db
+  )
+  
+  ##------- create sections -------------
+  contents <- list(
+    description = div.description,
+    bullets = rpt$bullets,
+    report = rpt$report,
+    methods = div.methods,  
+    references = div.refs,
+    settings = settings,
+    figures = figs,
+    tables = div.tables
+  )
+  txt <- rpt.compile_sections(contents, hlevel=hlevel, shift=shift)
 
   if(!is.null(title)) {
+    title <- paste0(title," (",which.db,")") 
     txt <- paste0("# ",title,"\n\n", txt)
   }
   return(txt)
@@ -624,4 +649,3 @@ Give an integrated interpretation and a pharmacological narrative. Validate infe
     summary = resp
   )
 }
->>>>>>> devel

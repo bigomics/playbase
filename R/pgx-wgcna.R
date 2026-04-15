@@ -653,18 +653,16 @@ wgcna.init <- function(wgcna, llm=NULL, img_model=NULL, annot=NULL,
       model = img_model,
       add.fallback = FALSE,
       filename = tempfile(fileext='.png'))
-    if(grepl("png$",ignore.case=TRUE)) {
+    if(grepl("png$",tmp,ignore.case=TRUE)) {
       img <- png::readPNG(tmp)
-    } else if(grepl("jpg$|jpeg$",ignore.case=TRUE)) {
+    } else if(grepl("jpg$|jpeg$",tmp,ignore.case=TRUE)) {
       img <- jpeg::readJPEG(tmp)
     } else {
       message("[wgcna.init] Error: invalid output image")
       img <- NULL
     }
-    dim(img)
     wgcna$report$infographic <- img
   }
-  
   wgcna
 }
 
@@ -4120,95 +4118,6 @@ wgcna.labels2colors <- function(colors, ...) {
 }
 
 
-#' Plot membership correlation vs gene signficance (correlation with
-#' trait) to discover biomarkers/driver genes.
-#'
-## wgcna.plotMMvsGS <- function(wgcna, module, trait, abs = TRUE, par = TRUE,
-##                              plotlib = "base") {
-##   ## module="ME3";trait="activated=act"
-##   moduleGenes <- wgcna$me.genes[[module]]
-##   nSamples <- nrow(wgcna$datExpr)
-
-##   ## Module membership correlation (with p-values)
-##   if ("stats" %in% names(wgcna)) {
-##     moduleMembership <- wgcna$stats$moduleMembership
-##     MMPvalue <- wgcna$stats$MMPvalue
-##   } else {
-##     moduleMembership <- as.data.frame(cor(wgcna$datExpr, wgcna$net$MEs, use = "p"))
-##     MMPvalue <- as.data.frame(WGCNA::corPvalueStudent(as.matrix(moduleMembership), nSamples))
-##   }
-
-##   ## Gene-trait significance (trait correlation) (with p-values)
-##   if ("stats" %in% names(wgcna)) {
-##     traitSignificance <- wgcna$stats$traitSignificance
-##     TSPvalue <- wgcna$stats$TSPvalue
-##   } else {
-##     traitSignificance <- as.data.frame(cor(wgcna$datExpr, wgcna$datTraits, use = "p"))
-##     TSPvalue <- as.data.frame(WGCNA::corPvalueStudent(as.matrix(traitSignificance), nSamples))
-##   }
-
-##   x <- (moduleMembership[moduleGenes, module])
-##   y <- (traitSignificance[moduleGenes, trait])
-##   if (abs == TRUE) {
-##     x <- abs(x)
-##     y <- abs(y)
-##   }
-##   ##
-##   px <- MMPvalue[moduleGenes, module]
-##   py <- TSPvalue[moduleGenes, trait]
-##   qx <- p.adjust(px, method = "fdr")
-##   qy <- p.adjust(py, method = "fdr")
-##   is.sig <- (qx < 0.05 & qy < 0.05)
-##   sigx <- (qx < 0.05)
-##   sigy <- (qy < 0.05)
-##   ii <- which(is.sig)
-##   qv <- quantile(x[ii], prob = 0.1)[1]
-##   qh <- quantile(y[ii], prob = 0.1)[1]
-
-##   pos <- cbind(x, y)
-##   rownames(pos) <- moduleGenes
-##   is.sig1 <- c("notsig", "onesig", "sig")[1 + 1 * sigx + 1 * sigy]
-##   hi1 <- NULL
-##   ## hi1 <- head(rownames(pos),10)
-##   col1 <- c("grey70", "grey20", "red2")
-
-##   if (par) par(mfrow = c(1, 1), mar = c(5, 5, 3, 2))
-##   if (plotlib == "ggplot") {
-##     pgx.scatterPlotXY.GGPLOT(
-##       pos,
-##       var = is.sig1, hilight = hi1, col = col1,
-##       xlab = paste("Module membership in", module, "module"),
-##       ylab = paste("Gene significance for trait", trait),
-##       title = paste("Module membership vs. gene significance\n"),
-##       cex.title = 0.9,
-##       girafe = FALSE
-##     )    
-##   } else if (plotlib == "girafe") {
-##     pgx.scatterPlotXY.GGPLOT(
-##       pos,
-##       var = is.sig1, hilight = hi1, col = col1,
-##       xlab = paste("Module membership in", module, "module"),
-##       ylab = paste("Gene significance for trait", trait),
-##       title = paste("Module membership vs. gene significance\n"),
-##       cex.title = 0.7, cex.axis = 0.7,
-##       girafe = TRUE
-##     )
-##   } else {
-##     ii <- which(is.sig1 == "notsig")
-##     verboseScatterplot(
-##       x[-ii], y[-ii],
-##       xlab = paste("Module membership in", module, "module"),
-##       ylab = paste("Gene significance for trait", trait),
-##       main = paste("Module membership vs. gene significance\n"),
-##       cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = col1[1]
-##     )
-##     ii <- which(is.sig1 == "onesig")
-##     points(x[ii], y[ii], col = col1[2])
-##     ii <- which(is.sig1 == "sig")
-##     points(x[ii], y[ii], col = col1[3])
-##     abline(v = qv, h = qh, col = "darkred")
-##   }
-## }
 
 #' @export
 wgcna.plotModuleTraitHeatmap <- function(wgcna, setpar = TRUE, cluster = FALSE,
@@ -5890,7 +5799,8 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
 
     if(length(top$genes[[k]])>0) {
       gg <- paste( top$genes[[k]], collapse=';')
-      q <- paste(q, "\nHere is the list of key genes/proteins/metabolites: <KEYGENES>\n")
+      ## strongly discourage use of gene in other modules
+      q <- paste(q, "\nHere is the list of key genes/proteins/metabolites, or so-called 'features'. Only use features that are in this list in your answer. Do not mention features not in this list. : <KEYGENES>\n")
     }
 
     q <- sub("<MODULE>", k, q)
@@ -6036,11 +5946,11 @@ wgcna.create_report <- function(wgcna, ai_model,
     results <- descriptions
   }
 
-  ## addd compute setttings
-  if(!is.null(wgcna$settings)) {
-    settings <- paste0(names(wgcna$settings),'=',wgcna$settings,collapse='; ')
-    results[['compute_settings']] <- settings
-  }
+  ## add compute setttings
+  ## if(!is.null(wgcna$settings)) {
+  ##   settings <- paste0(names(wgcna$settings),'=',wgcna$settings,collapse='; ')
+  ##   results[['compute_settings']] <- settings
+  ## }
 
   ## collate all results
   all.results <- lapply(names(results), function(me)
@@ -6060,7 +5970,7 @@ wgcna.create_report <- function(wgcna, ai_model,
     report <- all.results
   } else {
     
-    qq <- "These are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed report for this experiment. Give a detailed interpretation of the underlying biology by connecting WGCNA modules into biological functional programs, referring to key genes, proteins or metabolites. Build an cross-module integrative biological narrative. Suggest similarity to known diseases and possible therapies. Add a discussion and conclusion. Omit abstract, future directions, limitations, or references. Add a short paragraph describing methods and compute settings at the end. 
+    qq <- "These are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed report for this experiment. Give a detailed interpretation of the underlying biology by connecting WGCNA modules into biological functional programs, referring to key genes, proteins or metabolites. Build an cross-module integrative biological narrative. Suggest similarity to known diseases and possible therapies. Add a discussion and conclusion. Omit abstract, future directions, limitations, or references. 
 
 Format like a scientific article, use prose as much as possible, minimize the use of tables and bullet points. For long tables show at least the top 5, and at most top 10, up and down entries. Do not inject any inline code. Only write if there was evidence in the source text."  
     
@@ -6224,8 +6134,12 @@ wgcna.create_diagram <- function(wgcna, ai_model, graph=NULL,
   code.error <- TRUE
   ntry <- 1
   while(code.error && ntry <= maxtry) {
-  
-    aa <- ai.ask(qq, model = ai_model)
+
+    ## add time stamp to avoid prompt caching
+    qq1 <- qq
+    qq1 <- paste(qq1, date()) 
+
+    aa <- ai.ask(qq1, model = ai_model)
     aa0 <- aa
     
     ## cleanup a little bit
@@ -6309,11 +6223,16 @@ wgcna.create_module_infographic <- function(rpt, module, prompt = NULL,
 #' @param wgcna WGCNA result object with stats.
 #' @return Data frame of compound significance scores.
 #' @export
-calculateCompoundSignificance <- function(wgcna, collapse=TRUE, sort.by="score1",
-                                          digits=4) {
+wgcna.calculateSignificanceScore <- function(wgcna, collapse=TRUE,
+                                             sort.by="score", digits=4,
+                                             annot.cols=c("symbol","gene_title")) {
   Q <- list()
-  ww <- list(gx = wgcna)
-  if (!is.null(wgcna$layers)) ww <- wgcna$layers    
+  if (!is.null(wgcna$layers)) {
+    ww <- wgcna$layers
+  } else {
+    ww <- list(gx = wgcna)
+  }
+  names(ww)
   for (k in names(ww)) {
     stats <- ww[[k]]$stats   
     m1 <- stats$moduleMembership
@@ -6325,22 +6244,37 @@ calculateCompoundSignificance <- function(wgcna, collapse=TRUE, sort.by="score1"
     #Q1 <- data.frame(c1, rxs(m1,k=1), rxs(t1), rxs(f1))
     Q1 <- data.frame(c1, x1, rxs(t1), rxs(f1))
     colnames(Q1) <- c("module","MM","max.TS","max.FC")
-    Q1$score1 <- apply(Q1[,c(2,3)],1,prod)
-    Q1$score2 <- apply(Q1[,c(2,4)],1,prod)    
+    Q1$score <- apply(Q1[,c(2,3,4)],1,prod)    
     if(sort.by %in% colnames(Q1)) Q1 <- Q1[order(-Q1[,sort.by]),]
     Q1[,2:ncol(Q1)] <- round(Q1[,2:ncol(Q1)], digits=digits)
     Q[[k]] <- Q1
   }
-  
-  if(collapse) {
-    if (length(Q)>1) {
-      for(i in 1:length(Q)) rownames(Q[[i]]) <- paste0(names(Q)[i],":",
-        rownames(Q[[i]]))
+
+  if(!is.null(annot.cols) && length(annot.cols) && !is.null(wgcna$annot)) {
+    i=1
+    for(i in 1:length(Q)) {
+      rr <- rownames(Q[[i]])
+      kk <- match(rr, rownames(wgcna$annot))
+      sel <- intersect(annot.cols, colnames(wgcna$annot))
+      aa <- wgcna$annot[kk, sel, drop=FALSE]
+      ## if same as rownames drop
+      aa.sel <- which(colMeans(aa == rr,na.rm=TRUE) < 0.99)  
+      aa <- aa[,aa.sel,drop=FALSE]
+      Q[[i]] <- cbind(aa, Q[[i]])
     }
-    names(Q) <- NULL
-    Q <- do.call(rbind, Q)
-    if(sort.by %in% colnames(Q)) Q <- Q[order(-Q[,sort.by]),]    
-  }   
+  }
+
+  if (length(Q)>1) {
+    for(i in 1:length(Q)) rownames(Q[[i]]) <- paste0(names(Q)[i],":",
+      rownames(Q[[i]]))
+  }
+  names(Q) <- NULL
+  Q <- do.call(rbind, Q)
+  if(sort.by %in% colnames(Q)) Q <- Q[order(-Q[,sort.by]),]    
+
+  if(!collapse) {
+    Q <- tapply(1:nrow(Q), Q$module, function(i) Q[i,])
+  }
   return(Q)
 }
 
