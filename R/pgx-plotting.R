@@ -7786,8 +7786,12 @@ plotMethylIdeogram <-  function(beta_matrix,
   pp$data2height <- 80   ## lower panel
   pp$data1inmargin <- 10
   pp$data2inmargin <- 10
-  pp$ideogramheight<- 20
-
+  pp$ideogramheight <- 20
+  pp$leftmargin <- 0.05
+  pp$rightmargin <- 0.01
+  pp$topmargin <- 30
+  pp$bottommargin <- 10
+  
   kp <- karyoploteR::plotKaryotype(genome = gn, plot.type = 2,
     chromosomes = chroms, plot.params = pp)
 
