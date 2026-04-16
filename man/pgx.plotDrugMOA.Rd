@@ -9,7 +9,7 @@ pgx.plotDrugMOA(
   contrast,
   db = "L1000/activity",
   type = c("drugClass", "targetGene")[1],
-  ntop = ntop
+  ntop = 20
 )
 }
 \description{
