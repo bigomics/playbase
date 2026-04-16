@@ -7758,9 +7758,9 @@ plotMethylIdeogram <-  function(beta_matrix,
   ## Smoothed data per chromosome
   LL <- list()
   for (chr in chroms) {
-    kk   <- which(as.character(seqnames(gr)) == chr)
-    sub  <- sort(gr[kk])
-    pos  <- as.numeric(start(sub))
+    kk <- which(as.character(seqnames(gr)) == chr)
+    sub <- sort(gr[kk])
+    pos <- as.numeric(start(sub))
     beta <- sub$mean_beta
     sd_b <- sub$sd_beta
     k <- max(5L, round(length(pos) / 500))
@@ -7788,12 +7788,8 @@ plotMethylIdeogram <-  function(beta_matrix,
   pp$data2inmargin <- 10
   pp$ideogramheight<- 20
 
-  kp <- karyoploteR::plotKaryotype(
-    genome = gn,
-    plot.type = 2,
-    chromosomes = chroms,
-    plot.params = pp
-  )
+  kp <- karyoploteR::plotKaryotype(genome = gn, plot.type = 2,
+    chromosomes = chroms, plot.params = pp)
 
   ## Build GRanges for smooth lines. Clip pos to chromosome bounds.
   LL <- lapply(chroms, function(chr) {
