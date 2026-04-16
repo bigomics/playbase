@@ -7758,7 +7758,7 @@ plotMethylIdeogram <-  function(beta_matrix,
   ## Smoothed data per chromosome
   LL <- list()
   for (chr in chroms) {
-    kk   <- which(seqnames(gr) == chr)
+    kk   <- which(as.character(seqnames(gr)) == chr)
     sub  <- sort(gr[kk])
     pos  <- as.numeric(start(sub))
     beta <- sub$mean_beta
