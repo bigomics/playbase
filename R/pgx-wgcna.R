@@ -540,7 +540,7 @@ wgcna.compute <- function(X,
 #' Create lasagna graph for wgcna object
 #'
 #' 
-wgcna.create_lasagna_graph <- function(wgcna, layers=NULL) {
+wgcna.create_lasagna_model <- function(wgcna, layers=NULL) {
 
   if(is.null(layers)) {
     if(!is.null(wgcna$layers)) {
@@ -581,7 +581,9 @@ wgcna.create_lasagna_graph <- function(wgcna, layers=NULL) {
     prune = TRUE
   )
 
-  graph
+  lasagna$graph <- graph
+
+  return(lasagna)
 }
 
 #' Init/update function
@@ -592,6 +594,8 @@ wgcna.init <- function(wgcna, llm=NULL, img_model=NULL, annot=NULL,
 
   if(!is.null(llm) && llm=="") llm <- NULL
   if(!is.null(img_model) && img_model=="") img_model <- NULL
+
+  is.multi <- ("layers" %in% names(wgcna))
   
   if (is.null(wgcna$svTOM) && !is.null(wgcna$TOM)) {
     ## sv.tom <- ceiling(min(sv.tom,dim(datExpr)/2))
@@ -619,14 +623,15 @@ wgcna.init <- function(wgcna, llm=NULL, img_model=NULL, annot=NULL,
   if (is.null(wgcna$graph)) {
     message("[wgcna.init] computing graph...")
     if (!is.null(progress)) progress$inc(0.1, "computing graph...")        
-    wgcna$graph <- wgcna.create_lasagna_graph(wgcna) 
+    wgcna$lasagna <- wgcna.create_lasagna_model(wgcna)
+    wgcna$graph <- wgcna$lasagna$graph
   }
   
   if (is.null(wgcna$report) && !is.null(llm)) {
     message("[wgcna.init] creating report...")
     if (!is.null(progress)) progress$inc(0.1, "creating report...")            
     wgcna$report <- wgcna.create_report(
-      wgcna, ai_model=llm, graph=NULL, annot=annot, multi=FALSE,
+      wgcna, ai_model=llm, graph=NULL, annot=annot, multi=is.multi,
       ntop=100, topratio=0.85, psig=0.05, do.diagram = TRUE,
       userprompt='', format="markdown", verbose=1, progress=NULL)
   }
@@ -893,12 +898,12 @@ wgcna.compute_multiomics <- function(dataX,
     }    
   }
 
-
   lasagna.model <- NULL
   lasagna.graph <- NULL
   do.lasagna = TRUE
   if(do.lasagna) {
-    lasagna.graph <- wgcna.create_lasagna_graph(layers=layers, wgcna=NULL)     
+    lasagna.model <- wgcna.create_lasagna_model(layers=layers, wgcna=NULL)
+    lasagna.graph <- lasagna.model$graph
   }
 
   report.out <- NULL
@@ -909,7 +914,8 @@ wgcna.compute_multiomics <- function(dataX,
     if(!is.null(ai_model)) message("Creating report using ", ai_model)
     if(is.null(ai_model)||ai_model=="") message("Creating dummy report")
     report.out <- wgcna.create_report(
-      layers, ai_model,
+      layers,
+      ai_model,
       annot = annot,
       multi = TRUE,
       graph = lasagna.graph,
@@ -942,17 +948,23 @@ wgcna.compute_multiomics <- function(dataX,
     NULL
   ) 
 
+  ## translate annotation table to symbol?
+  if(0 && !is.null(annot) && "symbol" %in% colnames(annot)) {
+    annot <- rename_by2(annot, annot, "symbol", keep.prefix=TRUE)
+  }
+  
   out <- list(
     layers = layers,
     me.genes = me.genes,
     gsea = gsea,
     report = report.out,
     datanames = datanames,
-    lasagna = lasagna.model,
+    lasagna = lasagna.model,  ## deprecate??
     graph = lasagna.graph,  
     ## datExpr = datExpr,
     ## datTraits = datTraits,
     ## modTraits = modTraits,
+    annot = annot,
     experiment = experiment,
     settings = settings,
     class = "multiomics"
@@ -5527,11 +5539,21 @@ wgcna.get_modTraits <- function(wgcna) {
 #' @export
 wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
                                      psig = 0.05, level="gene", rename="symbol") {
+
+  is.consensus <- "layers" %in% names(wgcna) && class(wgcna$datExpr) == "list"
+  is.multi <- "layers" %in% names(wgcna) && is.null(wgcna$datExpr) 
   
-  if("layers" %in% names(wgcna) && class(wgcna$datExpr) == "list") {
-    cons <- wgcna.getConsensusTopGenesAndSets(wgcna, annot=annot,
+  if(is.consensus) {
+    top <- wgcna.getConsensusTopGenesAndSets(wgcna, annot=annot,
       module=module,  ntop=ntop, rename=rename) 
-    return(cons)
+    return(top)
+  }
+
+  if(is.multi) {
+    top <- wgcna.getMultiTopGenesAndSets(
+      wgcna$layers, annot=annot, module=module, psig=psig, ntop=ntop,
+      level=level, rename=rename) 
+    return(top)
   }
 
   stats <- NULL

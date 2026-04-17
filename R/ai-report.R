@@ -408,7 +408,7 @@ rpt.compile_wgcna_report <- function(obj, report = NULL,
   df1 <- df1[order(-df1$size),,drop=FALSE]
 
   df2 <- wgcna.calculateSignificanceScore(wgcna, collapse=FALSE,
-    sort.by="score", annot.cols="symbol") 
+    sort.by="score", annot.cols = c("feature","symbol")) 
   df2 <- lapply(df2, head, 10)
   names(df2) <- paste0("Top significance scores (",names(df2),")")
 
