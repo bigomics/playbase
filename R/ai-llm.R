@@ -29,6 +29,7 @@ ai.get_ollama_models <- function(models=NULL, size=NULL) {
 
   ##hist(models.sizes, breaks=50)
   if(!is.null(models) && !any(models=="OLLAMA_MODELS")) {
+    models <- sub("^ollama:","",models)  ## strip
     available.models <- intersect(models,available.models)
   }
 

@@ -111,6 +111,7 @@ markdownToPDF <- function(text, file, tmpdir=NULL, engine='pdflatex',
     hdr <- paste0(hdr, "    pdf-engine: ",engine,"\n")
     hdr <- paste0(hdr, "    documentclass: ",documentclass,"\n")  
     hdr <- paste0(hdr, "    papersize: a4\n")
+    hdr <- paste0(hdr, "    fontsize: 10pt\n")        
     hdr <- paste0(hdr, "    geometry:\n")
     hdr <- paste0(hdr, "      - left=24mm\n")
     hdr <- paste0(hdr, "      - right=20mm\n")

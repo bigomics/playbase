@@ -298,8 +298,9 @@ pgx.getTopDrugs <- function(pgx, ct, n = 10, dir = 1, na.rm = TRUE, db = 1) {
   annot <- annot[match(names(x), rownames(annot)), ]
   df <- data.frame(enrichment = x, q.value = q, annot)
   if (na.rm) df <- df[which(!is.na(df$moa)), ]
-  df <- df[order(-df$enrichment), ]
+  df <- df[order(-abs(df$enrichment)), ]
   if (dir < 0) df <- df[order(df$enrichment), ]
+  if (dir > 0) df <- df[order(-df$enrichment), ]  
   df$drug <- NULL
   colnames(df) <- sub("moa", "mechanism_of_action", colnames(df))
   head(df, n)
@@ -312,6 +313,8 @@ pgx.getTopMOA <- function(pgx, ct, moa=NULL, n = 10, dir = 1, psig=0.1,
   }
   df <- moa[[ct]][[level]]
   df <- df[,c("pathway","pval","padj","NES")]
+  df <- df[order(-abs(df$NES)), ,drop=FALSE]
+  sel <- 1:nrow(df)
   if(dir > 0) {
     df <- df[order(-df$NES), ,drop=FALSE]
     sel <- which(df$padj <= psig & df$NES > 0)
