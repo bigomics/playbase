@@ -116,12 +116,15 @@ ai.create_ellmer_chat <- function(model, system_prompt) {
   } else if( grepl("^groq:",model)) {
     model1 <- sub("^groq:","",model)
     chat <- ellmer::chat_groq(model = model1, system_prompt = system_prompt)
+  } else if( grepl("^google:",model)) {
+    model1 <- sub("^google:","",model)
+    chat <- ellmer::chat_google_gemini(model = model1, system_prompt = system_prompt)
   } else if( grepl("^xai:grok",model)) {
     message("Sorry Grok not yet supported... ")    
   } else if(model %in% OLLAMA_MODELS) {
     chat <- ellmer::chat_ollama(model = model, system_prompt = system_prompt)
   } else {
-    message("unsupported model ",model)
+    message("unsupported model ",model,"\n")
   }
   chat
 }

@@ -5799,7 +5799,8 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
 
     if(length(top$genes[[k]])>0) {
       gg <- paste( top$genes[[k]], collapse=';')
-      q <- paste(q, "\nHere is the list of key genes/proteins/metabolites: <KEYGENES>\n")
+      ## strongly discourage use of gene in other modules
+      q <- paste(q, "\nHere is the list of key genes/proteins/metabolites, or so-called 'features'. Only use features that are in this list in your answer. Do not mention features not in this list. : <KEYGENES>\n")
     }
 
     q <- sub("<MODULE>", k, q)

@@ -147,6 +147,7 @@ Imports:
     rliger,
     rpart,
     rpart.plot,
+    rsvg,
     Rtsne,
     ruv,
     RUVSeq,
