@@ -403,8 +403,10 @@ ists to functional biological insights.**"
   ##------- tables -------------
   df1 <- data.frame(size = sapply(wgcna$me.genes,length))
   df1 <- df1[order(-df1$size),,drop=FALSE]
-  df2 <- calculateCompoundSignificance(wgcna, collapse=TRUE,
-    sort.by="score1") 
+  #df2 <- calculateCompoundSignificance(wgcna, collapse=TRUE, sort.by="score1")
+  df2 <- wgcna.calculateSignificanceScore(wgcna, collapse=TRUE, sort.by="score")   
+  rownames(df2) <- NULL
+  df2$gene_title <- NULL
   
   div.tables <- list(
     "WGCNA module sizes" = df1,
