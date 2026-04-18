@@ -6328,8 +6328,8 @@ wgcna.create_module_infographic <- function(rpt, module, prompt = NULL,
 #' @param wgcna WGCNA result object with stats.
 #' @return Data frame of compound significance scores.
 #' @export
-wgcna.calculateSignificanceScore <- function(wgcna, collapse=TRUE,
-                                             sort.by="score", digits=4, annot=NULL,
+wgcna.calculateSignificanceScore <- function(wgcna, collapse=TRUE, sort.by="score",
+                                             digits=4, annot=NULL, rownames=NULL,
                                              annot.cols=c("feature","symbol","gene_title")) {
   Q <- list()
   if (!is.null(wgcna$layers)) {
@@ -6384,9 +6384,17 @@ wgcna.calculateSignificanceScore <- function(wgcna, collapse=TRUE,
   Q <- do.call(rbind, Q)
   if(sort.by %in% colnames(Q)) Q <- Q[order(-Q[,sort.by]),]    
 
+  if(is.null(rownames)) rownames <- !("feature" %in% colnames(Q))
+  if(!rownames) {
+    rownames(Q) <- NULL
+  }
+
   ## split by module
   if(!collapse) {
     Q <- tapply(1:nrow(Q), Q$module, function(i) Q[i,])
+    if(!rownames) {
+      for(i in 1:length(Q)) rownames(Q[[i]]) <- NULL
+    }
   }
   return(Q)
 }

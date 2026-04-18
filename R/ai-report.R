@@ -403,14 +403,18 @@ ists to functional biological insights.**"
   ##------- tables -------------
   df1 <- data.frame(size = sapply(wgcna$me.genes,length))
   df1 <- df1[order(-df1$size),,drop=FALSE]
-  #df2 <- calculateCompoundSignificance(wgcna, collapse=TRUE, sort.by="score1")
-  df2 <- wgcna.calculateSignificanceScore(wgcna, collapse=TRUE, sort.by="score")   
-  rownames(df2) <- NULL
-  df2$gene_title <- NULL
+
+  topmodules <- names(wgcna$report$summaries)
+  df2 <- wgcna.calculateSignificanceScore(wgcna, collapse=FALSE,
+    sort.by="score", annot.cols = c("feature","symbol")) 
+  df2 <- df2[topmodules]
+  df2 <- lapply(df2, head, 10)
+  names(df2) <- paste0("Top significance scores (",names(df2),")")
+  for(i in 1:length(df2)) rownames(df2[[i]]) <- NULL
   
-  div.tables <- list(
-    "WGCNA module sizes" = df1,
-    "Feature scores" = head(df2,40)
+  div.tables <- c(
+    list("WGCNA module sizes" = df1),
+    df2
   )
   
   ##------- create sections -------------
