@@ -4,15 +4,29 @@
 \alias{plotMethylIdeogram}
 \title{plotMethylIdeogram}
 \usage{
-plotMethylIdeogram(beta_matrix, annot, organism = NULL, chromosomes = NULL)
+plotMethylIdeogram(
+  beta_matrix,
+  annot,
+  organism = NULL,
+  chromosomes = NULL,
+  bin_size = 1e+06,
+  probe_count_bars = TRUE,
+  loess_bins = 5L
+)
 }
 \arguments{
 \item{beta_matrix}{Matrix of beta values. Features in rows. Samples in columns.}
 
 \item{annot}{Annotation dataframe of CpGs. Must have chromosomes and positions.}
 
-\item{chroms}{Chromosomes to plot. Chromosomes with fewer than 10 CpG probes are removed.}
+\item{organism}{Organism string. Use "mouse" or "rat" for mm10; default is hg19.}
+
+\item{chromosomes}{Chromosomes to plot. Default: autosomes + X + Y.}
+
+\item{bin_size}{Genomic bin size in base pairs for the summary line. Default: 1e6 (1 Mb).}
 }
 \description{
-Creates ideograms for the selected chromosomes and regions. Plot beta values
+Like plotMethylIdeogram but replaces the probe-order rolling mean with a
+  fixed-window genomic bin average. Each bin shows the mean beta across all CpGs that
+  fall within that window, giving a cleaner and less noisy trend line.
 }
