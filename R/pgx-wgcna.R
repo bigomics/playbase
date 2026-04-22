@@ -594,7 +594,6 @@ wgcna.init <- function(wgcna, llm=NULL, img_model=NULL, annot=NULL,
 
   if(!is.null(llm) && llm=="") llm <- NULL
   if(!is.null(img_model) && img_model=="") img_model <- NULL
-
   is.multi <- ("layers" %in% names(wgcna))
   
   if (is.null(wgcna$svTOM) && !is.null(wgcna$TOM)) {
@@ -5854,12 +5853,15 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
 
 #' @export
 wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
-                                multi=FALSE) {
+                                multi=NULL) {
 
   if(is.null(topratio)) topratio <- 0.85
+  if(is.null(multi) && !is.null(wgcna$layers)) multi <- TRUE
   if(!multi) {    
     ww <- list(gx = wgcna)  ## single-omics wgcna object
-  } else {
+  } else if(!is.null(wgcna$layers)) {
+    ww <- wgcna$layers
+  } else {    
     ww <- wgcna
   }
   
@@ -5890,7 +5892,7 @@ wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
 #'
 #' @export
 wgcna.create_report <- function(wgcna, ai_model,
-                                graph = NULL, annot=NULL, multi=FALSE,
+                                graph = NULL, annot=NULL, multi=NULL,
                                 ntop=100, topratio=0.85, psig=0.05,
                                 do.diagram = TRUE,
                                 userprompt='', format="markdown",
@@ -5904,6 +5906,11 @@ wgcna.create_report <- function(wgcna, ai_model,
   
   if(is.null(ai_model)) ai_model <- ""
   if(is.null(topratio)) topratio <- 0.85
+
+  if(is.null(multi)) {
+    is.mono <- all(c("datExpr","datTraits","net") %in% names(wgcna))
+    multi <- !is.null(wgcna$layers) || !is.mono
+  }
   
   if(!multi) {
     layers <- list(gx = wgcna)
@@ -6245,9 +6252,9 @@ wgcna.create_module_infographic <- function(rpt, module, prompt = NULL,
 #' @param wgcna WGCNA result object with stats.
 #' @return Data frame of compound significance scores.
 #' @export
-wgcna.calculateSignificanceScore <- function(wgcna, collapse=TRUE,
-                                             sort.by="score", digits=4,
-                                             annot.cols=c("symbol","gene_title")) {
+wgcna.calculateSignificanceScore <- function(wgcna, collapse=TRUE, sort.by="score",
+                                             digits=4, annot=NULL, rownames=NULL,
+                                             annot.cols=c("feature","symbol","gene_title")) {
   Q <- list()
   if (!is.null(wgcna$layers)) {
     ww <- wgcna$layers
@@ -6271,24 +6278,31 @@ wgcna.calculateSignificanceScore <- function(wgcna, collapse=TRUE,
     Q1[,2:ncol(Q1)] <- round(Q1[,2:ncol(Q1)], digits=digits)
     Q[[k]] <- Q1
   }
-
-  if(!is.null(annot.cols) && length(annot.cols) && !is.null(wgcna$annot)) {
+  
+  if(is.null(annot)) annot <- wgcna$annot
+  if(!is.null(annot.cols) && length(annot.cols) && !is.null(annot)) {
     i=1
     for(i in 1:length(Q)) {
-      rr <- rownames(Q[[i]])
-      kk <- match(rr, rownames(wgcna$annot))
-      sel <- intersect(annot.cols, colnames(wgcna$annot))
-      aa <- wgcna$annot[kk, sel, drop=FALSE]
-      ## if same as rownames drop
-      aa.sel <- which(colMeans(aa == rr,na.rm=TRUE) < 0.99)  
-      aa <- aa[,aa.sel,drop=FALSE]
-      Q[[i]] <- cbind(aa, Q[[i]])
+      Q1 <- Q[[i]]
+      Q1 <- rename_by2(Q1, annot, "feature", na.rm=FALSE)      
+      rr <- rownames(Q1)
+      kk <- match(rr, rownames(annot))
+      sel <- intersect(annot.cols, colnames(annot))
+      aa <- annot[kk, sel, drop=FALSE]
+      ## if feature and symbol are same drop
+      if(all(c("feature","symbol") %in% colnames(aa))) {
+        if( mean(aa$symbol == aa$feature,na.rm=TRUE)) {
+          aa$symbol <- NULL
+        }
+      }
+      rr <- mofa.strip_prefix(rr)
+      Q[[i]] <- data.frame(aa, Q[[i]], row.names=rr)
     }
   }
 
   if (length(Q)>1) {
-    for(i in 1:length(Q)) rownames(Q[[i]]) <- paste0(names(Q)[i],":",
-      rownames(Q[[i]]))
+    for(k in 1:length(Q)) rownames(Q[[k]]) <- paste0(names(Q)[k],":",
+      rownames(Q[[k]]))
   }
   names(Q) <- NULL
   Q <- do.call(rbind, Q)
@@ -6296,6 +6310,18 @@ wgcna.calculateSignificanceScore <- function(wgcna, collapse=TRUE,
 
   if(!collapse) {
     Q <- tapply(1:nrow(Q), Q$module, function(i) Q[i,])
+    if(is.null(rownames)) rownames <- !("feature" %in% colnames(Q))
+    if(!rownames) {
+      rownames(Q) <- NULL
+    }
+
+  ## split by module
+  if(!collapse) {
+    Q <- tapply(1:nrow(Q), Q$module, function(i) Q[i,])
+    if(!rownames) {
+      for(i in 1:length(Q)) rownames(Q[[i]]) <- NULL
+    }
+>>>>>>> devel
   }
   return(Q)
 }

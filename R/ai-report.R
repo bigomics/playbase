@@ -407,10 +407,13 @@ rpt.compile_wgcna_report <- function(obj, report = NULL,
   df1 <- data.frame(size = sapply(wgcna$me.genes,length))
   df1 <- df1[order(-df1$size),,drop=FALSE]
 
+  topmodules <- names(wgcna$report$summaries)
   df2 <- wgcna.calculateSignificanceScore(wgcna, collapse=FALSE,
     sort.by="score", annot.cols = c("feature","symbol")) 
+  df2 <- df2[topmodules]
   df2 <- lapply(df2, head, 10)
   names(df2) <- paste0("Top significance scores (",names(df2),")")
+  for(i in 1:length(df2)) rownames(df2[[i]]) <- NULL
 
   div.tables <- c(
     list("WGCNA module sizes" = df1),
