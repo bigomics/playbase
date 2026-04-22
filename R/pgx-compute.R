@@ -195,6 +195,7 @@ pgx.createPGX <- function(counts,
                           add.gmt = TRUE,
                           settings = list(),
                           sc_compute_settings = list()) {
+
   message("[pgx.createPGX]===========================================")
   message("[pgx.createPGX]=========== pgx.createPGX =================")
   message("[pgx.createPGX]===========================================")
@@ -208,7 +209,7 @@ pgx.createPGX <- function(counts,
   message("[pgx.createPGX] dim.counts: ", dim(counts)[1], " x ", dim(counts)[2])
   message("[pgx.createPGX] class.counts: ", class(counts))
   message("[pgx.createPGX] counts has ", sum(is.na(counts)), " missing values")
-  
+
   ndup <- sum(duplicated(rownames(counts)))
   if (ndup > 0) {
     if (average.duplicated) {
@@ -377,6 +378,20 @@ pgx.createPGX <- function(counts,
   versions$playbase_version <- packageVersion("playbase")
   versions$playdata_version <- packageVersion("playdata")
 
+  ## Reorder uniprots
+  if (datatype == "proteomics") {
+    message("[pgx.createPGX] Reordering uniprots in counts, X, annot_table")
+    feature.lengths <- NULL
+    if (!is.null(annot_table)) {
+      kk <- grep("length|size", tolower(colnames(annot_table)))
+      if (length(kk) > 0) feature.lengths <- colnames(annot_table)[kk][1]
+    }
+    for(i in 1:nrow(counts)) {
+      rownames(counts)[i] <- playbase::rank_uniprots(rownames(counts)[i], feature.lengths[i])$feature
+    }
+    rownames(X) <- rownames(annot_table) <- rownames(counts)
+  }
+
   pgx <- list(
     name = name,
     organism = organism,
@@ -399,9 +414,7 @@ pgx.createPGX <- function(counts,
     sc_compute_settings = sc_compute_settings
   )
 
-  ## -------------------------------------------------------------------
-  ## create gene annotation table
-  ## -------------------------------------------------------------------
+  ## Create gene annotation table
   pgx$genes <- NULL
   pgx$probe_type <- probe_type
 
@@ -413,6 +426,18 @@ pgx.createPGX <- function(counts,
     probetype = pgx$probe_type,
     annot_table = annot_table
   )
+
+  ## Reorder uniprots in pgx$genes. Valid for all datatypes.
+  message("[pgx.createPGX] Reordering uniprot column in pgx$genes")
+  hh <- grep("uniprot", tolower(colnames(pgx$genes)))
+  if (length(hh) > 0) {
+    feature.lengths <- NULL
+    kk <- grep("length|size", tolower(colnames(pgx$genes)))
+    if (length(kk) > 0) feature.lengths <- as.character(pgx$genes[, kk[1]])
+    for(i in 1:nrow(pgx$genes)) {
+      pgx$genes[i, hh[1]] <- playbase::rank_uniprots(pgx$genes[i, hh[1]], feature.lengths[i])$feature
+    }
+  }
 
   if (is.null(pgx$genes)) stop("[pgx.createPGX] FATAL: Could not build gene annotation")
 
