@@ -9,7 +9,7 @@ wgcna.create_report(
   ai_model,
   graph = NULL,
   annot = NULL,
-  multi = FALSE,
+  multi = NULL,
   ntop = 100,
   topratio = 0.85,
   psig = 0.05,

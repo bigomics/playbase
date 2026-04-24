@@ -9,7 +9,9 @@ wgcna.calculateSignificanceScore(
   collapse = TRUE,
   sort.by = "score",
   digits = 4,
-  annot.cols = c("symbol", "gene_title")
+  annot = NULL,
+  rownames = NULL,
+  annot.cols = c("feature", "symbol", "gene_title")
 )
 }
 \arguments{
