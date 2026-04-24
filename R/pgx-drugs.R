@@ -557,7 +557,10 @@ ai.create_report_drug_connectivity <- function(pgx, model, model2=NULL, db=1,
   out <- list(
     prompt = prompt,
     bullets = bullets,
-    report = rpt
+    report = rpt,
+    database = db.name,
+    llm_model = model,
+    llm_model2 = model2
   )
   return(out)
 }

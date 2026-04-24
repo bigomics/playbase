@@ -6308,21 +6308,16 @@ wgcna.calculateSignificanceScore <- function(wgcna, collapse=TRUE, sort.by="scor
   Q <- do.call(rbind, Q)
   if(sort.by %in% colnames(Q)) Q <- Q[order(-Q[,sort.by]),]    
 
-  if(!collapse) {
-    Q <- tapply(1:nrow(Q), Q$module, function(i) Q[i,])
-    if(is.null(rownames)) rownames <- !("feature" %in% colnames(Q))
-    if(!rownames) {
-      rownames(Q) <- NULL
-    }
-
-  ## split by module
-  if(!collapse) {
-    Q <- tapply(1:nrow(Q), Q$module, function(i) Q[i,])
-    if(!rownames) {
-      for(i in 1:length(Q)) rownames(Q[[i]]) <- NULL
-    }
->>>>>>> devel
+  if(is.null(rownames)) rownames <- !("feature" %in% colnames(Q))
+  if(!rownames) {
+    rownames(Q) <- NULL
   }
+
+  if(!collapse) {
+    ## split by module
+    Q <- tapply(1:nrow(Q), Q$module, function(i) Q[i,])    
+  }
+
   return(Q)
 }
 

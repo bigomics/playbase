@@ -575,7 +575,9 @@ rpt.compile_drugconnectivity_report <- function(obj, which.db = 1, report = NULL
   )
 
   settings <- list(
-    database = which.db
+    database = which.db,
+    llm_model = rpt$model,
+    create_date = Sys.time()
   )
   
   ##------- create sections -------------
