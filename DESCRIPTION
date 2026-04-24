@@ -19,7 +19,6 @@ biocViews:
 Imports:
     AnnotationDbi,
     AnnotationHub,
-    ape,
     ArrayExpress,
     assertthat,
     aws.s3,
@@ -49,7 +48,6 @@ Imports:
     DiagrammeRsvg,
     dplyr,
     DT,
-    dynamicTreeCut,
     edgeR,
     ellmer,
     fastcluster,
