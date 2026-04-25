@@ -235,11 +235,27 @@ pgx.readOptions <- function(file = "./OPTIONS", default = NULL) {
   if (!file.exists(file)) {
     return(NULL)
   }
-  P <- utils::read.table(file, sep = "=", row.names = 1)
-  opt.names <- trimws(rownames(P))
-  opt <- list(P[, 1])
-  opt <- sapply(opt, trimws)
-  opt <- as.list(opt)
+  P <- utils::read.table(file, sep = "=", stringsAsFactors = FALSE)
+  opt.names <- trimws(P[, 1])
+  opt.values <- trimws(P[, 2])
+
+  dup.counts <- table(opt.names)
+  dup.counts <- dup.counts[dup.counts > 1]
+  if (length(dup.counts)) {
+    for (nm in names(dup.counts)) {
+      warning(
+        "[pgx.readOptions] option '", nm, "' is defined ",
+        dup.counts[[nm]], " times in ", file,
+        "; using the first occurrence",
+        call. = FALSE, immediate. = TRUE
+      )
+    }
+    keep <- !duplicated(opt.names)
+    opt.names <- opt.names[keep]
+    opt.values <- opt.values[keep]
+  }
+
+  opt <- as.list(opt.values)
   names(opt) <- opt.names
   opt <- sapply(opt, strsplit, split = "[;]")
   ## convert character to R types
