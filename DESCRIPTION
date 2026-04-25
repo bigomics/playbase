@@ -95,6 +95,7 @@ Imports:
     Matrix,
     matrixStats,
     matrixTests,
+    metaLINCS,
     metap,
     methods,
     microbenchmark,
