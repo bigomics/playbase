@@ -290,6 +290,111 @@ sum_treps <- function(counts, trep_var = "") {
   
 }
 
+#' Re-order uniprot IDs (when a feature has multiple uniprot ids)
+#' Rules:
+#' If there are Swiss-Prot entries, Swiss-Prot entries come first, followed by TrEMBL entries.
+#' Among Swiss-Prot entries, if there are canonical entries, canonical entries come first (eg P05067),
+#' followed by isoforms (P05067-2). In absence of canonical entries, convert isoforms to canonical
+#' (eg P05067-2 to P05067).
+#' Among Swiss-Prot entries (after step 2), longer proteins come first.
+#' Among TrEMBL entires, longer proteins come first.
+#' @param feature feature ids, collapsed with ";".
+#' @param lengths Character vector of feature lengths, collapsed with ";". Default NULL.
+#' @export
+rank_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
+
+  if (as.character(feature) %in% c("","NA")) return(as.character(feature))
+  if (is.na(feature)) return(feature)
+
+  ff <- strsplit(as.character(feature), ";")[[1]]
+  ff <- ff[nzchar(trimws(ff))]
+  ff <- ff[!is.na(ff)]
+  if (length(ff) <= 1) return(list(feature=feature, lengths=lengths))
+
+  ll <- NULL
+  if (!is.null(lengths)) {
+    ll <- strsplit(as.character(lengths), ";")[[1]]
+    ll <- ll[!is.na(ll)]
+  }
+  
+  if (!is.null(ll)) {
+    if (length(ff) > length(ll)) {
+      n <- length(ff) - length(ll)
+      ll <- c(ll, rep("0", n)) ## unavailable lengths set as 0
+    }
+    if (length(ff) < length(ll)) {
+      if (verbose)
+        message("[playbase::rankProteins] Protein lengths does not match features. Ignoring length.")
+      ll <- NULL
+    } else {
+      names(ll) <- ff
+    }
+  }
+  
+  ## Swiss-Prot entries come first (if any), followed by TrEMBL entries (if any).
+  ff.sp=NULL; ff.trembl=NULL
+  sp <- grep("^[OPQ][0-9]", ff)
+  if (length(sp) > 0) {
+    ## Swiss-Prot canonical entries come first (P05067), followed by isoforms (eg., P05067-2).
+    ## In absence of canonical entries, convert isoforms to canonical (eg., P05067-2 to P05067).
+    ff.sp <- ff[sp]
+    hh <- grep("[-_][0-9]+$", ff.sp)
+    if (length(hh) > 0) {
+      if (length(hh) == length(ff.sp)) {
+        ff.sp[hh] <- sub("[-_][0-9]+$", "", ff.sp[hh])
+        if (!is.null(ll)) names(ll)[sp][hh] <- ff.sp[hh]
+      } else {
+        ff.sp <- c(ff.sp[-hh], ff.sp[hh])
+      }
+    }
+  }
+  if (length(ff.sp) != length(ff)) {
+    ff.trembl <- ff[-sp]
+  }
+
+  ll.sp=NULL; ll.trembl=NULL
+
+  ## Among Swiss-Prot entries, longer proteins come first.
+  if (!is.null(ff.sp) & !is.null(ll)) {
+    hh <- grep("[-_][0-9]+$", ff.sp)
+    if (length(hh) > 0) {
+      canon <- ff.sp[-hh]
+      iso <- ff.sp[hh]
+      ll.canon <- as.numeric(ll[match(canon, names(ll))])
+      ll.iso <- as.numeric(ll[match(iso, names(ll))])
+      canon <- canon[order(ll.canon, decreasing = TRUE, na.last = TRUE)]
+      iso <- iso[order(ll.iso, decreasing = TRUE, na.last = TRUE)]
+      ff.sp <- c(canon, iso)
+    } else {
+      ll.sp <- as.numeric(ll[match(ff.sp, names(ll))])
+      ff.sp <- ff.sp[order(ll.sp, decreasing = TRUE, na.last = TRUE)]
+    }
+    ll.sp <- as.numeric(ll[match(ff.sp, names(ll))])
+  }
+
+  ## Among TrEMBL entires, longer proteins come first.
+  if (!is.null(ff.trembl) & !is.null(ll)) {
+    ll.trembl <- ll[match(ff.trembl, names(ll))]
+    ll.trembl <- as.numeric(ll.trembl)
+    oo <- order(ll.trembl, decreasing = TRUE)
+    ff.trembl <- ff.trembl[oo]
+    ll.trembl <- ll.trembl[oo] 
+  }
+
+  if (!is.null(ff.sp) | !is.null(ff.trembl)) {
+    ff <- paste0(c(ff.sp, ff.trembl), collapse = ";")
+  }
+
+  if (!is.null(ll.sp) | !is.null(ll.trembl)) {
+    ll <- paste0(c(ll.sp, ll.trembl), collapse = ";")
+  }
+
+  if (verbose) message("[playbase::rankProteins] Completed.\n")
+
+  return(list(feature=ff, lengths=ll))
+  
+}
+
 
 iconv2utf8 <- function(s) {
   iconv(s, to = "UTF-8//TRANSLIT", sub = "")
