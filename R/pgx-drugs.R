@@ -117,7 +117,7 @@ pgx.update_drugs_results <- function(pgx, model, img_model) {
         report = rpt$report,
         model = img_model,
         filename = "/tmp/drug-infographic.png",
-        aspectRatio = "16:9",
+        aspectratio = "16:9",
         add.fallback = TRUE
       )
       if(grepl("jpg$",outfile,ignore.case=TRUE)) {
@@ -570,18 +570,24 @@ ai.create_report_drug_connectivity <- function(pgx, model, model2=NULL, db=1,
 #'
 #' @export
 ai.cmap_create_infographic <- function(report, model, filename,
-                                       aspectRatio = c("4:3","16:9","3:4")[2],
+                                       aspectratio = c("4:3","16:9","3:4")[2],
                                        add.fallback = TRUE)
 {
   prompt <- paste("**Instructions**: Create an infographic for the following pharmacological mechanism-of-action analysis report.\n\n**summary**:", report)
-  out <- ai.create_image_gemini(
+  if(is.null(model) || model=="") {
+    model <- ai.get_image_models()
+  }
+  if(add.fallback) {
+    ## add fallback models
+    model <- unique(c(model,playbase::ai.get_image_models()))  
+  }
+  out <- ai.create_image(
     prompt,
     model = model,
-    api_key = Sys.getenv("GEMINI_API_KEY"),
     format = "file",
     filename = filename,
-    aspect_ratio = aspectRatio,
-    image_size = "1K"
+    aspect_ratio = aspectratio,
+    size = 1024
   )
   if(is.null(out) || !file.exists(out)) return(NULL)
   return(out)

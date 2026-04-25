@@ -46,13 +46,14 @@ ai.create_image <- function(prompt,
                             model = IMAGE_MODELS,
                             format = c("file","base64","raw")[1], 
                             filename = "image.png",
+                            size = 1024,
                             aspect_ratio = "16:9" )
 {
   res <- NULL
   for(m in model) {
     message("[ai.create_image] reaching model: ",m)
     
-    if(grepl("gemini",m)) {
+    if(grepl("gemini|^google",m)) {
       res <- try(ai.create_image_gemini(
         prompt = prompt,
         model = m,
@@ -74,15 +75,15 @@ ai.create_image <- function(prompt,
       ))        
     }    
 
-    if(grepl("^openai:gpt",m)) {
+    if(grepl("^openai|gpt",m)) {
       res <- try(ai.create_image_openai(
         prompt = prompt,
-        model = "openai:gpt-image-1",
-        #model = model,
+        model = m,
         api_key = Sys.getenv("OPENAI_API_KEY"),
         format = format,
-        filename = filename
-        ##aspect_ratio = aspect_ratio
+        filename = filename,
+        aspect_ratio = aspect_ratio,
+        size = size
       ))        
     }
     if(inherits(res,"try-error")) {
@@ -235,9 +236,9 @@ ai.create_image_gemini <- function(prompt,
 #'
 #' @export
 ai.create_image_openai <- function (prompt,
-                                    model = "gpt-image-1", 
-                                    size = c("auto","1024x1024")[1], 
-                                    aspect_ratio = NULL,
+                                    model = "gpt-image-2", 
+                                    size = 1024,
+                                    aspect_ratio = "3:2",
                                     format = c("file","base64","raw"),
                                     filename = "image.png",
                                     api_key = Sys.getenv("OPENAI_API_KEY"),
@@ -248,7 +249,7 @@ ai.create_image_openai <- function (prompt,
   ##    size <- match.arg(size)
   format <- match.arg(format)
   assertthat::assert_that(assertthat::is.string(prompt), assertthat::noNA(prompt))
-  assertthat::assert_that(assertthat::is.string(size), assertthat::noNA(size))
+  #assertthat::assert_that(assertthat::is.number(size), assertthat::noNA(size))
   assertthat::assert_that(assertthat::is.string(format), 
     assertthat::noNA(format))
   if (!is.null(user)) {
@@ -269,16 +270,12 @@ ai.create_image_openai <- function (prompt,
   }
   model <- sub("^openai:","",model)
   
-  if(grepl("api.x.ai",base_url,fixed=TRUE)) {
-    message("calling grok (warning: $0.07 per image)")    
-    if(is.null(model)) model <- "grok-2-image-1212"
-    size <- NULL
-  } else if(grepl("api.openai.com",base_url,fixed=TRUE)) {
-    ##if(is.null(model)) model <- NULL
-    message("calling openai (warning: $0.05 per image)")    
-  } else {
-    stop("invalid base_url =",base_url)
-  }
+  if(is.null(aspect_ratio)) aspect_ratio <- "3:2"
+  size <- max(as.numeric(strsplit(as.character(size),split='x')[[1]]))
+  ar <- as.numeric(strsplit(aspect_ratio,split=':')[[1]])
+  ar <- ar / mean(ar,na.rm=TRUE)
+  size <- 16*round(size*ar/16)
+  size <- paste(size,collapse='x')
   
   url <- glue::glue("{base_url}/images/generations")
   headers <- c(Authorization = paste("Bearer", api_key), 
@@ -293,7 +290,7 @@ ai.create_image_openai <- function (prompt,
   body[["n"]] <- 1
   if(!is.null(response_format)) body[["response_format"]] <- "b64_json"
   body[["size"]] <- size
-  if(!is.null(aspect_ratio)) body[["aspect_ratio"]] <- aspect_ratio
+  #if(!is.null(aspect_ratio)) body[["aspect_ratio"]] <- aspect_ratio
   body[["user"]] <- user
   response <- httr::POST(url = url, httr::add_headers(.headers = headers), 
     body = body, encode = "json")
