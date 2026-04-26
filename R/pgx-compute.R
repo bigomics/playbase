@@ -384,7 +384,7 @@ pgx.createPGX <- function(counts,
     feature.lengths <- NULL
     if (!is.null(annot_table)) {
       kk <- grep("length|size", tolower(colnames(annot_table)))
-      if (length(kk) > 0) feature.lengths <- colnames(annot_table)[kk][1]
+      if (length(kk) > 0) feature.lengths <- annot_table[, kk[1]]
     }
     for(i in 1:nrow(counts)) {
       rownames(counts)[i] <- playbase::rank_uniprots(rownames(counts)[i], feature.lengths[i])$feature
