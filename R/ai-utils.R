@@ -95,8 +95,12 @@ markdownToPDF <- function(text, file, tmpdir=NULL, engine='pdflatex',
     text <- gsub("[.]underline","",text)  ## problematic...
   }
 
+
+  
   text <- gsub(intToUtf8("8209"),"-",text)
   text <- iconv2ascii(text)
+
+  text <- gsub("```markdown|```","",text)
   ##text <- gsub("---\n","",text)
   
   latex.engines <- c("lualatex","pdflatex")
