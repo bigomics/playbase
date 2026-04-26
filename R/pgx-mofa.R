@@ -6,7 +6,11 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
                              add_gsets = FALSE,
                              factorizations = TRUE,
                              compute.enrichment = TRUE,
-                             compute.lasagna = TRUE) {
+                             compute.lasagna = TRUE,
+                             create.report = FALSE,
+                             llm_model = NULL,
+                             image_model = NULL
+                             ) {
   has.prefix <- (mean(grepl(":", rownames(pgx$X))) > 0.8)
   is.multiomics <- (pgx$datatype == "multi-omics" && has.prefix)
 
@@ -114,7 +118,7 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
       )
     }
   }
-
+  
   ## pre-compute cluster positions
   message("computing SNF...")
   mofa$snf <- snf.cluster(mofa$xx, pheno = NULL, plot = FALSE)
@@ -126,6 +130,23 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
   mofa$posf <- mofa.compute_clusters(mofa$xx, along = "features", method = "umap")
   ## mofa$posf <- mofa.compute_clusters(mofa$xx, along = "features", method='tsne')
 
+  if (create.report) {
+    mofa$report <- mofa.create_report(
+      mofa,
+      llm_model = llm_model,
+      image_model = image_model,
+      graph = NULL,
+      annot = pgx$genes, 
+      ntop = 100, psig = 0.05,
+      do.diagram = TRUE, 
+      userprompt = '',
+      format = "markdown",
+      verbose = 1,
+      progress = NULL
+    )
+    
+  }
+        
   return(mofa)
 }
 
@@ -418,6 +439,14 @@ mofa.compute <- function(xdata,
   }
   num.contrasts <- sign(makeContrastsFromLabelMatrix(contrasts))
 
+  settings <- list(
+    kernel = toupper(kernel),
+    numfactors = numfactors,
+    ntop = ntop,
+    gset.ntop = gset.ntop,
+    scale_views = scale_views
+  )
+  
   res <- list(
     model = model,
     samples = samples,
@@ -434,7 +463,8 @@ mofa.compute <- function(xdata,
     Y = Y,
     gsea = gsea,
     GMT = GMT,
-    graphs = graphs
+    graphs = graphs,
+    settings = settings
   )
 
   return(res)
@@ -837,6 +867,43 @@ mofa.plot_all_factortraits <- function(meta.res) {
     gx.imagemap(abs(meta.res[[i]]$Z), main = names(meta.res)[i])
   }
 }
+
+mofa.feature_significance <- function(mofa, collapse=FALSE,
+    sort.by="score", annot=NULL, annot.cols = c("feature","symbol")) {
+  ww <- mofa$W
+  K <- cbind(mofa$Y, mofa$K)
+  rho <- cor(t(mofa$X), K)
+  maxW <- apply( abs(ww), 1, max, na.rm=TRUE)
+  maxR <- apply( abs(rho), 1, max, na.rm=TRUE)  
+  gg <- rownames(ww)
+  sdx <- matrixStats::rowSds(mofa$X[gg,])  
+  score <- maxW * maxR * sdx
+  topfactor <- max.col(abs(ww))
+  topsign <- sign(ww[cbind(1:nrow(ww),topfactor)])
+  topfactor <- colnames(ww)[max.col(abs(ww))]
+  
+  aa <- data.frame(feature = gg)
+  if(is.null(annot) && !is.null(mofa$annot)) annot <- mofa$annot
+  if(!is.null(annot)) {    
+    ww1 <- rename_by2(ww, annot, "feature", na.rm=FALSE)      
+    rr <- rownames(ww1)
+    kk <- match(rr, rownames(annot))
+    sel <- intersect(annot.cols, colnames(annot))
+    aa <- annot[kk, sel, drop=FALSE]
+  }  
+  df <- data.frame(
+    aa,
+    xfactor=topfactor, xsign=topsign,
+    max.W=maxW, max.R=maxR, SD=sdx, score=score)
+  df <- df[order(-df[,sort.by]),]
+  
+  if(!collapse) {
+    mm <- df$xfactor
+    df <- tapply(1:nrow(df), mm, function(i) df[i,,drop=FALSE])
+  }
+  df
+}
+
 
 ## -------------------------------------------------------------
 ## ------------------ HELPER FUNCTIONS -------------------------
@@ -3638,6 +3705,343 @@ mofa.normalizeExpression <- function(X, method1 = "maxMedian", method2 = "none")
   normX <- normX[rownames(X), ]
   return(normX)
 }
+
+##----------------------------------------------------------------------
+##----------------------------------------------------------------------
+##----------------------------------------------------------------------
+
+mofa.getTopFactors <- function(mofa, minrho=0.2) {
+  Z <- mofa$Z
+  Z[ abs(Z) < minrho ] <- 0
+  Z <- Z[rowMeans(Z==0) < 1,,drop=FALSE]
+  idx1 <- max.col(abs(Z))
+  idx2 <- max.col(Z)
+  idx <- unique(c(idx1,idx2))
+  colnames(mofa$Z)[idx]
+}
+
+mofa.getTopGenesAndSets <- function(mofa, annot=NULL, factors=NULL, ntop=40,
+                                     psig = 0.05, level="gene", rename="symbol") {
+  
+  if(!"gsea" %in% names(mofa)) {
+    warning("object has no enrichment results (gsea)")
+    return(NULL)
+  }
+  
+  ## get top genes by centrality-weighted-meanFC2
+  ww <- mofa$W
+  Y <- cbind(mofa$K, mofa$Y)
+  rho <- cor(t(mofa$X), Y)
+  ff <- sqrt(rowMeans(rho**2, na.rm=TRUE))
+  mm <- ww * ff
+  if(!is.null(annot)) {
+    annot$gene_title <- paste0(annot$gene_title," (",annot$symbol,")")
+    mm <- rename_by2(mm, annot, new_id=rename)
+  }
+  gg <- rownames(mm)
+  mm <- as.list(data.frame(mm))
+  if(!is.null(factors)) mm <- mm[which(names(mm) %in% factors)]
+  for(i in 1:length(mm)) names(mm[[i]]) <- gg
+  mm <- lapply(mm, function(x) x[x!=0])
+  topgenes <- lapply(mm, function(x) names(head(sort(-x),ntop)))
+
+  ## top genesets
+  topsets <- NULL
+  if("gsea" %in% names(mofa)) {
+    ee <- mofa$gsea$table
+    if(!is.null(factors)) ee <- ee[which(names(ee) %in% factors)]  
+    topsets <- list()
+    for(k in names(ee)) {
+      ee1 <- ee[[k]]
+      ee1 <- ee1[ee1$pval < psig,,drop=FALSE]  ## or padj???
+      ee1 <- ee1[order(-ee1$NES),,drop=FALSE]
+      topsets[[k]] <- head(ee1$pathway, ntop)
+    }
+  }
+
+  ## top correlated phenotypes
+  Y <- cbind(mofa$K, mofa$Y)
+  M <- cor(mofa$F, Y)
+  toppheno <- apply(M, 1, function(x) names(which(x > 0.8*max(x, na.rm=TRUE))))
+  
+  if(level=="geneset") {
+    topsets <- topgenes
+    topgenes <- NULL
+  }
+
+  list(sets = topsets, genes = topgenes, pheno = toppheno)
+}
+
+
+#' @export
+mofa.describeFactors <- function(mofa, ntop=50, psig = 0.05,
+                                 annot=NULL, factors=NULL,
+                                 experiment="", verbose=1, model=DEFAULT_LLM,
+                                 docstyle = "detailed summary", numpar = 2,
+                                 level="gene")  {
+  if(0) {
+    ntop=50; psig = 0.05; annot=NULL; factors=NULL;
+    experiment=""; verbose=1; model=DEFAULT_LLM;
+    docstyle = "detailed summary"; numpar = 2;
+    level="gene"
+  }
+  
+  if(is.null(annot)) {
+    message("[mofa.describeFactor] WARNING. user annot table is recommended.")
+  }
+  
+  top <- mofa.getTopGenesAndSets(mofa, annot=annot, ntop=ntop,
+    factors=factors, psig=psig, level=level, rename="gene_title")
+
+  if(is.null(factors)) {
+    factors <- union(names(top$genes), names(top$sets))
+  }
+
+  if(is.null(experiment)) experiment <- ""
+
+  if(length(factors)==0) {
+    info("[wgcna.describeModules] warning: empty module list!")    
+    return(NULL)
+  }
+
+  ## If no LLM is available we do just a manual summary
+  model <- setdiff(model, c("", NA))
+  if (is.null(model) || length(model) == 0) {
+    desc <- list()
+    for(m in factors) {
+      ss=gg=pp="<none>"
+      
+      if(!is.null(top$genes[[m]])) {
+        gg <- paste( top$genes[[m]], collapse=', ')
+      } 
+      if(!is.null(top$sets[[m]])) {
+        ss <- paste( sub(".*:","",top$sets[[m]]), collapse='; ')
+      } 
+      if(m %in% names(top$pheno)) {
+        pp <- paste( top$pheno[[m]], collapse='; ')
+      } 
+      d <- ""
+      if(!is.null(pp)) d <- paste(d, "**Correlated phenotypes**:", pp, "\n\n")
+      if(!is.null(gg) && gg!="") {
+        d <- paste(d, "**Key genes**:", gg, "\n\n")
+      }
+      if(!is.null(ss) && ss!="") {
+        d <- paste(d, "**Top enriched gene sets**:", ss, "\n\n")
+      }
+      desc[[m]] <- d
+    }
+
+    res <- list(
+      prompt = NULL,
+      questions = NULL,
+      answers = desc
+    )
+    return(res)
+  }
+
+  kernel <- toupper(mofa$setting$kernel)
+  
+  prompt <- paste("These are results of a multi-omics factor analysis using",kernel,". Give a", docstyle, "of the main overall biological function of the following top enriched genesets belonging to factor <FACTOR>. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about \'<EXPERIMENT>\'. Use maximum", numpar, "paragraphs. Do not use any bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n")
+
+  if (verbose > 1) cat(prompt)
+
+  desc <- list()
+  questions <- list()
+  k=factors[1]
+  for (k in factors) {
+    if (verbose > 0) message("Describing factor ", k)
+
+    ss=gg=pp=""
+    if(length(top$sets[[k]])>0) {
+      ss <- sub( ".*:","", top$sets[[k]] ) ## strip prefix
+      ss <- paste(ss, collapse=';')    
+    } else {
+      ss <- "[no significant genesets]"
+    }
+
+    if(k %in% names(top$pheno)) {
+      pp <- paste0("'",top$pheno[[k]],"'")
+      pp <- paste( pp, collapse=';')      
+    }
+
+    q <- prompt
+
+    if(length(top$genes[[k]])>0) {
+      gg <- paste( top$genes[[k]], collapse=';')
+      q <- paste(q, "\nHere is the list of key genes/proteins/metabolites: <KEYGENES>\n")
+    }
+
+    q <- sub("<FACTOR>", k, q)
+    q <- sub("<PHENOTYPES>", pp, q)
+    q <- sub("<EXPERIMENT>", experiment, q)
+    q <- sub("<GENESETS>", ss, q)
+    q <- sub("<KEYGENES>", gg, q)
+
+    answer <- ""
+    for (m in model) {
+      if (verbose > 0) message("  ...asking LLM model ", m)
+      a <- ai.ask(q, model = m)
+      a <- paste0(a, "\n\n[AI generated using ", m, "]\n")
+      if (length(model) > 1) a <- paste0("\n-------------------------------\n\n", a)
+      answer <- paste0(answer, a)
+    }
+
+    desc[[k]] <- answer
+    questions[[k]] <- q
+  }
+
+  res <- list(
+    prompt = prompt,
+    questions = questions,
+    answers = desc
+  )
+  return(res)
+}
+
+
+#' Create report object.
+#'
+#' @export
+mofa.create_report <- function(mofa, llm_model,
+                               graph = NULL, annot=NULL, 
+                               ntop=100, psig=0.05,
+                               do.diagram = TRUE, image_model = NULL,
+                               userprompt='', format="markdown",
+                               verbose=1, progress=NULL) {
+
+  if(0) {
+    graph = NULL; annot=NULL; multi=FALSE;
+    ntop=100; psig=0.05;
+    format="markdown"; verbose=1;
+    progress=NULL
+  }
+  
+  if(is.null(llm_model)) llm_model <- ""
+
+  ## get top.factors (most correlated with some phenotype)
+  top.factors <- mofa.getTopFactors(mofa) ## always multi format
+  top.factors
+  
+  if(is.null(annot) && !is.null(mofa$annot)) {
+    annot <- mofa$annot
+  }
+  if(is.null(annot)) {
+    message("[mofa.create_report] WARNING. providing user annot table is recommended.")
+  }
+  
+  ##--------------------------------------------------------------------
+  ## Step 1. Describe modules with LLM. We can use one LLM model or more.
+  ##--------------------------------------------------------------------
+  if(!is.null(progress)) progress$set(message = "Extracting top factors...", value=0.2)
+  if(verbose) message("Extracting top factors...")
+  out <- mofa.describeFactors(
+    mofa,
+    factors = top.factors,
+    ntop = ntop,  ## number of top genes or sets
+    annot = annot,
+    psig = psig,
+    experiment = mofa$experiment,
+    verbose = verbose,
+    model = llm_model
+  ) 
+  names(out)
+  summaries_prompts <- out$questions
+  summaries <- out$answers
+  
+  ## add compute setttings
+  results <- summaries
+  if(!is.null(mofa$settings)) {
+    settings <- mofa$settings
+    settings[['llm_model']] <- llm_model
+    settings <- paste0(names(settings),'=',settings,collapse='; ')
+    results[['compute_settings']] <- settings
+  }
+
+  ## collate all results
+  all.results <- lapply(names(results), function(me)
+    paste0("================= ",me," =================\n\n", results[[me]],"\n"))
+  all.results <- paste(all.results, collapse="\n")   
+
+  ##--------------------------------------------------------------------
+  ## Step 2: Make detailed report. We concatenate all summaries and
+  ## ask a (better) LLM model to create a report.
+  ## --------------------------------------------------------------------
+  if(!is.null(progress)) progress$set(message = "Baking full report...", value=0.6)
+  if(verbose) message("Baking full report...")
+
+  qq=diagram=report=infographic=NULL;
+  bullets=""
+
+  kernel <- toupper(mofa$settings$kernel)
+  
+  if(llm_model == "") {
+    report <- all.results
+  } else {
+    
+    qq <- paste("These are the results of a multi-omics factor analysis using",kernel,". There are descriptions of the most relevant factors. Create a detailed report for this experiment. Give a detailed interpretation of the underlying biology by connecting factors into biological functional programs, referring to key genes, proteins or metabolites. Build an cross-factor integrative biological narrative. If relevant, suggest similarity to known diseases and possible therapies. Add a discussion and conclusion. Omit abstract, future directions, limitations, or references. 
+
+Format like a scientific article, use prose as much as possible, minimize the use of tables and bullet points. For long tables show at least the top 5, and at most top 10, up and down entries. Do not inject any inline code. Only write if there was evidence in the source text.")  
+        
+    xx <- mofa$experiment
+    if(!is.null(xx) && xx!="") {
+      pp <- paste("You are a biologist interpreting results of a ",kernel," multi-omics factor analysis for this experiment:",
+        xx, ".\n\n")
+      qq <- paste(pp, qq)
+    }
+    
+    if(format=="markdown") {
+      qq <- paste(qq, "Format as markdown. Divide text in sections using hash.")
+    }
+    if(tolower(format)=="html") {
+      qq <- paste(qq, "Format as HTML. Divide text in sections using header tags.")
+    }
+    qq <- paste(qq, userprompt)
+    qq <- paste(qq, "\n\n<results>",all.results,"\n</results>")
+
+    ## Finally ask LLM
+    report <- ai.ask(qq, model = llm_model)
+    report <- gsub("^```html|```$","",report)
+        
+    ##--------------------------------------------------------------------
+    ## Step 3: Create diagram from report
+    ##-------------------------------------------------------------------
+    ## if(do.diagram && llm_model!="") {
+    ##   if(!is.null(progress)) progress$set(message = "Mashing up diagram...", value=0.8)  
+    ##   if(verbose) message("Mashing up diagram...")
+    ##   if(is.null(graph) && !is.null(mofa$graph)) graph <- mofa$graph
+    ##   diagram <- wgcna.create_diagram(
+    ##     report, llm_model = llm_model, graph = graph,
+    ##     rankdir="TB", correct=TRUE, double.check=TRUE 
+    ##   )
+    ## }
+
+    ## create bullet points
+    bullet_prompt = paste0("**Instructions**: From the given report, extract 3 one-line  bullet points summarizing key take home messages. Keep sentences short. Give just the list items. No markup inside list items. \n\n***Report***:",report)
+    bullets <- ai.ask(bullet_prompt, model = llm_model)
+    
+  }
+
+  # if there is no title, we add a generic one.
+  if(!grepl("^#[ ]|\n#[ ]",report)) {
+    tt <- paste0("# ",kernel," Analysis Report\n\n")
+    report <- paste(tt, report)
+  }
+  report <- gsub(intToUtf8("8209"),"-",report)
+
+  list(
+    summaries_prompts = summaries_prompts,
+    summaries = summaries,
+    report_prompt = qq,
+    report = report,
+    bullets = bullets,
+    diagram = diagram,
+    infographic = infographic,
+    llm_model = llm_model,
+    image_model = image_model,
+    settings = mofa$settings
+  )
+}
+
 
 
 ## ======================================================================

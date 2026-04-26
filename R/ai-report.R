@@ -270,8 +270,8 @@ rpt.compile_wgcna_report <- function(obj, report = NULL,
   rpt <- wgcna$report
   if(!is.null(report))  rpt <- report
   
-  has.report <- "report" %in% names(wgcna)
-  has.infographic <- has.report && "infographic" %in% names(wgcna$report)    
+  has.report <- !is.null(rpt)
+  has.infographic <- has.report && !is.null(rpt$infographic)
   has.report
   has.infographic
   
@@ -327,6 +327,7 @@ rpt.compile_wgcna_report <- function(obj, report = NULL,
   
   fig2 <- tempfile(fileext='.png')
   tr <- (ncol(modTraits) < nrow(modTraits))
+
   png(fig2, w=800*rx, h=500*rx, pointsize=14*rx)
   if(is.mox) {
     wgcna.plotModuleTraitHeatmap(
@@ -403,10 +404,12 @@ rpt.compile_wgcna_report <- function(obj, report = NULL,
   df1 <- data.frame(size = sapply(wgcna$me.genes,length))
   df1 <- df1[order(-df1$size),,drop=FALSE]
 
-  topmodules <- names(wgcna$report$summaries)
   df2 <- wgcna.calculateSignificanceScore(wgcna, collapse=FALSE,
     sort.by="score", annot.cols = c("feature","symbol")) 
-  df2 <- df2[topmodules]
+  if(!is.null(rpt)) {
+    topmodules <- names(rpt$summaries)
+    df2 <- df2[topmodules]
+  }
   df2 <- lapply(df2, head, 10)
   names(df2) <- paste0("Top significance scores (",names(df2),")")
   for(i in 1:length(df2)) rownames(df2[[i]]) <- NULL
@@ -481,4 +484,133 @@ Give an integrated interpretation and a pharmacological narrative. Validate infe
     bullet = resp2,
     summary = resp
   )
+}
+
+
+##----------------------------------------------------------------------
+##----------------------------------------------------------------------
+##----------------------------------------------------------------------
+
+
+#'
+#'
+#' @export
+mofa.compile_markdown_report <- function(mofa, report = NULL, 
+                                         hlevel=2, shift=TRUE,
+                                         title=NULL) {
+
+  if(all(c("mofa","genes","counts") %in% names(mofa))) {
+    ## is pgx object
+    mofa <- mofa$mofa
+  }
+  
+  kernel <- mofa$settings$kernel
+  if(is.null(kernel)) kernel <- "MOFA"
+  if(is.null(title)) title <- paste(toupper(kernel), " Analysis Report") 
+  
+  rpt <- mofa$report
+  if(!is.null(report))  rpt <- report
+  
+  has.report <- !is.null(rpt)
+  has.infographic <- has.report && !is.null(rpt$infographic)
+  has.report
+  has.infographic
+  
+  if(!has.report) {
+    message("Error: missing report results")
+    return(NULL)
+  }
+  if(!has.infographic) {
+    message("Warning: missing infographic")
+    ##return(NULL)
+  }
+    
+  ##------- description -------------
+  div.description <- 
+    "**Multi‐Omics Factor Analysis (MOFA) is a computational, factorization-based framework for multi‐omics data integration. MOFA 'factors' are low-dimensional representations of multi-omic data. A factor is a latent variable that captures a source of variation across the integrated data. Each factor captures a different source and dimension of heterogeneity in the integrated data, and thus represents an independent source of variation. Note that the interpretation of factors is analogous to the interpretation of the principal components in PCA. Factors may correspond to distinct biological processes or cellular states that may differ across multiple experimental conditions.**"
+
+  kernel <- mofa$settings$kernel
+  if(!is.null(kernel) && kernel == "diablo") {
+    div.description <- 
+      "**DIABLO (Data Integration Analysis for Biomarker Discovery using Latent Variable Approaches for Omics Studies) is a supervised method for integrating multiple datasets in relation to a categorical outcome variable. It employs multiblock (s)PLS-DA to identify correlations between datasets, and uses a design matrix to control the relationships between them. DIABLO constructs latent factors by maximising the covariances between datasets, while balancing model discrimination and integration. Factors may correspond to distinct biological processes or cellular states that may differ across multiple experimental conditions.**"
+  }
+  
+  div.methods <-
+    "Computations were done in Omics Playground using the multi-omics module (BigOmics Analytics, Switzerland). MOFA analysis were based on the MOFA2 R package. Diablo analysis were based on the MixOmics R package."
+  
+  div.refs <- c(
+    "Argelaguet R, Velten B, Arnol D, Dietrich S, Zenz T, Marioni JC, Buettner F, Huber W, Stegle O (2018). “Multi‐Omics Factor Analysis — a framework for unsupervised integration of multi-omics data sets.” Mol Syst Biol. https://www.embopress.org/doi/full/10.15252/msb.20178124",
+    "Rohart F.,  Gautier, B, Singh, A and Lê Cao, K. A. mixOmics: an R package for ‘omics feature selection and multiple data integration. PLOS 2-17.",
+    "Omics Playground online documentation: Multi-omics data analysis. https://omicsplayground.readthedocs.io/en/latest/methods/#multi-omics-data-analysis."
+)
+
+  modTraits <- mofa$Z
+  dim(modTraits)
+  
+  ##------- figures -------------
+  rx=2  ## resolution parameter
+  
+  fig1 <- tempfile(fileext='.png')
+  tr <- (ncol(modTraits) < nrow(modTraits))
+  png(fig1, w=800*rx, h=500*rx, pointsize=14*rx)
+  mofa.plot_factor_trait_correlation(mofa)
+  dev.off()
+
+  fig2 = NULL
+  fig2 <- tempfile(fileext='.png')
+  if(!is.null(rpt$infographic)) {
+    img <- rpt$infographic
+    if(class(img) == 'array' && length(dim(img))==3 ) {
+      png::writePNG(img, target=fig2)
+    } else if(is.character(rpt$infographic[1])) {
+      fig2 <- rpt$infographic
+      if(!file.exists(fig2)) fig2 <- NULL
+    }
+  } else {
+    png(fig2,w=800,h=450)
+    par(mar=c(0,0,0,0))
+    plot.new()
+    text(0.5,0.5,"missing infographic")
+    dev.off()
+  }
+  
+  figs <- list(
+    "Factor-trait correlation" = fig1,
+    "Graphical abstract (AI generated)." = fig2
+  )
+  figs <- figs[!sapply(figs,is.null)]
+  figs <- lapply(figs, function(f) paste0('/',f))
+  labels=NULL
+  
+  ##------- tables -------------
+  topmodules <- names(rpt$summaries)
+  df1 <- mofa.feature_significance(mofa, collapse=FALSE,
+    sort.by="score", annot.cols = c("feature","symbol")) 
+  topmodules <- sort(intersect(topmodules,names(df1)))
+  df1 <- df1[topmodules]
+  df1 <- lapply(df1, head, 20)
+  names(df1) <- paste0("Top significance scores (",names(df1),")")
+  for(i in 1:length(df1)) rownames(df1[[i]]) <- NULL
+  
+  div.tables <- c(
+    df1
+  )
+  
+  ##------- create sections -------------
+  contents <- list(
+    description = div.description,
+    bullets = rpt$bullets,
+    report = rpt$report,
+    methods = div.methods,  
+    settings = mofa$settings,
+    references = div.refs,
+    figures = figs,
+    tables = div.tables
+  )
+  txt <- rpt.compile_sections(contents, hlevel=hlevel, shift=shift)
+
+  if(!is.null(title)) {
+    txt <- paste0("# ",title,"\n\n", txt)
+  }
+  return(txt)
 }

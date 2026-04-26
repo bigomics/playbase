@@ -605,6 +605,10 @@ wgcna.init <- function(wgcna, llm=NULL, img_model=NULL, annot=NULL,
     wgcna$svTOM <- svTOM
     wgcna$TOM <- NULL
   }
+
+  if (is.null(wgcna$modTraits) && !is..multi) {
+    wgcna$modTraits <- cor(wgcna$net$MEs, wgcna$datTraits)
+  }
   
   if (is.null(wgcna$stats)) {
     if(all(c("net","datExpr","datTraits","svTOM") %in% names(wgcna))) {
