@@ -8,7 +8,7 @@ ai.cmap_create_infographic(
   report,
   model,
   filename,
-  aspectRatio = c("4:3", "16:9", "3:4")[2],
+  aspectratio = c("4:3", "16:9", "3:4")[2],
   add.fallback = TRUE
 )
 }

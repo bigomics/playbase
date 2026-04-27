@@ -608,7 +608,7 @@ wgcna.init <- function(wgcna, llm=NULL, img_model=NULL, annot=NULL,
     wgcna$TOM <- NULL
   }
 
-  if (is.null(wgcna$modTraits) && !is..multi) {
+  if (is.null(wgcna$modTraits) && !is.multi) {
     wgcna$modTraits <- cor(wgcna$net$MEs, wgcna$datTraits)
   }
   
@@ -5857,8 +5857,8 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
 
 #' @export
 wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
-                                multi=NULL) {
-
+                                minrho=0.2, multi=NULL) {
+  
   if(is.null(topratio)) topratio <- 0.85
   if(is.null(multi) && !is.null(wgcna$layers)) multi <- TRUE
   if(!multi) {    
@@ -5868,7 +5868,8 @@ wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
   } else {    
     ww <- wgcna
   }
-  
+
+  ## compute module-trait
   M <- list()
   i=1
   for(i in 1:length(ww)) {    
@@ -5880,8 +5881,16 @@ wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
   top.modules <- c()
   i=1
   for(i in 1:length(M)) {
-    mx <- rowMeans(abs(M[[i]]**kx),na.rm=TRUE)**(1/kx)
-    tt <- names(which( mx > topratio * max(mx)))
+    #mx <- rowMeans(abs(M[[i]]**kx),na.rm=TRUE)**(1/kx)
+    #tt <- names(which( mx > topratio * max(mx)))
+    Z <- t(M[[i]])
+    Z[ abs(Z) < minrho ] <- 0
+    Z <- Z[rowMeans(Z==0) < 1,,drop=FALSE]
+    idx1 <- max.col(abs(Z))
+    idx2 <- max.col(Z)
+    idx2 <- ifelse( apply(Z,1,max)>0,idx2,0)
+    idx <- setdiff(unique(c(idx1,idx2)),0)
+    tt <- colnames(Z)[idx]    
     top.modules <- c(top.modules, tt) 
   }
 

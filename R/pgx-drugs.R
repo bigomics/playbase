@@ -91,6 +91,10 @@ pgx.computeDrugEnrichment <- function(pgx, X = NULL, xdrugs = NULL,
 #' @export
 pgx.update_drugs_results <- function(pgx, model, img_model) {
 
+  if(is.null(pgx$drugs)) {
+    return(pgx)
+  }
+  
   if(is.null(pgx$drugs[[1]]$moa)) {
     dbg("[pgx.update_drugs_results] updating MOA enrichment...")
     for(db in names(pgx$drugs)) {
@@ -99,17 +103,17 @@ pgx.update_drugs_results <- function(pgx, model, img_model) {
     }
   }
   
-  if(is.null(pgx$drugs[[1]]$report)) {
+  if(is.null(pgx$drugs[[1]]$report) && !is.null(model)) {
     dbg("[pgx.update_drugs_results] updating reports...")
     for(db in names(pgx$drugs)) {
-      pgx$drugs[[db]]$report <- ai.create_report_drug_connectivity(
+      pgx$drugs[[db]]$report <- cmap.create_report(
         pgx, model=model, model2=NULL, db=db, user.prompt = NULL)
     }
   }
 
   ## check infographic
   rpt <- pgx$drugs[[1]]$report
-  if(is.null(rpt$infographic)) {
+  if(is.null(rpt$infographic) && !is.null(img_model)) {
     dbg("[pgx.update_drugs_results] updating infographics...")    
     for(db in names(pgx$drugs)) {    
       rpt <- pgx$drugs[[db]]$report
@@ -458,8 +462,8 @@ metaLINCS.plotlyActivationMap <- function(res, contrast = NULL,
 
 #' Summarize drug connectivity results
 #'
-ai.summarize_drug_connectivity <- function(pgx, ct, model, drugs=NULL, db=1,
-                                           ntop=10, ntop2=50) {
+cmap.summarize_results <- function(pgx, ct, model, drugs=NULL, db=1,
+                                   ntop=10, ntop2=50) {
 
   if(is.null(drugs)) drugs <- pgx$drugs
   if(is.numeric(db)) db <- names(drugs)[db]
@@ -511,15 +515,22 @@ ai.summarize_drug_connectivity <- function(pgx, ct, model, drugs=NULL, db=1,
 #'
 #'
 #' @export
-ai.create_report_drug_connectivity <- function(pgx, model, model2=NULL, db=1,
-                                               user.prompt=NULL) {
+cmap.create_report <- function(pgx, model, model2=NULL, db=1,
+                               user.prompt=NULL, force=FALSE) {
 
+  if(is.null(pgx$drugs)) return(NULL)  
   if(is.null(model2)) model2=model
 
   db.name <- db
   if(is.numeric(db)) db.name <- names(pgx$drugs)[db]
   db.name
 
+  rpt <- pgx$drugs[[db.name]]$report
+  if(!is.null(rpt) && !force) {
+    message("[cmap.create_report] object already has report")
+    return(rpt)
+  }
+  
   ## check if moa results are there
   has.moa <- !is.null(pgx$drugs[[db]]$moa)
   if(!has.moa) {
@@ -532,7 +543,7 @@ ai.create_report_drug_connectivity <- function(pgx, model, model2=NULL, db=1,
   ct=colnames(pgx$contrasts)[1]
   for(ct in colnames(pgx$contrasts)) {
     message("summarizing drug connectivity results for ",ct,"...")
-    summaries[[ct]] <- ai.summarize_drug_connectivity(pgx, ct, model,
+    summaries[[ct]] <- cmap.summarize_results(pgx, ct, model,
       drugs=NULL, db=db, ntop=10, ntop2=50)   
   }
   names(summaries)
@@ -557,6 +568,7 @@ ai.create_report_drug_connectivity <- function(pgx, model, model2=NULL, db=1,
   out <- list(
     prompt = prompt,
     bullets = bullets,
+    summaries = summaries,
     report = rpt,
     database = db.name,
     llm_model = model,

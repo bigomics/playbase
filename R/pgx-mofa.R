@@ -881,7 +881,6 @@ mofa.feature_significance <- function(mofa, collapse=FALSE,
   topfactor <- max.col(abs(ww))
   topsign <- sign(ww[cbind(1:nrow(ww),topfactor)])
   topfactor <- colnames(ww)[max.col(abs(ww))]
-  
   aa <- data.frame(feature = gg)
   if(is.null(annot) && !is.null(mofa$annot)) annot <- mofa$annot
   if(!is.null(annot)) {    
@@ -890,13 +889,11 @@ mofa.feature_significance <- function(mofa, collapse=FALSE,
     kk <- match(rr, rownames(annot))
     sel <- intersect(annot.cols, colnames(annot))
     aa <- annot[kk, sel, drop=FALSE]
-  }  
+  }
+  w <- topsign * maxW
   df <- data.frame(
-    aa,
-    xfactor=topfactor, xsign=topsign,
-    max.W=maxW, max.R=maxR, SD=sdx, score=score)
-  df <- df[order(-df[,sort.by]),]
-  
+    aa, xfactor=topfactor, W=w, max.R=maxR, SD=sdx, score=score)
+  df <- df[order(-df[,sort.by]),]  
   if(!collapse) {
     mm <- df$xfactor
     df <- tapply(1:nrow(df), mm, function(i) df[i,,drop=FALSE])
@@ -3716,7 +3713,8 @@ mofa.getTopFactors <- function(mofa, minrho=0.2) {
   Z <- Z[rowMeans(Z==0) < 1,,drop=FALSE]
   idx1 <- max.col(abs(Z))
   idx2 <- max.col(Z)
-  idx <- unique(c(idx1,idx2))
+  idx2 <- ifelse( apply(Z,1,max)>0,idx2,0)
+  idx <- setdiff(unique(c(idx1,idx2)),0)
   colnames(mofa$Z)[idx]
 }
 
@@ -3905,7 +3903,7 @@ mofa.describeFactors <- function(mofa, ntop=50, psig = 0.05,
 mofa.create_report <- function(mofa, llm_model,
                                graph = NULL, annot=NULL, 
                                ntop=100, psig=0.05,
-                               do.diagram = TRUE, image_model = NULL,
+                               do.diagram = TRUE, img_model = NULL,
                                userprompt='', format="markdown",
                                verbose=1, progress=NULL) {
 
@@ -4018,6 +4016,12 @@ Format like a scientific article, use prose as much as possible, minimize the us
     ## create bullet points
     bullet_prompt = paste0("**Instructions**: From the given report, extract 3 one-line  bullet points summarizing key take home messages. Keep sentences short. Give just the list items. No markup inside list items. \n\n***Report***:",report)
     bullets <- ai.ask(bullet_prompt, model = llm_model)
+
+    if(!is.null(img_model)) {
+      infographic <- ai.create_infographic(
+        mofa_rpt$report, img_model, filename="/tmp/infographic.png")
+
+    }
     
   }
 
@@ -4037,11 +4041,10 @@ Format like a scientific article, use prose as much as possible, minimize the us
     diagram = diagram,
     infographic = infographic,
     llm_model = llm_model,
-    image_model = image_model,
+    image_model = img_model,
     settings = mofa$settings
   )
 }
-
 
 
 ## ======================================================================

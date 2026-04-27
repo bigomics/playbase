@@ -8,6 +8,47 @@
 ##------------------------ REPORT CREATION ----------------------------
 ##---------------------------------------------------------------------
 
+#' @export
+pgx.create_reports <- function(pgx, llm_model) {
+
+  if(!is.null(pgx$wgcna) && is.null(pgx$wgcna$report)) {  
+    message(">>> creating WGCNA report...")
+    pgx$wgcna$report<- wgcna.create_report(
+      pgx$wgcna,
+      ai_model = llm_model,
+      graph = NULL,
+      annot = pgx$genes,
+      ntop=100,
+      psig=0.05,
+      do.diagram = TRUE,
+      userprompt='',
+      format="markdown",
+      verbose=1,
+      progress=NULL
+    )
+  }
+
+  if(!is.null(pgx$mofa) && is.null(pgx$mofa$report)) {
+    message(">>> creating MOFA report...")
+    pgx$mofa$report <- mofa.create_report(
+      pgx$mofa, llm_model = llm_model,
+      graph = NULL, annot=pgx$genes,
+      ntop=100, psig=0.05,
+      do.diagram = TRUE,
+      userprompt='', format="markdown",
+      verbose=1, progress=NULL)
+  }
+
+  if(!is.null(pgx$drugs) && is.null(pgx$drugs$report)) {  
+    message(">>> creating drug CMAP report...")
+    pgx$drugs$report <- cmap.create_report(
+      pgx, model=llm_model, model2 = NULL, db = 1,
+      user.prompt = NULL)
+  }
+  
+  return(pgx)
+}
+
 
 #' @export
 ai.create_report <- function(pgx, ...) {
@@ -32,7 +73,7 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
 
   all.sections <- c("description", "dataset_info","compute_settings",
     "differential_expression", "geneset_enrichment",
-    "drug_similarity","hub_genes","wgcna_report")
+    "drug_similarity","hub_genes","wgcna_report","mofa_report")
   if(is.null(sections)) {
     sections <- all.sections
   } else {
@@ -117,17 +158,22 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
   drug_similarity <- NULL
   if("drug_similarity" %in% sections && !is.null(pgx$drugs)) {
 
-    ## NEED RETHINK: Only reports first contrast at the moment
-    D <- pgx.getTopDrugs(pgx, ct, n=ntop, na.rm=TRUE)    
-    drug_similarity <- list(
-      "Drug Mechanism of Action. Drug Connectivity Map (CMap) analysis of selected comparison. Similarity of the mechanism of action (MOA) is based on correlation enrichment with drug perturbation profiles of LINCS L1000 database. The top most similar (i.e. positively correlated) drugs are:\n\n" =
-        pgx.getTopDrugs(pgx, ct, n=ntop, dir=+1, na.rm=TRUE), 
-      "The top most inhibitory (i.e. negative correlated) drugs are:\n\n" = 
-        pgx.getTopDrugs(pgx, ct, n=ntop, dir=-1, na.rm=TRUE)
-    )
-    #drug_similarity <- lapply(drug_similarity, round, digits=3)    
-    drug_similarity <- lapply(drug_similarity, table_to_content)    
-
+    if(!is.null(pgx$drugs[[1]]$report)) {
+      message("found CMAP report")
+      drug_similarity <- pgx$drugs[[1]]$report$report
+    } else {
+      ## NEED RETHINK: Only reports first contrast at the moment
+      D <- pgx.getTopDrugs(pgx, ct, n=ntop, na.rm=TRUE)    
+      drug_similarity <- list(
+        "Drug Mechanism of Action. Drug Connectivity Map (CMap) analysis of selected comparison. Similarity of the mechanism of action (MOA) is based on correlation enrichment with drug perturbation profiles of LINCS L1000 database. The top most similar (i.e. positively correlated) drugs are:\n\n" =
+          pgx.getTopDrugs(pgx, ct, n=ntop, dir=+1, na.rm=TRUE), 
+        "The top most inhibitory (i.e. negative correlated) drugs are:\n\n" = 
+          pgx.getTopDrugs(pgx, ct, n=ntop, dir=-1, na.rm=TRUE)
+      )
+      #drug_similarity <- lapply(drug_similarity, round, digits=3)    
+      drug_similarity <- lapply(drug_similarity, table_to_content)    
+      drug_similarity <- list_to_content(drug_similarity, newline=TRUE)
+    }
 
   }
   
@@ -141,20 +187,45 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
   ##-------------------------------------------------------------------
   wgcna_report <- NULL
   if("wgcna_report" %in% sections && !is.null(pgx$wgcna)) {
-
-    out <- wgcna.describeModules(
-      pgx$wgcna,
-      modules = NULL,
-      multi = FALSE, 
-      ntop = 50,
-      annot = pgx$genes, 
-      experiment = pgx$description,
+    if(!is.null(pgx$wgcna$report)) {
+      message("found WGCNA report")
+      wgcna_report <- pgx$wgcna$report$report
+    } else {
+      out <- wgcna.describeModules(
+        pgx$wgcna,
+        modules = NULL,
+        multi = FALSE, 
+        ntop = 50,
+        annot = pgx$genes, 
+        experiment = pgx$description,
       verbose = FALSE,
       model = NULL
-    ) 
+      ) 
+      names(out)
+      wgcna_report <- list_to_content(out$answers, newline=TRUE)
+    }
+  }
 
-    names(out)
-    wgcna_report <- list_to_content(out$answers, newline=TRUE)
+  ##-------------------------------------------------------------------
+  mofa_report <- NULL
+  if("mofa_report" %in% sections && !is.null(pgx$mofa)) {
+    if(!is.null(pgx$mofa$report)) {
+      message("found MOFA report")
+      mofa_report <- pgx$mofa$report$report
+    } else {
+      ## manual description
+      out <- mofa.describeFactors(
+        pgx$mofa,
+        factors = NULL,
+        ntop = 50,
+        annot = pgx$genes, 
+        experiment = pgx$description,
+        verbose = FALSE,
+        model = NULL
+      ) 
+      names(out)
+      mofa_report <- list_to_content(out$answers, newline=TRUE)
+    }
   }
     
   ##-----------------------------------------------------------
@@ -168,9 +239,10 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
     compute_settings = list_to_content(compute_settings),
     differential_expression = list_to_content(differential_expression, newline=TRUE),
     geneset_enrichment = list_to_content(geneset_enrichment, newline=TRUE),
-    drug_similarity = list_to_content(drug_similarity, newline=TRUE),
+    drug_similarity = drug_similarity,
     pcsf_report = list_to_content(pcsf_report),
-    wgcna_report = wgcna_report
+    wgcna_report = wgcna_report,
+    mofa_report = mofa_report
   )
 
   ## clean-up
@@ -178,8 +250,8 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
   content <- lapply(content, function(s) gsub("[=]+{3}","",s))
   
   if(collate) {
-    content <- collate_as_sections(
-      content, csep='\\newpage')
+    ##content <- collate_as_sections(content, csep='\\newpage')
+    content <- collate_as_report(content)
   }
 
   return(content)
@@ -251,6 +323,10 @@ rpt.compile_sections <- function(contents, hlevel=2, shift=TRUE) {
   collate_as_sections(divs, csep="", hlevel=hlevel, shift=shift)  
 }
 
+
+##----------------------------------------------------------------------
+##----------------------------------------------------------------------
+##----------------------------------------------------------------------
 
 #'
 #'
@@ -442,14 +518,18 @@ rpt.compile_wgcna_report <- function(obj, report = NULL,
   return(txt)
 }
 
+
+##----------------------------------------------------------------------
+##----------------------------------------------------------------------
+##----------------------------------------------------------------------
   
 #'
 #'
 #' @export
-rpt.compile_drugconnectivity_report <- function(obj, which.db = 1, report = NULL, 
-                                                hlevel = 2, shift = TRUE,
-                                                model = NULL, pgx=NULL,
-                                                title = "Drug Connectivity Analysis") {
+rpt.compile_cmap_report <- function(obj, which.db = 1, report = NULL, 
+                                    hlevel = 2, shift = TRUE,
+                                    model = NULL, pgx=NULL,
+                                    title = "Drug Connectivity Analysis") {
 
   rpt <- NULL
   if(!is.null(obj)) {  
@@ -477,7 +557,7 @@ rpt.compile_drugconnectivity_report <- function(obj, which.db = 1, report = NULL
   if(!has.report) {
     if(!is.null(model)) {
       message("Warning: missing report results. Computing...")
-      rpt <- ai.create_report_drug_connectivity(
+      rpt <- cmap.create_report(
         pgx, model, model2 = NULL, db = which.db,
         user.prompt = NULL)
     } else {
@@ -603,59 +683,10 @@ rpt.compile_drugconnectivity_report <- function(obj, which.db = 1, report = NULL
   return(txt)
 }
 
-#' Summarize drug connectivity results
-#'
-#' @export
-rpt.summarize_drug_connectivity <- function(pgx, ct, model, db=1, ntop=10) {
-  
-  if(is.numeric(db)) db <- names(pgx$drugs)[db]
-
-  toplist <- list(
-    "Top most similar (i.e. positively correlated) drugs are" =
-      table_to_content(pgx.getTopDrugs(pgx, ct, n=ntop, dir=+1, db=db, na.rm=TRUE)), 
-    "Top most inhibitory (i.e. negative correlated) drugs are:" = 
-      table_to_content(pgx.getTopDrugs(pgx, ct, n=ntop, dir=-1, db=db, na.rm=TRUE)),
-    "Top most positively enriched MOA classes are" =
-      table_to_content(pgx.getTopMOA(pgx, ct, n=ntop, dir=+1, db=db, level=1)), 
-    "Top most negatively (opposite) enriched MOA classes are" =
-      table_to_content(pgx.getTopMOA(pgx, ct, n=ntop, dir=-1, db=db, level=1)), 
-    "Top most positively enriched MOA drug target genes are" =
-      table_to_content(pgx.getTopMOA(pgx, ct, n=ntop, dir=+1, db=db, level=2)), 
-    "Top most negatively (opposite) enriched MOA drug target genes are" =
-      table_to_content(pgx.getTopMOA(pgx, ct, n=ntop, dir=-1, db=db, level=2)), 
-    "Top most positively enriched gene sets are" =
-      paste(pgx.getTopGS(pgx, ct, n=50, dir=+1), collapse=';'), 
-    "Top most negatively enriched gene sets are" =
-      paste(pgx.getTopGS(pgx, ct, n=50, dir=-1), collapse=';') 
-  )
-
-  results=NULL
-  if(grepl("sensitivity",db)) {
-    results <- paste("Drug Synergy Analysis using Connectivity Map (CMap) analysis. Synergy of the mechanism of action (MOA) is based on correlation enrichment with computed drug sensitivity profiles of ",db," database. Positive correlation indicate possible synergy with the given drug. Negative correlation indicate possible antagonism with given drug. :\n\n",
-    list_to_content(toplist, newline=TRUE), sep=""
-    )
-  } else {
-    results <- paste("Drug Mechanism of Action. Drug Connectivity Map (CMap) analysis of selected comparison. Similarity of the mechanism of action (MOA) is based on correlation enrichment with drug perturbation profiles of ",db," database:\n\n",
-      list_to_content(toplist, newline=TRUE), sep=""
-    )
-  }
-  
-  resp <- ai.ask( paste("Give a summary of the following results from a drug connectivity MOA analysis.
-Give an integrated interpretation and a pharmacological narrative. Validate inferred drug MOA with the given (measured) enriched up/down gene sets. Do not include tables, be concise, write in prose. \n\nAnalysis results: ",results), model = model)
-
-  resp2 <- ai.ask(paste("Give a short 3 bullet point summary of the following text. Focus on similarity with drugs. Use very short sentences, no titles. :",resp),  model = model)
-  
-  out <- list(
-    bullet = resp2,
-    summary = resp
-  )
-}
-
 
 ##----------------------------------------------------------------------
 ##----------------------------------------------------------------------
 ##----------------------------------------------------------------------
-
 
 #'
 #'
