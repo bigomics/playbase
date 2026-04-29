@@ -1328,25 +1328,12 @@ ggVolcano <- function(x,
                       use_hyperbola = FALSE,
                       hyperbola_k = 1,
                       use_ggprism = FALSE,
-                      ggprism_palette = "black_and_white",
-                      ggprism_colors = FALSE,
                       ggprism_border = FALSE,
                       ggprism_axis_guide = "default",
                       ggprism_show_legend = FALSE,
                       ggprism_legend_x = 0.95,
                       ggprism_legend_y = 0.95,
                       ggprism_legend_border = FALSE) {
-  ## Handle ggprism colors if enabled
-  if (isTRUE(use_ggprism) && isTRUE(ggprism_colors)) {
-    prism_cols <- ggprism::prism_colour_pal(palette = ggprism_palette)(4)
-    colors <- c(
-      up = prism_cols[1],
-      down = prism_cols[2],
-      notsig = prism_cols[3],
-      notsel = paste0(prism_cols[4], "88")
-    )
-  }
-
   if (is.null(highlight)) highlight <- names
   if (showlegend) {
     legend <- "right"
@@ -1572,7 +1559,7 @@ ggVolcano <- function(x,
   if (isTRUE(use_ggprism)) {
     plt <- plt +
       ggprism::theme_prism(
-        palette = ggprism_palette,
+        palette = "black_and_white",
         base_size = axis.text.size,
         border = ggprism_border
       )
