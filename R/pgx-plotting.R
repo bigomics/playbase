@@ -6460,10 +6460,13 @@ pgx.boxplot.PLOTLY <- function(
 #' @param data Data frame in long format.
 #' @param x Column name for x-axis grouping.
 #' @param y Column name for y-axis values.
+#' @param split Column name to split categories into side-by-side boxes. Default NULL.
 #' @param title Plot title. Default NULL.
 #' @param color Box outline color. Default "#3181de".
 #' @param fillcolor Box fill color. Default "#2fb5e3".
 #' @param linecolor Box border color. Default "#3181de".
+#' @param colors Palette used when \code{split} is set; passed to
+#'   \code{scale_fill_manual()}. Default NULL (ggplot2 default palette).
 #' @param yaxistitle Y-axis title. Default "".
 #' @param xaxistitle X-axis title. Default "".
 #'
@@ -6473,10 +6476,12 @@ pgx.boxplot.GGPLOT <- function(
   data,
   x = NULL,
   y = NULL,
+  split = NULL,
   title = NULL,
   color = "#3181de",
   fillcolor = "#2fb5e3",
   linecolor = "#3181de",
+  colors = NULL,
   yaxistitle = "",
   xaxistitle = "",
   font_family = "Lato"
@@ -6484,19 +6489,41 @@ pgx.boxplot.GGPLOT <- function(
   if (is.null(x)) x <- colnames(data)[1]
   if (is.null(y)) y <- colnames(data)[2]
 
-  p <- ggplot2::ggplot(data, ggplot2::aes(x = .data[[x]], y = .data[[y]])) +
-    ggplot2::geom_boxplot(
-      fill = fillcolor,
-      color = linecolor,
-      outlier.shape = NA
+  if (is.null(split)) {
+    p <- ggplot2::ggplot(data, ggplot2::aes(x = .data[[x]], y = .data[[y]])) +
+      ggplot2::geom_boxplot(
+        fill = fillcolor,
+        color = linecolor,
+        outlier.shape = NA
+      ) +
+      ggplot2::labs(x = xaxistitle, y = yaxistitle, title = title) +
+      ggplot2::theme_classic(base_family = font_family) +
+      ggplot2::theme(
+        legend.position = "none",
+        axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5),
+        plot.margin = ggplot2::margin(2, 2, 2, 2)
+      )
+  } else {
+    p <- ggplot2::ggplot(
+      data,
+      ggplot2::aes(x = .data[[x]], y = .data[[y]], fill = .data[[split]])
     ) +
-    ggplot2::labs(x = xaxistitle, y = yaxistitle, title = title) +
-    ggplot2::theme_classic(base_family = font_family) +
-    ggplot2::theme(
-      legend.position = "none",
-      axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5),
-      plot.margin = ggplot2::margin(2, 2, 2, 2)
-    )
+      ggplot2::geom_boxplot(
+        color = linecolor,
+        outlier.shape = NA,
+        position = ggplot2::position_dodge(preserve = "single")
+      ) +
+      ggplot2::labs(x = xaxistitle, y = yaxistitle, title = title, fill = split) +
+      ggplot2::theme_classic(base_family = font_family) +
+      ggplot2::theme(
+        axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5),
+        plot.margin = ggplot2::margin(2, 2, 2, 2)
+      )
+
+    if (!is.null(colors)) {
+      p <- p + ggplot2::scale_fill_manual(values = colors)
+    }
+  }
 
   p
 }
