@@ -2486,47 +2486,39 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
 
   table(dtype)
   dtype <- tolower(dtype)
+  dtype <- sub("^tx$","gx",dtype)
   dtype <- ifelse(grepl("ensembl|symbol|hugo|gene|hgnc", dtype), "gx", dtype)
   dtype <- ifelse(grepl("uniprot|protein", dtype), "px", dtype)
   dtype <- ifelse(grepl("chebi|hmdb|kegg|pubchem|lipid|refmet", dtype), "mx", dtype)
   table(dtype)
-  dtype[!dtype %in% c("gx","px","mx")] <- "custom"
+  dtype[!dtype %in% c("gx","px","mx","lx")] <- "custom"
   dbg("[getMultiOmicsProbeAnnotation] detected datatypes = ", unique(dtype))
 
   ## populate with defaults
   symbol <- sub("^[a-zA-Z]+:", "", probes)
-
   annot <- list()
-  if (any(dtype %in% c("gx", "px"))) {
-    ii <- which(dtype %in% c("gx", "px"))
+  for(dt in unique(dtype)) {
+    ii <- which(dtype == dt)
     pp <- sub("^[a-zA-Z]+:", "", probes[ii])
-    aa <- getGeneAnnotation(organism, pp)
-    head(aa)
-    aa$data_type <- sub(":.*", "", probes[ii])
-    ##rownames(aa) <- probes[ii]
+    aa <- NULL
+    if(dt %in% c("gx","px")) {
+      aa <- getGeneAnnotation(organism, pp)
+    }
+    if(dt %in% c("mx")) {
+      aa <- getMetaboliteAnnotation(
+        pp, db = c("lipids", "refmet", "playdata", "annothub"),
+        extra_annot = TRUE, annot_table = NULL,
+        prefix.symbol = FALSE)
+    }
+    if(dt %in% c("lx")) {
+      aa <- getLipidAnnotation(pp, annot_table = NULL)
+    }
+    if(dt %in% c("custom")) {
+      aa <- getCustomAnnotation(pp, custom_annot = NULL)
+    }
+    aa$data_type <- dt
     aa$feature <- probes[ii]
-    annot[["gx"]] <- aa
-  }
-  if ("mx" %in% dtype) {
-    ii <- which(dtype == "mx")
-    # hh <- grep("^[a-zA-Z]+:NA$", probes[ii])
-    # if (length(hh)) ii <- ii[-hh]
-    pp <- sub("^[a-zA-Z]+:", "", probes[ii])
-    aa <- getMetaboliteAnnotation(pp)
-    aa$data_type <- "mx"
-    ##rownames(aa) <- probes[ii]
-    aa$feature <- probes[ii]
-    annot[["mx"]] <- aa
-  }
-  if ("custom" %in% dtype) {
-    ii <- which(dtype == "custom")
-    pp <- sub("^[a-zA-Z]+:", "", probes[ii])
-    aa <- getCustomAnnotation(pp, custom_annot = NULL)
-    head(aa)
-    aa$data_type <- "custom"
-    ##rownames(aa) <- probes[ii]
-    aa$feature <- probes[ii]
-    annot[["custom"]] <- aa
+    annot[[dt]] <- aa
   }
 
   ## Merge all annotation tables

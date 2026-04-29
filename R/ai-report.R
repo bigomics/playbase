@@ -287,8 +287,7 @@ rpt.compile_wgcna_report <- function(obj, report = NULL,
   
   ##------- description -------------
   div.description <- 
-    "**Weighted Gene Co-expression Network Analysis (WGCNA) is a systems biology method for finding clusters (modules) of highly correlated genes in high-dimensional data, such as RNA-seq or microarray samples. It identifies modules based on similar expression patterns, relates them to external sample traits, and finds key hub genes, enabling the transition from simple gene l
-ists to functional biological insights.**"
+    "**Weighted Gene Co-expression Network Analysis (WGCNA) is a systems biology method for finding clusters (modules) of highly correlated genes in high-dimensional data, such as RNA-seq or microarray samples. It identifies modules based on similar expression patterns, relates them to external sample traits, and finds key hub genes, enabling the transition from simple gene lists to functional biological insights.**"
   
   div.methods <-
     "WGCNA computation was done in Omics Playground (BigOmics Analytics, Switzerland) using the `WGCNAplus` R package. The optimal soft threshold β was determined by optimizing the IQR of the dendrogram heights. The adjacency matrix was transformed into a topological overlapping matrix (TOM) and used for hierarchical clustering of the features. Subsequently, the dynamic tree‐cutting algorithm was employed to identify gene modules, each comprising a minimum of genes. Similar modules were merged using a shear height threshold. Finally, modules were distinguished by different colours and represented by their module eigengene (ME). Module-trait relationship was determined based on the Pearson correlation between ME and clinical features. Gene significance (GS) values were computed as the product of the Module Membership (MM) (correlation between expression and module eigengene) and maximum Trait Significance (TS) (correlation between expression and clinical characteristics) values."
@@ -403,12 +402,18 @@ ists to functional biological insights.**"
   ##------- tables -------------
   df1 <- data.frame(size = sapply(wgcna$me.genes,length))
   df1 <- df1[order(-df1$size),,drop=FALSE]
-  df2 <- calculateCompoundSignificance(wgcna, collapse=TRUE,
-    sort.by="score1") 
+
+  topmodules <- names(wgcna$report$summaries)
+  df2 <- wgcna.calculateSignificanceScore(wgcna, collapse=FALSE,
+    sort.by="score", annot.cols = c("feature","symbol")) 
+  df2 <- df2[topmodules]
+  df2 <- lapply(df2, head, 10)
+  names(df2) <- paste0("Top significance scores (",names(df2),")")
+  for(i in 1:length(df2)) rownames(df2[[i]]) <- NULL
   
-  div.tables <- list(
-    "WGCNA module sizes" = df1,
-    "Feature scores" = head(df2,40)
+  div.tables <- c(
+    list("WGCNA module sizes" = df1),
+    df2
   )
   
   ##------- create sections -------------

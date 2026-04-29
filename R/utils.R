@@ -290,6 +290,186 @@ sum_treps <- function(counts, trep_var = "") {
   
 }
 
+#' Re-order uniprot IDs (when a feature has multiple uniprot ids)
+#' Rules:
+#' If there are Swiss-Prot entries, Swiss-Prot entries come first, followed by TrEMBL entries.
+#' Among Swiss-Prot entries, if there are canonical entries, canonical entries come first (eg P05067),
+#' followed by isoforms (P05067-2). In absence of canonical entries, convert isoforms to canonical
+#' (eg P05067-2 to P05067).
+#' Among Swiss-Prot entries (after step 2), longer proteins come first.
+#' Among TrEMBL entires, longer proteins come first.
+#' @param feature feature ids, collapsed with ";".
+#' @param lengths Character vector of feature lengths, collapsed with ";". Default NULL.
+#' @export
+rank_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
+
+  ff <- strsplit(as.character(feature), ";")[[1]]
+  ff <- ff[nzchar(trimws(ff))]
+
+  if (all(as.character(feature) %in% c("", "NA", NA))) {
+    return(list(feature=feature, lengths=lengths))
+  }
+  
+  if (length(ff) <= 1) {
+    sp <- grep("^[OPQ][0-9]", ff)
+    if (length(sp) > 0) {
+      hh <- grep("[-_][0-9]+$", ff)
+      if (length(hh) > 0) ff <- sub("[-_][0-9]+$", "", ff)
+    }
+    return(list(feature=ff, lengths=lengths))
+  }
+
+  ll <- NULL
+  if (!is.null(lengths)) {
+    lengths <- strsplit(as.character(lengths), ";")[[1]]
+    lengths <- lengths[nzchar(trimws(lengths))]
+    if (length(ff) != length(lengths)) {
+      message("[playbase::rank_uniprots] Protein lengths does not match features. Ignoring length.")
+    } else {
+      names(lengths) <- ff
+      kk <- which(as.character(lengths) %in% c("0", "", "NA", NA))
+      if (length(kk) > 0) {
+        if (length(kk) == length(lengths)) {
+          message("[playbase::rank_uniprots] All protein lengths uninformative. Ignoring length.")
+        } else {
+          ll <- lengths
+          ll[kk] <- "0"
+        }
+      } else {
+        ll <- lengths
+      }
+    }
+  }
+  
+  ## Swiss-Prot entries come first (if any), followed by TrEMBL entries (if any).
+  ff.sp=NULL; ff.trembl=NULL
+  sp <- grep("^[OPQ][0-9]", ff)
+  if (length(sp) > 0) {
+    ## Swiss-Prot canonical entries come first (P05067), followed by isoforms (eg., P05067-2).
+    ## In absence of canonical entries, convert isoforms to canonical (eg., P05067-2 to P05067).
+    ff.sp <- ff[sp]
+    hh <- grep("[-_][0-9]+$", ff.sp)
+    if (length(hh) > 0) {      
+      if (length(hh) == length(ff.sp)) {
+        ff.sp[hh] <- sub("[-_][0-9]+$", "", ff.sp[hh])
+        if (!is.null(ll)) {
+          names(ll)[sp][hh] <- ff.sp[hh]
+          names(lengths)[sp][hh] <- ff.sp[hh]
+        }
+      } else  {
+        canon <- sub("[-_][0-9]+$", "", ff.sp[hh])
+        if (length(which(ff.sp %in% canon)) == 0) {
+          ff.sp[hh] <- canon
+          if (!is.null(ll)) {
+            names(ll)[sp][hh] <- ff.sp[hh]
+            names(lengths)[sp][hh] <- ff.sp[hh]
+          }
+        } else {
+          ff.sp <- c(ff.sp[-hh], ff.sp[hh])
+          if (!is.null(ll)) {
+            if (!isTRUE(all.equal(ff.sp, names(ll)))) {
+              ll <- ll[match(ff.sp, names(ll))]
+              lengths <- lengths[match(ff.sp, names(lengths))]
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (length(ff.sp) != length(ff)) ff.trembl <- ff[-sp]
+  
+  ll.sp=NULL; ll.trembl=NULL
+  
+  ## Among Swiss-Prot entries, longer proteins come first.
+  if (!is.null(ff.sp) & !is.null(ll)) {
+    hh <- grep("[-_][0-9]+$", ff.sp)
+    if (length(hh) > 0) {
+      canon <- ff.sp[-hh]
+      iso <- ff.sp[hh]
+      ll.canon <- as.numeric(ll[match(canon, names(ll))])
+      canon <- canon[order(ll.canon, decreasing = TRUE, na.last = TRUE)]
+      ll.iso <- as.numeric(ll[match(iso, names(ll))])
+      iso <- iso[order(ll.iso, decreasing = TRUE, na.last = TRUE)]
+      ff.sp <- c(canon, iso)
+    } else {
+      if (!isTRUE(all.equal(ff.sp, names(ll)))) {
+        ll.sp <- as.numeric(ll[match(ff.sp, names(ll))])
+      } else {
+        ll.sp <- as.numeric(ll)
+      }
+      ff.sp <- ff.sp[order(ll.sp, decreasing = TRUE, na.last = TRUE)]
+    }
+    if (!isTRUE(all.equal(ff.sp, names(ll)))) {
+      ll.sp <- as.numeric(ll[match(ff.sp, names(ll))])
+      names(ll.sp) <- names(ll)[match(ff.sp, names(ll))]
+    } else {
+      ll.sp <- as.numeric(ll)
+      names(ll.sp) <- names(ll)
+    }
+  }
+  
+  ## Among TrEMBL entries, longer proteins come first.
+  if (!is.null(ff.trembl) & !is.null(ll)) {
+    ll.trembl <- ll[match(ff.trembl, names(ll))]
+    ll.trembl <- as.numeric(ll.trembl)
+    oo <- order(ll.trembl, decreasing = TRUE)
+    ff.trembl <- ff.trembl[oo]
+    ll.trembl <- ll.trembl[oo] 
+    if (!isTRUE(all.equal(ll.trembl, names(ll)))) {
+      names(ll.trembl) <- names(ll)[match(ff.trembl, names(ll))]
+    } else {
+      names(ll.trembl) <- names(ll)
+    }
+  }
+  
+  if (!is.null(ff.sp) | !is.null(ff.trembl)) {
+    ff <- paste0(c(ff.sp, ff.trembl), collapse = ";")
+  }
+
+  if (!is.null(ll.sp) | !is.null(ll.trembl)) {
+    ll <- paste0(c(ll.sp, ll.trembl), collapse = ";")
+    names(ll) <- paste0(c(names(ll.sp), names(ll.trembl)), collapse = ";")
+  }
+  
+  ## Keep unique if possible. No deduplication if different lengths present.
+  ff1 <- strsplit(ff, ";")[[1]]
+  ff1.dup <- which(duplicated(ff1))
+  if (any(ff1.dup)) {
+    if (!is.null(ll)) {
+      ll1 <- strsplit(ll, ";")[[1]]
+      nn1 <- strsplit(as.character(names(ll)), ";")[[1]]
+      ll1.dup <- which(duplicated(ll1))
+      if (isTRUE(all.equal(ff1.dup, ll1.dup))) {
+        ff1 <- ff1[-ff1.dup]
+        ll1 <- ll1[-ll1.dup]
+        nn1 <- nn1[-ll1.dup]
+        ff <- paste0(ff1, collapse=";")
+        ll <- paste0(ll1, collapse=";")
+        names(ll) <- paste0(nn1, collapse=";")
+      }
+    } else {
+      ff <- paste0(ff1[-ff1.dup], collapse=";")
+    }
+  }
+  
+  ## Reset lengths to original
+  if (!is.null(ll)) {
+    vv <- strsplit(as.character(ll), ";")[[1]]
+    nn <- strsplit(as.character(names(ll)), ";")[[1]]
+    if (!isTRUE(all.equal(names(lengths), nn))) {
+      jj <- match(names(lengths), nn)
+      vv[jj] <- unname(lengths)
+    }
+    ll <- paste0(vv, collapse=";")
+  }
+  
+  if (verbose) message("playbase::rank_uniprots] Completed.\n")
+
+  return(list(feature=ff, lengths=ll))
+  
+}
+
 
 iconv2utf8 <- function(s) {
   iconv(s, to = "UTF-8//TRANSLIT", sub = "")

@@ -6,7 +6,7 @@
 IMAGE_MODELS <- c(
   "google:gemini-3.1-flash-image-preview",
   "google:gemini-3-pro-image-preview",
-  "openai:gpt-image-1"
+  "openai:gpt-image-2"
 )
 
 #' Return list of available remote models. 

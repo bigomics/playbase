@@ -592,6 +592,7 @@ wgcna.init <- function(wgcna, llm=NULL, img_model=NULL, annot=NULL,
 
   if(!is.null(llm) && llm=="") llm <- NULL
   if(!is.null(img_model) && img_model=="") img_model <- NULL
+  is.multi <- "layers" %in% names(wgcna)
   
   if (is.null(wgcna$svTOM) && !is.null(wgcna$TOM)) {
     ## sv.tom <- ceiling(min(sv.tom,dim(datExpr)/2))
@@ -626,7 +627,7 @@ wgcna.init <- function(wgcna, llm=NULL, img_model=NULL, annot=NULL,
     message("[wgcna.init] creating report...")
     if (!is.null(progress)) progress$inc(0.1, "creating report...")            
     wgcna$report <- wgcna.create_report(
-      wgcna, ai_model=llm, graph=NULL, annot=annot, multi=FALSE,
+      wgcna, ai_model=llm, graph=NULL, annot=annot, multi=is.multi,
       ntop=100, topratio=0.85, psig=0.05, do.diagram = TRUE,
       userprompt='', format="markdown", verbose=1, progress=NULL)
   }
@@ -653,9 +654,9 @@ wgcna.init <- function(wgcna, llm=NULL, img_model=NULL, annot=NULL,
       model = img_model,
       add.fallback = FALSE,
       filename = tempfile(fileext='.png'))
-    if(grepl("png$",ignore.case=TRUE)) {
+    if(grepl("png$",tmp,ignore.case=TRUE)) {
       img <- png::readPNG(tmp)
-    } else if(grepl("jpg$|jpeg$",ignore.case=TRUE)) {
+    } else if(grepl("jpg$|jpeg$",tmp,ignore.case=TRUE)) {
       img <- jpeg::readJPEG(tmp)
     } else {
       message("[wgcna.init] Error: invalid output image")
@@ -5619,10 +5620,20 @@ wgcna.get_modTraits <- function(wgcna) {
 wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
                                      psig = 0.05, level="gene", rename="symbol") {
   
-  if("layers" %in% names(wgcna) && class(wgcna$datExpr) == "list") {
-    cons <- wgcna.getConsensusTopGenesAndSets(wgcna, annot=annot,
+  is.consensus <- "layers" %in% names(wgcna) && class(wgcna$datExpr) == "list"
+  is.multi <- "layers" %in% names(wgcna) && is.null(wgcna$datExpr) 
+  
+  if(is.consensus) {
+    top <- wgcna.getConsensusTopGenesAndSets(wgcna, annot=annot,
       module=module,  ntop=ntop, rename=rename) 
-    return(cons)
+    return(top)
+  }
+
+  if(is.multi) {
+    top <- wgcna.getMultiTopGenesAndSets(
+      wgcna$layers, annot=annot, module=module, psig=psig, ntop=ntop,
+      level=level, rename=rename) 
+    return(top)
   }
 
   stats <- NULL
@@ -5922,12 +5933,15 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
 
 #' @export
 wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
-                                multi=FALSE) {
+                                multi=NULL) {
 
   if(is.null(topratio)) topratio <- 0.85
+  if(is.null(multi) && !is.null(wgcna$layers)) multi <- TRUE
   if(!multi) {    
     ww <- list(gx = wgcna)  ## single-omics wgcna object
-  } else {
+  } else if(!is.null(wgcna$layers)) {
+    ww <- wgcna$layers
+  } else {    
     ww <- wgcna
   }
   
@@ -5958,7 +5972,7 @@ wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
 #'
 #' @export
 wgcna.create_report <- function(wgcna, ai_model,
-                                graph = NULL, annot=NULL, multi=FALSE,
+                                graph = NULL, annot=NULL, multi=NULL,
                                 ntop=100, topratio=0.85, psig=0.05,
                                 do.diagram = TRUE,
                                 userprompt='', format="markdown",
@@ -5972,6 +5986,11 @@ wgcna.create_report <- function(wgcna, ai_model,
   
   if(is.null(ai_model)) ai_model <- ""
   if(is.null(topratio)) topratio <- 0.85
+
+  if(is.null(multi)) {
+    is.mono <- all(c("datExpr","datTraits","net") %in% names(wgcna))
+    multi <- !is.null(wgcna$layers) || !is.mono
+  }
   
   if(!multi) {
     layers <- list(gx = wgcna)
@@ -6309,11 +6328,16 @@ wgcna.create_module_infographic <- function(rpt, module, prompt = NULL,
 #' @param wgcna WGCNA result object with stats.
 #' @return Data frame of compound significance scores.
 #' @export
-calculateCompoundSignificance <- function(wgcna, collapse=TRUE, sort.by="score1",
-                                          digits=4) {
+wgcna.calculateSignificanceScore <- function(wgcna, collapse=TRUE, sort.by="score",
+                                             digits=4, annot=NULL, rownames=NULL,
+                                             annot.cols=c("feature","symbol","gene_title")) {
   Q <- list()
-  ww <- list(gx = wgcna)
-  if (!is.null(wgcna$layers)) ww <- wgcna$layers    
+  if (!is.null(wgcna$layers)) {
+    ww <- wgcna$layers
+  } else {
+    ww <- list(gx = wgcna)
+  }
+  names(ww)
   for (k in names(ww)) {
     stats <- ww[[k]]$stats   
     m1 <- stats$moduleMembership
@@ -6325,22 +6349,53 @@ calculateCompoundSignificance <- function(wgcna, collapse=TRUE, sort.by="score1"
     #Q1 <- data.frame(c1, rxs(m1,k=1), rxs(t1), rxs(f1))
     Q1 <- data.frame(c1, x1, rxs(t1), rxs(f1))
     colnames(Q1) <- c("module","MM","max.TS","max.FC")
-    Q1$score1 <- apply(Q1[,c(2,3)],1,prod)
-    Q1$score2 <- apply(Q1[,c(2,4)],1,prod)    
+    Q1$score <- apply(Q1[,c(2,3,4)],1,prod)    
     if(sort.by %in% colnames(Q1)) Q1 <- Q1[order(-Q1[,sort.by]),]
     Q1[,2:ncol(Q1)] <- round(Q1[,2:ncol(Q1)], digits=digits)
     Q[[k]] <- Q1
   }
   
-  if(collapse) {
-    if (length(Q)>1) {
-      for(i in 1:length(Q)) rownames(Q[[i]]) <- paste0(names(Q)[i],":",
-        rownames(Q[[i]]))
+  if(is.null(annot)) annot <- wgcna$annot
+  if(!is.null(annot.cols) && length(annot.cols) && !is.null(annot)) {
+    i=1
+    for(i in 1:length(Q)) {
+      Q1 <- Q[[i]]
+      Q1 <- rename_by2(Q1, annot, "feature", na.rm=FALSE)      
+      rr <- rownames(Q1)
+      kk <- match(rr, rownames(annot))
+      sel <- intersect(annot.cols, colnames(annot))
+      aa <- annot[kk, sel, drop=FALSE]
+      ## if feature and symbol are same drop
+      if(all(c("feature","symbol") %in% colnames(aa))) {
+        if( mean(aa$symbol == aa$feature,na.rm=TRUE)) {
+          aa$symbol <- NULL
+        }
+      }
+      rr <- mofa.strip_prefix(rr)
+      Q[[i]] <- data.frame(aa, Q[[i]], row.names=rr)
     }
-    names(Q) <- NULL
-    Q <- do.call(rbind, Q)
-    if(sort.by %in% colnames(Q)) Q <- Q[order(-Q[,sort.by]),]    
-  }   
+  }
+
+  if (length(Q)>1) {
+    for(k in 1:length(Q)) rownames(Q[[k]]) <- paste0(names(Q)[k],":",
+      rownames(Q[[k]]))
+  }
+  names(Q) <- NULL
+  Q <- do.call(rbind, Q)
+  if(sort.by %in% colnames(Q)) Q <- Q[order(-Q[,sort.by]),]    
+
+  if(is.null(rownames)) rownames <- !("feature" %in% colnames(Q))
+  if(!rownames) {
+    rownames(Q) <- NULL
+  }
+
+  ## split by module
+  if(!collapse) {
+    Q <- tapply(1:nrow(Q), Q$module, function(i) Q[i,])
+    if(!rownames) {
+      for(i in 1:length(Q)) rownames(Q[[i]]) <- NULL
+    }
+  }
   return(Q)
 }
 
