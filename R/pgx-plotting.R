@@ -1328,25 +1328,12 @@ ggVolcano <- function(x,
                       use_hyperbola = FALSE,
                       hyperbola_k = 1,
                       use_ggprism = FALSE,
-                      ggprism_palette = "black_and_white",
-                      ggprism_colors = FALSE,
                       ggprism_border = FALSE,
                       ggprism_axis_guide = "default",
                       ggprism_show_legend = FALSE,
                       ggprism_legend_x = 0.95,
                       ggprism_legend_y = 0.95,
                       ggprism_legend_border = FALSE) {
-  ## Handle ggprism colors if enabled
-  if (isTRUE(use_ggprism) && isTRUE(ggprism_colors)) {
-    prism_cols <- ggprism::prism_colour_pal(palette = ggprism_palette)(4)
-    colors <- c(
-      up = prism_cols[1],
-      down = prism_cols[2],
-      notsig = prism_cols[3],
-      notsel = paste0(prism_cols[4], "88")
-    )
-  }
-
   if (is.null(highlight)) highlight <- names
   if (showlegend) {
     legend <- "right"
@@ -1572,7 +1559,7 @@ ggVolcano <- function(x,
   if (isTRUE(use_ggprism)) {
     plt <- plt +
       ggprism::theme_prism(
-        palette = ggprism_palette,
+        palette = "black_and_white",
         base_size = axis.text.size,
         border = ggprism_border
       )
@@ -2238,6 +2225,21 @@ pgx.plotExpression <- function(pgx,
         fig <- plotly::layout(p = fig, xaxis = list(showticklabels = FALSE))
       }
       return(fig)
+    } else if (plotlib == "ggplot") {
+      p <- pgx.barplot.GGPLOT(
+        data = data.frame(
+          gx = gx,
+          xgroup = factor(names(gx), levels = names(gx))
+        ),
+        x = "xgroup",
+        y = "gx",
+        grouped = FALSE,
+        fillcolor = klr,
+        title = main,
+        yaxistitle = ylab,
+        xaxistitle = xlab
+      )
+      return(p)
     } else {
       ## plot using base graphics
       gx.min <- 0
@@ -2291,6 +2293,20 @@ pgx.plotExpression <- function(pgx,
         pct.NA = pct.NA
       )
       return(fig)
+    } else if (plotlib == "ggplot") {
+      data <- data.frame(gx = gx, xgroup = xgroup)
+      p <- pgx.barplot.GGPLOT(
+        data = data,
+        x = "xgroup",
+        y = "gx",
+        grouped = TRUE,
+        fillcolor = grp.klr1,
+        title = main,
+        yaxistitle = ylab,
+        xaxistitle = xlab,
+        show_points = TRUE
+      )
+      return(p)
     } else {
       ## plot using base graphics
       gx.b3plot(gx, xgroup, #
@@ -3160,12 +3176,11 @@ plot_ggviolin <- function(x, y, group = NULL, main = "", ylim = NULL, add.dots =
     ggplot2::ylim(ylim[1], ylim[2]) +
     ggplot2::scale_fill_manual(values = col) +
     ggplot2::scale_x_discrete(guide = guide_axis(angle = srt)) +
-    ggplot2::geom_violin(trim = TRUE, position = ggplot2::position_dodge(pdodge)) +
-    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = srt, vjust = 0)) +
-    ggplot2::theme_minimal(base_size = base_size)
-  if (is.null(group)) {
-    p <- p + ggplot2::theme(legend.position = "none")
-  }
+    ggplot2::geom_violin(trim = TRUE, position = ggplot2::position_dodge(pdodge),
+                          show.legend = FALSE) +
+    ggplot2::guides(fill = "none") +
+    ggplot2::theme_minimal(base_size = base_size) +
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = srt, vjust = 0))
   if (add.dots && is.null(group)) {
     p <- p +
       ggplot2::geom_jitter(shape = 20, size = 1.2 * cex, position = ggplot2::position_jitter(0.07))
@@ -4001,6 +4016,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
         labelFUN(
           data = df1,
           ggplot2::aes(x = x, y = y, label = name),
+          inherit.aes = FALSE,
           size = 3.0 * cex.clust,
           color = "black",
           label.size = 0.10,
@@ -4163,6 +4179,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       labelFUN(
         data = subset(df, name %in% hilight2),
         ggplot2::aes(label = label),
+        inherit.aes = FALSE,
         size = 5.0 * cex.lab,
         color = "black",
         max.overlaps = 99,
@@ -6435,6 +6452,83 @@ pgx.boxplot.PLOTLY <- function(
 }
 
 
+#' Box plot using ggplot2
+#'
+#' ggplot2 counterpart of \code{pgx.boxplot.PLOTLY}. Returns a ggplot2 object
+#' so callers can layer ggprism themes before converting via \code{ggplotly()}.
+#'
+#' @param data Data frame in long format.
+#' @param x Column name for x-axis grouping.
+#' @param y Column name for y-axis values.
+#' @param split Column name to split categories into side-by-side boxes. Default NULL.
+#' @param title Plot title. Default NULL.
+#' @param color Box outline color. Default "#3181de".
+#' @param fillcolor Box fill color. Default "#2fb5e3".
+#' @param linecolor Box border color. Default "#3181de".
+#' @param colors Palette used when \code{split} is set; passed to
+#'   \code{scale_fill_manual()}. Default NULL (ggplot2 default palette).
+#' @param yaxistitle Y-axis title. Default "".
+#' @param xaxistitle X-axis title. Default "".
+#'
+#' @return A ggplot2 object.
+#' @export
+pgx.boxplot.GGPLOT <- function(
+  data,
+  x = NULL,
+  y = NULL,
+  split = NULL,
+  title = NULL,
+  color = "#3181de",
+  fillcolor = "#2fb5e3",
+  linecolor = "#3181de",
+  colors = NULL,
+  yaxistitle = "",
+  xaxistitle = "",
+  font_family = "Lato"
+) {
+  if (is.null(x)) x <- colnames(data)[1]
+  if (is.null(y)) y <- colnames(data)[2]
+
+  if (is.null(split)) {
+    p <- ggplot2::ggplot(data, ggplot2::aes(x = .data[[x]], y = .data[[y]])) +
+      ggplot2::geom_boxplot(
+        fill = fillcolor,
+        color = linecolor,
+        outlier.shape = NA
+      ) +
+      ggplot2::labs(x = xaxistitle, y = yaxistitle, title = title) +
+      ggplot2::theme_classic(base_family = font_family) +
+      ggplot2::theme(
+        legend.position = "none",
+        axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5),
+        plot.margin = ggplot2::margin(2, 2, 2, 2)
+      )
+  } else {
+    p <- ggplot2::ggplot(
+      data,
+      ggplot2::aes(x = .data[[x]], y = .data[[y]], fill = .data[[split]])
+    ) +
+      ggplot2::geom_boxplot(
+        color = linecolor,
+        outlier.shape = NA,
+        position = ggplot2::position_dodge(preserve = "single")
+      ) +
+      ggplot2::labs(x = xaxistitle, y = yaxistitle, title = title, fill = split) +
+      ggplot2::theme_classic(base_family = font_family) +
+      ggplot2::theme(
+        axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5),
+        plot.margin = ggplot2::margin(2, 2, 2, 2)
+      )
+
+    if (!is.null(colors)) {
+      p <- p + ggplot2::scale_fill_manual(values = colors)
+    }
+  }
+
+  p
+}
+
+
 #' Bar plot using plotly
 #'
 #' @param data Data frame to plot
@@ -6606,6 +6700,117 @@ pgx.barplot.PLOTLY <- function(
 
   return(p)
 }
+
+
+#' Bar plot using ggplot2
+#'
+#' ggplot2 counterpart of \code{pgx.barplot.PLOTLY}. Returns a ggplot2 object
+#' so callers can layer ggprism themes before converting via \code{ggplotly()}.
+#'
+#' @param data Data frame to plot.
+#' @param x Column name for x-axis. Default NULL uses first column.
+#' @param y Column name for y-axis. Default NULL uses second column.
+#' @param title Plot title. Default NULL.
+#' @param fillcolor Bar fill color(s). Single color or named vector per group.
+#' @param yaxistitle Y-axis title. Default "".
+#' @param xaxistitle X-axis title. Default "".
+#' @param grouped Aggregate mean +/- SD across groups? Default TRUE.
+#' @param show_points Overlay individual data points? Default TRUE.
+#' @param point_colors Color(s) for data points. Default "black".
+#' @param point_size Size of data points. Default 2.
+#'
+#' @return A ggplot2 object.
+#' @export
+pgx.barplot.GGPLOT <- function(
+  data,
+  x = NULL,
+  y = NULL,
+  title = NULL,
+  fillcolor = "#A6CEE3",
+  yaxistitle = "",
+  xaxistitle = "",
+  grouped = TRUE,
+  show_points = TRUE,
+  point_colors = "black",
+  point_size = 2,
+  font_family = "Lato"
+) {
+  if (is.null(x)) x <- colnames(data)[1]
+  if (is.null(y)) y <- colnames(data)[2]
+
+  if (grouped) {
+    summary_df <- do.call(
+      data.frame,
+      stats::aggregate(
+        data[y],
+        list(data[[x]]),
+        function(val) {
+          c(mean = mean(val, na.rm = TRUE), sd = stats::sd(val, na.rm = TRUE))
+        }
+      )
+    )
+    colnames(summary_df) <- c(x, "mean", "sd")
+    summary_df$sd[is.na(summary_df$sd)] <- 0
+
+    if (is.factor(data[[x]])) {
+      summary_df[[x]] <- factor(summary_df[[x]], levels = levels(data[[x]]))
+    }
+
+    if (length(fillcolor) == 1) {
+      p <- ggplot2::ggplot(summary_df, ggplot2::aes(x = .data[[x]], y = .data[["mean"]])) +
+        ggplot2::geom_col(fill = fillcolor)
+    } else {
+      summary_df$.fill <- fillcolor[match(summary_df[[x]], names(fillcolor))]
+      summary_df$.fill[is.na(summary_df$.fill)] <- fillcolor[1]
+      p <- ggplot2::ggplot(summary_df, ggplot2::aes(x = .data[[x]], y = .data[["mean"]])) +
+        ggplot2::geom_col(ggplot2::aes(fill = .data[[x]])) +
+        ggplot2::scale_fill_manual(values = fillcolor) +
+        ggplot2::guides(fill = "none")
+    }
+
+    p <- p +
+      ggplot2::geom_errorbar(
+        ggplot2::aes(
+          ymin = .data[["mean"]] - .data[["sd"]],
+          ymax = .data[["mean"]] + .data[["sd"]]
+        ),
+        width = 0.2, linewidth = 0.5
+      )
+
+    if (show_points) {
+      pt_col <- if (length(point_colors) == nrow(data)) point_colors else rep(point_colors[1], nrow(data))
+      data$.pt_color <- pt_col
+      p <- p +
+        ggplot2::geom_jitter(
+          data = data,
+          ggplot2::aes(x = .data[[x]], y = .data[[y]]),
+          color = pt_col,
+          width = 0.15, size = point_size,
+          inherit.aes = FALSE
+        )
+    }
+  } else {
+    if (length(fillcolor) > 1 && length(fillcolor) == nrow(data)) {
+      p <- ggplot2::ggplot(data, ggplot2::aes(x = .data[[x]], y = .data[[y]])) +
+        ggplot2::geom_col(fill = fillcolor)
+    } else {
+      p <- ggplot2::ggplot(data, ggplot2::aes(x = .data[[x]], y = .data[[y]])) +
+        ggplot2::geom_col(fill = fillcolor[1])
+    }
+  }
+
+  p <- p +
+    ggplot2::labs(x = xaxistitle, y = yaxistitle, title = title) +
+    ggplot2::theme_classic(base_family = font_family) +
+    ggplot2::theme(
+      legend.position = "none",
+      axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5),
+      plot.margin = ggplot2::margin(2, 2, 2, 2)
+    )
+
+  p
+}
+
 
 #' @export
 pgx.plotActivation <- function(pgx,
