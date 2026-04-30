@@ -15,7 +15,8 @@ pgx.barplot.GGPLOT(
   grouped = TRUE,
   show_points = TRUE,
   point_colors = "black",
-  point_size = 2
+  point_size = 2,
+  font_family = "Lato"
 )
 }
 \arguments{

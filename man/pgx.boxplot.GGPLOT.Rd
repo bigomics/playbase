@@ -8,12 +8,15 @@ pgx.boxplot.GGPLOT(
   data,
   x = NULL,
   y = NULL,
+  split = NULL,
   title = NULL,
   color = "#3181de",
   fillcolor = "#2fb5e3",
   linecolor = "#3181de",
+  colors = NULL,
   yaxistitle = "",
-  xaxistitle = ""
+  xaxistitle = "",
+  font_family = "Lato"
 )
 }
 \arguments{
@@ -23,6 +26,8 @@ pgx.boxplot.GGPLOT(
 
 \item{y}{Column name for y-axis values.}
 
+\item{split}{Column name to split categories into side-by-side boxes. Default NULL.}
+
 \item{title}{Plot title. Default NULL.}
 
 \item{color}{Box outline color. Default "#3181de".}
@@ -30,6 +35,9 @@ pgx.boxplot.GGPLOT(
 \item{fillcolor}{Box fill color. Default "#2fb5e3".}
 
 \item{linecolor}{Box border color. Default "#3181de".}
+
+\item{colors}{Palette used when \code{split} is set; passed to
+\code{scale_fill_manual()}. Default NULL (ggplot2 default palette).}
 
 \item{yaxistitle}{Y-axis title. Default "".}
 
