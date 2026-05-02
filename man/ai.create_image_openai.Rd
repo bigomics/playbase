@@ -7,9 +7,9 @@ prompt of about 1000 characters.}
 \usage{
 ai.create_image_openai(
   prompt,
-  model = "gpt-image-1",
-  size = c("auto", "1024x1024")[1],
-  aspect_ratio = NULL,
+  model = "gpt-image-2",
+  size = 1024,
+  aspect_ratio = "3:2",
   format = c("file", "base64", "raw"),
   filename = "image.png",
   api_key = Sys.getenv("OPENAI_API_KEY"),

@@ -10,6 +10,7 @@ ai.create_image(
   model = IMAGE_MODELS,
   format = c("file", "base64", "raw")[1],
   filename = "image.png",
+  size = 1024,
   aspect_ratio = "16:9"
 )
 }

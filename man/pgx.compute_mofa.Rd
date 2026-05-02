@@ -13,7 +13,10 @@ pgx.compute_mofa(
   add_gsets = FALSE,
   factorizations = TRUE,
   compute.enrichment = TRUE,
-  compute.lasagna = TRUE
+  compute.lasagna = TRUE,
+  create.report = FALSE,
+  llm_model = NULL,
+  image_model = NULL
 )
 }
 \description{
