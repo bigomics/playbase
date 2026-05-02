@@ -41,9 +41,12 @@ pgx.create_reports <- function(pgx, llm_model) {
 
   if(!is.null(pgx$drugs) && is.null(pgx$drugs$report)) {  
     message(">>> creating drug CMAP report...")
-    pgx$drugs$report <- cmap.create_report(
-      pgx, model=llm_model, model2 = NULL, db = 1,
-      user.prompt = NULL)
+    drug.db <- names(pgx$drugs)[1]  ## NEED ALL????
+    for(db in drug.db) {
+      pgx$drugs[[db]]$report <- cmap.create_report(
+        pgx, model=llm_model, model2 = NULL, db = db,
+        user.prompt = NULL)
+    }
   }
   
   return(pgx)

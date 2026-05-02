@@ -3719,7 +3719,7 @@ mofa.getTopFactors <- function(mofa, minrho=0.2) {
 }
 
 mofa.getTopGenesAndSets <- function(mofa, annot=NULL, factors=NULL, ntop=40,
-                                     psig = 0.05, level="gene", rename="symbol") {
+                                    psig = 0.05, level="gene", rename="symbol") {
   
   if(!"gsea" %in% names(mofa)) {
     warning("object has no enrichment results (gsea)")
@@ -3760,14 +3760,15 @@ mofa.getTopGenesAndSets <- function(mofa, annot=NULL, factors=NULL, ntop=40,
   ## top correlated phenotypes
   Y <- cbind(mofa$K, mofa$Y)
   M <- cor(mofa$F, Y)
-  toppheno <- apply(M, 1, function(x) names(which(x > 0.8*max(x, na.rm=TRUE))))
+  top.pheno <- apply(pmax(M,0), 1, function(x) names(which(x > 0.8*max(x, na.rm=TRUE))))
+  top.negpheno <- apply(pmin(M,0), 1, function(x) names(which(x < 0.8*min(x, na.rm=TRUE))))
   
   if(level=="geneset") {
     topsets <- topgenes
     topgenes <- NULL
   }
 
-  list(sets = topsets, genes = topgenes, pheno = toppheno)
+  list(sets = topsets, genes = topgenes, pheno = top.pheno, neg.pheno = top.negpheno)
 }
 
 
