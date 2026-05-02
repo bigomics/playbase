@@ -6357,6 +6357,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
 #' @param data Data frame to plot.
 #' @param x Column in data to use for x-axis grouping. Default NULL.
 #' @param y Column in data to use for y-axis values. Default NULL.
+#' @param split. Split categories by subcategories to have side-by-side boxplots. Default NULL
 #' @param title Plot title text. Default NULL.
 #' @param color Box fill color. Default "#3181de".
 #' @param fillcolor Box inside fill color. Default "#2fb5e3".
@@ -6375,10 +6376,12 @@ pgx.boxplot.PLOTLY <- function(
   data,
   x = NULL,
   y = NULL,
+  split = NULL,
   title = NULL,
   color = "#3181de",
   fillcolor = "#2fb5e3",
   linecolor = "#3181de",
+  colors = NULL,
   hoverinfo = "y",
   hoverformat = ".2f",
   yaxistitle = FALSE,
@@ -6386,26 +6389,49 @@ pgx.boxplot.PLOTLY <- function(
   font_family = "Lato",
   margin = list(l = 10, r = 10, b = 10, t = 10)
 ) {
-  plotly::plot_ly(
-    data = data,
-    x = ~ get(x),
-    y = ~ get(y),
-    type = "box",
-    fillcolor = fillcolor,
-    marker = list(color = color),
-    line = list(color = linecolor),
-    hoverinfo = hoverinfo
-  ) %>%
-    plotly::layout(
-      title = title,
-      yaxis = list(
-        title = yaxistitle,
-        hoverformat = hoverformat
-      ),
-      xaxis = list(title = xaxistitle),
-      font = list(family = font_family),
-      margin = margin
-    )
+  if (is.null(split)) {
+    plotly::plot_ly(
+      data = data,
+      x = ~ get(x),
+      y = ~ get(y),
+      type = "box",
+      fillcolor = fillcolor,
+      marker = list(color = color),
+      line = list(color = linecolor),
+      hoverinfo = hoverinfo
+    ) %>%
+      plotly::layout(
+        title = title,
+        yaxis = list(
+          title = yaxistitle,
+          hoverformat = hoverformat
+        ),
+        xaxis = list(title = xaxistitle),
+        font = list(family = font_family),
+        margin = margin
+      )
+  } else {
+    plotly::plot_ly(
+      data = data,
+      x = ~ get(x),
+      y = ~ get(y),
+      color = ~ get(split),
+      colors = colors,
+      type = "box",
+      hoverinfo = hoverinfo
+    ) %>%
+      plotly::layout(
+        title = title,
+        boxmode = "group",
+        yaxis = list(
+          title = yaxistitle,
+          hoverformat = hoverformat
+        ),
+        xaxis = list(title = xaxistitle),
+        font = list(family = font_family),
+        margin = margin
+      )
+  }
 }
 
 
