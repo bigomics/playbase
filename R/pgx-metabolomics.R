@@ -243,9 +243,6 @@ getMetaboliteAnnotation <- function(probes,
   }
   probes <- trimws(probes)
 
-  ## strip postfix after underscore (NEED RETHINK!)
-  ## probes <- sub("[ _.-].*", "", probes)
-
   ## missing probes as 'minus'
   probes[probes %in% c("", "-", "NA", NA)] <- "-"
   names(orig.probes) <- probes
