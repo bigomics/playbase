@@ -8292,8 +8292,8 @@ plotMethylIdeogram <- function(beta_matrix,
       )
     }
   }
-
-  msg("Completed.\n")
+  return(kp)
+}
 
 #' @export
 plotlyExport <- function(p, file, width, height, 
