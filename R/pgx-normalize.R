@@ -160,17 +160,17 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
 #' @param X Matrix of Beta values. Probes in rows; samples in columns.
 #' @return Matrix of M values in log2-scale
 #' @export
-betaToM <- function(beta, offset = 1e-6) {
-  message("[playbase::betaToM] Methylomics: converting Beta values to M values.")
+betaToM <- function(beta, offset = 1e-6, verbose = FALSE) {
+  if (verbose) message("[playbase::betaToM] Methylomics: converting Beta values to M values.")
   vv <- range(beta, na.rm = TRUE)
   is.beta <- (vv[1] >= 0 & vv[2] <= 1)
   if (!is.beta) {
-    message("[playbase::betaToM] Error: input data seems not be beta values. Returning input matrix.")
+    if (verbose) message("[playbase::betaToM] Error: input data seems not be beta values. Returning input matrix.")
     return(beta)
   } else {
     beta <- pmin(pmax(beta, offset), 1 - offset)
     m <- log2(beta / (1 - beta))
-    message("[playbase::betaToM] Methylomics: Beta to M values conversion completed.\n")
+    if (verbose) message("[playbase::betaToM] Methylomics: Beta to M values conversion completed.\n")
     rm(beta); return(m)
   }
 }
@@ -180,16 +180,16 @@ betaToM <- function(beta, offset = 1e-6) {
 #' @param X Matrix of M values. Probes in rows; samples in columns.
 #' @return Matrix of Beta values.
 #' @export
-mToBeta <- function(m) {
-  message("[playbase::mToBeta] Methylomics: converting M values to Beta values.")
+mToBeta <- function(m, verbose = FALSE) {
+  if (verbose) message("[playbase::mToBeta] Methylomics: converting M values to Beta values.")
   vv <- range(m, na.rm = TRUE)
   is.beta <- (vv[1] >= 0 & vv[2] <= 1)
   if (is.beta) {
-    message("[playbase::mtoBeta] Input data seems already beta values. Returning input matrix.")
+    if (verbose) message("[playbase::mtoBeta] Input data seems already beta values. Returning input matrix.")
     return(m)
   } else {
     beta <- (2^m / (1 + 2^m))
-    message("[playbase::mToBeta] Methylomics: M to Beta values conversion completed.\n")
+    if (verbose) message("[playbase::mToBeta] Methylomics: M to Beta values conversion completed.\n")
     rm(m); return(beta)
   }
 }
