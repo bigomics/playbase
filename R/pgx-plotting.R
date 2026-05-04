@@ -7676,6 +7676,15 @@ plotAdjacencyMatrixFromGraph <- function(graph, nmax = 40, binary = FALSE,
 #' @param plot.beta.dist Logical. Show genome-wide beta density panel. Default TRUE.
 #' @param plot.beta.boxplots Logical. Show per-chromosome beta boxplot panel. Default FALSE.
 #' @param pheno If 2 levels, generate side-by-side boxplots. Default NULL
+#' @param up_color Colour for the high-methylation reference vline at beta = 0.8
+#'   (density panel only). Default "#d73027".
+#' @param down_color Colour for the low-methylation reference vline at beta = 0.2
+#'   (density panel only). Default "#4575b4".
+#' @param box_color Fill colour for the boxplot panel when no phenotype grouping is
+#'   active. Default "#aaaaaa".
+#' @param group_colors Optional character vector of fill colours for the boxplot
+#'   panel when \code{pheno} is grouped (>= 2 levels). Recycled to match the number
+#'   of groups. When \code{NULL}, ggplot's default discrete palette is used.
 #' @description Overview figure: (A) genome-wide beta density, (B) per-chromosome
 #'   beta boxplot (distribution of per-sample chromosome means).
 #' @return A patchwork/ggplot object, printed to device.
@@ -7685,7 +7694,11 @@ plotMethylOverview <- function(beta_matrix,
                                pheno = NULL,
                                chromosomes = NULL,
                                plot.beta.dist = TRUE,
-                               plot.beta.boxplots = FALSE) {
+                               plot.beta.boxplots = FALSE,
+                               up_color = "#d73027",
+                               down_color = "#4575b4",
+                               box_color = "#aaaaaa",
+                               group_colors = NULL) {
   
   msg <- function(...) message("[playbase::plotMethylOverview] ", ...)
 
@@ -7722,8 +7735,8 @@ plotMethylOverview <- function(beta_matrix,
     mv <- rowMeans(beta_matrix, na.rm = TRUE)
     pA <- ggplot2::ggplot(data.frame(beta = mv), ggplot2::aes(x = beta))
     pA <- pA + ggplot2::geom_density(fill = "#888888", alpha = 0.35, colour = "#555555", linewidth = 0.4)
-    pA <- pA + ggplot2::geom_vline(xintercept = 0.2, linetype = "dashed", colour = "#4575b4", linewidth = 0.5)
-    pA <- pA + ggplot2::geom_vline(xintercept = 0.8, linetype = "dashed", colour = "#d73027", linewidth = 0.5)
+    pA <- pA + ggplot2::geom_vline(xintercept = 0.2, linetype = "dashed", colour = down_color, linewidth = 0.5)
+    pA <- pA + ggplot2::geom_vline(xintercept = 0.8, linetype = "dashed", colour = up_color, linewidth = 0.5)
     pA <- pA + ggplot2::scale_x_continuous(limits = c(0, 1), breaks = c(0, 0.2, 0.5, 0.8, 1))
     pA <- pA + ggplot2::labs(x = "", y = "Density")
     pA <- pA + ggplot2::theme_minimal(base_size = 15)
@@ -7739,64 +7752,68 @@ plotMethylOverview <- function(beta_matrix,
 
   if (plot.beta.boxplots) {
 
-    chr_labels <- sub("^chr", "", chromosomes)
+    pheno_chr <- if (!is.null(pheno)) as.character(pheno) else NULL
+    phenos <- if (!is.null(pheno_chr)) sort(unique(pheno_chr[!is.na(pheno_chr) & pheno_chr != ""])) else character(0)
+    grouped <- length(phenos) >= 2
 
-    two_groups <- !is.null(pheno) && length(unique(as.character(pheno))) == 2
-    if (two_groups) {
-      phenos <- sort(unique(as.character(pheno)))
-      g1 <- which(pheno == phenos[1])
-      g2 <- which(pheno == phenos[2])
+    chr_means <- matrix(
+      NA_real_,
+      nrow = ncol(beta_matrix), ncol = length(chromosomes),
+      dimnames = list(colnames(beta_matrix), chromosomes)
+    )
+    for (k in seq_along(chromosomes)) {
+      jj <- which(annot$chrom_temp == chromosomes[k])
+      if (length(jj) > 0) {
+        chr_means[, k] <- colMeans(beta_matrix[jj, , drop = FALSE], na.rm = TRUE)
+      }
     }
 
-    if (two_groups) {
-      LL <- list()
-      for(i in 1:2) {
-        if (i == 1) group=g1 else group=g2
-        DF <- data.frame(matrix(NA, nrow = length(group), ncol = length(chromosomes)))
-        rownames(DF) <- colnames(beta_matrix)[group]
-        colnames(DF) <- chr_labels
-        for (ii in 1:nrow(DF)) {
-          for (k in 1:ncol(DF)) {
-            jj <- which(annot$chrom_temp == chromosomes[k])
-            if (length(jj) > 0) DF[ii, k] <- mean(beta_matrix[jj, group[ii]], na.rm = TRUE)
-          }
-        }
-        LL[[i]] <- DF
+    df <- data.frame(
+      sample = rep(rownames(chr_means), ncol(chr_means)),
+      chrom  = factor(rep(colnames(chr_means), each = nrow(chr_means)),
+                      levels = chromosomes),
+      beta   = as.vector(chr_means),
+      stringsAsFactors = FALSE
+    )
+    if (grouped) {
+      df$group <- factor(
+        pheno_chr[match(df$sample, colnames(beta_matrix))],
+        levels = phenos
+      )
+      df <- df[!is.na(df$group), , drop = FALSE]
+    }
+
+    pB <- ggplot2::ggplot(df, ggplot2::aes(x = chrom, y = beta))
+    if (grouped) {
+      pB <- pB + ggplot2::aes(fill = group)
+      pB <- pB + ggplot2::geom_boxplot(
+        colour = "#444444",
+        outlier.size = 0.4, outlier.shape = 16, width = 0.7
+      )
+      if (!is.null(group_colors)) {
+        fills <- rep_len(group_colors, length(phenos))
+        pB <- pB + ggplot2::scale_fill_manual(values = setNames(fills, phenos))
       }
-      at_g1  <- seq(1, length(chromosomes) * 3, by = 3)
-      at_g2  <- at_g1 + 1
-      pB <- patchwork::wrap_elements(full = ~ {
-        op <- par(mar = c(4, 4, 0.8, 0.8), mgp = c(2.8, 0.5, 0), tcl = -0.1, las = 1)
-        on.exit(par(op))
-        xlim <- c(0, max(at_g2) + 1)
-        boxplot(LL[[1]], at = at_g1, xlim = xlim, col = "#aaaaaa", border = "#444444",
-          outpch = 16, outcex = 0.3, xaxt = "n", yaxt = "n", ylab = "Beta signal",
-          cex.lab = 1.2, frame = FALSE)
-        boxplot(LL[[2]], at = at_g2, add = TRUE, col = "#8B4513", border = "#5a2b00",
-          outpch = 16, outcex = 0.3, xaxt = "n", yaxt = "n")
-        axis(2, cex.axis = 1.2)
-        text(x = at_g1 + 0.5, y = par("usr")[3] - 0.01, chromosomes, adj = 1, srt = 45, xpd=T, cex=1.2)
-        legend("topright", legend = phenos, fill = c("#aaaaaa", "#8B4513"), bty = "n", cex = 1.5)
-        grid()
-      })
     } else {
-      DF <- data.frame(matrix(NA, nrow = ncol(beta_matrix), ncol = length(chromosomes)))
-      rownames(DF) <- colnames(beta_matrix)
-      colnames(DF) <- chr_labels
-      for (i in 1:nrow(DF)) {
-        for (k in 1:ncol(DF)) {
-          jj <- which(annot$chrom_temp == chromosomes[k])
-          if (length(jj) > 0) DF[i, k] <- mean(beta_matrix[jj, i], na.rm = TRUE)
-        }
-      }
-      pB <- patchwork::wrap_elements(full = ~ {
-        op <- par(mar = c(4, 4, 0.8, 0.8), mgp = c(2.8, 0.5, 0), tcl = -0.1, las = 1)
-        on.exit(par(op))
-        boxplot(DF, ylab = "Beta signal", cex.axis = 1.2, cex.lab = 1.2, xaxt = "n")
-        text(x = 1:ncol(DF), y = par("usr")[3] - 0.01, chromosomes, adj = 1, srt = 45, xpd=T, cex=1.2)
-        grid()
-      })
+      pB <- pB + ggplot2::geom_boxplot(
+        fill = box_color, colour = "#444444",
+        outlier.size = 0.4, outlier.shape = 16, width = 0.7
+      )
     }
+    pB <- pB + ggplot2::labs(x = NULL, y = "Beta signal")
+    pB <- pB + ggplot2::theme_minimal(base_size = 15)
+    pB <- pB + ggplot2::theme(
+      panel.grid.minor = ggplot2::element_blank(),
+      panel.grid.major.x = ggplot2::element_blank(),
+      panel.grid.major.y = ggplot2::element_line(linewidth = 0.35),
+      axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 13),
+      axis.text.y = ggplot2::element_text(size = 13),
+      axis.title.y = ggplot2::element_text(size = 14, margin = ggplot2::margin(r = 12)),
+      legend.position = if (grouped) "top" else "none",
+      legend.title = ggplot2::element_blank(),
+      legend.text = ggplot2::element_text(size = 13),
+      plot.margin = ggplot2::unit(c(2, 2, 0, 2), "mm")
+    )
   }
 
   if (plot.beta.dist && plot.beta.boxplots) {
