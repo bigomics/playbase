@@ -7,10 +7,12 @@
 plotMethylIdeogram(
   beta_matrix,
   annot,
-  organism = NULL,
+  pheno = NULL,
   chromosomes = NULL,
+  organism = NULL,
   bin_size = 1e+06,
   probe_count_bars = TRUE,
+  pheno_lines = FALSE,
   loess_bins = 5L
 )
 }
@@ -19,14 +21,24 @@ plotMethylIdeogram(
 
 \item{annot}{Annotation dataframe of CpGs. Must have chromosomes and positions.}
 
-\item{organism}{Organism string. Use "mouse" or "rat" for mm10; default is hg19.}
+\item{pheno}{Character vector of length ncol(beta_matrix) with exactly 2 unique levels.
+Samples are split into the two groups. If pheno is not NULL and has 2 levels and
+matches ncol(beta_matrix), a second panel shows the delta-beta (group1 - group2)
+per bin, with red bars above zero and blue bars below zero.}
 
 \item{chromosomes}{Chromosomes to plot. Default: autosomes + X + Y.}
 
-\item{bin_size}{Genomic bin size in base pairs for the summary line. Default: 1e6 (1 Mb).}
+\item{organism}{Organism string. Use "mouse" or "rat" for mm10; default is hg19.}
+
+\item{bin_size}{Genomic bin size in base pairs. Default: 1e6 (1 Mb).}
+
+\item{probe_count_bars}{Logical. Show probe-count bar panel when not in two-group mode. Default TRUE.}
+
+\item{pheno_lines}{Logical. When TRUE and pheno has 2 levels, draw one line per group
+(black = group 1, brown = group 2) instead of the single overall mean line. Default FALSE.}
+
+\item{loess_bins}{Number of bins to use as the LOESS neighbourhood. Default 5.}
 }
 \description{
-Like plotMethylIdeogram but replaces the probe-order rolling mean with a
-  fixed-window genomic bin average. Each bin shows the mean beta across all CpGs that
-  fall within that window, giving a cleaner and less noisy trend line.
+plotMethylIdeogram
 }
