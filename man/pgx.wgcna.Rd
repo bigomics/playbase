@@ -38,7 +38,27 @@ pgx.wgcna(
 \item{ngenes}{Number of genes to use (most variable)}
 }
 \value{
-List containing WGCNA network and module results
+A list with the following components:
+\describe{
+  \item{datExpr}{Transposed expression matrix used for WGCNA.}
+  \item{datTraits}{Numeric trait matrix derived from sample metadata.}
+  \item{svTOM}{Singular vectors of the TOM matrix (low-rank approximation).}
+  \item{net}{WGCNA network object from \code{blockwiseModules}.}
+  \item{me.genes}{Gene-to-module membership vectors.}
+  \item{me.colors}{Module color assignments.}
+  \item{W}{Module eigengene matrix.}
+  \item{modTraits}{Module-trait correlation results.}
+  \item{stats}{Module-level statistics and test results.}
+  \item{power}{Effective soft-thresholding power used.}
+  \item{minModSize}{Effective minimum module size (may be capped for small datasets).}
+  \item{mergeCutHeight}{Merge cut height for module merging.}
+  \item{minKME}{Minimum eigengene connectivity to stay in a module.}
+  \item{networktype}{Network type used (\code{"signed"}, \code{"unsigned"}, etc.).}
+  \item{tomtype}{TOM type used.}
+  \item{clust}{Clustering results from dimensionality reduction on TOM.}
+  \item{annot}{Gene annotation table from the PGX object.}
+  \item{experiment}{Experiment description from the PGX object.}
+}
 }
 \description{
 Constructs a weighted gene coexpression network and detects

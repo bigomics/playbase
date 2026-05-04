@@ -138,7 +138,8 @@ pgx.plotGeneUMAP(
   level = "gene",
   plotlib = "ggplot",
   data = FALSE,
-  labeltype = "feature"
+  labeltype = "feature",
+  col = NULL
 )
 }
 \arguments{
