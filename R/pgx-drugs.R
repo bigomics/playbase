@@ -279,9 +279,12 @@ pgx.getMOAmatrix <- function(pgx, db=1, type=c("drugClass","targetGene")[1]) {
   mm <- lapply(moa, function(m) m[[type]])
   pp <- lapply(mm, function(m) m$pathway)
   pp <- Reduce(intersect, pp)
-  mm <- lapply(mm, function(m) m[match(pp,m$pathway),])
-  X <- sapply(mm, function(m) m$NES)
-  rownames(X) <- pp
+  X <- NULL
+  if(length(pp)) {
+    mm <- lapply(mm, function(m) m[match(pp,m$pathway),,drop=FALSE])
+    X <- sapply(mm, function(m) m$NES)
+    if(!is.null(X) && nrow(X)) rownames(X) <- pp
+  }
   X
 }
 
