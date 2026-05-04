@@ -115,6 +115,7 @@ Imports:
     pamr,
     parallel,
     partykit,
+    patchwork,
     pcaMethods,
     plaid,
     plotly,
