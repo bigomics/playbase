@@ -76,7 +76,7 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
 
   all.sections <- c("description", "dataset_info","compute_settings",
     "differential_expression", "geneset_enrichment",
-    "drug_similarity","hub_genes","wgcna_report","mofa_report")
+    "drug_similarity","pcsf_report","wgcna_report","mofa_report")
   if(is.null(sections)) {
     sections <- all.sections
   } else {
