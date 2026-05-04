@@ -389,6 +389,7 @@ pgx.createPGX <- function(counts,
     for(i in 1:nrow(counts)) {
       rownames(counts)[i] <- playbase::rank_uniprots(rownames(counts)[i], feature.lengths[i])$feature
     }
+    rownames(counts) <- make_unique(rownames(counts))
     rownames(X) <- rownames(counts)
     if (!is.null(annot_table)) {
       rownames(annot_table) <- rownames(counts)
