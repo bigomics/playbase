@@ -306,10 +306,10 @@ rank_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
   ff <- strsplit(as.character(feature), ";")[[1]]
   ff <- ff[nzchar(trimws(ff))]
 
-  if (all(as.character(feature) %in% c("", "NA", NA))) {
+  if (length(ff) == 0) {
     return(list(feature=feature, lengths=lengths))
   }
-  
+
   if (length(ff) <= 1) {
     sp <- grep("^[OPQ][0-9]", ff)
     if (length(sp) > 0) {
@@ -377,7 +377,9 @@ rank_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
     }
   }
 
-  if (length(ff.sp) != length(ff)) ff.trembl <- ff[-sp]
+  if (length(ff.sp) != length(ff)) {
+    ff.trembl <- if (length(sp) > 0) ff[-sp] else ff
+  }
   
   ll.sp=NULL; ll.trembl=NULL
   
