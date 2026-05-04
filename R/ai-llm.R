@@ -1,15 +1,19 @@
+##
+## This file is part of the Omics Playground project.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
+##
 
 DEFAULT_LLM = "gpt-5-nano"
 DEFAULT_LLM = NULL
 
 REMOTE_MODELS <- c(
-  "openai:gpt-5-nano",
+  "openai:gpt-5.4-nano",
+  "openai:gpt-5.4-mini",  
   "xai:grok-4-1-fast-non-reasoning", 
-  "groq:llama-3.1-8b-instant",
-  "groq:meta-llama/llama-4-scout-17b-16e-instruct",  
   "groq:openai/gpt-oss-20b",
   "groq:openai/gpt-oss-120b",
-  "google:gemini-2.5-flash-lite"
+  "google:gemini-3-flash-preview",
+  "google:gemini-3.1-flash-lite-preview"  
 )
 
 #'
@@ -25,6 +29,7 @@ ai.get_ollama_models <- function(models=NULL, size=NULL) {
 
   ##hist(models.sizes, breaks=50)
   if(!is.null(models) && !any(models=="OLLAMA_MODELS")) {
+    models <- sub("^ollama:","",models)  ## strip
     available.models <- intersect(models,available.models)
   }
 
@@ -48,6 +53,8 @@ ai.get_ollama_models <- function(models=NULL, size=NULL) {
 OLLAMA_MODELS = ai.get_ollama_models()
 
 
+#' Return list of available remote models. 
+#'
 #' @export
 ai.get_remote_models <- function(models = NULL) {
   keys <- NULL
@@ -85,7 +92,9 @@ ai.get_remote_models <- function(models = NULL) {
 ai.get_models <- function(models=NULL) {
   local.models  <- sort(ai.get_ollama_models(models))
   remote.models <- sort(ai.get_remote_models(models))   
-  models <- list( local = local.models, remote = remote.models)
+  models <- list()
+  if(length(local.models))  models$local <- local.models
+  if(length(remote.models)) models$remote <- remote.models  
   return(models)
 }
 
@@ -107,12 +116,15 @@ ai.create_ellmer_chat <- function(model, system_prompt) {
   } else if( grepl("^groq:",model)) {
     model1 <- sub("^groq:","",model)
     chat <- ellmer::chat_groq(model = model1, system_prompt = system_prompt)
+  } else if( grepl("^google:",model)) {
+    model1 <- sub("^google:","",model)
+    chat <- ellmer::chat_google_gemini(model = model1, system_prompt = system_prompt)
   } else if( grepl("^xai:grok",model)) {
     message("Sorry Grok not yet supported... ")    
   } else if(model %in% OLLAMA_MODELS) {
     chat <- ellmer::chat_ollama(model = model, system_prompt = system_prompt)
   } else {
-    message("unsupported model ",model)
+    message("unsupported model ",model,"\n")
   }
   chat
 }
@@ -121,11 +133,12 @@ ai.create_ellmer_chat <- function(model, system_prompt) {
 ai.ask <- function(question, model, engine=c("ellmer","tidyprompt")[2]) {
   if(model == "ellmer" && grepl("grok",model)) model <- "tidyprompt"
   if(engine=="ellmer") {
-    resp <- ai.ask_ellmer(question=question, model=model, prompt=NULL) 
+    resp <- try(ai.ask_ellmer(question=question, model=model, prompt=NULL))
   }
   if(engine=="tidyprompt") {
-    resp <- ai.ask_tidyprompt(question=question, model=model) 
+    resp <- try(ai.ask_tidyprompt(question=question, model=model)) 
   }
+  if(inherits(resp, "try-error")) resp <- "Error: could not get response"
   return(resp)
 }
 
