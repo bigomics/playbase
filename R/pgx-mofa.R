@@ -3707,7 +3707,7 @@ mofa.normalizeExpression <- function(X, method1 = "maxMedian", method2 = "none")
 ##----------------------------------------------------------------------
 ##----------------------------------------------------------------------
 
-mofa.getTopFactors <- function(mofa, psig=0.05, minrho=0.1) {
+mofa.getTopFactors <- function(mofa, topratio=0.85, psig=0.05, minrho=0.1) {
   Z <- mofa$Z
   Z[ abs(Z) < minrho ] <- 0
   Z <- Z[rowMeans(Z==0) < 1,,drop=FALSE]
@@ -3857,7 +3857,7 @@ mofa.describeFactors <- function(mofa, ntop=50, psig = 0.05,
 
   kernel <- toupper(mofa$setting$kernel)
   
-  prompt <- paste("These are results of a multi-omics factor analysis using",kernel,". Give a", docstyle, "of the main overall biological function of the following top enriched genesets belonging to factor <FACTOR>. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about \'<EXPERIMENT>\'. Use maximum", numpar, "paragraphs. Do not use any bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n")
+  prompt <- paste("These are results of a multi-omics factor analysis using",kernel," of an experiment about \'<EXPERIMENT>\'. Give a", docstyle, "of the main overall biological function of the following top enriched genesets belonging to factor <FACTOR>. Discuss the possible relationship with positively correlate phenotypes <PHENOTYPES> and, if not obvious, negatively correlate phenotypes <NEGPHENOTYPES> . Use maximum", numpar, "paragraphs. Do not use any bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n")
 
   if (verbose > 1) cat(prompt)
 
@@ -3867,7 +3867,7 @@ mofa.describeFactors <- function(mofa, ntop=50, psig = 0.05,
   for (k in factors) {
     if (verbose > 0) message("Describing factor ", k)
 
-    ss=gg=pp=""
+    ss=gg=pp=nn=""
     if(length(top$sets[[k]])>0) {
       ss <- sub( ".*:","", top$sets[[k]] ) ## strip prefix
       ss <- paste(ss, collapse=';')    
@@ -3879,6 +3879,10 @@ mofa.describeFactors <- function(mofa, ntop=50, psig = 0.05,
       pp <- paste0("'",top$pheno[[k]],"'")
       pp <- paste( pp, collapse=';')      
     }
+    if(k %in% names(top$neg.pheno)) {
+      nn <- paste0("'",top$neg.pheno[[k]],"'")
+      nn <- paste( nn, collapse=';')      
+    }
 
     q <- prompt
 
@@ -3889,6 +3893,7 @@ mofa.describeFactors <- function(mofa, ntop=50, psig = 0.05,
 
     q <- sub("<FACTOR>", k, q)
     q <- sub("<PHENOTYPES>", pp, q)
+    q <- sub("<NEGPHENOTYPES>", nn, q)    
     q <- sub("<EXPERIMENT>", experiment, q)
     q <- sub("<GENESETS>", ss, q)
     q <- sub("<KEYGENES>", gg, q)
