@@ -301,7 +301,7 @@ sum_treps <- function(counts, trep_var = "") {
 #' @param feature feature ids, collapsed with ";".
 #' @param lengths Character vector of feature lengths, collapsed with ";". Default NULL.
 #' @export
-rank_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
+reorder_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
 
   ff <- strsplit(as.character(feature), ";")[[1]]
   ff <- ff[nzchar(trimws(ff))]
@@ -324,13 +324,13 @@ rank_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
     lengths <- strsplit(as.character(lengths), ";")[[1]]
     lengths <- lengths[nzchar(trimws(lengths))]
     if (length(ff) != length(lengths)) {
-      message("[playbase::rank_uniprots] Protein lengths does not match features. Ignoring length.")
+      message("[playbase::reorder_uniprots] Protein lengths does not match features. Ignoring length.")
     } else {
       names(lengths) <- ff
       kk <- which(as.character(lengths) %in% c("0", "", "NA", NA))
       if (length(kk) > 0) {
         if (length(kk) == length(lengths)) {
-          message("[playbase::rank_uniprots] All protein lengths uninformative. Ignoring length.")
+          message("[playbase::reorder_uniprots] All protein lengths uninformative. Ignoring length.")
         } else {
           ll <- lengths
           ll[kk] <- "0"
@@ -377,7 +377,7 @@ rank_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
     }
   }
 
-  if (length(ff.sp) != length(ff)) ff.trembl <- ff[-sp]
+  if (length(ff.sp) != length(ff)) ff.trembl <- if (length(sp) == 0) ff else ff[-sp]
   
   ll.sp=NULL; ll.trembl=NULL
   
@@ -464,7 +464,7 @@ rank_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
     ll <- paste0(vv, collapse=";")
   }
   
-  if (verbose) message("playbase::rank_uniprots] Completed.\n")
+  if (verbose) message("playbase::reorder_uniprots] Completed.\n")
 
   return(list(feature=ff, lengths=ll))
   
