@@ -3707,7 +3707,7 @@ mofa.normalizeExpression <- function(X, method1 = "maxMedian", method2 = "none")
 ##----------------------------------------------------------------------
 ##----------------------------------------------------------------------
 
-mofa.getTopFactors <- function(mofa, minrho=0.2) {
+mofa.getTopFactors <- function(mofa, psig=0.05, minrho=0.1) {
   Z <- mofa$Z
   Z[ abs(Z) < minrho ] <- 0
   Z <- Z[rowMeans(Z==0) < 1,,drop=FALSE]
@@ -3716,6 +3716,24 @@ mofa.getTopFactors <- function(mofa, minrho=0.2) {
   idx2 <- ifelse( apply(Z,1,max)>0,idx2,0)
   idx <- setdiff(unique(c(idx1,idx2)),0)
   colnames(mofa$Z)[idx]
+
+  ## compute module-trait correlation and p-value
+  ydim <- colSums(!is.na(mofa$Y))
+  R <- t(mofa$Z)
+  P <- sapply(1:ncol(R), function(j) cor.pvalue(R[,j],ydim[j]))
+  colnames(P) <- colnames(R)
+
+  ## As top modules, we take all modules that are significantly
+  ## correlated with at least one phenotype
+  adj.psig <- psig / length(R)
+  idx1 <- which(rowSums(P <= adj.psig) > 0)
+  rmax <- topratio * pmax(apply(R,2,max,na.rm=TRUE),0)
+  rmax <- pmax(rmax, minrho)
+  idx2 <- which(colSums(t(R) >= rmax)>0)
+  idx <- setdiff(unique(c(idx1,idx2)),0)
+  top.modules <- rownames(R)[idx]    
+  
+  top.modules
 }
 
 mofa.getTopGenesAndSets <- function(mofa, annot=NULL, factors=NULL, ntop=40,

@@ -5856,11 +5856,14 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
 }
 
 #' @export
-wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
-                                minrho=0.2, multi=NULL) {
-  
+wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=NULL, rm.grey=TRUE,
+                                psig=0.05, minrho=0.1, multi=NULL) {
+
+  if(!is.null(kx)) dbg("[wgcna.getTopModules] WARNING: kx parameter is deprecated")
+
   if(is.null(topratio)) topratio <- 0.85
   if(is.null(multi) && !is.null(wgcna$layers)) multi <- TRUE
+  if(is.null(multi)) multi <- FALSE
   if(!multi) {    
     ww <- list(gx = wgcna)  ## single-omics wgcna object
   } else if(!is.null(wgcna$layers)) {
@@ -5869,28 +5872,33 @@ wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
     ww <- wgcna
   }
 
-  ## compute module-trait
-  M <- list()
+  ## compute module-trait correlation and p-value
+  R <- list()
+  P <- list()
   i=1
   for(i in 1:length(ww)) {    
     me <- ww[[i]]$net$MEs
     dt <- ww[[i]]$datTraits    
-    M[[i]] <- cor(me, dt, use="pairwise")
+    R1 <- cor(me, dt, use="pairwise")
+    ndim <- colSums(!is.na(dt))
+    P1 <- sapply(1:ncol(dt), function(j) cor.pvalue(R1[,j],ndim[j]))
+    colnames(P1) <- colnames(dt)
+    R[[i]] <- R1
+    P[[i]] <- P1
   } 
-  
+
+  ## As top modules, we take all modules that are significantly
+  ## correlated with at least one phenotype
   top.modules <- c()
   i=1
-  for(i in 1:length(M)) {
-    #mx <- rowMeans(abs(M[[i]]**kx),na.rm=TRUE)**(1/kx)
-    #tt <- names(which( mx > topratio * max(mx)))
-    Z <- t(M[[i]])
-    Z[ abs(Z) < minrho ] <- 0
-    Z <- Z[rowMeans(Z==0) < 1,,drop=FALSE]
-    idx1 <- max.col(abs(Z))
-    idx2 <- max.col(Z)
-    idx2 <- ifelse( apply(Z,1,max)>0,idx2,0)
+  for(i in 1:length(R)) {
+    adj.psig <- psig / length(R[[i]])
+    idx1 <- which(rowSums(P[[i]] <= adj.psig) > 0)
+    rmax <- topratio * pmax(apply(R[[i]],2,max,na.rm=TRUE),0)
+    rmax <- pmax(rmax, minrho)
+    idx2 <- which(colSums(t(R[[i]]) >= rmax)>0)
     idx <- setdiff(unique(c(idx1,idx2)),0)
-    tt <- colnames(Z)[idx]    
+    tt <- rownames(R[[i]])[idx]    
     top.modules <- c(top.modules, tt) 
   }
 
@@ -5934,7 +5942,7 @@ wgcna.create_report <- function(wgcna, ai_model,
   }
 
   ## get top modules (most correlated with some phenotype)
-  top.modules <- wgcna.getTopModules(layers, topratio=topratio, kx=4,
+  top.modules <- wgcna.getTopModules(layers, topratio=topratio, 
     multi=TRUE) ## always multi format
   top.modules
   
