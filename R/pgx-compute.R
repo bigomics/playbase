@@ -422,7 +422,7 @@ pgx.createPGX <- function(counts,
   pgx$probe_type <- probe_type
   
   message("[createPGX] annotating genes")
-  pgx$genes <- playbase::getProbeAnnotation(
+  pgx$genes <- getProbeAnnotation(
     organism = pgx$organism,
     probes = rownames(pgx$counts),
     datatype = pgx$datatype,
