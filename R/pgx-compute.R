@@ -391,10 +391,9 @@ pgx.createPGX <- function(counts,
     }
     rownames(X) <- rownames(counts)
   }
-
-  rownames(pgx$counts) <- rownames(pgx$X) <- make_unique(rownames(pgx$X))  
+  rownames(counts) <- rownames(X) <- make_unique(rownames(X))
   if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
-  
+
   pgx <- list(
     name = name,
     organism = organism,
