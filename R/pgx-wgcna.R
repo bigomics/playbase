@@ -5892,8 +5892,7 @@ wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=NULL, rm.grey=TRUE,
   top.modules <- c()
   i=1
   for(i in 1:length(R)) {
-    adj.psig <- psig / length(R[[i]])
-    idx1 <- which(rowSums(P[[i]] <= adj.psig) > 0)
+    idx1 <- which(rowSums(P[[i]] <= psig) > 0)
     rmax <- topratio * pmax(apply(R[[i]],2,max,na.rm=TRUE),0)
     rmax <- pmax(rmax, minrho)
     idx2 <- which(colSums(t(R[[i]]) >= rmax)>0)
