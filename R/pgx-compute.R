@@ -391,7 +391,6 @@ pgx.createPGX <- function(counts,
     }
     rownames(X) <- rownames(counts)
   }
-  rownames(counts) <- rownames(X) <- make_unique(rownames(X))
   if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
 
   pgx <- list(
