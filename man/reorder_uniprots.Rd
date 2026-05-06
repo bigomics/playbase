@@ -6,8 +6,7 @@
 Rules:
 If there are Swiss-Prot entries, Swiss-Prot entries come first, followed by TrEMBL entries.
 Among Swiss-Prot entries, if there are canonical entries, canonical entries come first (eg P05067),
-followed by isoforms (P05067-2). In absence of canonical entries, convert isoforms to canonical
-(eg P05067-2 to P05067).
+followed by isoforms (P05067-2). Isoform names are kept as-is (if present).
 Among Swiss-Prot entries (after step 2), longer proteins come first.
 Among TrEMBL entires, longer proteins come first.}
 \usage{
@@ -23,8 +22,7 @@ Re-order uniprot IDs (when a feature has multiple uniprot ids)
 Rules:
 If there are Swiss-Prot entries, Swiss-Prot entries come first, followed by TrEMBL entries.
 Among Swiss-Prot entries, if there are canonical entries, canonical entries come first (eg P05067),
-followed by isoforms (P05067-2). In absence of canonical entries, convert isoforms to canonical
-(eg P05067-2 to P05067).
+followed by isoforms (P05067-2). Isoform names are kept as-is (if present).
 Among Swiss-Prot entries (after step 2), longer proteins come first.
 Among TrEMBL entires, longer proteins come first.
 }
