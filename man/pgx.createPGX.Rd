@@ -28,6 +28,9 @@ pgx.createPGX(
   batch.correct.method = "no_batch_correct",
   batch.pars = "<autodetect>",
   covariates = NULL,
+  dma = NULL,
+  remove.xy.probes = FALSE,
+  meth_type = NULL,
   auto.scale = TRUE,
   filter.genes = TRUE,
   exclude.genes = NULL,
@@ -69,6 +72,12 @@ for the gene annotation table and the probe to symbol conversion.}
 \item{batch.pars}{BC variable. Default "autodetect" as per QC/BC tab in upload.}
 
 \item{covariates}{variables to regress out. Valid only for linear model-based tests.}
+
+\item{dma}{Differential methylation analysis. If datatype=="methylomics", can be DMP (default) vs. DMR. Else NULL.}
+
+\item{remove.xy.probes}{Logical. Only activated when datatype=="methylomics". Remove X- and Y-linked CpG probes.}
+
+\item{meth_type}{Type of array: 450K array or EPIC array}
 
 \item{auto.scale}{Logical indicating whether to automatically scale/center genes. Default is TRUE.}
 

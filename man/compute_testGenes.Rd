@@ -2,7 +2,9 @@
 % Please edit documentation in R/compute2-genes.R
 \name{compute_testGenes}
 \alias{compute_testGenes}
-\title{Compute Test Genes}
+\title{Compute Test Genes
+This function computes gene tests based on the input data and contrast matrix.
+It performs different test methods depending on whether the data is single-omics or multi-omics.}
 \usage{
 compute_testGenes(
   pgx,
@@ -32,6 +34,7 @@ compute_testGenes(
 An updated object with gene test results.
 }
 \description{
+Compute Test Genes
 This function computes gene tests based on the input data and contrast matrix.
 It performs different test methods depending on whether the data is single-omics or multi-omics.
 }
