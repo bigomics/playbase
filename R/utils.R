@@ -294,8 +294,7 @@ sum_treps <- function(counts, trep_var = "") {
 #' Rules:
 #' If there are Swiss-Prot entries, Swiss-Prot entries come first, followed by TrEMBL entries.
 #' Among Swiss-Prot entries, if there are canonical entries, canonical entries come first (eg P05067),
-#' followed by isoforms (P05067-2). In absence of canonical entries, convert isoforms to canonical
-#' (eg P05067-2 to P05067).
+#' followed by isoforms (P05067-2). Isoform names are kept as-is (if present).
 #' Among Swiss-Prot entries (after step 2), longer proteins come first.
 #' Among TrEMBL entires, longer proteins come first.
 #' @param feature feature ids, collapsed with ";".
@@ -309,15 +308,8 @@ reorder_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
   if (all(as.character(feature) %in% c("", "NA", NA))) {
     return(list(feature=feature, lengths=lengths))
   }
-  
-  if (length(ff) <= 1) {
-    sp <- grep("^[OPQ][0-9]", ff)
-    if (length(sp) > 0) {
-      hh <- grep("[-_][0-9]+$", ff)
-      if (length(hh) > 0) ff <- sub("[-_][0-9]+$", "", ff)
-    }
-    return(list(feature=ff, lengths=lengths))
-  }
+
+  if (length(ff) <= 1) { return(list(feature=ff, lengths=lengths)) }
 
   ll <- NULL
   if (!is.null(lengths)) {
@@ -346,32 +338,19 @@ reorder_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
   sp <- grep("^[OPQ][0-9]", ff)
   if (length(sp) > 0) {
     ## Swiss-Prot canonical entries come first (P05067), followed by isoforms (eg., P05067-2).
-    ## In absence of canonical entries, convert isoforms to canonical (eg., P05067-2 to P05067).
+    ## Isoform names are kept as-is.
     ff.sp <- ff[sp]
     hh <- grep("[-_][0-9]+$", ff.sp)
-    if (length(hh) > 0) {      
-      if (length(hh) == length(ff.sp)) {
-        ff.sp[hh] <- sub("[-_][0-9]+$", "", ff.sp[hh])
-        if (!is.null(ll)) {
-          names(ll)[sp][hh] <- ff.sp[hh]
-          names(lengths)[sp][hh] <- ff.sp[hh]
-        }
-      } else  {
-        canon <- sub("[-_][0-9]+$", "", ff.sp[hh])
-        if (length(which(ff.sp %in% canon)) == 0) {
-          ff.sp[hh] <- canon
-          if (!is.null(ll)) {
-            names(ll)[sp][hh] <- ff.sp[hh]
-            names(lengths)[sp][hh] <- ff.sp[hh]
-          }
-        } else {
-          ff.sp <- c(ff.sp[-hh], ff.sp[hh])
-          if (!is.null(ll)) {
-            if (!isTRUE(all.equal(ff.sp, names(ll)))) {
-              ll <- ll[match(ff.sp, names(ll))]
-              lengths <- lengths[match(ff.sp, names(lengths))]
-            }
-          }
+    if (length(hh) > 0 && length(hh) < length(ff.sp)) {
+      ## Mix of canonical and isoforms: put entries with no suffix first.
+      ff.sp <- c(ff.sp[-hh], ff.sp[hh])
+      if (!is.null(ll)) {
+        ## Reorder ll to match new ff.sp order while preserving TrEMBL entries.
+        sp_rest <- setdiff(names(ll), ff.sp)
+        new_order <- c(ff.sp, sp_rest)
+        if (!isTRUE(all.equal(new_order, names(ll)))) {
+          ll <- ll[match(new_order, names(ll))]
+          lengths <- lengths[match(new_order, names(lengths))]
         }
       }
     }
