@@ -37,7 +37,7 @@ jobs:
       - name: Install dependencies
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck
+          extra-packages: any::rcmdcheck, github::YuLab-SMU/ggtree
       - name: Check
         run: rcmdcheck::rcmdcheck(args = c("--no-manual", "--no-tests"), error_on = "error")
         shell: Rscript {0}
