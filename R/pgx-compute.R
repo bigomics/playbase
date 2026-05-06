@@ -208,7 +208,7 @@ pgx.createPGX <- function(counts,
   message("[pgx.createPGX] dim.counts: ", dim(counts)[1], " x ", dim(counts)[2])
   message("[pgx.createPGX] class.counts: ", class(counts))
   message("[pgx.createPGX] counts has ", sum(is.na(counts)), " missing values")
-  
+
   ndup <- sum(duplicated(rownames(counts)))
   if (ndup > 0) {
     if (average.duplicated) {
@@ -706,7 +706,7 @@ pgx.computePGX <- function(pgx,
   ## select valid contrasts
   sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
   contr.matrix <- contr.matrix[, sel, drop = FALSE]
- 
+
   ## -------------------------------------------------------------------
   ## Clustering
   ## -------------------------------------------------------------------
@@ -792,7 +792,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
 
   timeseries <- any(grepl("^IA:*", colnames(pgx$contrasts)))
-  
+
   message("[pgx.computePGX] testing genes...")
   pgx <- compute_testGenes(
     pgx,

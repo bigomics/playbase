@@ -5,9 +5,9 @@
 
 #' @export
 is.multiomics <- function(pgx) {
-  t1=t2=TRUE
-  if(!is.null(pgx$datatype)) t1 <- (pgx$datatype %in% c("multiomics","multi-omics"))
-  t2 <- all(grepl("[:]",rownames(pgx$X)))
+  t1 <- t2 <- TRUE
+  if (!is.null(pgx$datatype)) t1 <- (pgx$datatype %in% c("multiomics", "multi-omics"))
+  t2 <- all(grepl("[:]", rownames(pgx$X)))
   t1 || t2
 }
 
@@ -1518,7 +1518,7 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   ## add rownames and extra columns
   annot_table$rownames <- rownames(annot_table)
   annot_table$rownames2 <- sub("^[A-Za-z]+:", "", rownames(annot_table)) ## strip prefix
-  
+
   if (is.matrix(counts) || inherits(counts, "Matrix") ||
     is.data.frame(counts) || !is.null(dim(counts))) {
     type <- "matrix"
@@ -1529,41 +1529,43 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   }
 
   ## handle old style annot without symbol column
-  if(new_id=="symbol" && !"symbol" %in% colnames(annot_table) &&
-    "gene_name" %in% colnames(annot_table)) new_id <- "gene_name"
+  if (new_id == "symbol" && !"symbol" %in% colnames(annot_table) &&
+    "gene_name" %in% colnames(annot_table)) {
+    new_id <- "gene_name"
+  }
 
   ## strip prefix ??
   probes0 <- probes
-  probes <- mofa.strip_prefix(probes0)  
+  probes <- mofa.strip_prefix(probes0)
 
   ## iterative matching of probes.
-  idx <- rep(NA, length(probes))  
+  idx <- rep(NA, length(probes))
   names(idx) <- probes0
   probe_match <- apply(annot_table, 2, function(x) sum(probes %in% x))
-  match.cols <- names(sort(probe_match,decreasing=TRUE))
+  match.cols <- names(sort(probe_match, decreasing = TRUE))
   pp <- probes
-  for (k in match.cols) {  
-    ##from_id <- names(which.max(probe_match))
+  for (k in match.cols) {
+    ## from_id <- names(which.max(probe_match))
     from <- annot_table[, k]
     ii <- match(pp, from)
-    if(any(!is.na(ii))) {
+    if (any(!is.na(ii))) {
       kk <- which(!is.na(ii))
-      idx[match(pp[kk],probes)] <- ii[kk]
+      idx[match(pp[kk], probes)] <- ii[kk]
     }
     pp <- probes[is.na(idx)]
-    if(length(pp)==0) break
+    if (length(pp) == 0) break
   }
 
   ## bail out if no match at all
-  if(all(is.na(idx))) {
+  if (all(is.na(idx))) {
     return(counts)
   }
-    
+
   ## make sure matrix
-  if( type == "vector") {
+  if (type == "vector") {
     counts <- cbind(counts)
   }
-  
+
   ## create matched counts/data table
   keep.prefix <- (keep.prefix && all(grepl(":", probes0)))
   if (keep.prefix) {
@@ -2644,5 +2646,3 @@ match.dataframe <- function(id, df, parallel = TRUE) {
 ## ==========================================================================
 ## ==================== END OF FILE =========================================
 ## ==========================================================================
-
-

@@ -251,7 +251,7 @@ compute_CV <- function(counts) {
   return(cv)
 }
 
-#' Sum up tech replicates of a linear count matrix 
+#' Sum up tech replicates of a linear count matrix
 #' This function combines (sums up) features of technical replicates
 #' It does so in the linear space.
 #' @param counts Numeric matrix
@@ -259,7 +259,6 @@ compute_CV <- function(counts) {
 #' @return counts matrix with technical replicates combined
 #' @export
 sum_treps <- function(counts, trep_var = "") {
-
   if (is.null(trep_var)) {
     return(counts)
   } else if (length(trep_var) != ncol(counts)) {
@@ -273,7 +272,7 @@ sum_treps <- function(counts, trep_var = "") {
     trep_var <- as.character(trep_var)
     names(trep_var) <- colnames(counts)
     treps <- unique(trep_var)
-    for(i in 1:length(treps)) {
+    for (i in 1:length(treps)) {
       jj <- which(trep_var == treps[i])
       if (length(jj) <= 1) next
       kk <- names(jj)
@@ -281,13 +280,12 @@ sum_treps <- function(counts, trep_var = "") {
       mat <- rowSums(counts1, na.rm = TRUE)
       mat[rowSums(is.na(counts1)) == length(kk)] <- NA
       counts[, kk[1]] <- mat
-      jx  <- match(kk, colnames(counts))
+      jx <- match(kk, colnames(counts))
       counts <- counts[, -jx[-1], drop = FALSE]
     }
   }
-  
+
   return(counts)
-  
 }
 
 

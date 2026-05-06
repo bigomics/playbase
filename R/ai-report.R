@@ -1,38 +1,41 @@
-##---------------------------------------------------------------------
-##------------------------ REPORT CREATION ----------------------------
-##---------------------------------------------------------------------
+## ---------------------------------------------------------------------
+## ------------------------ REPORT CREATION ----------------------------
+## ---------------------------------------------------------------------
 
 #' @export
 ai.create_report <- function(pgx, ...) {
   message("DEPRECATED: ai.create_report()")
-  rpt.create_full_report(pgx, ...) 
+  rpt.create_full_report(pgx, ...)
 }
 
 #'
 #'
 #' @export
-rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
-                                   sections=NULL, collate=FALSE) {
-
-  if(0) {
-    ntop=20;sections=NULL;collate=FALSE
+rpt.create_full_report <- function(pgx, ntop = 20, llm = NULL,
+                                   sections = NULL, collate = FALSE) {
+  if (0) {
+    ntop <- 20
+    sections <- NULL
+    collate <- FALSE
   }
-  
+
   contrasts <- pgx.getContrasts(pgx)
   samples <- rownames(pgx$samples)
-  ct <- contrasts[1]  ## FOR NOW!!!!
+  ct <- contrasts[1] ## FOR NOW!!!!
 
-  all.sections <- c("description", "dataset_info","compute_settings",
+  all.sections <- c(
+    "description", "dataset_info", "compute_settings",
     "differential_expression", "geneset_enrichment",
-    "drug_similarity","hub_genes","wgcna_report")
-  if(is.null(sections)) {
+    "drug_similarity", "hub_genes", "wgcna_report"
+  )
+  if (is.null(sections)) {
     sections <- all.sections
   } else {
     sections <- intersect(all.sections, sections)
   }
 
   description <- NULL
-  if("description" %in% sections) {
+  if ("description" %in% sections) {
     description <- list(
       name = pgx$name,
       title = pgx$description,
@@ -41,7 +44,7 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
   }
 
   dataset_info <- NULL
-  if("dataset_info" %in% sections) {
+  if ("dataset_info" %in% sections) {
     dataset_info <- list(
       name = pgx$name,
       organism = pgx$organism,
@@ -58,50 +61,52 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
   }
 
   compute_settings <- NULL
-  if("compute_settings" %in% sections) {
+  if ("compute_settings" %in% sections) {
     compute_settings <- list(
       gene_tests = colnames(pgx$gx.meta$meta[[1]]$p),
       geneset_tests = colnames(pgx$gset.meta$meta[[1]]$p),
       pgx_slots = sort(names(pgx))
     )
   }
-  
-  ##-------------------------------------------------------------------
+
+  ## -------------------------------------------------------------------
   differential_expression <- NULL
-  if("differential_expression" %in% sections) {
+  if ("differential_expression" %in% sections) {
     F <- pgx.getMetaMatrix(pgx)$fc
     F <- rename_by2(F, pgx$genes, "symbol")
-    ii <- match(rownames(F),pgx$genes$symbol)
-    rownames(F) <- paste0(pgx$genes$gene_title[ii]," (",rownames(F),")")
-    F.up <- head( F[order(-rowMeans(F)),,drop=FALSE], 2*ntop )
-    F.dn <- head( F[order(rowMeans(F)),,drop=FALSE], 2*ntop )
-    
+    ii <- match(rownames(F), pgx$genes$symbol)
+    rownames(F) <- paste0(pgx$genes$gene_title[ii], " (", rownames(F), ")")
+    F.up <- head(F[order(-rowMeans(F)), , drop = FALSE], 2 * ntop)
+    F.dn <- head(F[order(rowMeans(F)), , drop = FALSE], 2 * ntop)
+
     differential_expression <- list(
       "Up-regulated genes (top hits). The top most most positively differentially expressed genes are:" = F.up,
       "Down-regulated genes (top hits). The top most negatively differentially expressed genes are:" = F.dn
     )
-    differential_expression <- lapply(differential_expression, round, digits=3)
-    differential_expression <- lapply(differential_expression, table_to_content)    
+    differential_expression <- lapply(differential_expression, round, digits = 3)
+    differential_expression <- lapply(differential_expression, table_to_content)
   }
-  
-  ##-------------------------------------------------------------------
+
+  ## -------------------------------------------------------------------
   geneset_enrichment <- NULL
-  if("geneset_enrichment" %in% sections) {
+  if ("geneset_enrichment" %in% sections) {
     G <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
-    G <- G[order(-rowMeans(G)),,drop=FALSE]  ## NEED RETHINK: rowmeans is not good...
-    revtail <- function(A,n) {
-      if(nrow(A)==0) return(A[0,,drop=FALSE])
-      head(A[nrow(A):1,,drop=FALSE],n)
+    G <- G[order(-rowMeans(G)), , drop = FALSE] ## NEED RETHINK: rowmeans is not good...
+    revtail <- function(A, n) {
+      if (nrow(A) == 0) {
+        return(A[0, , drop = FALSE])
+      }
+      head(A[nrow(A):1, , drop = FALSE], n)
     }
-    BP.up <- head( G[grep("GOBP|GO_BP",rownames(G)),,drop=FALSE], ntop)
-    BP.dn <- revtail( G[grep("GOBP|GO_BP",rownames(G)),,drop=FALSE], ntop)
-    MF.up <- head( G[grep("GOMF|GO_MF",rownames(G)),,drop=FALSE], ntop)
-    MF.dn <- revtail( G[grep("GOMF|GO_MF",rownames(G)),,drop=FALSE], ntop)
-    CC.up <- head( G[grep("GOCC|GO_CC",rownames(G)),,drop=FALSE], ntop)
-    CC.dn <- revtail( G[grep("GOCC|GO_CC",rownames(G)),,drop=FALSE], ntop)
-    PW.up <- head( G[grep("PATHWAY",rownames(G)),,drop=FALSE], ntop)
-    PW.dn <- revtail( G[grep("PATHWAY",rownames(G)),,drop=FALSE], ntop)
-    
+    BP.up <- head(G[grep("GOBP|GO_BP", rownames(G)), , drop = FALSE], ntop)
+    BP.dn <- revtail(G[grep("GOBP|GO_BP", rownames(G)), , drop = FALSE], ntop)
+    MF.up <- head(G[grep("GOMF|GO_MF", rownames(G)), , drop = FALSE], ntop)
+    MF.dn <- revtail(G[grep("GOMF|GO_MF", rownames(G)), , drop = FALSE], ntop)
+    CC.up <- head(G[grep("GOCC|GO_CC", rownames(G)), , drop = FALSE], ntop)
+    CC.dn <- revtail(G[grep("GOCC|GO_CC", rownames(G)), , drop = FALSE], ntop)
+    PW.up <- head(G[grep("PATHWAY", rownames(G)), , drop = FALSE], ntop)
+    PW.dn <- revtail(G[grep("PATHWAY", rownames(G)), , drop = FALSE], ntop)
+
     geneset_enrichment <- list(
       "Top most positively enriched GO biological process (BP) gene sets:" = BP.up,
       "Top most negatively enriched GO biological process (BP) gene sets:" = BP.dn,
@@ -112,52 +117,50 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
       "Top most positively enriched pathways:" = PW.up,
       "Top most negatively enriched pathways:" = PW.dn
     )
-    geneset_enrichment <- lapply(geneset_enrichment, round, digits=3)
+    geneset_enrichment <- lapply(geneset_enrichment, round, digits = 3)
     geneset_enrichment <- lapply(geneset_enrichment, table_to_content)
   }
 
-  ##-------------------------------------------------------------------
+  ## -------------------------------------------------------------------
   drug_similarity <- NULL
-  if("drug_similarity" %in% sections && !is.null(pgx$drugs)) {
+  if ("drug_similarity" %in% sections && !is.null(pgx$drugs)) {
     ## NEED RETHINK: Only reports first contrast at the moment
-    D <- pgx.getTopDrugs(pgx, ct, n=ntop, na.rm=TRUE)    
+    D <- pgx.getTopDrugs(pgx, ct, n = ntop, na.rm = TRUE)
     drug_similarity <- list(
       "Drug Mechanism of Action. Drug Connectivity Map (CMap) analysis of selected comparison. Similarity of the mechanism of action (MOA) is based on correlation enrichment with drug perturbation profiles of LINCS L1000 database. The top most similar (i.e. positively correlated) drugs are:\n\n" =
-        pgx.getTopDrugs(pgx, ct, n=ntop, dir=+1, na.rm=TRUE), 
-      "The top most inhibitory (i.e. negative correlated) drugs are:\n\n" = 
-        pgx.getTopDrugs(pgx, ct, n=ntop, dir=-1, na.rm=TRUE)
+        pgx.getTopDrugs(pgx, ct, n = ntop, dir = +1, na.rm = TRUE),
+      "The top most inhibitory (i.e. negative correlated) drugs are:\n\n" =
+        pgx.getTopDrugs(pgx, ct, n = ntop, dir = -1, na.rm = TRUE)
     )
-    #drug_similarity <- lapply(drug_similarity, round, digits=3)    
-    drug_similarity <- lapply(drug_similarity, table_to_content)    
+    # drug_similarity <- lapply(drug_similarity, round, digits=3)
+    drug_similarity <- lapply(drug_similarity, table_to_content)
   }
-  
-  ##-------------------------------------------------------------------
-  pcsf_report <- NULL
-  if(FALSE && "pcsf_report" %in% sections) {
-    pcsf_report <- list("Identification of hub genes. Hub genes can identify important regulators. The hub score is computed using a page rank network centrality score. The most central genes are:" = table_to_content(pgx.getPCSFcentrality(pgx, ct, plot = FALSE, n = ntop))
-    )
-  }
-  
-  ##-------------------------------------------------------------------
-  wgcna_report <- NULL
-  if("wgcna_report" %in% sections && !is.null(pgx$wgcna)) {
 
+  ## -------------------------------------------------------------------
+  pcsf_report <- NULL
+  if (FALSE && "pcsf_report" %in% sections) {
+    pcsf_report <- list("Identification of hub genes. Hub genes can identify important regulators. The hub score is computed using a page rank network centrality score. The most central genes are:" = table_to_content(pgx.getPCSFcentrality(pgx, ct, plot = FALSE, n = ntop)))
+  }
+
+  ## -------------------------------------------------------------------
+  wgcna_report <- NULL
+  if ("wgcna_report" %in% sections && !is.null(pgx$wgcna)) {
     out <- wgcna.describeModules(
       pgx$wgcna,
       modules = NULL,
-      multi = FALSE, 
+      multi = FALSE,
       ntop = 40,
-      annot = pgx$genes, 
+      annot = pgx$genes,
       experiment = pgx$description,
       verbose = FALSE,
       model = NULL
-    ) 
+    )
 
     names(out)
-    wgcna_report <- list_to_content(out$answers, newline=TRUE)
+    wgcna_report <- list_to_content(out$answers, newline = TRUE)
   }
-    
-  ##-----------------------------------------------------------
+
+  ## -----------------------------------------------------------
   report <- list(
     DATASET_INFO = list_to_content(dataset_info)
   )
@@ -166,20 +169,22 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
     description = list_to_content(description),
     dataset_info = list_to_content(dataset_info),
     compute_settings = list_to_content(compute_settings),
-    differential_expression = list_to_content(differential_expression, newline=TRUE),
-    geneset_enrichment = list_to_content(geneset_enrichment, newline=TRUE),
-    drug_similarity = list_to_content(drug_similarity, newline=TRUE),
+    differential_expression = list_to_content(differential_expression, newline = TRUE),
+    geneset_enrichment = list_to_content(geneset_enrichment, newline = TRUE),
+    drug_similarity = list_to_content(drug_similarity, newline = TRUE),
     pcsf_report = list_to_content(pcsf_report),
     wgcna_report = wgcna_report
   )
 
   ## clean-up
-  #content <- lapply(content, function(s) gsub("[-=_]+{4}","",s))
-  content <- lapply(content, function(s) gsub("[=]+{3}","",s))
-  
-  if(collate) {
+  # content <- lapply(content, function(s) gsub("[-=_]+{4}","",s))
+  content <- lapply(content, function(s) gsub("[=]+{3}", "", s))
+
+  if (collate) {
     content <- collate_as_sections(
-      content, csep='\\newpage')
+      content,
+      csep = "\\newpage"
+    )
   }
 
   return(content)
@@ -189,77 +194,79 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
 #' Format and render contents as section.
 #'
 #' @export
-rpt.compile_sections <- function(contents, hlevel=2, shift=TRUE) {
-  
+rpt.compile_sections <- function(contents, hlevel = 2, shift = TRUE) {
   div.description <- contents$description
   div.bullets <- contents$bullets
 
   ## render report with slight grey background
   div.report <- contents$report
-  div.report <- gsub("\n---","\n",div.report)  ## remove hline
+  div.report <- gsub("\n---", "\n", div.report) ## remove hline
   div.report <- paste("\n::: {style='background-color: #eee;'}",
-    div.report, ":::\n",sep="\n\n")
-  
+    div.report, ":::\n",
+    sep = "\n\n"
+  )
+
   div.methods <- contents$methods
   div.settings <- list_to_list(contents$settings)
 
   div.references <- contents$references
   div.references <- list_to_list(
     as.list(div.references),
-    type = 'ol',
+    type = "ol",
     add.name = FALSE
   )
 
   div.figures <- as.list(contents$figures)
-  div.figures <- md.list_to_figs(div.figures)  
+  div.figures <- md.list_to_figs(div.figures)
 
   div.tables <- list()
-  for(i in 1:length(contents$tables)) {
+  for (i in 1:length(contents$tables)) {
     tbl <- table_to_content(
       contents$tables[[i]]
-      #caption = names(contents$tables)[i]
+      # caption = names(contents$tables)[i]
     )
     tbl <- paste("\n::: {style='font-size: 8pt;'}",
-      tbl, ":::\n",sep="\n\n")    
+      tbl, ":::\n",
+      sep = "\n\n"
+    )
     div.tables[[i]] <- tbl
   }
   names(div.tables) <- names(contents$tables)
-  div.tables <- list_to_content(div.tables, newline=TRUE) 
-  
+  div.tables <- list_to_content(div.tables, newline = TRUE)
+
   divs <- list(
     "Description" = div.description,
     "Highlights" = div.bullets,
     "AI Report" = div.report,
-    "Methods" = div.methods,  
+    "Methods" = div.methods,
     "Settings" = div.settings,
-    "References" = div.references,    
+    "References" = div.references,
     "Figures" = div.figures,
     "Tables" = div.tables
   )
   names(divs) <- toupper(names(divs))
-  names(divs) <- paste0("[",names(divs),"]{.underline}")  ## sometimes problemati
+  names(divs) <- paste0("[", names(divs), "]{.underline}") ## sometimes problemati
 
-  for(i in 1:length(divs)) {
+  for (i in 1:length(divs)) {
     divname <- names(divs)[i]
     divs[[i]] <- paste(divs[[i]], "\n\n---\n\n")
-    if(hlevel>1 && grepl("references|figures", divname, ignore.case=TRUE) ) {
-      #divs[[i]] <- paste0(divs[[i]], "\\newpage\n")
+    if (hlevel > 1 && grepl("references|figures", divname, ignore.case = TRUE)) {
+      # divs[[i]] <- paste0(divs[[i]], "\\newpage\n")
       divs[[i]] <- paste0(divs[[i]], "\n\n{{< pagebreak >}} &nbsp; \n\n")
     }
   }
 
-  collate_as_sections(divs, csep="", hlevel=hlevel, shift=shift)  
+  collate_as_sections(divs, csep = "", hlevel = hlevel, shift = shift)
 }
 
 
 #'
 #'
 #' @export
-rpt.compile_wgcna_report <- function(obj, report = NULL, 
-                                     hlevel=2, shift=TRUE,
-                                     title="WGCNA Analysis Report") {
-
-  if(all(c("wgcna","genes","counts") %in% names(obj))) {
+rpt.compile_wgcna_report <- function(obj, report = NULL,
+                                     hlevel = 2, shift = TRUE,
+                                     title = "WGCNA Analysis Report") {
+  if (all(c("wgcna", "genes", "counts") %in% names(obj))) {
     ## is pgx object
     wgcna <- obj$wgcna
   } else {
@@ -268,164 +275,175 @@ rpt.compile_wgcna_report <- function(obj, report = NULL,
   }
 
   rpt <- wgcna$report
-  if(!is.null(report))  rpt <- report
-  
+  if (!is.null(report)) rpt <- report
+
   has.report <- "report" %in% names(wgcna)
-  has.infographic <- has.report && "infographic" %in% names(wgcna$report)    
+  has.infographic <- has.report && "infographic" %in% names(wgcna$report)
   has.report
   has.infographic
-  
-  if(!has.report) {
+
+  if (!has.report) {
     message("Error: missing report results. Please run wgcna.init()")
     return(NULL)
   }
-  if(!has.infographic) {
+  if (!has.infographic) {
     message("Warning: missing infographic")
-    ##return(NULL)
+    ## return(NULL)
   }
-  
-  
-  ##------- description -------------
-  div.description <- 
+
+
+  ## ------- description -------------
+  div.description <-
     "**Weighted Gene Co-expression Network Analysis (WGCNA) is a systems biology method for finding clusters (modules) of highly correlated genes in high-dimensional data, such as RNA-seq or microarray samples. It identifies modules based on similar expression patterns, relates them to external sample traits, and finds key hub genes, enabling the transition from simple gene l
 ists to functional biological insights.**"
-  
+
   div.methods <-
     "WGCNA computation was done in Omics Playground (BigOmics Analytics, Switzerland) using the `WGCNAplus` R package. The optimal soft threshold β was determined by optimizing the IQR of the dendrogram heights. The adjacency matrix was transformed into a topological overlapping matrix (TOM) and used for hierarchical clustering of the features. Subsequently, the dynamic tree‐cutting algorithm was employed to identify gene modules, each comprising a minimum of genes. Similar modules were merged using a shear height threshold. Finally, modules were distinguished by different colours and represented by their module eigengene (ME). Module-trait relationship was determined based on the Pearson correlation between ME and clinical features. Gene significance (GS) values were computed as the product of the Module Membership (MM) (correlation between expression and module eigengene) and maximum Trait Significance (TS) (correlation between expression and clinical characteristics) values."
-  
+
   div.refs <- c(
     "Langfelder, P., Horvath, S. WGCNA: an R package for weighted correlation network analysis. BMC Bioinformatics 9, 559 (2008). https://doi.org/10.1186/1471-2105-9-559",
     "Langfelder P, Luo R, Oldham MC, Horvath S (2011) Is My Network Module Preserved and Reproducible? PLoS Comput Biol 7(1): e1001057. https://doi.org/10.1371/journal.pcbi.1001057",
-  "WGCNAplus R package: `https://github.com/bigomics/WGCNAplus`"
-)
+    "WGCNAplus R package: `https://github.com/bigomics/WGCNAplus`"
+  )
 
-  is.mox <- all(c("layers","lasagna") %in% names(wgcna))
+  is.mox <- all(c("layers", "lasagna") %in% names(wgcna))
   is.mox
 
   modTraits <- wgcna$modTraits
-  if(is.mox) {
+  if (is.mox) {
     mm <- lapply(wgcna$layers, function(w) w$modTraits)
     modTraits <- do.call(rbind, mm)
   }
   dim(modTraits)
-  
-  ##------- figures -------------
-  rx=2  ## resolution parameter
 
-  fig1 <- tempfile(fileext='.png')
-  if(is.mox) {
-    nr <- ceiling(length(wgcna$layers)/2)
-    png(fig1, w=800*rx, h=nr*300*rx, pointsize=14*rx)    
-    wgcna.plotMultiDendroAndColors(wgcna$layers, show.traits=1,
-      main="Cluster dendrogram and module colors")
+  ## ------- figures -------------
+  rx <- 2 ## resolution parameter
+
+  fig1 <- tempfile(fileext = ".png")
+  if (is.mox) {
+    nr <- ceiling(length(wgcna$layers) / 2)
+    png(fig1, w = 800 * rx, h = nr * 300 * rx, pointsize = 14 * rx)
+    wgcna.plotMultiDendroAndColors(wgcna$layers,
+      show.traits = 1,
+      main = "Cluster dendrogram and module colors"
+    )
     dev.off()
   } else {
-    png(fig1, w=800*rx, h=400*rx, pointsize=14*rx)
-    wgcna.plotDendroAndColors(wgcna, show.traits=1,
-      main="Cluster dendrogram and module colors")
-    dev.off()
-  }
-  
-  fig2 <- tempfile(fileext='.png')
-  tr <- (ncol(modTraits) < nrow(modTraits))
-  png(fig2, w=800*rx, h=500*rx, pointsize=14*rx)
-  if(is.mox) {
-    wgcna.plotModuleTraitHeatmap(
-      wgcna$layers, multi=TRUE, cluster=TRUE, text=FALSE,
-      transpose=tr, main="Module-trait correlation")
-  } else {
-    wgcna.plotModuleTraitHeatmap(
-      wgcna, multi=FALSE,
-      cluster=TRUE, text=FALSE,
-      transpose=tr, main="Module-trait correlation")
-  }
-  dev.off()
-
-  fig3 = NULL
-  fig3 <- tempfile(fileext='.png')
-  if(!is.null(rpt$infographic)) {
-    img <- rpt$infographic
-    if(class(img) == 'array' && length(dim(img))==3 ) {
-      png::writePNG(img, target=fig3)
-    } else if(is.character(rpt$infographic[1])) {
-      fig3 <- rpt$infographic
-      if(!file.exists(fig3)) fig3 <- NULL
-    }
-  } else {
-    png(fig3,w=800,h=450)
-    par(mar=c(0,0,0,0))
-    plot.new()
-    text(0.5,0.5,"missing infographic")
-    dev.off()
-  }
-
-  fig4 = NULL
-  if(!is.null(rpt$diagram)) {
-    fig4svg <- tempfile(fileext='.svg')
-    fig4 <- tempfile(fileext='.png')
-    dd <- DiagrammeR::grViz(rpt$diagram)
-    svg <- DiagrammeRsvg::export_svg(dd)
-    write(svg, file=fig4svg)
-    rsvg::rsvg_png(fig4svg, file=fig4, width=2400)
-  } else {
-    fig4 <- tempfile(fileext='.png')
-    png(fig4,w=800,h=450)
-    plot.new()
-    text(0.5,0.5,"missing diagram")
-    dev.off()
-  }
-
-  fig5 = NULL
-  if(FALSE && is.mox && !is.null(wgcna$graph)) {
-    fig5 <- tempfile(fileext='.png')
-    png(fig5, w=1200, h=700, pointsize=14)
-    plotMultiPartiteGraph2(
-      wgcna$graph, ntop=10, min.rho=0.1,
-      edge.cex=1.6, cex.label=1.4,
-      normalize.edges = TRUE,
-      edge.type = "inter",
-      value.name = ''
+    png(fig1, w = 800 * rx, h = 400 * rx, pointsize = 14 * rx)
+    wgcna.plotDendroAndColors(wgcna,
+      show.traits = 1,
+      main = "Cluster dendrogram and module colors"
     )
     dev.off()
   }
-  
+
+  fig2 <- tempfile(fileext = ".png")
+  tr <- (ncol(modTraits) < nrow(modTraits))
+  png(fig2, w = 800 * rx, h = 500 * rx, pointsize = 14 * rx)
+  if (is.mox) {
+    wgcna.plotModuleTraitHeatmap(
+      wgcna$layers,
+      multi = TRUE, cluster = TRUE, text = FALSE,
+      transpose = tr, main = "Module-trait correlation"
+    )
+  } else {
+    wgcna.plotModuleTraitHeatmap(
+      wgcna,
+      multi = FALSE,
+      cluster = TRUE, text = FALSE,
+      transpose = tr, main = "Module-trait correlation"
+    )
+  }
+  dev.off()
+
+  fig3 <- NULL
+  fig3 <- tempfile(fileext = ".png")
+  if (!is.null(rpt$infographic)) {
+    img <- rpt$infographic
+    if (class(img) == "array" && length(dim(img)) == 3) {
+      png::writePNG(img, target = fig3)
+    } else if (is.character(rpt$infographic[1])) {
+      fig3 <- rpt$infographic
+      if (!file.exists(fig3)) fig3 <- NULL
+    }
+  } else {
+    png(fig3, w = 800, h = 450)
+    par(mar = c(0, 0, 0, 0))
+    plot.new()
+    text(0.5, 0.5, "missing infographic")
+    dev.off()
+  }
+
+  fig4 <- NULL
+  if (!is.null(rpt$diagram)) {
+    fig4svg <- tempfile(fileext = ".svg")
+    fig4 <- tempfile(fileext = ".png")
+    dd <- DiagrammeR::grViz(rpt$diagram)
+    svg <- DiagrammeRsvg::export_svg(dd)
+    write(svg, file = fig4svg)
+    rsvg::rsvg_png(fig4svg, file = fig4, width = 2400)
+  } else {
+    fig4 <- tempfile(fileext = ".png")
+    png(fig4, w = 800, h = 450)
+    plot.new()
+    text(0.5, 0.5, "missing diagram")
+    dev.off()
+  }
+
+  fig5 <- NULL
+  if (FALSE && is.mox && !is.null(wgcna$graph)) {
+    fig5 <- tempfile(fileext = ".png")
+    png(fig5, w = 1200, h = 700, pointsize = 14)
+    plotMultiPartiteGraph2(
+      wgcna$graph,
+      ntop = 10, min.rho = 0.1,
+      edge.cex = 1.6, cex.label = 1.4,
+      normalize.edges = TRUE,
+      edge.type = "inter",
+      value.name = ""
+    )
+    dev.off()
+  }
+
   figs <- list(
-    "Multi-layer LASAGNA network." = fig5,    
-    "Module diagram (AI annotated)." = fig4,        
+    "Multi-layer LASAGNA network." = fig5,
+    "Module diagram (AI annotated)." = fig4,
     "Graphical abstract (AI generated)." = fig3,
-    "Dendrogram and module colors." = fig1,  
+    "Dendrogram and module colors." = fig1,
     "Module-trait correlation heatmap" = fig2
   )
-  figs <- figs[!sapply(figs,is.null)]
-  figs <- lapply(figs, function(f) paste0('/',f))
-  labels=NULL
-  
-  ##------- tables -------------
-  df1 <- data.frame(size = sapply(wgcna$me.genes,length))
-  df1 <- df1[order(-df1$size),,drop=FALSE]
-  df2 <- calculateCompoundSignificance(wgcna, collapse=TRUE,
-    sort.by="score1") 
-  
+  figs <- figs[!sapply(figs, is.null)]
+  figs <- lapply(figs, function(f) paste0("/", f))
+  labels <- NULL
+
+  ## ------- tables -------------
+  df1 <- data.frame(size = sapply(wgcna$me.genes, length))
+  df1 <- df1[order(-df1$size), , drop = FALSE]
+  df2 <- calculateCompoundSignificance(wgcna,
+    collapse = TRUE,
+    sort.by = "score1"
+  )
+
   div.tables <- list(
     "WGCNA module sizes" = df1,
-    "Feature scores" = head(df2,40)
+    "Feature scores" = head(df2, 40)
   )
-  
-  ##------- create sections -------------
+
+  ## ------- create sections -------------
   contents <- list(
     description = div.description,
     bullets = rpt$bullets,
     report = rpt$report,
-    methods = div.methods,  
+    methods = div.methods,
     settings = wgcna$settings,
     references = div.refs,
     figures = figs,
     tables = div.tables
   )
-  txt <- rpt.compile_sections(contents, hlevel=hlevel, shift=shift)
+  txt <- rpt.compile_sections(contents, hlevel = hlevel, shift = shift)
 
-  if(!is.null(title)) {
-    txt <- paste0("# ",title,"\n\n", txt)
+  if (!is.null(title)) {
+    txt <- paste0("# ", title, "\n\n", txt)
   }
   return(txt)
 }
@@ -433,45 +451,46 @@ ists to functional biological insights.**"
 #' Summarize drug connectivity results
 #'
 #' @export
-rpt.summarize_drug_connectivity <- function(pgx, ct, model, db=1, ntop=10) {
-  
-  if(is.numeric(db)) db <- names(pgx$drugs)[db]
+rpt.summarize_drug_connectivity <- function(pgx, ct, model, db = 1, ntop = 10) {
+  if (is.numeric(db)) db <- names(pgx$drugs)[db]
 
   toplist <- list(
     "Top most similar (i.e. positively correlated) drugs are" =
-      table_to_content(pgx.getTopDrugs(pgx, ct, n=ntop, dir=+1, db=db, na.rm=TRUE)), 
-    "Top most inhibitory (i.e. negative correlated) drugs are:" = 
-      table_to_content(pgx.getTopDrugs(pgx, ct, n=ntop, dir=-1, db=db, na.rm=TRUE)),
+      table_to_content(pgx.getTopDrugs(pgx, ct, n = ntop, dir = +1, db = db, na.rm = TRUE)),
+    "Top most inhibitory (i.e. negative correlated) drugs are:" =
+      table_to_content(pgx.getTopDrugs(pgx, ct, n = ntop, dir = -1, db = db, na.rm = TRUE)),
     "Top most positively enriched MOA classes are" =
-      table_to_content(pgx.getTopMOA(pgx, ct, n=ntop, dir=+1, db=db, level=1)), 
+      table_to_content(pgx.getTopMOA(pgx, ct, n = ntop, dir = +1, db = db, level = 1)),
     "Top most negatively (opposite) enriched MOA classes are" =
-      table_to_content(pgx.getTopMOA(pgx, ct, n=ntop, dir=-1, db=db, level=1)), 
+      table_to_content(pgx.getTopMOA(pgx, ct, n = ntop, dir = -1, db = db, level = 1)),
     "Top most positively enriched MOA drug target genes are" =
-      table_to_content(pgx.getTopMOA(pgx, ct, n=ntop, dir=+1, db=db, level=2)), 
+      table_to_content(pgx.getTopMOA(pgx, ct, n = ntop, dir = +1, db = db, level = 2)),
     "Top most negatively (opposite) enriched MOA drug target genes are" =
-      table_to_content(pgx.getTopMOA(pgx, ct, n=ntop, dir=-1, db=db, level=2)), 
+      table_to_content(pgx.getTopMOA(pgx, ct, n = ntop, dir = -1, db = db, level = 2)),
     "Top most positively enriched gene sets are" =
-      paste(pgx.getTopGS(pgx, ct, n=50, dir=+1), collapse=';'), 
+      paste(pgx.getTopGS(pgx, ct, n = 50, dir = +1), collapse = ";"),
     "Top most negatively enriched gene sets are" =
-      paste(pgx.getTopGS(pgx, ct, n=50, dir=-1), collapse=';') 
+      paste(pgx.getTopGS(pgx, ct, n = 50, dir = -1), collapse = ";")
   )
 
-  results=NULL
-  if(grepl("sensitivity",db)) {
-    results <- paste("Drug Synergy Analysis using Connectivity Map (CMap) analysis. Synergy of the mechanism of action (MOA) is based on correlation enrichment with computed drug sensitivity profiles of ",db," database. Positive correlation indicate possible synergy with the given drug. Negative correlation indicate possible antagonism with given drug. :\n\n",
-    list_to_content(toplist, newline=TRUE), sep=""
+  results <- NULL
+  if (grepl("sensitivity", db)) {
+    results <- paste("Drug Synergy Analysis using Connectivity Map (CMap) analysis. Synergy of the mechanism of action (MOA) is based on correlation enrichment with computed drug sensitivity profiles of ", db, " database. Positive correlation indicate possible synergy with the given drug. Negative correlation indicate possible antagonism with given drug. :\n\n",
+      list_to_content(toplist, newline = TRUE),
+      sep = ""
     )
   } else {
-    results <- paste("Drug Mechanism of Action. Drug Connectivity Map (CMap) analysis of selected comparison. Similarity of the mechanism of action (MOA) is based on correlation enrichment with drug perturbation profiles of ",db," database:\n\n",
-      list_to_content(toplist, newline=TRUE), sep=""
+    results <- paste("Drug Mechanism of Action. Drug Connectivity Map (CMap) analysis of selected comparison. Similarity of the mechanism of action (MOA) is based on correlation enrichment with drug perturbation profiles of ", db, " database:\n\n",
+      list_to_content(toplist, newline = TRUE),
+      sep = ""
     )
   }
-  
-  resp <- ai.ask( paste("Give a summary of the following results from a drug connectivity MOA analysis.
-Give an integrated interpretation and a pharmacological narrative. Validate inferred drug MOA with the given (measured) enriched up/down gene sets. Do not include tables, be concise, write in prose. \n\nAnalysis results: ",results), model = model)
 
-  resp2 <- ai.ask(paste("Give a short 3 bullet point summary of the following text. Focus on similarity with drugs. Use very short sentences, no titles. :",resp),  model = model)
-  
+  resp <- ai.ask(paste("Give a summary of the following results from a drug connectivity MOA analysis.
+Give an integrated interpretation and a pharmacological narrative. Validate inferred drug MOA with the given (measured) enriched up/down gene sets. Do not include tables, be concise, write in prose. \n\nAnalysis results: ", results), model = model)
+
+  resp2 <- ai.ask(paste("Give a short 3 bullet point summary of the following text. Focus on similarity with drugs. Use very short sentences, no titles. :", resp), model = model)
+
   out <- list(
     bullet = resp2,
     summary = resp
