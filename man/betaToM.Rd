@@ -4,7 +4,7 @@
 \alias{betaToM}
 \title{betaToM}
 \usage{
-betaToM(beta, offset = 1e-06)
+betaToM(beta, offset = 1e-06, verbose = FALSE)
 }
 \arguments{
 \item{X}{Matrix of Beta values. Probes in rows; samples in columns.}

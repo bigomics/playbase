@@ -10,7 +10,11 @@ plotMethylOverview(
   pheno = NULL,
   chromosomes = NULL,
   plot.beta.dist = TRUE,
-  plot.beta.boxplots = FALSE
+  plot.beta.boxplots = FALSE,
+  up_color = "#d73027",
+  down_color = "#4575b4",
+  box_color = "#aaaaaa",
+  group_colors = NULL
 )
 }
 \arguments{
@@ -25,6 +29,19 @@ plotMethylOverview(
 \item{plot.beta.dist}{Logical. Show genome-wide beta density panel. Default TRUE.}
 
 \item{plot.beta.boxplots}{Logical. Show per-chromosome beta boxplot panel. Default FALSE.}
+
+\item{up_color}{Colour for the high-methylation reference vline at beta = 0.8
+(density panel only). Default "#d73027".}
+
+\item{down_color}{Colour for the low-methylation reference vline at beta = 0.2
+(density panel only). Default "#4575b4".}
+
+\item{box_color}{Fill colour for the boxplot panel when no phenotype grouping is
+active. Default "#aaaaaa".}
+
+\item{group_colors}{Optional character vector of fill colours for the boxplot
+panel when \code{pheno} is grouped (>= 2 levels). Recycled to match the number
+of groups. When \code{NULL}, ggplot's default discrete palette is used.}
 }
 \value{
 A patchwork/ggplot object, printed to device.

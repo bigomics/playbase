@@ -4,7 +4,7 @@
 \alias{mToBeta}
 \title{mToBeta}
 \usage{
-mToBeta(m)
+mToBeta(m, verbose = FALSE)
 }
 \arguments{
 \item{X}{Matrix of M values. Probes in rows; samples in columns.}
