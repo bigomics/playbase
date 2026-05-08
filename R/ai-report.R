@@ -646,15 +646,17 @@ rpt.compile_cmap_report <- function(obj, which.db = 1, report = NULL,
 
   df1 <- pgx.getMOAmatrix(pgx, db=which.db, type="drugClass")
   df2 <- pgx.getMOAmatrix(pgx, db=which.db, type="targetGene")
-  df1 <- round(df1, digits=3)
-  df2 <- round(df2, digits=3)  
-  
-  order1 <- order(-rowMeans(df1**2))
-  df1.top <- head(df1[order1,,drop=FALSE],15)
-
-  order2 <- order(-rowMeans(df2**2))
-  df2.top <- head(df2[order2,,drop=FALSE],20)
-  
+  df1.top = df2.top = NULL
+  if(!is.null(df1)) {
+    df1 <- round(df1, digits=3)  
+    order1 <- order(-rowMeans(df1**2))
+    df1.top <- head(df1[order1,,drop=FALSE],15)
+  }
+  if(!is.null(df2)) {
+    df2 <- round(df2, digits=3)  
+    order2 <- order(-rowMeans(df2**2))
+    df2.top <- head(df2[order2,,drop=FALSE],20)
+  }
   div.tables <- list(
     "Top enriched MOA drug class" = df1.top,
     "Top enriched MOA target" = df2.top
@@ -662,8 +664,8 @@ rpt.compile_cmap_report <- function(obj, which.db = 1, report = NULL,
 
   settings <- list(
     database = which.db,
-    llm_model = rpt$model,
-    create_date = Sys.time()
+    llm_model = rpt$llm_model,
+    create_date = format(Sys.time(), "%Y-%m-%d %H:%M")
   )
   
   ##------- create sections -------------
