@@ -897,7 +897,9 @@ wgcna.compute_multiomics <- function(dataX,
     ## split up results?? still needed in old formats
     for(k in names(layers)) {
       mm <- names(layers[[k]]$me.genes)
-      layers[[k]]$gsea <- gsea[mm]
+      mm.gsea <- gsea[mm]
+      names(mm.gsea) <- mm
+      layers[[k]]$gsea <- mm.gsea
     }    
   }
 
@@ -5597,14 +5599,15 @@ wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
 
   ## top correlated phenotypes
   M <- wgcna.get_modTraits(wgcna)   
-  toppheno <- apply(M, 1, function(x) names(which(x > 0.8*max(x, na.rm=TRUE))))
+  top.pheno <- apply(M, 1, function(x) names(which(x > 0.8*max(x, na.rm=TRUE))))
+  top.negpheno <- apply(M, 1, function(x) names(which(x < 0.8*min(x, na.rm=TRUE))))  
   
   if(level=="geneset") {
     topsets <- topgenes
     topgenes <- NULL
   }
 
-  list(sets = topsets, genes = topgenes, pheno = toppheno)
+  list(sets = topsets, genes = topgenes, pheno = top.pheno, neg.pheno = top.negpheno)
 }
 
 #' @export
@@ -5641,17 +5644,18 @@ wgcna.getMultiTopGenesAndSets <- function(multi_wgcna, annot=NULL, module=NULL,
   top$genes <- lapply(toplist, function(t) t[['genes']])
   names(top$genes) <- NULL
   top$genes <- unlist(top$genes, recursive = FALSE)
-  names(top$genes)
 
   top$sets <- lapply(toplist, function(t) t[["sets"]])
   names(top$sets) <- NULL
   top$sets <- unlist(top$sets, recursive = FALSE)
-  names(top$sets)
 
   top$pheno <- lapply(toplist, function(t) t[["pheno"]])
   names(top$pheno) <- NULL
   top$pheno <- unlist(top$pheno, recursive = FALSE)
-  names(top$pheno)
+
+  top$neg.pheno <- lapply(toplist, function(t) t[["neg.pheno"]])
+  names(top$neg.pheno) <- NULL
+  top$neg.pheno <- unlist(top$neg.pheno, recursive = FALSE)
 
   return(top)
 }
@@ -5712,16 +5716,17 @@ wgcna.getConsensusTopGenesAndSets <- function(cons, annot=NULL, module=NULL, nto
   Y <- lapply(M, function(m) cons$datTraits[rownames(m),])
   R <- mapply( function(x,y) abs(cor(x,y,use="pairwise")), M, Y, SIMPLIFY=FALSE)
   R <- Reduce('+', R)
-  toppheno <- apply(R, 1, function(x) names(which(x > 0.9*max(x,na.rm=TRUE))),
+  top.pheno <- apply(R, 1, function(x) names(which(x > 0.8*max(x,na.rm=TRUE))),
     simplify = FALSE)
-  toppheno
+  top.negpheno <- apply(R, 1, function(x) names(which(x < 0.8*min(x,na.rm=TRUE))),
+    simplify = FALSE)
 
   if (level == "geneset") {
     topsets <- topgenes
     topgenes <- NULL
   }
 
-  list(sets = topsets, genes = topgenes, pheno = toppheno)
+  list(sets = topsets, genes = topgenes, pheno = top.pheno, neg.pheno = top.negpheno)
 }
 
 ## ----------------------------------------------------------------------
@@ -5731,7 +5736,7 @@ wgcna.getConsensusTopGenesAndSets <- function(cons, annot=NULL, module=NULL, nto
 #' @export
 wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
                                   annot=NULL, multi=FALSE, modules=NULL,
-                                  experiment="", verbose=1, model=DEFAULT_LLM,
+                                  experiment=NULL, verbose=1, model=DEFAULT_LLM,
                                   docstyle = "detailed summary", numpar = 2,
                                   level="gene")  {
 
@@ -5751,7 +5756,8 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
     modules <- union(names(top$genes), names(top$sets))
   }
 
-  if(is.null(experiment)) experiment <- ""
+  if(is.null(experiment) && !is.null(wgcna$experiment)) experiment <- wgcna$experiment
+  if(is.null(experiment)) experiment <- ""  
   ##if(!is.null(top$genes)) modules <- intersect(modules, names(top$genes))
   ##if(!is.null(top$sets)) modules <- intersect(modules, names(top$sets))
   ##modules <- intersect(modules, names(top$pheno))  
@@ -5766,7 +5772,7 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
   if (is.null(model) || length(model) == 0) {
     desc <- list()
     for(m in modules) {
-      ss=gg=pp="<none>"
+      ss=gg=pp=nn="<none>"
       
       if(!is.null(top$genes[[m]])) {
         gg <- paste( top$genes[[m]], collapse=', ')
@@ -5777,8 +5783,12 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
       if(m %in% names(top$pheno)) {
         pp <- paste( top$pheno[[m]], collapse='; ')
       } 
+      if(m %in% names(top$neg.pheno)) {
+        nn <- paste( top$neg.pheno[[m]], collapse='; ')
+      } 
       d <- ""
-      if(!is.null(pp)) d <- paste(d, "**Correlated phenotypes**:", pp, "\n\n")
+      if(!is.null(pp)) d <- paste(d, "**Positively correlated phenotypes**:", pp, "\n\n")
+      if(!is.null(nn)) d <- paste(d, "**Negatively correlated phenotypes**:", nn, "\n\n")      
       if(!is.null(gg) && gg!="") {
         d <- paste(d, "**Key genes**:", gg, "\n\n")
       }
@@ -5798,7 +5808,7 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
     
   prompt <- paste("Give a",docstyle,"of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. After that, shortly discuss if any of these key genes/proteins/metabolites might be involved in the biological function. No need to mention all, just a few. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about \"<EXPERIMENT>\". Use maximum",numpar,"paragraphs. Use prose, do not use any bullet points or tables. \n\nHere is list of enriched gene sets:\n <GENESETS>\n\n")
 
-  prompt <- paste("Give a", docstyle, "of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about \"<EXPERIMENT>\". Use maximum", numpar, "paragraphs. Do not use any bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n")
+  prompt <- paste("These are part of the results of a WGCNA analysis of an experiment about \"<EXPERIMENT>\". Give a", docstyle, "of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. Discuss the possible relationship with positively correlated phenotypes <PHENOTYPES> and, if not obvious, negatively correlated phenotypes <NEGPHENOTYPES>. Use maximum", numpar, "paragraphs. Do not use any bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n")
 
   if (verbose > 1) cat(prompt)
 
@@ -5807,7 +5817,7 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
   for (k in modules) {
     if (verbose > 0) message("Describing module ", k)
 
-    ss=gg=pp=""
+    ss=gg=pp=nn=""
     if(length(top$sets[[k]])>0) {
       ss <- sub( ".*:","", top$sets[[k]] ) ## strip prefix
       ss <- paste(ss, collapse=';')    
@@ -5818,6 +5828,10 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
     if(k %in% names(top$pheno)) {
       pp <- paste0("'",top$pheno[[k]],"'")
       pp <- paste( pp, collapse=';')      
+    }
+    if(k %in% names(top$neg.pheno)) {
+      nn <- paste0("'",top$neg.pheno[[k]],"'")
+      nn <- paste( nn, collapse=';')      
     }
 
     q <- prompt
@@ -5830,6 +5844,7 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
 
     q <- sub("<MODULE>", k, q)
     q <- sub("<PHENOTYPES>", pp, q)
+    q <- sub("<NEGPHENOTYPES>", nn, q)    
     q <- sub("<EXPERIMENT>", experiment, q)
     q <- sub("<GENESETS>", ss, q)
     q <- sub("<KEYGENES>", gg, q)
@@ -5856,11 +5871,14 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
 }
 
 #' @export
-wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
-                                minrho=0.2, multi=NULL) {
-  
+wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=NULL, rm.grey=TRUE,
+                                psig=0.05, minrho=0.1, multi=NULL) {
+
+  if(!is.null(kx)) dbg("[wgcna.getTopModules] WARNING: kx parameter is deprecated")
+
   if(is.null(topratio)) topratio <- 0.85
   if(is.null(multi) && !is.null(wgcna$layers)) multi <- TRUE
+  if(is.null(multi)) multi <- FALSE
   if(!multi) {    
     ww <- list(gx = wgcna)  ## single-omics wgcna object
   } else if(!is.null(wgcna$layers)) {
@@ -5869,28 +5887,32 @@ wgcna.getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
     ww <- wgcna
   }
 
-  ## compute module-trait
-  M <- list()
+  ## compute module-trait correlation and p-value
+  R <- list()
+  P <- list()
   i=1
   for(i in 1:length(ww)) {    
     me <- ww[[i]]$net$MEs
     dt <- ww[[i]]$datTraits    
-    M[[i]] <- cor(me, dt, use="pairwise")
+    R1 <- cor(me, dt, use="pairwise")
+    ndim <- colSums(!is.na(dt))
+    P1 <- sapply(1:ncol(dt), function(j) cor.pvalue(R1[,j],ndim[j]))
+    colnames(P1) <- colnames(dt)
+    R[[i]] <- R1
+    P[[i]] <- P1
   } 
-  
+
+  ## As top modules, we take all modules that are significantly
+  ## correlated with at least one phenotype
   top.modules <- c()
   i=1
-  for(i in 1:length(M)) {
-    #mx <- rowMeans(abs(M[[i]]**kx),na.rm=TRUE)**(1/kx)
-    #tt <- names(which( mx > topratio * max(mx)))
-    Z <- t(M[[i]])
-    Z[ abs(Z) < minrho ] <- 0
-    Z <- Z[rowMeans(Z==0) < 1,,drop=FALSE]
-    idx1 <- max.col(abs(Z))
-    idx2 <- max.col(Z)
-    idx2 <- ifelse( apply(Z,1,max)>0,idx2,0)
+  for(i in 1:length(R)) {
+    idx1 <- which(rowSums(P[[i]] <= psig) > 0)
+    rmax <- topratio * pmax(apply(R[[i]],2,max,na.rm=TRUE),0)
+    rmax <- pmax(rmax, minrho)
+    idx2 <- which(colSums(t(R[[i]]) >= rmax)>0)
     idx <- setdiff(unique(c(idx1,idx2)),0)
-    tt <- colnames(Z)[idx]    
+    tt <- rownames(R[[i]])[idx]    
     top.modules <- c(top.modules, tt) 
   }
 
@@ -5934,7 +5956,7 @@ wgcna.create_report <- function(wgcna, ai_model,
   }
 
   ## get top modules (most correlated with some phenotype)
-  top.modules <- wgcna.getTopModules(layers, topratio=topratio, kx=4,
+  top.modules <- wgcna.getTopModules(layers, topratio=topratio, 
     multi=TRUE) ## always multi format
   top.modules
   

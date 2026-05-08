@@ -134,7 +134,7 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
     mofa$report <- mofa.create_report(
       mofa,
       llm_model = llm_model,
-      image_model = image_model,
+      img_model = image_model,
       graph = NULL,
       annot = pgx$genes, 
       ntop = 100, psig = 0.05,
@@ -3707,7 +3707,7 @@ mofa.normalizeExpression <- function(X, method1 = "maxMedian", method2 = "none")
 ##----------------------------------------------------------------------
 ##----------------------------------------------------------------------
 
-mofa.getTopFactors <- function(mofa, minrho=0.2) {
+mofa.getTopFactors <- function(mofa, topratio=0.85, psig=0.05, minrho=0.1) {
   Z <- mofa$Z
   Z[ abs(Z) < minrho ] <- 0
   Z <- Z[rowMeans(Z==0) < 1,,drop=FALSE]
@@ -3716,6 +3716,23 @@ mofa.getTopFactors <- function(mofa, minrho=0.2) {
   idx2 <- ifelse( apply(Z,1,max)>0,idx2,0)
   idx <- setdiff(unique(c(idx1,idx2)),0)
   colnames(mofa$Z)[idx]
+
+  ## compute module-trait correlation and p-value
+  ydim <- colSums(!is.na(mofa$Y))
+  R <- t(mofa$Z)
+  P <- sapply(1:ncol(R), function(j) cor.pvalue(R[,j],ydim[j]))
+  colnames(P) <- colnames(R)
+
+  ## As top modules, we take all modules that are significantly
+  ## correlated with at least one phenotype
+  idx1 <- which(rowSums(P <= psig) > 0)
+  rmax <- topratio * pmax(apply(R,2,max,na.rm=TRUE),0)
+  rmax <- pmax(rmax, minrho)
+  idx2 <- which(colSums(t(R) >= rmax)>0)
+  idx <- setdiff(unique(c(idx1,idx2)),0)
+  top.modules <- rownames(R)[idx]    
+  
+  top.modules
 }
 
 mofa.getTopGenesAndSets <- function(mofa, annot=NULL, factors=NULL, ntop=40,
@@ -3840,7 +3857,7 @@ mofa.describeFactors <- function(mofa, ntop=50, psig = 0.05,
 
   kernel <- toupper(mofa$setting$kernel)
   
-  prompt <- paste("These are results of a multi-omics factor analysis using",kernel,". Give a", docstyle, "of the main overall biological function of the following top enriched genesets belonging to factor <FACTOR>. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about \'<EXPERIMENT>\'. Use maximum", numpar, "paragraphs. Do not use any bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n")
+  prompt <- paste("These are results of a multi-omics factor analysis using",kernel," of an experiment about \'<EXPERIMENT>\'. Give a", docstyle, "of the main overall biological function of the following top enriched genesets belonging to factor <FACTOR>. Discuss the possible relationship with positively correlate phenotypes <PHENOTYPES> and, if not obvious, negatively correlate phenotypes <NEGPHENOTYPES> . Use maximum", numpar, "paragraphs. Do not use any bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n")
 
   if (verbose > 1) cat(prompt)
 
@@ -3850,7 +3867,7 @@ mofa.describeFactors <- function(mofa, ntop=50, psig = 0.05,
   for (k in factors) {
     if (verbose > 0) message("Describing factor ", k)
 
-    ss=gg=pp=""
+    ss=gg=pp=nn=""
     if(length(top$sets[[k]])>0) {
       ss <- sub( ".*:","", top$sets[[k]] ) ## strip prefix
       ss <- paste(ss, collapse=';')    
@@ -3862,6 +3879,10 @@ mofa.describeFactors <- function(mofa, ntop=50, psig = 0.05,
       pp <- paste0("'",top$pheno[[k]],"'")
       pp <- paste( pp, collapse=';')      
     }
+    if(k %in% names(top$neg.pheno)) {
+      nn <- paste0("'",top$neg.pheno[[k]],"'")
+      nn <- paste( nn, collapse=';')      
+    }
 
     q <- prompt
 
@@ -3872,6 +3893,7 @@ mofa.describeFactors <- function(mofa, ntop=50, psig = 0.05,
 
     q <- sub("<FACTOR>", k, q)
     q <- sub("<PHENOTYPES>", pp, q)
+    q <- sub("<NEGPHENOTYPES>", nn, q)    
     q <- sub("<EXPERIMENT>", experiment, q)
     q <- sub("<GENESETS>", ss, q)
     q <- sub("<KEYGENES>", gg, q)
