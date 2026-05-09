@@ -112,6 +112,36 @@ pgx.computeDrugEnrichment <- function(pgx, X = NULL, xdrugs = NULL,
   return(results)
 }
 
+#' Compute missing CMAP cluster (UMAP) positions for each drug database
+#'
+#' @description Lazily fills in \code{pgx$drugs[[db]]$clust} for any database
+#'   that is missing it, using the stored \code{stats} (drug profiles x contrasts)
+#'   matrix as UMAP input. Works on both plain lists and Shiny reactiveValues.
+#'
+#' @param pgx A PGX object with a \code{drugs} slot.
+#' @return The (possibly modified) PGX object.
+#' @export
+pgx.compute_drugs_clust <- function(pgx) {
+  if (is.null(pgx$drugs)) return(pgx)
+  for (db in names(pgx$drugs)) {
+    if (!is.null(pgx$drugs[[db]]$clust)) next
+    smat <- pgx$drugs[[db]]$stats
+    if (is.null(smat) || !is.matrix(smat) || nrow(smat) < 5 || ncol(smat) < 2) next
+    smat[is.na(smat)] <- 0
+    nn <- min(15L, nrow(smat) - 1L)
+    clust <- try(
+      uwot::umap(smat, fast_sgd = TRUE, verbose = FALSE, n_neighbors = nn),
+      silent = TRUE
+    )
+    if (!inherits(clust, "try-error")) {
+      rownames(clust) <- rownames(smat)
+      pgx$drugs[[db]]$clust <- clust
+    }
+  }
+  return(pgx)
+}
+
+
 #' Update older versions of pgx$drugs with MOA, report and infographic
 #'
 #' @export
@@ -120,7 +150,12 @@ pgx.update_drugs_results <- function(pgx, model, img_model) {
   if(is.null(pgx$drugs)) {
     return(pgx)
   }
-  
+
+  if (is.null(pgx$drugs[[1]]$clust)) {
+    dbg("[pgx.update_drugs_results] computing CMAP cluster positions...")
+    pgx <- pgx.compute_drugs_clust(pgx)
+  }
+
   if(is.null(pgx$drugs[[1]]$moa)) {
     dbg("[pgx.update_drugs_results] updating MOA enrichment...")
     for(db in names(pgx$drugs)) {
