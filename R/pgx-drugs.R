@@ -74,13 +74,39 @@ pgx.computeDrugEnrichment <- function(pgx, X = NULL, xdrugs = NULL,
       enr, annot = drug_info)
   }
 
+  ## Compute 2D UMAP positions for drug profiles (required by CMAP scatter plot)
+  clust <- NULL
+  sel_profiles <- rownames(enr$stats)
+  xsel_idx <- match(sel_profiles, colnames(X))
+  xsel_idx <- xsel_idx[!is.na(xsel_idx)]
+  if (length(xsel_idx) >= 5) {
+    cX <- X[gg, xsel_idx, drop = FALSE]
+    cX[is.na(cX)] <- 0
+    cX <- cX - rowMeans(cX)
+    ok <- apply(cX, 2, sd) > 0
+    cX <- cX[, ok, drop = FALSE]
+    if (ncol(cX) >= 5) {
+      nn <- min(15L, ncol(cX) - 1L)
+      clust <- try(
+        uwot::umap(t(cX), fast_sgd = TRUE, verbose = FALSE, n_neighbors = nn),
+        silent = TRUE
+      )
+      if (inherits(clust, "try-error")) {
+        clust <- NULL
+      } else {
+        rownames(clust) <- colnames(cX)
+      }
+    }
+  }
+
   results <- list()
   results$cor <- list(NULL)
   results$GSEA <- enr[c("X","Q","P","size")]
   results$stats <- enr$stats
   results$drug <- enr$drug
   results$moa <- moa
-  
+  results$clust <- clust
+
   message("[pgx.computeDrugEnrichment] done!")
 
   return(results)
