@@ -306,6 +306,7 @@ pgx.getTopDrugs <- function(pgx, ct, n = 10, dir = 1, na.rm = TRUE, db = 1) {
   head(df, n)
 }
 
+#' @export
 pgx.getTopMOA <- function(pgx, ct, moa=NULL, n = 10, dir = 1, psig=0.1,
                           db=1, level=c("drugClass","targetGene")[1]) {
   if(is.null(moa) && !is.null(pgx)) {
@@ -327,6 +328,7 @@ pgx.getTopMOA <- function(pgx, ct, moa=NULL, n = 10, dir = 1, psig=0.1,
   head(df,n)
 }
 
+#' @export
 pgx.getTopGS <- function(pgx, ct, n = 20, dir = 1, psig=0.1) {
   F <- pgx.getMetaMatrix(pgx, level="geneset")$fc
   P <- pgx.getMetaMatrix(pgx, level="geneset")$qv
@@ -349,4 +351,73 @@ pgx.getTopGS <- function(pgx, ct, n = 20, dir = 1, psig=0.1) {
   }
   xx <- xx[ord,,drop=FALSE]
   head(rownames(xx), n)
+}
+
+#' @export
+pgx.info <- function(pgx, format="list", fields=NULL) {
+  
+  gset.methods <- sort(colnames(pgx$gset.meta$meta[[1]]$fc))
+  gx.methods <- colnames(pgx$gx.meta$meta[[1]]$fc)
+  extra_methods <- c(
+    wgcna = "WGCNA",
+    mofa = "MOFA",
+    deconv = "celltype deconvolution",
+    drugs = "drug connectivity",
+    wordcloud = "wordcloud",
+    connectivity = "experiment similarity"
+  )
+  extra.compute <- unname(extra_methods[names(extra_methods) %in% names(pgx)])
+  
+  methods <- list(
+    "enrichment methods" = gset.methods,
+    "gene tests" = gx.methods,
+    "extra analysis" = extra_methods )
+
+  default.methods <- c("name","description","datatype","organism",
+    "creator", names(methods))
+  
+  sel <- which(sapply(pgx, class) %in% c("character","Date"))
+  sel.tags <- names(pgx)[sel]
+  pgx.sel <- lapply(sel.tags, function(i) pgx[[i]])
+  names(pgx.sel) <- sel.tags  
+  
+  settings <- c(pgx.sel, methods)
+  settings <- settings[!duplicated(names(settings))]
+  
+  if("settings" %in% names(pgx)) {
+    settings <- c(settings, pgx$settings)
+  }
+  if("versions" %in% names(pgx)) {
+    settings <- c(settings, pgx$versions)
+  }
+  if(pgx$datatype %in% c("scRNA-seq","scRNAseq")) {
+    settings <- c(settings, pgx$sc_compute_settings)
+  }
+
+  ## add matrix sizes
+  sel.matrix <- c("counts","X","samples","contrasts","GMT","gsetX")
+  mat.sizes <- sapply(sel.matrix, function(m) paste(dim(pgx[[m]]),collapse=" x "))
+  settings <- c(settings, mat.sizes)
+   
+  ## collapse lists
+  settings <- lapply(settings, paste, collapse="; ")    
+  body <- unlist(settings)
+  
+  ## select fields
+  if(!is.null(fields) && any(names(body) %in% fields)) {
+    fields <- unique(c(fields, default.methods))
+    body <- body[intersect(fields, names(body))]
+  } 
+
+  ## remove sensitive
+  sel <- setdiff(names(body), c("filename",""))
+  body <- body[sel]
+  
+  
+  if(format == "html") {
+    body <- paste0("<b>",names(body),":</b>&nbsp; ", body, "<br>")
+    body <- paste(body, collapse="")
+  }
+  
+  body
 }
