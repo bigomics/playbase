@@ -58,8 +58,6 @@ OLLAMA_MODELS = ai.get_ollama_models()
 #' @export
 ai.get_remote_models <- function(models = NULL) {
   keys <- NULL
-  dbg("[ai.get_remote_models] input models = ",models)
-  dbg("[ai.get_remote_models] len.models = ",length(models))
   if(!is.null(models) && "REMOTE_MODELS" %in% models) {
     models <- unique(c(models, REMOTE_MODELS))
   }
@@ -71,27 +69,22 @@ ai.get_remote_models <- function(models = NULL) {
   if (Sys.getenv("GROQ_API_KEY")!="") keys <- c(keys,"groq:")
   if (Sys.getenv("GEMINI_API_KEY")!="") keys <- c(keys,"gemini-","google:")
   if (Sys.getenv("OLLAMA_REMOTE")!="") keys <- c(keys,"remote:.*")
-
-  dbg("[ai.get_remote_models] keys = ", keys)
   
   if(is.null(models) || length(models)==0 || models[1]=="" ) {
     models <- keys
   } else if (!is.null(keys)) {
     regex <- paste0("^", keys, collapse = "|")
-    models <- grep(regex, models, value = TRUE)
+    models <- models[which(grepl(regex, models))]
   } else {
     models <- NULL
-  }
-
-  dbg("[ai.get_remote_models] available models = ",models)
-  
+  }  
   models
 }
 
 #' @export
 ai.get_models <- function(models=NULL) {
-  local.models  <- sort(ai.get_ollama_models(models))
-  remote.models <- sort(ai.get_remote_models(models))   
+  local.models  <- ai.get_ollama_models(models)
+  remote.models <- ai.get_remote_models(models)   
   models <- list()
   if(length(local.models))  models$local <- local.models
   if(length(remote.models)) models$remote <- remote.models  
