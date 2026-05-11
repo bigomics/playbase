@@ -64,7 +64,7 @@ pgx.computeDrugEnrichment <- function(pgx, X = NULL, xdrugs = NULL,
 
   colnames(X) <- paste0(xdrugs,"_",colnames(X))
   enr <- metaLINCS::computeConnectivityEnrichment(
-    FC, names = NULL, mDrugEnrich = X, 
+    FC, names = rownames(FC), mDrugEnrich = X, 
     nmin = nmin, nprune = nprune) 
   
   ## Now compute the MoA enrichment (if not done)
