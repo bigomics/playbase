@@ -68,16 +68,10 @@ pgx.computeDrugEnrichment <- function(pgx, X = NULL, xdrugs = NULL,
     FC, names = rownames(FC), mDrugEnrich = X, 
     nmin = nmin, nprune = nprune) 
 
-  ## metaLINCS hardcodes column name "FC" for single-contrast matrices (it checks
-  ## names() not colnames()), so restore the original contrast names here
   if (!is.null(enr) && !is.null(fc_colnames) && ncol(enr$X) == length(fc_colnames)) {
     colnames(enr$X) <- colnames(enr$P) <- colnames(enr$Q) <- fc_colnames
   }
 
-  ## For single-contrast datasets, R drops the column dimension when subsetting a
-  ## 1-column matrix, producing a 1D array for enr$stats. ncol() of a 1D array
-  ## returns NA (not NULL), so downstream code that checks is.null(ncol(stats))
-  ## incorrectly tries 2D indexing. Force stats to always be a proper matrix.
   if (!is.null(enr) && !is.null(enr$stats) && length(dim(enr$stats)) < 2) {
     enr$stats <- matrix(enr$stats, ncol = length(fc_colnames),
                         dimnames = list(names(enr$stats), fc_colnames))
