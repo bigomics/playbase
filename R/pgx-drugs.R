@@ -63,10 +63,20 @@ pgx.computeDrugEnrichment <- function(pgx, X = NULL, xdrugs = NULL,
   }
 
   colnames(X) <- paste0(xdrugs,"_",colnames(X))
+  fc_colnames <- colnames(FC)
   enr <- metaLINCS::computeConnectivityEnrichment(
-    FC, names = NULL, mDrugEnrich = X, 
+    FC, names = rownames(FC), mDrugEnrich = X, 
     nmin = nmin, nprune = nprune) 
-  
+
+  if (!is.null(enr) && !is.null(fc_colnames) && ncol(enr$X) == length(fc_colnames)) {
+    colnames(enr$X) <- colnames(enr$P) <- colnames(enr$Q) <- fc_colnames
+  }
+
+  if (!is.null(enr) && !is.null(enr$stats) && length(dim(enr$stats)) < 2) {
+    enr$stats <- matrix(enr$stats, ncol = length(fc_colnames),
+                        dimnames = list(names(enr$stats), fc_colnames))
+  }
+
   ## Now compute the MoA enrichment (if not done)
   moa <- NULL
   if(!is.null(drug_info)) {
