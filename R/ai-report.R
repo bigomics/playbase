@@ -21,7 +21,7 @@ pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
     for(k in names(pgx$drugs)) pgx$drugs[[k]]$report <- NULL
   }
 
-  if(is.null(select))
+  if(is.null(select)) select <- c("wgcna","mofa","cmap")
 
   if("wgcna" %in% select) {
     if(!is.null(pgx$wgcna) && is.null(pgx$wgcna$report)) {  
