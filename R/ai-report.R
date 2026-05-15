@@ -13,7 +13,7 @@
 #' @export
 pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
                                verbose=1, force=FALSE,
-                               select=c("wgcna","mofa","cmap")) {
+                               select=c("wgcna","mofa","cmap","integrated")) {
 
   if(force) {
     pgx$wgcna$report <- NULL
@@ -21,7 +21,7 @@ pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
     for(k in names(pgx$drugs)) pgx$drugs[[k]]$report <- NULL
   }
 
-  if(is.null(select)) select <- c("wgcna","mofa","cmap")
+  if(is.null(select)) select <- c("wgcna","mofa","cmap","integrated")
 
   if("wgcna" %in% select) {
     if(!is.null(pgx$wgcna) && is.null(pgx$wgcna$report)) {  
@@ -87,6 +87,16 @@ pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
       }
     }
   }
+
+  if("integrated" %in% select) {    
+    message(">>> creating integrated report...")
+    intrpt <- rpt.create_integrated_report(pgx, llm=llm_model)
+    pgx$report <- list(
+      report = intrpt,
+      infographics = NULL,
+      tables = NULL
+    )
+  }
   
   return(pgx)
 }
@@ -135,8 +145,6 @@ pgx.update_infographics <- function(pgx, llm_model, img_model,
   
   return(pgx)
 }
-
-
 
 #' This is a full report of all analyses of the experiment and can
 #' serve as data source for LLM questions.
@@ -263,14 +271,19 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
   ##-------------------------------------------------------------------
   pcsf_report <- NULL
   if(FALSE && "pcsf_report" %in% sections) {
+    message("found PCSF report")    
     pcsf_report <- list("Identification of hub genes. Hub genes can identify important regulators. The hub score is computed using a page rank network centrality score. The most central genes are:" = table_to_content(pgx.getPCSFcentrality(pgx, ct, plot = FALSE, n = ntop))
     )
   }
   
   ##-------------------------------------------------------------------
   wgcna_report <- NULL
-  if("wgcna_report" %in% sections && !is.null(pgx$wgcna)) {
-    if(!is.null(pgx$wgcna$report)) {
+  has_wgcna <- !is.null(pgx$wgcna) || !is.null(pgx$wgcna_mox)
+  if("wgcna_report" %in% sections && has_wgcna) {
+    if(!is.null(pgx$wgcna_mox$report)) {
+      message("found WGCNA_mox report")
+      wgcna_report <- pgx$wgcna_mox$report$report
+    } else if(!is.null(pgx$wgcna$report)) {
       message("found WGCNA report")
       wgcna_report <- pgx$wgcna$report$report
     } else {
@@ -281,8 +294,8 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
         ntop = 50,
         annot = pgx$genes, 
         experiment = pgx$description,
-      verbose = FALSE,
-      model = NULL
+        verbose = FALSE,
+        model = NULL
       ) 
       names(out)
       wgcna_report <- list_to_content(out$answers, newline=TRUE)
@@ -340,10 +353,27 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
   return(content)
 }
 
-
 #' Format and render contents as section.
 #'
 #' @export
+rpt.create_integrated_report <- function(pgx, llm, ntop=100, 
+                                         add_prompt=NULL, sections=NULL) {
+  full_rpt <- rpt.create_full_report(
+    pgx, ntop=ntop, llm=llm, sections=sections, collate=FALSE)
+  coll_rpt <- collate_as_report(full_rpt)
+  q <- paste("Create an integrated bioinformatics analysis report from the following report sections that were done for an omics experiment. For each section, create a short summary. Then create an integrated narrative section that is coherent with findings from all reports. Refer findings to the methods. Emphasize connections to observed phenotypes. Discuss the molecular roles of multi-omics datatypes. End with a summary and conclusion. Write in continuous prose, use less tables or bullets. Output in clean markdown.")
+  if(!is.null(add_prompt))  q <- paste(q, add_prompt)
+    q <- paste(q, "\n\n***Here are the reports***:\n\n", coll_rpt)
+  message("[rpt.create_integrated_report] creating integrated report...")
+  message("[rpt.create_integrated_report] input nchar = ", nchar(q))
+  integr <- ai.ask(q, model=llm)
+  message("[rpt.create_integrated_report] output nchar = ", nchar(integr))
+  return(integr)
+}
+
+
+#' Format and render contents as section.
+#'
 rpt.compile_sections <- function(contents, hlevel=2, shift=TRUE) {
   
   div.description <- contents$description
