@@ -361,7 +361,7 @@ rpt.create_integrated_report <- function(pgx, llm, ntop=100,
   full_rpt <- rpt.create_full_report(
     pgx, ntop=ntop, llm=llm, sections=sections, collate=FALSE)
   coll_rpt <- collate_as_report(full_rpt)
-  q <- paste("Create an integrated bioinformatics analysis report from the following report sections that were done for an omics experiment. For each section, create a short summary. Then create an integrated narrative section that is coherent with findings from all reports. Refer findings to the methods. Emphasize connections to observed phenotypes. Discuss the molecular roles of multi-omics datatypes. End with a summary and conclusion. Write in continuous prose, use less tables or bullets. Output in clean markdown.")
+  q <- paste("Create an integrated bioinformatics analysis report from the following report sections that were done for an omics experiment. For each section, create a short summary. Then create an integrated narrative section that is coherent with findings from all reports. Refer findings to the methods. Emphasize connections to observed phenotypes. Discuss the molecular roles of multi-omics datatypes. If relevant, suggest similarity to known diseases and possible therapies. End with a summary and conclusion. Write in continuous prose, use less tables or bullets. Output in clean markdown.")
   if(!is.null(add_prompt))  q <- paste(q, add_prompt)
     q <- paste(q, "\n\n***Here are the reports***:\n\n", coll_rpt)
   message("[rpt.create_integrated_report] creating integrated report...")
