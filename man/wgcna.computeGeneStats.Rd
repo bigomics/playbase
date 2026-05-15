@@ -4,7 +4,7 @@
 \alias{wgcna.computeGeneStats}
 \title{Compute general feature statistics after WGCNA results.}
 \usage{
-wgcna.computeGeneStats(net, datExpr, datTraits, TOM)
+wgcna.computeGeneStats(net, datExpr = NULL, datTraits = NULL, TOM = NULL)
 }
 \description{
 Compute general feature statistics after WGCNA results.

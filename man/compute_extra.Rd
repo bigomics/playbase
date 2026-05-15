@@ -11,7 +11,9 @@ compute_extra(
   sigdb = NULL,
   pgx.dir = "./data",
   libx.dir = "./libx",
-  user_input_dir = getwd()
+  user_input_dir = getwd(),
+  llm_model = NULL,
+  img_model = NULL
 )
 }
 \arguments{

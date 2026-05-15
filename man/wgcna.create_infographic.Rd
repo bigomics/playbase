@@ -13,6 +13,7 @@ wgcna.create_infographic(
   diagram = NULL,
   prompt = NULL,
   add.fallback = FALSE,
+  format = c("file", "image")[1],
   filename = "infographic.png"
 )
 }

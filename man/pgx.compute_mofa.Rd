@@ -16,7 +16,7 @@ pgx.compute_mofa(
   compute.lasagna = TRUE,
   create.report = FALSE,
   llm_model = NULL,
-  image_model = NULL
+  img_model = NULL
 )
 }
 \description{

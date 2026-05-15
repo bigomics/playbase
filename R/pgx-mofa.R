@@ -9,7 +9,7 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
                              compute.lasagna = TRUE,
                              create.report = FALSE,
                              llm_model = NULL,
-                             image_model = NULL
+                             img_model = NULL
                              ) {
   has.prefix <- (mean(grepl(":", rownames(pgx$X))) > 0.8)
   is.multiomics <- (pgx$datatype == "multi-omics" && has.prefix)
@@ -134,7 +134,7 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
     mofa$report <- mofa.create_report(
       mofa,
       llm_model = llm_model,
-      img_model = image_model,
+      img_model = img_model,
       graph = NULL,
       annot = pgx$genes, 
       ntop = 100, psig = 0.05,
@@ -4042,8 +4042,8 @@ Format like a scientific article, use prose as much as possible, minimize the us
 
     if(!is.null(img_model)) {
       infographic <- ai.create_infographic(
-        mofa_rpt$report, img_model, filename="/tmp/infographic.png")
-
+        mofa_rpt$report, img_model,
+        format = "image")
     }
     
   }

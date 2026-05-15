@@ -63,13 +63,17 @@ pgx.wgcna <- function(
   maxBlockSize = 9999,
   gset.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]",
   compute.enrichment = TRUE,
-  summary = TRUE,
-  ai_model = DEFAULT_LLM,
+  summary = NULL,
+  report = TRUE,
+  ai_model = NULL,
+  img_model = NULL,
   verbose = 1,
   progress = NULL
 ) {
   ## minmodsize=10;power=NULL;cutheight=0.15;deepsplit=2;ngenes=4000;networktype="signed";tomtype="signed";numericlabels=FALSE;ngenes=2000;gset.filter=NULL;minKME=0.8;maxBlockSize=5000
 
+  if(!is.null(summary)) message("[pgx.wgcna] warning: summary is deprecated")
+  
   samples <- pgx$samples
   contrasts <- pgx$contrasts
   ## no dot pheno
@@ -166,22 +170,17 @@ pgx.wgcna <- function(
     )
   }
 
-  if (summary) {
-    if (!is.null(progress)) progress$set(message = "Annotating modules...", value = 0.6)
-    message("Annotating modules using ", ai_model)
-    ai <- wgcna.describeModules(
-      wgcna,
-      ntop = 50,
-      model = ai_model,
-      annot = pgx$genes,
-      multi = FALSE,
-      experiment = pgx$description,
-      verbose = 0
-    )
-    wgcna$summary <- ai$answers
-    wgcna$prompts <- ai$questions
+  if (report && !is.null(ai_model)) {
+    if (!is.null(progress)) progress$set(message = "Creating report...", value = 0.6)
+    wgcna$report <- wgcna.create_report(
+      wgcna, ai_model = ai_model, graph=NULL, annot=pgx$genes, multi=FALSE,
+      ntop=100, topratio=0.85, psig=0.05, do.diagram = TRUE,
+      userprompt='', format="markdown", verbose=1, progress=NULL)    
   }
 
+  ## update
+  wgcna <- wgcna.init(wgcna, llm=ai_model, img_model=img_model, annot=pgx$genes)
+  
   ## save setting in object
   settings <- list(
     minmodsize = minmodsize,
@@ -592,6 +591,7 @@ wgcna.create_lasagna_model <- function(wgcna, layers=NULL) {
 wgcna.init <- function(wgcna, llm=NULL, img_model=NULL, annot=NULL,
                        sv.tom=40, progress=NULL) {
 
+  if(is.null(wgcna)) return(NULL)
   if(!is.null(llm) && llm=="") llm <- NULL
   if(!is.null(img_model) && img_model=="") img_model <- NULL
   is.multi <- ("layers" %in% names(wgcna))
@@ -613,14 +613,20 @@ wgcna.init <- function(wgcna, llm=NULL, img_model=NULL, annot=NULL,
   }
   
   if (is.null(wgcna$stats)) {
-    if(all(c("net","datExpr","datTraits","svTOM") %in% names(wgcna))) {
+    is.single <- all(c("net","datExpr","datTraits","svTOM") %in% names(wgcna)) 
+    is.mox <- all(c("layers") %in% names(wgcna))
+    if(is.single) {
       ## single-omics WGCNA
       message("[wgcna.init] computing missing gene statistics...")
       if (!is.null(progress)) progress$inc(0.1, "computing gene statistics...")    
       wgcna$stats <- wgcna.computeGeneStats(
         wgcna$net, wgcna$datExpr, wgcna$datTraits, TOM = wgcna$svTOM)
+    } else if(is.mox) {
+      if (!is.null(progress)) progress$inc(0.1, "computing gene statistics...")    
+      wgcna$stats <- wgcna.computeMultiGeneStats(wgcna)       
+    } else {
+      message("[wgcna.init] WARNING: could not calculate stats")
     }
-    ## How about multi-omics???
   }
 
   if (is.null(wgcna$graph)) {
@@ -650,7 +656,8 @@ wgcna.init <- function(wgcna, llm=NULL, img_model=NULL, annot=NULL,
   }
 
   ## add infographic if missing
-  if (is.null(wgcna$report$infographic) && !is.null(img_model)) {
+  if (is.null(wgcna$report$infographic) && !is.null(img_model) &&
+        !is.null(wgcna$report) ) {
     message("[wgcna.init] creating missing infographic...")
     if (!is.null(progress)) progress$inc(0.1, "creating infographic...")
     rpt <- wgcna$report 
@@ -1314,7 +1321,20 @@ cortest <- function(X, Y) {
 #'
 #'
 #'
-wgcna.computeGeneStats <- function(net, datExpr, datTraits, TOM) {
+wgcna.computeGeneStats <- function(net, datExpr=NULL, datTraits=NULL, TOM=NULL) {
+
+  if(all(c("net","datExpr","datTraits") %in% names(net))) {
+    datExpr <- net$datExpr
+    datTraits <- net$datTraits
+    TOM <- if(!is.null(net$svTOM)) net$svTOM else net$TOM
+    net <- net$net
+  }
+  
+  if( is.null(datExpr) || is.null(datExpr) || is.null(datExpr)) {
+    message("ERROR: must provide datExpr, datTraits and TOM")
+    stop()
+  }
+
   ## align
   kk <- intersect(rownames(datExpr), rownames(datTraits))
   datExpr <- datExpr[kk, , drop = FALSE]
@@ -1462,6 +1482,51 @@ wgcna.computeGeneStats <- function(net, datExpr, datTraits, TOM) {
 
   return(stats)
 }
+
+
+wgcna.computeMultiGeneStats <- function(multi) {
+  stats <- list()
+  for(k in names(multi$layers)) {
+    stats[[k]] <- wgcna.computeGeneStats(multi$layers[[k]]) 
+  }
+
+  for(k in names(stats)) {
+    for(i in 3:length(stats[[k]])) {
+      if(!is.null(rownames(stats[[k]][[i]]))) {
+        rownames(stats[[k]][[i]]) <- paste0(k,":",rownames(stats[[k]][[i]]))
+      }
+      if(!is.null(names(stats[[k]][[i]]))) {
+        names(stats[[k]][[i]]) <- paste0(k,":",names(stats[[k]][[i]]))
+      }
+    }    
+  }
+
+  xstats <- list()
+  for(m in c("moduleTraitCor","moduleTraitPvalue","traitSignificance","TSPvalue",
+    "foldChange","foldChangePvalue")) {
+    xstats[[m]] <- do.call(rbind, lapply(stats, '[[', m))
+  }
+  for(m in c("moduleMembership","MMPvalue")) {
+    ss <- list()
+    for(k in names(stats)) {
+      mm <- stats[[k]][[m]]
+      all.mods <- rownames(xstats$moduleTraitCor)
+      mods <- setdiff(all.mods,colnames(mm))
+      mm.zero <- matrix(NA, nrow=nrow(mm), ncol=length(mods))
+      colnames(mm.zero) <- mods
+      rownames(mm.zero) <- rownames(mm)
+      mm <- cbind(mm, mm.zero)
+      mm <- mm[, all.mods]
+      ss[[k]] <- mm
+    }
+    xstats[[m]] <- do.call(rbind, ss)    
+  }  
+  names(xstats)
+  xstats[["geneCentrality"]] <- Reduce(c,sapply(stats, '[[', "geneCentrality"))
+  xstats <- xstats[names(stats[[1]])]
+  return(xstats)
+}
+
 
 #'
 #'
@@ -6242,6 +6307,7 @@ wgcna.create_diagram <- function(wgcna, ai_model, graph=NULL,
 #' @export
 wgcna.create_infographic <- function(report, model, diagram=NULL,
                                      prompt=NULL, add.fallback = FALSE,
+                                     format = c("file","image")[1],
                                      filename = "infographic.png") {  
 
   prompt <- paste(prompt, "\nCreate a graphical abstract according to the given diagram and information in the WGCNA report. Use scientific infographic style. Illustrate biological concepts with small graphics. \n\n", report, "\n---------------\n\n", diagram)
@@ -6257,6 +6323,17 @@ wgcna.create_infographic <- function(report, model, diagram=NULL,
     format = "file", filename = filename
   ))
   if(inherits(outfile,"try-error")) return(NULL)
+  if(format == "image") {
+    if(grepl("png$",outfile,ignore.case=TRUE)) {
+      img <- png::readPNG(outfile)
+    } else if(grepl("jpg$|jpeg$",outfile,ignore.case=TRUE)) {
+      img <- jpeg::readJPEG(outfile)
+    } else {
+      message("[wgcna.init] Error: invalid output image")
+      img <- NULL
+    }
+    return(invisible(img))
+  }
   return(invisible(outfile))
 }
 
@@ -6264,6 +6341,7 @@ wgcna.create_infographic <- function(report, model, diagram=NULL,
 wgcna.create_module_infographic <- function(rpt, module, prompt = NULL,
                                             #model = "gemini-2.5-flash-image"
                                             model="gemini-3-pro-image-preview",
+                                            format = c("file","image")[1],
                                             add.fallback = FALSE,
                                             filename = "module-infographic.png") {  
   if(!module %in% names(rpt$summaries)) {
@@ -6280,6 +6358,17 @@ wgcna.create_module_infographic <- function(rpt, module, prompt = NULL,
   }
   outfile <- try(ai.create_image(prompt, model, filename = filename))
   if(inherits(outfile,"try-error")) return(NULL)
+  if(format == "image") {
+    if(grepl("png$",outfile,ignore.case=TRUE)) {
+      img <- png::readPNG(outfile)
+    } else if(grepl("jpg$|jpeg$",outfile,ignore.case=TRUE)) {
+      img <- jpeg::readJPEG(outfile)
+    } else {
+      message("[wgcna.init] Error: invalid output image")
+      img <- NULL
+    }
+    return(invisible(img))
+  }
   return(invisible(outfile))
 }
 
@@ -6297,9 +6386,14 @@ wgcna.calculateSignificanceScore <- function(wgcna, collapse=TRUE, sort.by="scor
     ww <- list(gx = wgcna)
   }
   names(ww)
+  k=1
   for (k in names(ww)) {
-    stats <- ww[[k]]$stats   
-    m1 <- stats$moduleMembership
+    stats <- ww[[k]]$stats
+    if(is.null(stats)) {
+      w <- ww[[k]]
+      stats <- wgcna.computeGeneStats(w$net, w$datExpr, w$datTraits, TOM=w$TOM)
+    }
+    m1 <- stats$moduleMembership    
     t1 <- stats$traitSignificance
     f1 <- stats$foldChange
     c1 <- ww[[k]]$net$labels[rownames(m1)]

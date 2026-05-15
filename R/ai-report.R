@@ -8,56 +8,135 @@
 ##------------------------ REPORT CREATION ----------------------------
 ##---------------------------------------------------------------------
 
+#' Update all reports in pgx object. Create if missing.
+#'
 #' @export
-pgx.create_reports <- function(pgx, llm_model) {
+pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
+                               verbose=1, force=FALSE,
+                               select=c("wgcna","mofa","cmap")) {
 
-  if(!is.null(pgx$wgcna) && is.null(pgx$wgcna$report)) {  
-    message(">>> creating WGCNA report...")
-    pgx$wgcna$report<- wgcna.create_report(
-      pgx$wgcna,
-      ai_model = llm_model,
-      graph = NULL,
-      annot = pgx$genes,
-      ntop=100,
-      psig=0.05,
-      do.diagram = TRUE,
-      userprompt='',
-      format="markdown",
-      verbose=1,
-      progress=NULL
-    )
+  if(force) {
+    pgx$wgcna$report <- NULL
+    pgx$mofa$report <- NULL
+    for(k in names(pgx$drugs)) pgx$drugs[[k]]$report <- NULL
   }
 
-  if(!is.null(pgx$mofa) && is.null(pgx$mofa$report)) {
-    message(">>> creating MOFA report...")
-    pgx$mofa$report <- mofa.create_report(
-      pgx$mofa, llm_model = llm_model,
-      graph = NULL, annot=pgx$genes,
-      ntop=100, psig=0.05,
-      do.diagram = TRUE,
-      userprompt='', format="markdown",
-      verbose=1, progress=NULL)
+  if(is.null(select))
+
+  if("wgcna" %in% select) {
+    if(!is.null(pgx$wgcna) && is.null(pgx$wgcna$report)) {  
+      message(">>> creating WGCNA report...")
+      pgx$wgcna$report<- wgcna.create_report(
+        pgx$wgcna,
+        ai_model = llm_model,
+        graph = NULL,
+        annot = pgx$genes,
+        ntop=100,
+        psig=0.05,
+        do.diagram = TRUE,
+        userprompt='',
+        format="markdown",
+        verbose = verbose,
+        progress=NULL
+      )
+    }
+    
+    if(!is.null(pgx$wgcna_mox) && is.null(pgx$wgcna_mox$report)) {  
+      message(">>> creating WGCNA report...")
+      pgx$wgcna_mox$report <- wgcna.create_report(
+        pgx$wgcna_mox,
+        ai_model = llm_model,
+        graph = NULL,
+        annot = pgx$genes,
+        ntop = 100,
+        psig = 0.05,
+        do.diagram = TRUE,
+        userprompt = '',
+        format = "markdown",
+        verbose = verbose,
+        progress = NULL
+      )
+    }
   }
 
-  if(!is.null(pgx$drugs) && is.null(pgx$drugs$report)) {  
-    message(">>> creating drug CMAP report...")
-    drug.db <- names(pgx$drugs)[1]  ## NEED ALL????
-    for(db in drug.db) {
-      pgx$drugs[[db]]$report <- cmap.create_report(
-        pgx, model=llm_model, model2 = NULL, db = db,
-        user.prompt = NULL)
+  if("mofa" %in% select) {    
+    if(!is.null(pgx$mofa) && is.null(pgx$mofa$report)) {
+      message(">>> creating MOFA report...")
+      pgx$mofa$report <- mofa.create_report(
+        pgx$mofa, llm_model = llm_model,
+        img_model = img_model,
+        graph = NULL, annot=pgx$genes,
+        ntop=100, psig=0.05,
+        do.diagram = TRUE,
+        userprompt='', format="markdown",
+        verbose = verbose,
+        progress=NULL)
+    }
+  }
+
+  if("cmap" %in% select) {    
+    if(!is.null(pgx$drugs) && is.null(pgx$drugs$report)) {  
+      message(">>> creating drug CMAP report...")
+      pgx <- pgx.update_drugs_results(pgx, model=llm_model, img_model=img_model)
+      drug.db <- names(pgx$drugs)[1]  ## NEED ALL????
+      drug.db <- head(drug.db,2) ## ONLY 2???
+      for(db in drug.db) {      
+        pgx$drugs[[db]]$report <- cmap.create_report(
+          pgx, model=llm_model, model2 = NULL, db = db,
+          user.prompt = NULL, force=force)
+      }
     }
   }
   
   return(pgx)
 }
 
-
 #' @export
 ai.create_report <- function(pgx, ...) {
   message("DEPRECATED: ai.create_report()")
   rpt.create_full_report(pgx, ...) 
 }
+
+#' Update infographics. Create if missing.
+#'
+#' @export
+pgx.update_infographics <- function(pgx, llm_model, img_model,
+                                    force=FALSE, progress=NULL) {
+
+  ## update reports
+  pgx <- pgx.update_reports(pgx, llm_model = llm_model, img_model=NULL) 
+
+  ## delete old if forced
+  if(force) {
+    if(!is.null(pgx$wgcna)) pgx$wgcna$report$infographic <- NULL
+    if(!is.null(pgx$wgcna_mox)) pgx$wgcna_mox$report$infographic <- NULL    
+    if(!is.null(pgx$mofa))  pgx$mofa$report$infographic <- NULL    
+    if(!is.null(pgx$drugs)) {
+      for(k in names(pgx$drugs)) pgx$drugs[[k]]$report$infographic <- NULL
+    }
+  }
+  
+  ## update infographics
+  if(!is.null(pgx$wgcna)) {    
+    pgx$wgcna <- wgcna.init(pgx$wgcna, annot=pgx$genes, llm=llm_model,
+      img_model=img_model)
+  }
+  if(!is.null(pgx$wgcna_mox)) {  
+    pgx$wgcna_mox <- wgcna.init(pgx$wgcna_mox, annot=pgx$genes, llm=llm_model,
+      img_model=img_model)
+  }
+  if(!is.null(pgx$drugs)) {    
+    pgx <- pgx.update_drugs_results(pgx, model=llm_model, img_model=img_model)
+  }
+  if(!is.null(pgx$mofa) && is.null(pgx$mofa$report$infographic)) {
+    pgx$mofa$report$infographic <- ai.create_infographic(
+      pgx$mofa$report$report, img_model, format="image")
+  }
+  
+  return(pgx)
+}
+
+
 
 #' This is a full report of all analyses of the experiment and can
 #' serve as data source for LLM questions.
@@ -125,6 +204,7 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
     F <- rename_by2(F, pgx$genes, "symbol")
     ii <- match(rownames(F),pgx$genes$symbol)
     rownames(F) <- paste0(pgx$genes$gene_title[ii]," (",rownames(F),")")
+    ## NEED RETHINK!!!: which contrast?
     F.up <- head( F[order(-rowMeans(F)),,drop=FALSE], 2*ntop )
     F.dn <- head( F[order(rowMeans(F)),,drop=FALSE], 2*ntop )    
     differential_expression <- list(
