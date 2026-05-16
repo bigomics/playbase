@@ -67,6 +67,8 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
     numfeatures = 100
   )
 
+  mofa$experiment <- pgx$description
+  
   if (factorizations) {
     all.kernels <- c(
       "mofa", "pca", "nmf", "nmf2", "mcia", "diablo", ## "wgcna",
@@ -3928,6 +3930,7 @@ mofa.create_report <- function(mofa, llm_model,
                                ntop=100, psig=0.05,
                                do.diagram = TRUE, img_model = NULL,
                                userprompt='', format="markdown",
+                               description = NULL,
                                verbose=1, progress=NULL) {
 
   if(0) {
@@ -3949,7 +3952,13 @@ mofa.create_report <- function(mofa, llm_model,
   if(is.null(annot)) {
     message("[mofa.create_report] WARNING. providing user annot table is recommended.")
   }
-  
+
+  if(is.null(description)) description <- mofa$experiment
+  if(is.null(description)) {
+    message("[mofa.create_report] WARNING. missing experiment description.")
+    description <- "mult-omics experiment"
+  }
+
   ##--------------------------------------------------------------------
   ## Step 1. Describe modules with LLM. We can use one LLM model or more.
   ##--------------------------------------------------------------------
@@ -3961,7 +3970,7 @@ mofa.create_report <- function(mofa, llm_model,
     ntop = ntop,  ## number of top genes or sets
     annot = annot,
     psig = psig,
-    experiment = mofa$experiment,
+    experiment = description,
     verbose = verbose,
     model = llm_model
   ) 

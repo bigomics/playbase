@@ -10,7 +10,7 @@ pgx.update_reports(
   img_model = NULL,
   verbose = 1,
   force = FALSE,
-  select = c("wgcna", "mofa", "cmap", "integrated")
+  select = c("wgcna", "mofa", "cmap", "summary")
 )
 }
 \description{

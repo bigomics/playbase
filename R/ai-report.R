@@ -13,7 +13,7 @@
 #' @export
 pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
                                verbose=1, force=FALSE,
-                               select=c("wgcna","mofa","cmap","integrated")) {
+                               select=c("wgcna","mofa","cmap","summary")) {
 
   if(force) {
     pgx$wgcna$report <- NULL
@@ -21,7 +21,7 @@ pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
     for(k in names(pgx$drugs)) pgx$drugs[[k]]$report <- NULL
   }
 
-  if(is.null(select)) select <- c("wgcna","mofa","cmap","integrated")
+  if(is.null(select)) select <- c("wgcna","mofa","cmap","summary")
 
   if("wgcna" %in% select) {
     if(!is.null(pgx$wgcna) && is.null(pgx$wgcna$report)) {  
@@ -88,9 +88,9 @@ pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
     }
   }
 
-  if("integrated" %in% select) {    
-    message(">>> creating integrated report...")
-    intrpt <- rpt.create_integrated_report(pgx, llm=llm_model)
+  if("summary" %in% select) {    
+    message(">>> creating summary report...")
+    intrpt <- rpt.create_summary_report(pgx, llm=llm_model)
     pgx$report <- list(
       report = intrpt,
       infographics = NULL,
@@ -356,18 +356,19 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
 #' Format and render contents as section.
 #'
 #' @export
-rpt.create_integrated_report <- function(pgx, llm, ntop=100, 
-                                         add_prompt=NULL, sections=NULL) {
+rpt.create_summary_report <- function(pgx, llm, ntop=100, format="short",
+                                      add_prompt=NULL, sections=NULL) {
   full_rpt <- rpt.create_full_report(
     pgx, ntop=ntop, llm=llm, sections=sections, collate=FALSE)
+  format <- rep(format,2)
   coll_rpt <- collate_as_report(full_rpt)
-  q <- paste("Create an integrated bioinformatics analysis report from the following report sections that were done for an omics experiment. For each section, create a short summary. Then create an integrated narrative section that is coherent with findings from all reports. Refer findings to the methods. Emphasize connections to observed phenotypes. Discuss the molecular roles of multi-omics datatypes. If relevant, suggest similarity to known diseases and possible therapies. End with a summary and conclusion. Write in continuous prose, use less tables or bullets. Output in clean markdown.")
+  q <- paste("Create a",format[1],"summary report from the following bioinformatics analysis report sections that were done for an omics experiment. First give a short study overview. Then, for each method section, create a ",format[2],"summary and put it as a seperate section or subsection. Then create an integrative section that creates a biological narrative and is coherent with findings from all reports. Refer findings to the methods. Emphasize connections to observed phenotypes. Discuss the molecular roles of multi-omics datatypes. If relevant, suggest similarity to known diseases and possible therapies. End with a summary and conclusion. Write in continuous prose, use less tables or bullets. Output in clean markdown.")
   if(!is.null(add_prompt))  q <- paste(q, add_prompt)
     q <- paste(q, "\n\n***Here are the reports***:\n\n", coll_rpt)
-  message("[rpt.create_integrated_report] creating integrated report...")
-  message("[rpt.create_integrated_report] input nchar = ", nchar(q))
+  message("[rpt.create_summary_report] creating summary report...")
+  message("[rpt.create_summary_report] input nchar = ", nchar(q))
   integr <- ai.ask(q, model=llm)
-  message("[rpt.create_integrated_report] output nchar = ", nchar(integr))
+  message("[rpt.create_summary_report] output nchar = ", nchar(integr))
   return(integr)
 }
 

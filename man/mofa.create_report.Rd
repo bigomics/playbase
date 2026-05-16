@@ -15,6 +15,7 @@ mofa.create_report(
   img_model = NULL,
   userprompt = "",
   format = "markdown",
+  description = NULL,
   verbose = 1,
   progress = NULL
 )
