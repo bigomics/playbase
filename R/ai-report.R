@@ -18,6 +18,7 @@ pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
   if(force) {
     pgx$wgcna$report <- NULL
     pgx$mofa$report <- NULL
+    pgx$report <- NULL    
     for(k in names(pgx$drugs)) pgx$drugs[[k]]$report <- NULL
   }
 
@@ -88,7 +89,7 @@ pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
     }
   }
 
-  if("summary" %in% select) {    
+  if("summary" %in% select && is.null(pgx$report)) {    
     message(">>> creating summary report...")
     intrpt <- rpt.create_summary_report(pgx, llm=llm_model)
     pgx$report <- list(

@@ -86,60 +86,50 @@ md.list_to_figs <- function(figs, labels=NULL) {
 #' @export
 markdownToPDF <- function(text, file, tmpdir=NULL, engine='pdflatex',
                           font="mathpazo", documentclass="report",
-                          quiet=TRUE) {
+                          force.ascii = TRUE, logo=NULL, quiet=TRUE) {
 
   if(is.null(font) && engine == "pdflatex")  font <- "mathpazo"
   if(is.null(font) && engine == "lualatex")  font <- "Lato"
 
   if(engine == "lualatex") {
-    text <- gsub("[.]underline","",text)  ## problematic...
+    text <- gsub("[.]underline","",text)
   }
 
-
-  
   text <- gsub(intToUtf8("8209"),"-",text)
-  text <- iconv2ascii(text)
-
+  if(force.ascii) text <- iconv2ascii(text)
   text <- gsub("```markdown|```","",text)
-  ##text <- gsub("---\n","",text)
+  if(!is.null(logo) && !file.exists(logo)) logo <- NULL
   
-  latex.engines <- c("lualatex","pdflatex")
-
   ## header/frontmatter
   hdr <- paste0("---\n")
-#  hdr <- paste0(hdr, "title: TITLE\n")
-#  hdr <- paste0(hdr, "title-block-banner: true\n")  
   hdr <- paste0(hdr, "format:\n")
-  if(engine %in% latex.engines) {
-    hdr <- paste0(hdr, "  pdf:\n")
-    hdr <- paste0(hdr, "    pdf-engine: ",engine,"\n")
-    hdr <- paste0(hdr, "    documentclass: ",documentclass,"\n")  
-    hdr <- paste0(hdr, "    papersize: a4\n")
-    hdr <- paste0(hdr, "    fontsize: 10pt\n")        
-    hdr <- paste0(hdr, "    geometry:\n")
-    hdr <- paste0(hdr, "      - left=24mm\n")
-    hdr <- paste0(hdr, "      - right=20mm\n")
-    hdr <- paste0(hdr, "      - top=24mm\n")
-    hdr <- paste0(hdr, "      - bottom=20mm\n")
-    if(!is.null(font) && engine == "lualatex") {
-      hdr <- paste0(hdr, "    mainfont: ",font,"\n")
-    }
-    if(!is.null(font) && engine == "pdflatex") {
-      hdr <- paste0(hdr, "    fontfamily: ",font,"\n")
-    }
-    hdr <- paste0(hdr, "    fig-pos: 'h!'\n")    
-  } else if(engine == 'typst') {
-    hdr <- paste0(hdr, "  typst:\n")
-    hdr <- paste0(hdr, "    papersize: a4\n")
-    hdr <- paste0(hdr, "    margin:\n")
-    hdr <- paste0(hdr, "      left: 10mm\n")
-    hdr <- paste0(hdr, "      right: 0mm\n")
-    #hdr <- paste0(hdr, "    mainfont: Lato\n")
-    hdr <- paste0(hdr, "    mainfont: helvetica\n")
-    hdr <- paste0(hdr, "    fontsize: 10pt\n")    
-  } else {
-    stop("invalid engine")
+  hdr <- paste0(hdr, "  pdf:\n")
+  hdr <- paste0(hdr, "    pdf-engine: ",engine,"\n")
+  hdr <- paste0(hdr, "    documentclass: ",documentclass,"\n")
+  hdr <- paste0(hdr, "    papersize: a4\n")
+  hdr <- paste0(hdr, "    fontsize: 10pt\n")
+  hdr <- paste0(hdr, "    geometry:\n")
+  hdr <- paste0(hdr, "      - left=24mm\n")
+  hdr <- paste0(hdr, "      - right=20mm\n")
+  hdr <- paste0(hdr, "      - top=25mm\n")
+  hdr <- paste0(hdr, "      - bottom=18mm\n")
+  if(!is.null(font) && engine == "lualatex") {
+    hdr <- paste0(hdr, "    mainfont: ",font,"\n")
   }
+  if(!is.null(font) && engine == "pdflatex") {
+    hdr <- paste0(hdr, "    fontfamily: ",font,"\n")
+  }
+  hdr <- paste0(hdr, "    fig-pos: 'h!'\n")
+  if(!is.null(logo)) {
+    tex_header <- tempfile(fileext = ".tex")
+    writeLines(c(
+      r"(\usepackage{graphicx})",
+      r"(\usepackage{eso-pic})",
+      paste0(r"(\AddToShipoutPictureBG*{\put(\LenToUnit{\paperwidth-20mm},\LenToUnit{\paperheight-28mm}){\makebox[0pt][r]{\includegraphics[height=9mm]{)", logo, r"(}}}})")
+    ), tex_header)
+    hdr <- paste0(hdr, "    include-in-header: ", tex_header, "\n")
+  }
+
   hdr <- paste0(hdr, "---\n\n")
   text <- paste0(hdr, text)
 
