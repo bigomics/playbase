@@ -462,63 +462,11 @@ metaLINCS.plotlyActivationMap <- function(res, contrast = NULL,
 ## ======================= AI REPORT ====================================
 ## ======================================================================
 
-
-#' Summarize drug connectivity results
-#'
-cmap.summarize_results <- function(pgx, ct, model, drugs=NULL, db=1,
-                                   ntop=10, ntop2=50) {
-
-  if(is.null(drugs)) drugs <- pgx$drugs
-  if(is.numeric(db)) db <- names(drugs)[db]
-
-  toplist <- list(
-    "Top most positively enriched MOA classes are" =
-      table_to_content(pgx.getTopMOA(pgx, ct, n=ntop, dir=+1, db=db, level=1)), 
-    "Top most negatively (opposite) enriched MOA classes are" =
-      table_to_content(pgx.getTopMOA(pgx, ct, n=ntop, dir=-1, db=db, level=1)), 
-    "Top most positively enriched MOA drug target genes are" =
-      table_to_content(pgx.getTopMOA(pgx, ct, n=ntop, dir=+1, db=db, level=2)), 
-    "Top most negatively (opposite) enriched MOA drug target genes are" =
-      table_to_content(pgx.getTopMOA(pgx, ct, n=ntop, dir=-1, db=db, level=2)), 
-
-    "Top most similar (i.e. positively correlated) drugs are" =
-      table_to_content(pgx.getTopDrugs(pgx, ct, n=ntop2, dir=+1, db=db, na.rm=TRUE)), 
-    "Top most inhibitory (i.e. negative correlated) drugs are:" = 
-      table_to_content(pgx.getTopDrugs(pgx, ct, n=ntop2, dir=-1, db=db, na.rm=TRUE)),
-    "Top most positively enriched gene sets are" =
-      paste(pgx.getTopGS(pgx, ct, n=ntop2, dir=+1), collapse=';'), 
-    "Top most negatively enriched gene sets are" =
-      paste(pgx.getTopGS(pgx, ct, n=ntop2, dir=-1), collapse=';') 
-  )
-
-  results=NULL
-  if(grepl("sensitivity",db)) {
-    results <- paste("Drug Synergy Analysis using Connectivity Map (CMap) analysis. Synergy of the mechanism of action (MOA) is based on correlation enrichment with computed drug sensitivity profiles of ",db," database. Positive correlation indicate possible synergy with the given drug. Negative correlation indicate possible antagonism with given drug. Indicate clearly that this is not a regular drug similarity analysis but a drug synergy/resistance analysis using CMap.\n\n**Top tables**:",
-    list_to_content(toplist, newline=TRUE), sep=""
-    )
-  } else {
-    results <- paste("Drug Mechanism of Action. Drug Connectivity Map (CMap) analysis of selected comparison. Similarity of the mechanism of action (MOA) is based on correlation enrichment with drug perturbation profiles of ",db," database:",
-      "\n\n**Top tables**:", list_to_content(toplist, newline=TRUE), sep=""
-    )
-  }
-
-  prompt <- paste("**Instructions**: Give an overall summary of the following results from a drug connectivity MOA analysis. Create an integrated pharmacological narrative focussing on inferred mechanisms-of-action class and possible drug targets. Validate inferred drug MOA with the given (measured) enriched up/down gene sets. Do not describe gene sets on its own, only in connection with drug pharmacological MOA. Do not include tables, be concise, write in prose is preferred. Format in markdown with title and sections.")
-  prompt <- paste(prompt, "\n\n**Analysis results**: ",results)
-  summary <- ai.ask(prompt, model = model)
-
-  bullets <- ai.ask(paste("Give a short 2-3 bullet point summary of the following text. Focus on similarity with drugs MOA. Use very short sentences, no titles. :",summary),  model = model)
-  
-  out <- list(
-    prompt = prompt,
-    bullets = bullets,
-    summary = summary
-  )
-}
-
 #'
 #'
 #' @export
 cmap.create_report <- function(pgx, model, model2=NULL, db=1,
+                               ct=NULL, ntop=20, ntop2=100, 
                                user.prompt=NULL, force=FALSE) {
 
   if(is.null(pgx$drugs)) return(NULL)  
@@ -541,37 +489,52 @@ cmap.create_report <- function(pgx, model, model2=NULL, db=1,
     pgx$drugs[[db]][['moa']] <- metaLINCS::computeMoaEnrichment(res) 
   }
   
-  ## Create summaries for all contrasts
-  summaries <- list()
-  ct=colnames(pgx$contrasts)[1]
-  for(ct in colnames(pgx$contrasts)) {
-    message("summarizing drug connectivity results for ",ct,"...")
-    summaries[[ct]] <- cmap.summarize_results(pgx, ct, model,
-      drugs=NULL, db=db, ntop=10, ntop2=50)   
-  }
-  names(summaries)
+  D1 <- pgx.getTopMOA(pgx, ct, n=ntop, db=db.name, level=1)
+  D2 <- pgx.getTopMOA(pgx, ct, n=ntop, db=db.name, level=2)
+  D3 <- pgx.getTopDrugs(pgx, ct, n=ntop2, db=db.name, na.rm=TRUE)
+  D4 <- pgx.getTopGS(pgx, ct, n=ntop2)
   
-  ## Create single summary from all summaries
-  S <- lapply(summaries, function(x) x$summary)
-  S <- collate_as_sections(S)
+  toplist <- list(
+    "Top most enriched MOA classes are" =
+      table_to_content(D1), 
+    "Top most enriched MOA drug target genes are" =
+      table_to_content(D2),
+    "Top most correlated drugs are" =
+      table_to_content(D3), 
+    "Top most enriched gene sets are" =
+      table_to_content(D4) 
+  )
+
+  results=NULL
+  if(grepl("sensitivity",db)) {
+    results <- paste("Drug Synergy Analysis using Connectivity Map (CMap) analysis. Synergy of the mechanism of action (MOA) is based on correlation enrichment with computed drug sensitivity profiles of ",db," database. Positive correlation indicate possible synergy with the given drug. Negative correlation indicate possible antagonism with given drug. Indicate clearly that this is not a regular drug similarity analysis but a drug synergy/resistance analysis using CMap.\n\n**Top tables**:",
+    list_to_content(toplist, newline=TRUE), sep=""
+    )
+  } else {
+    results <- paste("Drug Mechanism of Action. Drug Connectivity Map (CMap) analysis of selected comparison. Similarity of the mechanism of action (MOA) is based on correlation enrichment with drug perturbation profiles of ",db," database:",
+      "\n\n**Top tables**:", list_to_content(toplist, newline=TRUE), sep=""
+    )
+  }
+
+  prompt <- paste("**Instructions**: Below are results tables from a drug connectivity MOA analysis for different comparisons. Summarize this into a single report. Give an analysis for each comparison but group comparison together if they are similar in their results. Create an integrated pharmacological narrative focussing on inferred mechanisms-of-action class and possible drug targets. Validate inferred drug MOA with the given (measured) enriched up/down gene sets. Do not describe gene sets on its own, only in connection with drug pharmacological MOA. Write in continuous prose is preferred. Minimize use of tables and bullet points, Format in markdown with title and sections.")
+  prompt <- paste(prompt, "\n\n**Analysis results**: ",results)
 
   ## Ask LLM
-  prompt <- paste("**Instructions**: Below are drug connectivity analysis results for different comparisons. Summarize this into a single report. Minimize use of tables, writing in prose is preferred. Use scientific style. Format in markdown with title and sections.")
   if(!is.null(user.prompt)) prompt <- paste(prompt, user.prompt)
   prompt <- paste0(prompt, "\nExperiment description: ", pgx$description)
   prompt <- paste0(prompt, "\nDatabase: ", db.name)
-  prompt <- paste0(prompt, "\n\n**CMap analysis**: ", S)
-  rpt <- ai.ask(prompt, model = model2)
-  
-  ## create bullets
-  prompt2 <- paste0("**Instructions**: Extract 3 short bullet points for the following drug connectivity report. Return only the list items.")
-  prompt2 <- paste0(prompt2, "\n\n**Report**: ", rpt)
-  bullets <- ai.ask(prompt2, model = model)
 
+  rpt <- ai.ask(prompt, model = model2)
+
+  ## create bullets
+  bullets <- ai.ask(paste("Give a short 2-3 bullet point summary of the following  drug connectivity report. Focus on similarity with drugs MOA. Use very short sentences, no titles. Return only the list items.\n\n**Report**:",rpt),  model = model)
+
+  ## infographic??
+  
+  
   out <- list(
     prompt = prompt,
     bullets = bullets,
-    summaries = summaries,
     report = rpt,
     database = db.name,
     llm_model = model,

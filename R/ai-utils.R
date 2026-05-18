@@ -125,7 +125,7 @@ markdownToPDF <- function(text, file, tmpdir=NULL, engine='pdflatex',
     writeLines(c(
       r"(\usepackage{graphicx})",
       r"(\usepackage{eso-pic})",
-      paste0(r"(\AddToShipoutPictureBG*{\put(\LenToUnit{\paperwidth-20mm},\LenToUnit{\paperheight-28mm}){\makebox[0pt][r]{\includegraphics[height=9mm]{)", logo, r"(}}}})")
+      paste0(r"(\AddToShipoutPictureBG*{\put(\LenToUnit{\paperwidth-20mm},\LenToUnit{\paperheight-24mm}){\makebox[0pt][r]{\includegraphics[height=9mm]{)", logo, r"(}}}})")
     ), tex_header)
     hdr <- paste0(hdr, "    include-in-header: ", tex_header, "\n")
   }

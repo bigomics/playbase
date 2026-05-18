@@ -76,14 +76,14 @@ pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
   }
 
   if("cmap" %in% select) {    
-    if(!is.null(pgx$drugs) && is.null(pgx$drugs$report)) {  
+    if(!is.null(pgx$drugs) && is.null(pgx$drugs[[1]]$report)) {  
       message(">>> creating drug CMAP report...")
-      pgx <- pgx.update_drugs_results(pgx, model=llm_model, img_model=img_model)
-      drug.db <- names(pgx$drugs)[1]  ## NEED ALL????
-      drug.db <- head(drug.db,2) ## ONLY 2???
+      pgx <- pgx.update_drugs_results(pgx, model=NULL, img_model=NULL)
+      drug.db <- names(pgx$drugs)  ## NEED ALL????
+      ##drug.db <- head(drug.db,2) ## ONLY 2???
       for(db in drug.db) {      
         pgx$drugs[[db]]$report <- cmap.create_report(
-          pgx, model=llm_model, model2 = NULL, db = db,
+          pgx, model = llm_model, model2 = NULL, db = db,
           user.prompt = NULL, force=force)
       }
     }
@@ -257,11 +257,7 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
       ## NEED RETHINK: Only reports first contrast at the moment
       D <- pgx.getTopDrugs(pgx, ct, n=ntop, na.rm=TRUE)    
       drug_similarity <- list(
-        "Drug Mechanism of Action. Drug Connectivity Map (CMap) analysis of selected comparison. Similarity of the mechanism of action (MOA) is based on correlation enrichment with drug perturbation profiles of LINCS L1000 database. The top most similar (i.e. positively correlated) drugs are:\n\n" =
-          pgx.getTopDrugs(pgx, ct, n=ntop, dir=+1, na.rm=TRUE), 
-        "The top most inhibitory (i.e. negative correlated) drugs are:\n\n" = 
-          pgx.getTopDrugs(pgx, ct, n=ntop, dir=-1, na.rm=TRUE)
-      )
+        "Drug Mechanism of Action. Drug Connectivity Map (CMap) analysis of selected comparison. Similarity of the mechanism of action (MOA) is based on correlation enrichment with drug perturbation profiles of LINCS L1000 database. Positive correlation means similar MOA, negative correlation means opposite MOA. The top most correlated drugs are:\n\n" = D)
       #drug_similarity <- lapply(drug_similarity, round, digits=3)    
       drug_similarity <- lapply(drug_similarity, table_to_content)    
       drug_similarity <- list_to_content(drug_similarity, newline=TRUE)
@@ -660,10 +656,14 @@ rpt.compile_cmap_report <- function(obj, which.db = 1, report = NULL,
       which.db <- names(drugs)[which.db]
     }
     rpt <- drugs[[which.db]]$report
-  } else if(!is.null(report))  {
-    ## check if we have valid report results    
+  }
+
+  ## user provided report
+  if(is.null(rpt) && !is.null(report))  {
     rpt <- report
-  } else {
+  }
+
+  if(is.null(rpt))  {
     stop("invalid parameters: missing obj or report")
   }
   
