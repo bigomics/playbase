@@ -11,6 +11,8 @@ markdownToPDF(
   engine = "pdflatex",
   font = "mathpazo",
   documentclass = "report",
+  force.ascii = TRUE,
+  logo = NULL,
   quiet = TRUE
 )
 }
