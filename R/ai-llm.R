@@ -18,12 +18,12 @@ REMOTE_MODELS <- c(
 
 #'
 #' @export
-ai.get_ollama_models <- function(models=NULL, size=NULL) {
-  available.models <- system("ollama list | tail -n +2 | cut -d' ' -f 1", intern=TRUE)
+ai.get_ollama_models <- function(models = NULL, size = NULL) {
+  available.models <- system("ollama list | tail -n +2 | cut -d' ' -f 1", intern = TRUE)
 
-  models.sizes <- system("ollama list | tail -n +2 | tr -s ' ' | cut -d' ' -f 3", intern=TRUE)
+  models.sizes <- system("ollama list | tail -n +2 | tr -s ' ' | cut -d' ' -f 3", intern = TRUE)
   models.sizes <- as.numeric(models.sizes)
-  models.sizes <- ifelse(models.sizes < 100, models.sizes, models.sizes/1000)
+  models.sizes <- ifelse(models.sizes < 100, models.sizes, models.sizes / 1000)
   names(models.sizes) <- available.models
   table(models.sizes < 5)
 
@@ -33,48 +33,48 @@ ai.get_ollama_models <- function(models=NULL, size=NULL) {
     available.models <- intersect(models,available.models)
   }
 
-  msize <- models.sizes[available.models] 
-  if(!is.null(size) && size=="S") {
-    sel <- which( msize <= 3 )
+  msize <- models.sizes[available.models]
+  if (!is.null(size) && size == "S") {
+    sel <- which(msize <= 3)
     available.models <- available.models[sel]
   }
-  if(!is.null(size) && size=="M") {
-    sel <- which( msize > 3 & msize <= 6)
+  if (!is.null(size) && size == "M") {
+    sel <- which(msize > 3 & msize <= 6)
     available.models <- available.models[sel]
   }
-  if(!is.null(size) && size=="L") {
-    msize <- models.sizes[available.models] 
-    sel <- which( msize > 6 )
+  if (!is.null(size) && size == "L") {
+    msize <- models.sizes[available.models]
+    sel <- which(msize > 6)
     available.models <- available.models[sel]
   }
-  
+
   return(available.models)
 }
-OLLAMA_MODELS = ai.get_ollama_models()
+OLLAMA_MODELS <- ai.get_ollama_models()
 
 
-#' Return list of available remote models. 
+#' Return list of available remote models.
 #'
 #' @export
 ai.get_remote_models <- function(models = NULL) {
   keys <- NULL
-  dbg("[ai.get_remote_models] input models = ",models)
-  dbg("[ai.get_remote_models] len.models = ",length(models))
-  if(!is.null(models) && "REMOTE_MODELS" %in% models) {
+  dbg("[ai.get_remote_models] input models = ", models)
+  dbg("[ai.get_remote_models] len.models = ", length(models))
+  if (!is.null(models) && "REMOTE_MODELS" %in% models) {
     models <- unique(c(models, REMOTE_MODELS))
   }
-  if(is.null(models)) {
+  if (is.null(models)) {
     models <- REMOTE_MODELS
   }
-  if (Sys.getenv("OPENAI_API_KEY")!="") keys <- c(keys,"gpt-","openai:")
-  if (Sys.getenv("XAI_API_KEY")!="") keys <- c(keys,"grok-","xai:")
-  if (Sys.getenv("GROQ_API_KEY")!="") keys <- c(keys,"groq:")
-  if (Sys.getenv("GEMINI_API_KEY")!="") keys <- c(keys,"gemini-","google:")
-  if (Sys.getenv("OLLAMA_REMOTE")!="") keys <- c(keys,"remote:.*")
+  if (Sys.getenv("OPENAI_API_KEY") != "") keys <- c(keys, "gpt-", "openai:")
+  if (Sys.getenv("XAI_API_KEY") != "") keys <- c(keys, "grok-", "xai:")
+  if (Sys.getenv("GROQ_API_KEY") != "") keys <- c(keys, "groq:")
+  if (Sys.getenv("GEMINI_API_KEY") != "") keys <- c(keys, "gemini-", "google:")
+  if (Sys.getenv("OLLAMA_REMOTE") != "") keys <- c(keys, "remote:.*")
 
   dbg("[ai.get_remote_models] keys = ", keys)
-  
-  if(is.null(models) || length(models)==0 || models[1]=="" ) {
+
+  if (is.null(models) || length(models) == 0 || models[1] == "") {
     models <- keys
   } else if (!is.null(keys)) {
     regex <- paste0("^", keys, collapse = "|")
@@ -83,18 +83,18 @@ ai.get_remote_models <- function(models = NULL) {
     models <- NULL
   }
 
-  dbg("[ai.get_remote_models] available models = ",models)
-  
+  dbg("[ai.get_remote_models] available models = ", models)
+
   models
 }
 
 #' @export
-ai.get_models <- function(models=NULL) {
-  local.models  <- sort(ai.get_ollama_models(models))
-  remote.models <- sort(ai.get_remote_models(models))   
+ai.get_models <- function(models = NULL) {
+  local.models <- sort(ai.get_ollama_models(models))
+  remote.models <- sort(ai.get_remote_models(models))
   models <- list()
-  if(length(local.models))  models$local <- local.models
-  if(length(remote.models)) models$remote <- remote.models  
+  if (length(local.models)) models$local <- local.models
+  if (length(remote.models)) models$remote <- remote.models
   return(models)
 }
 
@@ -103,18 +103,18 @@ ai.model_is_available <- function(model) {
   model %in% ai.get_models(models = model)
 }
 
-##======================================================================
-##====================== FUNCTIONS =====================================
-##======================================================================
+## ======================================================================
+## ====================== FUNCTIONS =====================================
+## ======================================================================
 
 #' @export
 ai.create_ellmer_chat <- function(model, system_prompt) {
   chat <- NULL
-  if( grepl("openai:", model) ) {
-    model1 <- sub("^openai:","",model)
+  if (grepl("openai:", model)) {
+    model1 <- sub("^openai:", "", model)
     chat <- ellmer::chat_openai(model = model1, system_prompt = system_prompt)
-  } else if( grepl("^groq:",model)) {
-    model1 <- sub("^groq:","",model)
+  } else if (grepl("^groq:", model)) {
+    model1 <- sub("^groq:", "", model)
     chat <- ellmer::chat_groq(model = model1, system_prompt = system_prompt)
   } else if( grepl("^google:",model)) {
     model1 <- sub("^google:","",model)
@@ -143,34 +143,36 @@ ai.ask <- function(question, model, engine=c("ellmer","tidyprompt")[2]) {
 }
 
 #' @export
-ai.ask_ellmer <- function(question, model=DEFAULT_LLM, prompt=NULL) {
+ai.ask_ellmer <- function(question, model = DEFAULT_LLM, prompt = NULL) {
   chat <- NULL
   if (inherits(model, "Chat")) {
     chat <- model
-  } else if(is.character(model)) {
-    if (model %in% OLLAMA_MODELS || grepl("^ollama:",model) ) {
-      model1 <- sub("^ollama:","",model)
+  } else if (is.character(model)) {
+    if (model %in% OLLAMA_MODELS || grepl("^ollama:", model)) {
+      model1 <- sub("^ollama:", "", model)
       chat <- ellmer::chat_ollama(model = model1, system_prompt = prompt)
-    } else if (grepl("^gpt|^openai:",model) && Sys.getenv("OPENAI_API_KEY")!="") {
+    } else if (grepl("^gpt|^openai:", model) && Sys.getenv("OPENAI_API_KEY") != "") {
       message("warning: using remote GPT model:", model)
-      model1 <- sub("^openai:","",model)
+      model1 <- sub("^openai:", "", model)
       chat <- ellmer::chat_openai(
         model = model1, system_prompt = prompt,
-        api_key = Sys.getenv("OPENAI_API_KEY") )
-    } else if (grepl("^grok|^xai:",model) && Sys.getenv("XAI_API_KEY")!="") {
-      model1 <- sub("^xai:","",model)
+        api_key = Sys.getenv("OPENAI_API_KEY")
+      )
+    } else if (grepl("^grok|^xai:", model) && Sys.getenv("XAI_API_KEY") != "") {
+      model1 <- sub("^xai:", "", model)
       chat <- ellmer::chat_openai(
         model = model1, system_prompt = prompt,
         api_key = Sys.getenv("XAI_API_KEY"),
-        base_url="https://api.x.ai/v1/")
-    } else if (grepl("^groq:",model) && Sys.getenv("GROQ_API_KEY")!="") {
-      model1 <- sub("groq:","",model)
+        base_url = "https://api.x.ai/v1/"
+      )
+    } else if (grepl("^groq:", model) && Sys.getenv("GROQ_API_KEY") != "") {
+      model1 <- sub("groq:", "", model)
       chat <- ellmer::chat_groq(
         model = model1, system_prompt = prompt,
         api_key = Sys.getenv("GROQ_API_KEY")
       )
-    } else if (grepl("^gemini|^google:",model) && Sys.getenv("GEMINI_API_KEY")!="") {
-      model1 <- sub("^google:","",model)
+    } else if (grepl("^gemini|^google:", model) && Sys.getenv("GEMINI_API_KEY") != "") {
+      model1 <- sub("^google:", "", model)
       chat <- ellmer::chat_google_gemini(
         model = model1, system_prompt = prompt,
         api_key = Sys.getenv("GEMINI_API_KEY")
@@ -186,64 +188,64 @@ ai.ask_ellmer <- function(question, model=DEFAULT_LLM, prompt=NULL) {
   chat$last_turn()@text
 }
 
-ai.ask_tidyprompt <- function(question, model, verbose=0) {
+ai.ask_tidyprompt <- function(question, model, verbose = 0) {
   llm <- NULL
-  if(model %in% OLLAMA_MODELS || grepl("^ollama:",model) ) {
-    model1 <- sub("^ollama:","",model)
+  if (model %in% OLLAMA_MODELS || grepl("^ollama:", model)) {
+    model1 <- sub("^ollama:", "", model)
     llm <- tidyprompt::llm_provider_ollama(
       parameters = list(
         model = model1
       )
     )
-  } else if(grepl("^remote:",model) ) {
+  } else if (grepl("^remote:", model)) {
     remotesrv <- Sys.getenv("OLLAMA_REMOTE")
-    if(remotesrv=="") {
+    if (remotesrv == "") {
       message("error: please set OLLAMA_REMOTE")
     }
-    if(remotesrv!="") {
-      model1 <- sub("^remote:","",model)    
-      if(verbose>0) {
-        message("connecting to remote ollama server = ",remotesrv)
-        message("remote model = ",model1)        
+    if (remotesrv != "") {
+      model1 <- sub("^remote:", "", model)
+      if (verbose > 0) {
+        message("connecting to remote ollama server = ", remotesrv)
+        message("remote model = ", model1)
       }
       llm <- tidyprompt::llm_provider_ollama(
         parameters = list(
           model = model1
         ),
-        url = paste0("http://",remotesrv,"/api/chat")
+        url = paste0("http://", remotesrv, "/api/chat")
       )
     }
-  } else if(grepl("^groq:",model)) {
-    model2 <- sub("groq:","",model)
+  } else if (grepl("^groq:", model)) {
+    model2 <- sub("groq:", "", model)
     llm <- tidyprompt::llm_provider_groq(
       parameters = list(model = model2)
     )
-  } else if(grepl("^grok|^xai:",model)) {
-    model2 <- sub("^xai:","",model)
+  } else if (grepl("^grok|^xai:", model)) {
+    model2 <- sub("^xai:", "", model)
     llm <- tidyprompt::llm_provider_xai(
       parameters = list(model = model2)
     )
-  } else if(grepl("^gpt-|^openai:",model)) {
-    model2 <- sub("^openai:","",model)
+  } else if (grepl("^gpt-|^openai:", model)) {
+    model2 <- sub("^openai:", "", model)
     llm <- tidyprompt::llm_provider_openai(
       parameters = list(model = model2)
     )
-  } else if(grepl("^gemini-|^google:",model)) {
-    model2 <- sub("^google:","",model)
+  } else if (grepl("^gemini-|^google:", model)) {
+    model2 <- sub("^google:", "", model)
     llm <- tidyprompt::llm_provider_google_gemini(
       parameters = list(model = model2),
       api_key = Sys.getenv("GEMINI_API_KEY")
     )
   }
-  if(is.null(llm)) {
+  if (is.null(llm)) {
     message("warning. unsupported model: ", model)
     return(NULL)
   }
-  
-  ##question = "what is P53?"
-  if(verbose>0) {
-    message("model = ",model)
-    message("question = ",question)    
+
+  ## question = "what is P53?"
+  if (verbose > 0) {
+    message("model = ", model)
+    message("question = ", question)
   }
 
   resp <- NULL
@@ -256,15 +258,15 @@ ai.ask_tidyprompt <- function(question, model, verbose=0) {
     )
 
   ## clean response
-  resp <- sub("<think>.*</think>","",resp)
+  resp <- sub("<think>.*</think>", "", resp)
 
   return(resp)
 }
 
 
-##----------------------------------------------------------------------
-##----------------------------------------------------------------------
-##----------------------------------------------------------------------
+## ----------------------------------------------------------------------
+## ----------------------------------------------------------------------
+## ----------------------------------------------------------------------
 
 #'
 #'

@@ -24,7 +24,6 @@ compute_testGenes <- function(pgx,
                               prune.samples = TRUE,
                               remove.outputs = TRUE,
                               timeseries = FALSE) {
-
   message("[compute_testGenes] detecting stat groups...")
 
   ## -----------------------------------------------------------------------------
@@ -105,7 +104,7 @@ compute_testGenes <- function(pgx,
   methods <- test.methods
   message("Testing differential expression methods: ", paste(methods, collapse = ", "))
   PRIOR.CPM <- 1
-  
+
   ## Run all test methods
   message("[compute_testGenes] start fitting... ")
   gx.meta <- ngs.fitContrastsWithAllMethods(
@@ -129,7 +128,7 @@ compute_testGenes <- function(pgx,
 
   message("[compute_testGenes]: fitting completed!")
 
-  
+
   ## --------------------------------------------------------------------------------
   ## set default matrices
   ## --------------------------------------------------------------------------------
@@ -143,9 +142,8 @@ compute_testGenes <- function(pgx,
 
   ## remove large outputs.
   if (remove.outputs) pgx$gx.meta$outputs <- NULL
-  
+
   message("[compute_testGenes] done!")
 
   return(pgx)
-
 }
