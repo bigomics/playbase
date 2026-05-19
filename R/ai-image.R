@@ -6,7 +6,7 @@
 IMAGE_MODELS <- c(
   "google:gemini-3.1-flash-image-preview",
   "google:gemini-3-pro-image-preview",
-  "openai:gpt-image-1"
+  "openai:gpt-image-2"
 )
 
 #' Return list of available remote models.
@@ -46,12 +46,14 @@ ai.create_image <- function(prompt,
                             model = IMAGE_MODELS,
                             format = c("file", "base64", "raw")[1],
                             filename = "image.png",
-                            aspect_ratio = "16:9") {
+                            size = 1024,
+                            aspect_ratio = "16:9" )
+{
   res <- NULL
-  for (m in model) {
-    message("[ai.create_image] reaching model: ", m)
-
-    if (grepl("gemini", m)) {
+  for(m in model) {
+    message("[ai.create_image] reaching model: ",m)
+    
+    if(grepl("gemini|^google",m)) {
       res <- try(ai.create_image_gemini(
         prompt = prompt,
         model = m,
@@ -73,16 +75,16 @@ ai.create_image <- function(prompt,
       ))
     }
 
-    if (grepl("^openai:gpt", m)) {
+    if(grepl("^openai|gpt",m)) {
       res <- try(ai.create_image_openai(
         prompt = prompt,
-        model = "openai:gpt-image-1",
-        # model = model,
+        model = m,
         api_key = Sys.getenv("OPENAI_API_KEY"),
         format = format,
-        filename = filename
-        ## aspect_ratio = aspect_ratio
-      ))
+        filename = filename,
+        aspect_ratio = aspect_ratio,
+        size = size
+      ))        
     }
     if (inherits(res, "try-error")) {
       message("[ai.create_image] failed model: ", m)
@@ -234,24 +236,23 @@ ai.create_image_gemini <- function(prompt,
 #' prompt of about 1000 characters.
 #'
 #' @export
-ai.create_image_openai <- function(prompt,
-                                   model = "gpt-image-1",
-                                   size = c("auto", "1024x1024")[1],
-                                   aspect_ratio = NULL,
-                                   format = c("file", "base64", "raw"),
-                                   filename = "image.png",
-                                   api_key = Sys.getenv("OPENAI_API_KEY"),
-                                   base_url = "https://api.openai.com/v1",
-                                   response_format = NULL,
-                                   user = NULL, organization = NULL) {
+ai.create_image_openai <- function (prompt,
+                                    model = "gpt-image-2", 
+                                    size = 1024,
+                                    aspect_ratio = "3:2",
+                                    format = c("file","base64","raw"),
+                                    filename = "image.png",
+                                    api_key = Sys.getenv("OPENAI_API_KEY"),
+                                    base_url = "https://api.openai.com/v1",
+                                    response_format = NULL,
+                                    user = NULL, organization = NULL) 
+{
   ##    size <- match.arg(size)
   format <- match.arg(format)
   assertthat::assert_that(assertthat::is.string(prompt), assertthat::noNA(prompt))
-  assertthat::assert_that(assertthat::is.string(size), assertthat::noNA(size))
-  assertthat::assert_that(
-    assertthat::is.string(format),
-    assertthat::noNA(format)
-  )
+  #assertthat::assert_that(assertthat::is.number(size), assertthat::noNA(size))
+  assertthat::assert_that(assertthat::is.string(format), 
+    assertthat::noNA(format))
   if (!is.null(user)) {
     assertthat::assert_that(
       assertthat::is.string(user),
@@ -274,19 +275,15 @@ ai.create_image_openai <- function(prompt,
     message("ERROR: not an OpenAI/GPT model")
     return(NULL)
   }
-  model <- sub("^openai:", "", model)
-
-  if (grepl("api.x.ai", base_url, fixed = TRUE)) {
-    message("calling grok (warning: $0.07 per image)")
-    if (is.null(model)) model <- "grok-2-image-1212"
-    size <- NULL
-  } else if (grepl("api.openai.com", base_url, fixed = TRUE)) {
-    ## if(is.null(model)) model <- NULL
-    message("calling openai (warning: $0.05 per image)")
-  } else {
-    stop("invalid base_url =", base_url)
-  }
-
+  model <- sub("^openai:","",model)
+  
+  if(is.null(aspect_ratio)) aspect_ratio <- "3:2"
+  size <- max(as.numeric(strsplit(as.character(size),split='x')[[1]]))
+  ar <- as.numeric(strsplit(aspect_ratio,split=':')[[1]])
+  ar <- ar / mean(ar,na.rm=TRUE)
+  size <- 16*round(size*ar/16)
+  size <- paste(size,collapse='x')
+  
   url <- glue::glue("{base_url}/images/generations")
   headers <- c(
     Authorization = paste("Bearer", api_key),
@@ -302,7 +299,7 @@ ai.create_image_openai <- function(prompt,
   body[["n"]] <- 1
   if (!is.null(response_format)) body[["response_format"]] <- "b64_json"
   body[["size"]] <- size
-  if (!is.null(aspect_ratio)) body[["aspect_ratio"]] <- aspect_ratio
+  #if(!is.null(aspect_ratio)) body[["aspect_ratio"]] <- aspect_ratio
   body[["user"]] <- user
   response <- httr::POST(
     url = url, httr::add_headers(.headers = headers),
@@ -390,3 +387,51 @@ ai.create_image_grok <- function(prompt,
 
   return(res)
 }
+
+
+#' Given a report this function creates an infographic by calling
+#' Gemini3. The genAI model is given the report and asked to adhere to
+#' the included or external given diagram (in DOT format).
+#' 
+#' @export
+ai.create_infographic <- function(report, model, diagram=NULL,
+                                  aspectratio = c("4:3","16:9","3:4")[2],
+                                  prompt=NULL, add.fallback = FALSE,
+                                  format=c("file","image")[1],
+                                  filename = "infographic.png") {  
+
+  prompt <- paste(prompt, "\nCreate a graphical abstract according to the information in this report. Use scientific infographic style. Illustrate biological concepts with small graphics. \n\n", report, "\n---------------\n\n", diagram)
+  if(is.null(model) || model=="") {
+    model <- ai.get_image_models()
+  }
+  if(add.fallback) {
+    ## add fallback models
+    model <- unique(c(model,playbase::ai.get_image_models()))  
+  }
+  if(format=="image") filename <- tempfile(fileext=".png")
+  outfile <- try(ai.create_image(
+    prompt = prompt,  model = model,
+    aspect_ratio = aspectratio,
+    #size = 1024,
+    format = "file",
+    filename = filename
+  ))
+  if(inherits(outfile,"try-error")) return(NULL)
+
+  if(format == "file") {
+    return(invisible(outfile))
+  } else   if(format == "image") {
+    if(grepl("png$",outfile,ignore.case=TRUE)) {
+      img <- png::readPNG(outfile)
+    } else if(grepl("jpg$|jpeg$",outfile,ignore.case=TRUE)) {
+      img <- jpeg::readJPEG(outfile)
+    } else {
+      message("[wgcna.init] Error: invalid output image")
+      img <- NULL
+    }
+    return(invisible(img))
+  } else {
+    stop("invalid output format")
+  }
+}
+

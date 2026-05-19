@@ -8,10 +8,12 @@ pgx.boxplot.PLOTLY(
   data,
   x = NULL,
   y = NULL,
+  split = NULL,
   title = NULL,
   color = "#3181de",
   fillcolor = "#2fb5e3",
   linecolor = "#3181de",
+  colors = NULL,
   hoverinfo = "y",
   hoverformat = ".2f",
   yaxistitle = FALSE,
@@ -46,6 +48,8 @@ pgx.boxplot.PLOTLY(
 \item{font_family}{Font family for text. Default "Lato".}
 
 \item{margin}{Plot margins. Default c(10,10,10,10).}
+
+\item{split.}{Split categories by subcategories to have side-by-side boxplots. Default NULL}
 }
 \value{
 A plotly boxplot object.

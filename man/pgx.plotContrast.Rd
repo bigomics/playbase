@@ -79,8 +79,6 @@ ggVolcano(
   use_hyperbola = FALSE,
   hyperbola_k = 1,
   use_ggprism = FALSE,
-  ggprism_palette = "black_and_white",
-  ggprism_colors = FALSE,
   ggprism_border = FALSE,
   ggprism_axis_guide = "default",
   ggprism_show_legend = FALSE,

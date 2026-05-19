@@ -1535,25 +1535,31 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   }
 
   ## strip prefix ??
-  probes0 <- probes
-  probes <- mofa.strip_prefix(probes0)
-
-  ## iterative matching of probes.
-  idx <- rep(NA, length(probes))
-  names(idx) <- probes0
-  probe_match <- apply(annot_table, 2, function(x) sum(probes %in% x))
-  match.cols <- names(sort(probe_match, decreasing = TRUE))
-  pp <- probes
-  for (k in match.cols) {
-    ## from_id <- names(which.max(probe_match))
+  probes1 <- mofa.strip_prefix(probes)
+  probes2 <- strip_postfix(probes1)  
+  
+  ## iterative matching of probes. can match multiple columns.
+  idx <- rep(NA, length(probes))  
+  names(idx) <- probes
+  probe_match <- apply(annot_table, 2, function(x)
+    sum(probes %in% x | probes1 %in% x | probes2 %in% x)
+  )
+  match.cols <- names(sort(probe_match,decreasing=TRUE))
+  k=match.cols[1]
+  for (k in match.cols) {  
+    ##from_id <- names(which.max(probe_match))
     from <- annot_table[, k]
-    ii <- match(pp, from)
-    if (any(!is.na(ii))) {
-      kk <- which(!is.na(ii))
-      idx[match(pp[kk], probes)] <- ii[kk]
+    ii <- match(probes1, from)
+    if(any(!is.na(ii))) {
+      kk <- which(!is.na(ii) & is.na(idx) )
+      idx[kk] <- ii[kk]
     }
-    pp <- probes[is.na(idx)]
-    if (length(pp) == 0) break
+    ii <- match(probes2, from)
+    if(any(!is.na(ii))) {
+      kk <- which(!is.na(ii) & is.na(idx) )
+      idx[kk] <- ii[kk]
+    }
+    if(sum(is.na(idx))==0) break
   }
 
   ## bail out if no match at all
@@ -1567,19 +1573,22 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   }
 
   ## create matched counts/data table
-  keep.prefix <- (keep.prefix && all(grepl(":", probes0)))
+  keep.prefix <- (keep.prefix && all(grepl(":", probes)))
   if (keep.prefix) {
-    dt <- mofa.get_prefix(probes0)
+    dt <- mofa.get_prefix(probes)
     new.name <- annot_table[idx, new_id]
     new.name <- paste0(dt, ":", new.name)
   } else {
     new.name <- annot_table[idx, new_id]
   }
+  new.name <- make_unique(new.name)
   rownames(counts) <- new.name
 
   # Remove rows with missing name
   if (na.rm) {
     counts <- counts[!rownames(counts) %in% c("", "NA", NA), , drop = FALSE]
+    sel <- !grepl("^NA.[0-9]+", rownames(counts))
+    counts <- counts[sel, , drop = FALSE]    
   }
 
   # Average columns of rows with the same gene symbol
