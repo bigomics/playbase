@@ -16,6 +16,7 @@ pgx.createPGX(
   max.genesets = 5000,
   name = "Data set",
   datatype = "RNA-seq",
+  datatype_subtype = NULL,
   azimuth_ref = "pbmcref",
   probe_type = NULL,
   creator = "unknown",

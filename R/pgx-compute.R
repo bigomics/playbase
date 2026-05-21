@@ -169,6 +169,7 @@ pgx.createPGX <- function(counts,
                           max.genesets = 5000,
                           name = "Data set",
                           datatype = "RNA-seq",
+                          datatype_subtype = NULL,
                           azimuth_ref = "pbmcref",
                           probe_type = NULL,
                           creator = "unknown",
@@ -201,6 +202,9 @@ pgx.createPGX <- function(counts,
   message("[pgx.createPGX]===========================================")
   message("\n")
   message("[pgx.createPGX] datatype = ", datatype, "\n")
+  if (!is.null(datatype_subtype)) {
+    message("[pgx.createPGX] datatype_subtype = ", datatype_subtype, "\n")
+  }
 
   if (is.null(counts)) stop("[pgx.createPGX] FATAL: counts must be provided")
   if (is.null(samples)) stop("[pgx.createPGX] FATAL: samples must be provided")
@@ -400,6 +404,7 @@ pgx.createPGX <- function(counts,
     date = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
     creator = creator,
     datatype = datatype,
+    datatype_subtype = datatype_subtype,
     description = description,
     metadata = metadata,
     samples = data.frame(samples, check.names = FALSE),
