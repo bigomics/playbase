@@ -299,15 +299,16 @@ sum_treps <- function(counts, trep_var = "") {
 #' @param lengths Character vector of feature lengths, collapsed with ";". Default NULL.
 #' @export
 reorder_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
-
   ff <- strsplit(as.character(feature), ";")[[1]]
   ff <- ff[nzchar(trimws(ff))]
 
   if (all(as.character(feature) %in% c("", "NA", NA))) {
-    return(list(feature=feature, lengths=lengths))
+    return(list(feature = feature, lengths = lengths))
   }
 
-  if (length(ff) <= 1) { return(list(feature=ff, lengths=lengths)) }
+  if (length(ff) <= 1) {
+    return(list(feature = ff, lengths = lengths))
+  }
 
   ll <- NULL
   if (!is.null(lengths)) {
@@ -330,9 +331,10 @@ reorder_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
       }
     }
   }
-  
+
   ## Swiss-Prot entries come first (if any), followed by TrEMBL entries (if any).
-  ff.sp=NULL; ff.trembl=NULL
+  ff.sp <- NULL
+  ff.trembl <- NULL
   sp <- grep("^[OPQ][0-9]", ff)
   if (length(sp) > 0) {
     ## Swiss-Prot canonical entries come first (P05067), followed by isoforms (eg., P05067-2).
@@ -355,9 +357,10 @@ reorder_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
   }
 
   if (length(ff.sp) != length(ff)) ff.trembl <- if (length(sp) == 0) ff else ff[-sp]
-  
-  ll.sp=NULL; ll.trembl=NULL
-  
+
+  ll.sp <- NULL
+  ll.trembl <- NULL
+
   ## Among Swiss-Prot entries, longer proteins come first.
   if (!is.null(ff.sp) & !is.null(ll)) {
     hh <- grep("[-_][0-9]+$", ff.sp)
@@ -385,21 +388,21 @@ reorder_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
       names(ll.sp) <- names(ll)
     }
   }
-  
+
   ## Among TrEMBL entries, longer proteins come first.
   if (!is.null(ff.trembl) & !is.null(ll)) {
     ll.trembl <- ll[match(ff.trembl, names(ll))]
     ll.trembl <- as.numeric(ll.trembl)
     oo <- order(ll.trembl, decreasing = TRUE)
     ff.trembl <- ff.trembl[oo]
-    ll.trembl <- ll.trembl[oo] 
+    ll.trembl <- ll.trembl[oo]
     if (!isTRUE(all.equal(ll.trembl, names(ll)))) {
       names(ll.trembl) <- names(ll)[match(ff.trembl, names(ll))]
     } else {
       names(ll.trembl) <- names(ll)
     }
   }
-  
+
   if (!is.null(ff.sp) | !is.null(ff.trembl)) {
     ff <- paste0(c(ff.sp, ff.trembl), collapse = ";")
   }
@@ -408,7 +411,7 @@ reorder_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
     ll <- paste0(c(ll.sp, ll.trembl), collapse = ";")
     names(ll) <- paste0(c(names(ll.sp), names(ll.trembl)), collapse = ";")
   }
-  
+
   ## Keep unique if possible. No deduplication if different lengths present.
   ff1 <- strsplit(ff, ";")[[1]]
   ff1.dup <- which(duplicated(ff1))
@@ -421,15 +424,15 @@ reorder_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
         ff1 <- ff1[-ff1.dup]
         ll1 <- ll1[-ll1.dup]
         nn1 <- nn1[-ll1.dup]
-        ff <- paste0(ff1, collapse=";")
-        ll <- paste0(ll1, collapse=";")
-        names(ll) <- paste0(nn1, collapse=";")
+        ff <- paste0(ff1, collapse = ";")
+        ll <- paste0(ll1, collapse = ";")
+        names(ll) <- paste0(nn1, collapse = ";")
       }
     } else {
-      ff <- paste0(ff1[-ff1.dup], collapse=";")
+      ff <- paste0(ff1[-ff1.dup], collapse = ";")
     }
   }
-  
+
   ## Reset lengths to original
   if (!is.null(ll)) {
     vv <- strsplit(as.character(ll), ";")[[1]]
@@ -438,13 +441,12 @@ reorder_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
       jj <- match(names(lengths), nn)
       vv[jj] <- unname(lengths)
     }
-    ll <- paste0(vv, collapse=";")
+    ll <- paste0(vv, collapse = ";")
   }
-  
+
   if (verbose) message("playbase::reorder_uniprots] Completed.\n")
 
-  return(list(feature=ff, lengths=ll))
-  
+  return(list(feature = ff, lengths = ll))
 }
 
 

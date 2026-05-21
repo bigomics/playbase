@@ -3176,8 +3176,10 @@ plot_ggviolin <- function(x, y, group = NULL, main = "", ylim = NULL, add.dots =
     ggplot2::ylim(ylim[1], ylim[2]) +
     ggplot2::scale_fill_manual(values = col) +
     ggplot2::scale_x_discrete(guide = guide_axis(angle = srt)) +
-    ggplot2::geom_violin(trim = TRUE, position = ggplot2::position_dodge(pdodge),
-                          show.legend = FALSE) +
+    ggplot2::geom_violin(
+      trim = TRUE, position = ggplot2::position_dodge(pdodge),
+      show.legend = FALSE
+    ) +
     ggplot2::guides(fill = "none") +
     ggplot2::theme_minimal(base_size = base_size) +
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = srt, vjust = 0))
@@ -7962,7 +7964,7 @@ plotAdjacencyMatrixFromGraph <- function(graph, nmax = 40, binary = FALSE,
 }
 
 #' @export
-plotlyExport <- function(p, file, width, height, 
+plotlyExport <- function(p, file, width, height,
                          format = tools::file_ext(file),
                          scale = 1, server = NULL) {
   is.docker <- file.exists("/.dockerenv")

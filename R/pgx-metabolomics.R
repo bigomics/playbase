@@ -1156,7 +1156,7 @@ ramp.annotate_metabolites <- function(id) {
   idx <- iconv2utf8(idx)
 
   ## chem properties
-  suppressMessages(chemprop <- RaMP::getChemicalProperties(idx, db=rampDB))
+  suppressMessages(chemprop <- RaMP::getChemicalProperties(idx, db = rampDB))
   chemdata <- chemprop$chem_props
   colnames(chemdata)
   sel.chem <- c("chem_source_id", "common_name", "mol_formula", "monoisotop_mass")
@@ -1166,7 +1166,7 @@ ramp.annotate_metabolites <- function(id) {
   rownames(annot) <- NULL
 
   ## add lipid class info
-  chem <- suppressMessages(RaMP::getChemClass(mets = idx, inferIdMapping = TRUE, db=rampDB))
+  chem <- suppressMessages(RaMP::getChemClass(mets = idx, inferIdMapping = TRUE, db = rampDB))
   metclass <- chem$met_classes
   dim(metclass)
   if (nrow(metclass)) {
@@ -1374,7 +1374,7 @@ ramp.get_metabolite_sets <- function(id, db = c("pathway", "onto", "class"),
     message("WARNING:: failed to connect github server")
     return(NULL)
   }
-  
+
   ## Query RaMP for patways
   gmt.pathway <- list()
   if ("pathway" %in% db) {

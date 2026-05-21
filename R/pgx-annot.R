@@ -2497,34 +2497,36 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
 
   table(dtype)
   dtype <- tolower(dtype)
-  dtype <- sub("^tx$","gx",dtype)
+  dtype <- sub("^tx$", "gx", dtype)
   dtype <- ifelse(grepl("ensembl|symbol|hugo|gene|hgnc", dtype), "gx", dtype)
   dtype <- ifelse(grepl("uniprot|protein", dtype), "px", dtype)
   dtype <- ifelse(grepl("chebi|hmdb|kegg|pubchem|lipid|refmet", dtype), "mx", dtype)
   table(dtype)
-  dtype[!dtype %in% c("gx","px","mx","lx")] <- "custom"
+  dtype[!dtype %in% c("gx", "px", "mx", "lx")] <- "custom"
   dbg("[getMultiOmicsProbeAnnotation] detected datatypes = ", unique(dtype))
 
   ## populate with defaults
   symbol <- sub("^[a-zA-Z]+:", "", probes)
   annot <- list()
-  for(dt in unique(dtype)) {
+  for (dt in unique(dtype)) {
     ii <- which(dtype == dt)
     pp <- sub("^[a-zA-Z]+:", "", probes[ii])
     aa <- NULL
-    if(dt %in% c("gx","px")) {
+    if (dt %in% c("gx", "px")) {
       aa <- getGeneAnnotation(organism, pp)
     }
-    if(dt %in% c("mx")) {
+    if (dt %in% c("mx")) {
       aa <- getMetaboliteAnnotation(
-        pp, db = c("lipids", "refmet", "playdata", "annothub"),
+        pp,
+        db = c("lipids", "refmet", "playdata", "annothub"),
         extra_annot = TRUE, annot_table = NULL,
-        prefix.symbol = FALSE)
+        prefix.symbol = FALSE
+      )
     }
-    if(dt %in% c("lx")) {
+    if (dt %in% c("lx")) {
       aa <- getLipidAnnotation(pp, annot_table = NULL)
     }
-    if(dt %in% c("custom")) {
+    if (dt %in% c("custom")) {
       aa <- getCustomAnnotation(pp, custom_annot = NULL)
     }
     aa$data_type <- dt

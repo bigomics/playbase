@@ -1536,30 +1536,30 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
 
   ## strip prefix ??
   probes1 <- mofa.strip_prefix(probes)
-  probes2 <- strip_postfix(probes1)  
-  
+  probes2 <- strip_postfix(probes1)
+
   ## iterative matching of probes. can match multiple columns.
-  idx <- rep(NA, length(probes))  
+  idx <- rep(NA, length(probes))
   names(idx) <- probes
-  probe_match <- apply(annot_table, 2, function(x)
+  probe_match <- apply(annot_table, 2, function(x) {
     sum(probes %in% x | probes1 %in% x | probes2 %in% x)
-  )
-  match.cols <- names(sort(probe_match,decreasing=TRUE))
-  k=match.cols[1]
-  for (k in match.cols) {  
-    ##from_id <- names(which.max(probe_match))
+  })
+  match.cols <- names(sort(probe_match, decreasing = TRUE))
+  k <- match.cols[1]
+  for (k in match.cols) {
+    ## from_id <- names(which.max(probe_match))
     from <- annot_table[, k]
     ii <- match(probes1, from)
-    if(any(!is.na(ii))) {
-      kk <- which(!is.na(ii) & is.na(idx) )
+    if (any(!is.na(ii))) {
+      kk <- which(!is.na(ii) & is.na(idx))
       idx[kk] <- ii[kk]
     }
     ii <- match(probes2, from)
-    if(any(!is.na(ii))) {
-      kk <- which(!is.na(ii) & is.na(idx) )
+    if (any(!is.na(ii))) {
+      kk <- which(!is.na(ii) & is.na(idx))
       idx[kk] <- ii[kk]
     }
-    if(sum(is.na(idx))==0) break
+    if (sum(is.na(idx)) == 0) break
   }
 
   ## bail out if no match at all
@@ -1588,7 +1588,7 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   if (na.rm) {
     counts <- counts[!rownames(counts) %in% c("", "NA", NA), , drop = FALSE]
     sel <- !grepl("^NA.[0-9]+", rownames(counts))
-    counts <- counts[sel, , drop = FALSE]    
+    counts <- counts[sel, , drop = FALSE]
   }
 
   # Average columns of rows with the same gene symbol
