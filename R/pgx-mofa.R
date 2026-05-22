@@ -2977,7 +2977,8 @@ lasagna.solve <- function(obj, pheno, max_edges = 100, value.type = "rho",
   }
 
   if (is.null(graph)) graph <- obj$graph
-  X <- obj$X
+  nn <- igraph::V(graph)$name
+  X <- obj$X[nn,]
   y <- obj$Y[, pheno]
 
   ## check if phenotype was coded -1/0/1
