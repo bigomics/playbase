@@ -124,7 +124,7 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, nsize = -1, main = "",
   igraph::E(G)$color <- ee.colors[1 + 1 * (sign(R[ee]) > 0)]
 
   ## delete weak edges
-  hist(abs(igraph::E(G)$weight), breaks = 100)
+  ## hist(abs(igraph::E(G)$weight), breaks = 100)
   if (rho.min < 1) {
     rho.min <- min(rho.min, max(abs(igraph::E(G)$weight)))
     del.edges <- which(abs(igraph::E(G)$weight) < rho.min)
