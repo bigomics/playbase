@@ -1309,8 +1309,11 @@ getHumanOrtholog.biomart <- function(organism, symbols, verbose = 1) {
 #' }
 #' @import data.table
 #' @export
-probe2symbol <- function(probes, annot_table, query = "symbol", 
+probe2symbol <- function(probes, annot_table, query = "symbol",
                          key = NULL, fill_na = FALSE, add_datatype = FALSE) {
+
+  # NULL annot_table: no mapping possible — return probes as-is (same behaviour as fill_na=TRUE)
+  if (is.null(annot_table)) return(probes)
 
   # Prepare inputs. add extra matching columns.
   annot_table <- cbind(rownames = rownames(annot_table), annot_table)
