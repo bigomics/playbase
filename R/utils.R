@@ -1,3 +1,8 @@
+## Null-coalescing operator. Returns `a` if not NULL, else `b`.
+## Mirrors base R 4.4+ `%||%` for backward compatibility (playbase Depends R >= 3.5).
+`%||%` <- function(a, b) if (is.null(a)) b else a
+
+
 mem.vmrss <- function(digits = 0) {
   mem <- "[? MB]"
   if (Sys.info()["sysname"] %in% c("Linux")) {
