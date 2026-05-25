@@ -505,17 +505,28 @@ read_h5_counts <- function(h5.file) {
           var_names <- as.character(rhdf5::h5read(h5.file, "/var/_index"))
           n_obs <- length(obs_names)
           n_vars <- length(var_names)
+          ## CSR indptr length = n_rows + 1; some tools write X as vars x obs (transposed)
+          n_csr_rows <- length(x_indptr) - 1L
+          transposed <- (n_csr_rows == n_vars && n_csr_rows != n_obs)
+          if (transposed) {
+            row_names <- var_names; col_names <- obs_names
+            n_rows <- n_vars;      n_cols    <- n_obs
+          } else {
+            row_names <- obs_names; col_names <- var_names
+            n_rows <- n_obs;        n_cols    <- n_vars
+          }
           message("[playbase::read_h5_counts] AnnData sparse CSR detected")
           message("[playbase::read_h5_counts] Size: ", n_obs, " cells; ", n_vars, " features")
-          row_idx <- rep(seq_len(n_obs), diff(as.integer(x_indptr)))
+          row_idx <- rep(seq_len(n_rows), diff(as.integer(x_indptr)))
           mat <- Matrix::sparseMatrix(
             i = row_idx,
             j = as.integer(x_indices) + 1L,
             x = as.numeric(x_data),
-            dims = c(n_obs, n_vars),
-            dimnames = list(obs_names, var_names)
+            dims = c(n_rows, n_cols),
+            dimnames = list(row_names, col_names)
           )
-          Matrix::t(mat) # transpose to genes x cells (standard counts convention)
+          ## ensure final result is genes x cells
+          if (transposed) mat else Matrix::t(mat)
         },
         error = function(w) {
           message("[playbase::read_h5_counts] AnnData read failed: ", conditionMessage(w))
