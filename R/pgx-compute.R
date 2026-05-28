@@ -732,7 +732,7 @@ pgx.computePGX <- function(pgx,
   ## select valid contrasts
   sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
   contr.matrix <- contr.matrix[, sel, drop = FALSE]
- 
+
   ## -------------------------------------------------------------------
   ## Clustering
   ## -------------------------------------------------------------------
@@ -818,7 +818,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
 
   timeseries <- any(grepl("^IA:*", colnames(pgx$contrasts)))
-  
+
   message("[pgx.computePGX] testing genes...")
   pgx <- compute_testGenes(
     pgx,

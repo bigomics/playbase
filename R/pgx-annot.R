@@ -109,12 +109,22 @@ merge_annot_table <- function(df, df2, priority = 1) {
 #'
 #' @export
 normalizeOrganism <- function(organism) {
-  if (is.null(organism) || is.na(organism)) return(organism)
+  if (is.null(organism) || is.na(organism)) {
+    return(organism)
+  }
   org_lower <- tolower(organism)
-  if (org_lower == "human") return("Homo sapiens")
-  if (org_lower == "mouse") return("Mus musculus")
-  if (org_lower == "rat") return("Rattus norvegicus")
-  if (grepl("canis.*familiaris|^dog$", org_lower)) return("Canis familiaris")
+  if (org_lower == "human") {
+    return("Homo sapiens")
+  }
+  if (org_lower == "mouse") {
+    return("Mus musculus")
+  }
+  if (org_lower == "rat") {
+    return("Rattus norvegicus")
+  }
+  if (grepl("canis.*familiaris|^dog$", org_lower)) {
+    return("Canis familiaris")
+  }
   organism
 }
 
@@ -227,12 +237,13 @@ getProbeAnnotation <- function(organism,
 #'
 #' @export
 getGeneAnnotation <- function(
-    organism,
-    probes,
-    is.phospho = FALSE,
-    use.ah = NULL,
-    verbose = TRUE,
-    methods = c("annothub", "gprofiler")) {
+  organism,
+  probes,
+  is.phospho = FALSE,
+  use.ah = NULL,
+  verbose = TRUE,
+  methods = c("annothub", "gprofiler")
+) {
   organism <- normalizeOrganism(organism)
 
   probes0 <- probes
@@ -777,8 +788,8 @@ cleanupAnnotation <- function(genes) {
   genes$human_ortholog[is.na(genes$human_ortholog)] <- ""
 
   # replace NA or empty symbol by "{feature}" so there is always a readable name
-  ii <- which( genes$symbol %in% c(NA,"","-"))
-  genes$symbol[ii] <- paste0("{",genes$feature[ii],"}")
+  ii <- which(genes$symbol %in% c(NA, "", "-"))
+  genes$symbol[ii] <- paste0("{", genes$feature[ii], "}")
   genes$gene_title[ii] <- "Uknown feature"
 
   # if organism is human, human_ortholog should be NA (matching old
@@ -1034,24 +1045,24 @@ getCustomAnnotation2 <- function(probes, custom_annot, feature.col = "feature",
 ## ================== GET ORTHOLOG FUNCTIONS ======================================
 ## ================================================================================
 
-biomaRt.useEnsembl <- function(biomart, dataset=NULL,
-                               mirrors = c("www","useast","asia")) {
+biomaRt.useEnsembl <- function(biomart, dataset = NULL,
+                               mirrors = c("www", "useast", "asia")) {
   mirror.ok <- rep(NA, length(mirrors))
   names(mirror.ok) <- mirrors
-  m="www"
-  for(m in mirrors) {
+  m <- "www"
+  for (m in mirrors) {
     resp <- NULL
     resp <- biomaRt::useEnsembl(biomart = biomart, mirror = m)
-    mirror.ok[m] <- !(resp@host %in% c(NA,"",NULL))
+    mirror.ok[m] <- !(resp@host %in% c(NA, "", NULL))
   }
   mirror.ok
-  if(!any(mirror.ok)) {
+  if (!any(mirror.ok)) {
     message("WARNING: could not reach any biomart mirror")
     return(NULL)
   }
-  sel.mirror <- head(names(which(mirror.ok)),1)
+  sel.mirror <- head(names(which(mirror.ok)), 1)
   sel.mirror
-  if(is.null(dataset)) {
+  if (is.null(dataset)) {
     mart <- biomaRt::useEnsembl(biomart = biomart, mirror = sel.mirror)
   } else {
     mart <- biomaRt::useEnsembl(biomart = biomart, dataset = dataset, mirror = sel.mirror)
@@ -1067,7 +1078,6 @@ biomaRt.useEnsembl <- function(biomart, dataset=NULL,
 getHumanOrtholog <- function(organism, symbols,
                              ortho.methods = c("homologene", "gprofiler", "babelgene"),
                              verbose = 1) {
-
   orthogenes <- rep(NA, length(symbols))
   orthosource <- rep(NA, length(symbols))
 
@@ -1137,7 +1147,7 @@ getHumanOrtholog <- function(organism, symbols,
       nrow(ortho.out) > 0)
     results.ok
     if (results.ok) {
-      ii <- which(is.na(orthogenes))  ## still unmapped
+      ii <- which(is.na(orthogenes)) ## still unmapped
       jj <- match(symbols[ii], ortho.out$input_gene)
       kk <- ii[which(!is.na(jj))]
       jj <- jj[which(!is.na(jj))]
@@ -1152,7 +1162,7 @@ getHumanOrtholog <- function(organism, symbols,
   }
   mean.mapped <- round(100 * mean(!is.na(orthogenes)), digits = 4)
   if (verbose > 0) message("[getHumanOrtholog] ratio mapped using orthogene = ", mean.mapped, "%")
-  
+
   if (any(is.na(orthogenes))) {
     if (verbose > 0) message("[getHumanOrtholog] Trying biomart...")
     ## test if biomart is reachable
@@ -1166,8 +1176,8 @@ getHumanOrtholog <- function(organism, symbols,
     } else {
       if (verbose > 0) message("[getHumanOrtholog] biomart failed...")
     }
-    mean.mapped <- round(100 * mean(!is.na(orthogenes)), digits = 4)    
-    message("[getHumanOrtholog] ratio mapped after biomart = ", mean.mapped, "%")    
+    mean.mapped <- round(100 * mean(!is.na(orthogenes)), digits = 4)
+    message("[getHumanOrtholog] ratio mapped after biomart = ", mean.mapped, "%")
   }
 
   ## Map any missing symbols that look like human genes
@@ -1203,7 +1213,7 @@ getHumanOrtholog.biomart <- function(organism, symbols, verbose = 1) {
   if (verbose > 0) message("[getHumanOrtholog.biomart] Searching biomart for '", organism0, "'")
 
   mart <- biomaRt.useEnsembl(biomart = "genes")
-  if(is.null(mart)) {
+  if (is.null(mart)) {
     message("ERROR: no biomart mirrors reachable. Exiting.")
     return(NULL)
   }
@@ -1392,11 +1402,11 @@ probe2symbol <- function(probes, annot_table, query = "symbol",
   }
 
   ah <- AnnotationHub::AnnotationHub()
-#  all_species <- allSpecies()
-#  if (!tolower(organism) %in% tolower(all_species)) {
-#    message("WARNING: organism '", organism, "' not in AnnotationHub")
-#    return(NULL)
-#  }
+  #  all_species <- allSpecies()
+  #  if (!tolower(organism) %in% tolower(all_species)) {
+  #    message("WARNING: organism '", organism, "' not in AnnotationHub")
+  #    return(NULL)
+  #  }
 
   message("querying AnnotationHub for '", organism, "'\n")
   suppressMessages({
@@ -1407,7 +1417,7 @@ probe2symbol <- function(probes, annot_table, query = "symbol",
     message("WARNING: organism '", organism, "' not in AnnotationHub.")
     return(NULL)
   }
-  
+
   ## select on exact organism name
   ahDb <- ahDb[which(tolower(ahDb$species) == tolower(organism))]
   k <- length(ahDb) ## latest of multiple
@@ -1592,11 +1602,14 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
       species = organism, method = "gprofiler",
       output_format = "id", verbose = FALSE
     )
-    gp.out <- tryCatch({
-      gprofiler2::gconvert(probesx, organism = gp.organism, target = "UNIPROT_GN_ACC")
-    }, error = function(e) {
-      return(NULL)
-    })
+    gp.out <- tryCatch(
+      {
+        gprofiler2::gconvert(probesx, organism = gp.organism, target = "UNIPROT_GN_ACC")
+      },
+      error = function(e) {
+        return(NULL)
+      }
+    )
     if (!is.null(gp.out)) {
       key_matches["GPROFILER"] <- length(unique(gp.out$input)) / length(probesx)
     }
@@ -2460,7 +2473,6 @@ convert_probetype <- function(organism, probes, target_id, from_id = NULL,
 #' data type unless classical transcriptomics/proteomics.
 #'
 getMultiOmicsProbeAnnotation <- function(organism, probes) {
-  
   is.prefixed <- mean(grepl("^[A-Za-z]+:", probes)) > 0.8
   if (is.prefixed) {
     dtype <- sub(":.*", "", probes)
@@ -2538,10 +2550,10 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
   annot <- annot[match(probes, annot$feature), ]
   rownames(annot) <- make_unique(probes)
   head(annot)
-  
+
   ## fill NA
-  annot$symbol[annot$symbol %in% c("-","")] <- NA
-  symbolx <- paste0("{",symbol,"}")
+  annot$symbol[annot$symbol %in% c("-", "")] <- NA
+  symbolx <- paste0("{", symbol, "}")
   annot$human_ortholog[which(annot$human_ortholog == "")] <- NA
   annot$feature <- ifelse(is.na(annot$feature), probes, annot$feature)
   annot$symbol <- ifelse(is.na(annot$symbol), symbolx, annot$symbol)
@@ -2561,4 +2573,3 @@ getMultiSpeciesProbeAnnotation <- function(probes, organisms, probetype,
   annot <- data.frame()
   return(annot)
 }
-
