@@ -91,7 +91,7 @@ pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
 
   if("summary" %in% select && is.null(pgx$report)) {    
     message(">>> creating summary report...")
-    intrpt <- rpt.create_summary_report(pgx, llm=llm_model)
+    intrpt <- rpt.create_summary_report(pgx, llm = llm_model)
     pgx$report <- list(
       report = intrpt,
       infographic = NULL,
@@ -113,12 +113,12 @@ ai.create_report <- function(pgx, ...) {
 #'
 #' @export
 pgx.update_infographics <- function(pgx, llm_model, img_model,
-                                    select=c("wgcna","mofa","cmap","summary"),
-                                    force=FALSE, progress=NULL) {
+                                    select = c("wgcna","mofa","cmap","summary"),
+                                    force = FALSE, progress = NULL) {
 
   ## first update reports
   pgx <- pgx.update_reports(pgx, select = select,
-    llm_model = llm_model, img_model=NULL) 
+    llm_model = llm_model, img_model = NULL) 
   
   ## update infographics in all slots
   if(!is.null(pgx$wgcna) && "wgcna" %in% select) {
@@ -150,7 +150,7 @@ pgx.update_infographics <- function(pgx, llm_model, img_model,
     }
   }
 
-  if(!is.null(pgx$report$report) && "mofa" %in% select) {
+  if(!is.null(pgx$report$report) && "summary" %in% select) {
     if(force)  pgx$report$report$infographic <- NULL    
     if(no.infograpic(pgx$report)) {
       pgx$report$infographic <- ai.create_infographic(
