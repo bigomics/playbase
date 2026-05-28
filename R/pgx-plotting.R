@@ -230,7 +230,7 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
 #' @export
 pgx.plotEnrichmentDotPlot <- function(pgx, contrast, filter = NULL,
                                       ntop = 30, dir = "both",
-                                      ptsize = 6, cex=1,
+                                      ptsize = 6, cex = 1,
                                       main = "Enrichment Analysis") {
   gs <- pgx$gset.meta$meta[[contrast]]
   df <- data.frame(
@@ -267,11 +267,11 @@ pgx.plotEnrichmentDotPlot <- function(pgx, contrast, filter = NULL,
     ggplot2::labs(x = "Enrichment score", y = NULL, color = "p-value", size = "score") +
     ggplot2::ggtitle(main) +
     ggplot2::theme(
-      axis.title = ggplot2::element_text(size = 11*cex),
-      axis.text = ggplot2::element_text(size = 11*cex),
-      title = ggplot2::element_text(size = 14*cex),
-      legend.title = ggplot2::element_text(size = 11*cex),
-      legend.text = ggplot2::element_text(size = 8*cex)
+      axis.title = ggplot2::element_text(size = 11 * cex),
+      axis.text = ggplot2::element_text(size = 11 * cex),
+      title = ggplot2::element_text(size = 14 * cex),
+      legend.title = ggplot2::element_text(size = 11 * cex),
+      legend.text = ggplot2::element_text(size = 8 * cex)
     )
 }
 
@@ -1306,7 +1306,7 @@ ggVolcano <- function(x,
                       lfc = 1,
                       psig = 0.05,
                       xlim = NULL,
-                      ylim = NULL,                      
+                      ylim = NULL,
                       showlegend = TRUE,
                       marker.size = 2.5,
                       marker.alpha = 0.7,
@@ -4250,7 +4250,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   }
 
   if (!is.null(facet)) {
-    plt <- plt + ggplot2::facet_wrap(~ facet)
+    plt <- plt + ggplot2::facet_wrap(~facet)
   }
 
   if (girafe) {
@@ -7553,8 +7553,8 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
                                    xpos = NULL, xlim = NULL, justgraph = FALSE,
                                    edge.cex = 1, edge.alpha = 0.33, xdist = 1,
                                    normalize.edges = FALSE, yheight = 2,
-                                   edge.sign = c("both","pos","neg","consensus")[1],
-                                   edge.type = c("both","inter","intra","both2")[1],
+                                   edge.sign = c("both", "pos", "neg", "consensus")[1],
+                                   edge.type = c("both", "inter", "intra", "both2")[1],
                                    labpos = NULL, value.name = NULL,
                                    strip.prefix = FALSE, strip.prefix2 = FALSE,
                                    prune = FALSE,

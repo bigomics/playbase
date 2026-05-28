@@ -522,7 +522,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE
     Q <- (Q + t(Q)) / 2
   }
 
-  up_col   <- if (!is.null(color_up))   color_up   else omics_colors("red")
+  up_col <- if (!is.null(color_up)) color_up else omics_colors("red")
   down_col <- if (!is.null(color_down)) color_down else omics_colors("brand_blue")
   BLUERED <- grDevices::colorRampPalette(c(down_col, "white", up_col))
 
