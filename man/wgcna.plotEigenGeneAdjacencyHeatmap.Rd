@@ -23,7 +23,7 @@ wgcna.plotEigenGeneAdjacencyHeatmap(
   mar1 = c(5.6, 4.5, 1.8, 0),
   mar2 = c(8, 10, 4, 2),
   cex.lab = 0.8,
-  cex.text = 0.7,
+  cex.text = 0.6,
   plotDendro = TRUE,
   plotHeatmap = TRUE,
   dendro.horiz = TRUE,

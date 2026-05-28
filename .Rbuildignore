@@ -6,3 +6,6 @@
 ^README\.Rmd$
 ^\.github$
 ^LICENSE\.md$
+^\.semquery$
+^\.active_plans$
+^\.agents_context$

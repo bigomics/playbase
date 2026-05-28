@@ -17,7 +17,7 @@
 #' @export
 compute_extra <- function(pgx, extra = c(
                             "meta.go", "infer", "deconv", "drugs", ## "graph",
-                            "connectivity", "wordcloud", "wgcna", "mofa"
+                            "connectivity", "wordcloud", "wgcna", "wgcna_mox", "mofa"
                           ), sigdb = NULL, pgx.dir = "./data", libx.dir = "./libx",
                           user_input_dir = getwd(),
                           llm_model = NULL, img_model = NULL
@@ -251,6 +251,41 @@ compute_extra <- function(pgx, extra = c(
       )
     })
     timings <- rbind(timings, c("wgcna", tt))
+  }
+
+  if ("wgcna_mox" %in% extra && isTRUE(pgx$datatype %in% c("multi-omics", "multiomics"))) {
+    info("[compute_extra] Computing multi-omics WGCNA...")
+    tt <- system.time({
+      tryCatch(
+        {
+          pgx$wgcna_mox <- wgcna.compute_multiomics(
+            dataX = mofa.split_data(pgx$X),
+            samples = pgx$samples,
+            contrasts = pgx$contrasts,
+            annot = pgx$genes,
+            GMT = pgx$GMT,
+            experiment = pgx$description,
+            power = NULL,
+            ngenes = 2000,
+            deepsplit = 2,
+            minmodsize = 10,
+            minKME = 0.3,
+            compute.enrichment = TRUE,
+            add.gsets = FALSE,
+            add.pheno = FALSE,
+            do.consensus = FALSE,
+            report = FALSE
+          )
+        },
+        error = function(e) {
+          message("[ERROR_WGCNA_MOX] FATAL: ", as.character(e))
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_WGCNA_MOX"))
+          return(NULL)
+        }
+      )
+    })
+    timings <- rbind(timings, c("wgcna_mox", tt))
+    info("[compute_extra] multi-omics WGCNA done")
   }
 
   if ("mofa" %in% extra) {
