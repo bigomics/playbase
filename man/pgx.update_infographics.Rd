@@ -8,6 +8,7 @@ pgx.update_infographics(
   pgx,
   llm_model,
   img_model,
+  select = c("wgcna", "mofa", "cmap", "summary"),
   force = FALSE,
   progress = NULL
 )
