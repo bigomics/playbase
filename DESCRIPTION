@@ -9,8 +9,9 @@ Description: More about what it does (maybe more than one line)
 License: Dual Commercial and Non-Commercial
 Encoding: UTF-8
 LazyData: true
-Suggests: 
-    testthat (>= 3.0.0)
+Suggests:
+    testthat (>= 3.0.0),
+    omicsai
 Config/testthat/edition: 3
 RoxygenNote: 7.3.3
 Depends: 

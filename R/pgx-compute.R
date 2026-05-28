@@ -194,7 +194,8 @@ pgx.createPGX <- function(counts,
                           remove.outliers = TRUE, ## DEPRECATED
                           add.gmt = TRUE,
                           settings = list(),
-                          sc_compute_settings = list()) {
+                          sc_compute_settings = list(),
+                          datatype_subtype = NULL) {
 
   message("[pgx.createPGX]===========================================")
   message("[pgx.createPGX]=========== pgx.createPGX =================")
@@ -684,7 +685,8 @@ pgx.computePGX <- function(pgx,
                            pgx.dir = NULL,
                            libx.dir = NULL,
                            progress = NULL,
-                           user_input_dir = getwd()) {
+                           user_input_dir = getwd(),
+                           ai = NULL) {
   message("[pgx.computePGX]===========================================")
   message("[pgx.computePGX]========== pgx.computePGX =================")
   message("[pgx.computePGX]===========================================")
@@ -865,6 +867,23 @@ pgx.computePGX <- function(pgx,
     libx.dir = libx.dir,
     user_input_dir = user_input_dir
   )
+
+  ## ------------------ AI reports (round 2, phase 2) -----------------
+  ## Static, per-module reports written to pgx$ai$<m>$report/$prompt by
+  ## pgx.update_reports. Gated on the omicsai Suggests dep; absent ai
+  ## arg or absent package means no reports generated (pre-pivot
+  ## behaviour preserved). See .active_plans/edge_merge/round2_plan.md.
+  if (!is.null(ai)) {
+    if (requireNamespace("omicsai", quietly = TRUE)) {
+      if (!is.null(progress)) progress$inc(0.05, detail = "AI reports")
+      message("[pgx.computePGX] generating AI reports...")
+      pgx <- pgx.update_reports(pgx, ai = ai)
+    } else {
+      warning("[pgx.computePGX] `ai` arg supplied but `omicsai` is not ",
+              "installed; skipping AI report generation. Install with: ",
+              "devtools::install_github('bigomics/omicsai').", call. = FALSE)
+    }
+  }
 
   info("[pgx.computePGX] DONE")
   return(pgx)

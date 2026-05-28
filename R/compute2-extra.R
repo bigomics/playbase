@@ -238,10 +238,7 @@ compute_extra <- function(pgx, extra = c(
     tt <- system.time({
       tryCatch(
         {
-          pgx$wgcna <- pgx.wgcna(
-            pgx,
-            ai_model = llm_model ## no AI by default (yet)
-          )
+          pgx$wgcna <- pgx.wgcna(pgx)
         },
         error = function(e) {
           message("[ERROR_WGCNA] FATAL: ", as.character(e))
@@ -264,9 +261,7 @@ compute_extra <- function(pgx, extra = c(
             ntop = 2000,
             gset.ntop = 2000,
             numfactors = 10,
-            add_gsets = FALSE,
-            llm_model = llm_model,
-            img_model = img_model
+            add_gsets = FALSE
           )
         },
         error = function(e) {

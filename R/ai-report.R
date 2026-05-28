@@ -8,98 +8,172 @@
 ##------------------------ REPORT CREATION ----------------------------
 ##---------------------------------------------------------------------
 
-#' Update all reports in pgx object. Create if missing.
+## ---------------------------------------------------------------------
+## Phase-2 (static) AI report orchestrator.
+##
+## Writes per-module reports to pgx$ai$<module>$report/$prompt and
+## pgx$ai$meta. Dispatches to <module>.create_report(slice, pgx, ai)
+## defined in pgx-<module>-report.R (added in round 2 step 3).
+##
+## ai schema is documented in .active_plans/edge_merge/round2_plan.md.
+## ---------------------------------------------------------------------
+
+.AI_DEFAULTS <- list(
+  llm_model    = "openai:gpt-5.4-mini",
+  img_model    = NULL,
+  report_type  = "normal",
+  select       = c("wgcna", "wgcna_mox", "mofa", "drugs", "de", "pathways"),
+  drug_dbs     = NULL,
+  ntop         = 100,
+  psig         = 0.05,
+  userprompt   = NULL,
+  force        = FALSE,
+  on_error     = "skip",
+  ## phase-3-only fields (ignored when report_type == "normal")
+  max_turns    = 50L,
+  tier         = NULL
+)
+
+.ai_resolve_defaults <- function(ai) {
+  if (is.null(ai)) ai <- list()
+  if (!is.list(ai)) stop("[pgx.update_reports] `ai` must be a list")
+  out <- .AI_DEFAULTS
+  for (nm in names(ai)) out[[nm]] <- ai[[nm]]
+  if (!out$report_type %in% c("normal", "deep")) {
+    stop("[pgx.update_reports] ai$report_type must be 'normal' or 'deep'; got '",
+         out$report_type, "'")
+  }
+  if (!out$on_error %in% c("skip", "abort", "warn")) {
+    stop("[pgx.update_reports] ai$on_error must be 'skip', 'abort', or 'warn'")
+  }
+  out
+}
+
+.ai_build_meta <- function(ai) {
+  omicsai_version <- tryCatch(
+    as.character(utils::packageVersion("omicsai")),
+    error = function(e) NA_character_
+  )
+  list(
+    date            = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+    llm_model       = ai$llm_model,
+    img_model       = ai$img_model,
+    report_type     = ai$report_type,
+    select          = ai$select,
+    drug_dbs        = ai$drug_dbs,
+    ntop            = ai$ntop,
+    psig            = ai$psig,
+    omicsai_version = omicsai_version,
+    options         = list()
+  )
+}
+
+.ai_dispatch_module <- function(m, pgx, ai) {
+  fn_name <- switch(m,
+    wgcna     = "wgcna.create_report",
+    wgcna_mox = "wgcna.create_report",  ## multi=TRUE branch handled inside
+    mofa      = "mofa.create_report",
+    drugs     = "drugs.create_report",
+    de        = "de.create_report",
+    pathways  = "pathways.create_report",
+    NULL
+  )
+  if (is.null(fn_name) || !exists(fn_name, mode = "function")) {
+    message("[pgx.update_reports] skipping '", m,
+            "' -- no entry point '", fn_name, "()'")
+    return(NULL)
+  }
+  fn <- get(fn_name, mode = "function")
+  ## Signature gate: phase-2 entry points are <m>.create_report(slice, pgx, ai).
+  ## Old per-module functions kept alive until cleanup #1/#2 have legacy
+  ## signatures (e.g. wgcna, ai_model, graph, ...) -- soft-skip them so the
+  ## orchestrator is dormant until step 3 lands the new implementations.
+  fn_args <- names(formals(fn))
+  if (length(fn_args) < 3 || !identical(fn_args[1:3], c("slice", "pgx", "ai"))) {
+    message("[pgx.update_reports] skipping '", m, "' -- '", fn_name,
+            "' has legacy signature (round 2 step 3 not landed yet)")
+    return(NULL)
+  }
+  slice <- switch(m,
+    wgcna     = pgx$wgcna,
+    wgcna_mox = pgx$wgcna_mox,
+    mofa      = pgx$mofa,
+    drugs     = pgx$drugs,
+    de        = pgx$gx.meta,
+    pathways  = pgx$gset.meta,
+    NULL
+  )
+  if (is.null(slice)) {
+    message("[pgx.update_reports] skipping '", m, "' -- slot is empty")
+    return(NULL)
+  }
+  fn(slice, pgx, ai)
+}
+
+#' Generate AI reports for a PGX object (phase-2 static path).
 #'
+#' Loops over `ai$select` and dispatches each module to its
+#' `<module>.create_report(slice, pgx, ai)` entry point, writing results
+#' to `pgx$ai$<module>$report` and `pgx$ai$<module>$prompt`. Writes
+#' run metadata to `pgx$ai$meta`.
+#'
+#' Requires the `omicsai` package (declared in Suggests). Caller is
+#' responsible for gating on `requireNamespace("omicsai", quietly = TRUE)`.
+#'
+#' @param pgx a PGX object.
+#' @param ai a list of report-generation options. See round2 plan for
+#'   the full schema. `NULL` returns `pgx` unchanged.
+#' @return `pgx` with `pgx$ai` populated.
 #' @export
-pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
-                               verbose=1, force=FALSE,
-                               select=c("wgcna","mofa","cmap","summary")) {
+pgx.update_reports <- function(pgx, ai = NULL) {
+  if (is.null(ai)) return(pgx)
+  ai <- .ai_resolve_defaults(ai)
 
-  if(force) {
-    pgx$wgcna$report <- NULL
-    pgx$mofa$report <- NULL
-    pgx$report <- NULL    
-    for(k in names(pgx$drugs)) pgx$drugs[[k]]$report <- NULL
+  if (identical(ai$report_type, "deep")) {
+    stop("[pgx.update_reports] ai$report_type = 'deep' is a phase-3 ",
+         "(pro/enterprise) feature and is not yet implemented. ",
+         "Use ai$report_type = 'normal' for now.")
   }
 
-  if(is.null(select)) select <- c("wgcna","mofa","cmap","summary")
-
-  if("wgcna" %in% select) {
-    if(!is.null(pgx$wgcna) && is.null(pgx$wgcna$report)) {  
-      message(">>> creating WGCNA report...")
-      pgx$wgcna$report<- wgcna.create_report(
-        pgx$wgcna,
-        ai_model = llm_model,
-        graph = NULL,
-        annot = pgx$genes,
-        ntop=100,
-        psig=0.05,
-        do.diagram = TRUE,
-        userprompt='',
-        format="markdown",
-        verbose = verbose,
-        progress=NULL
-      )
-    }
-    
-    if(!is.null(pgx$wgcna_mox) && is.null(pgx$wgcna_mox$report)) {  
-      message(">>> creating WGCNA report...")
-      pgx$wgcna_mox$report <- wgcna.create_report(
-        pgx$wgcna_mox,
-        ai_model = llm_model,
-        graph = NULL,
-        annot = pgx$genes,
-        ntop = 100,
-        psig = 0.05,
-        do.diagram = TRUE,
-        userprompt = '',
-        format = "markdown",
-        verbose = verbose,
-        progress = NULL
-      )
-    }
+  if (isTRUE(ai$force)) {
+    pgx$ai <- NULL
   }
+  if (is.null(pgx$ai)) pgx$ai <- list()
 
-  if("mofa" %in% select) {    
-    if(!is.null(pgx$mofa) && is.null(pgx$mofa$report)) {
-      message(">>> creating MOFA report...")
-      pgx$mofa$report <- mofa.create_report(
-        pgx$mofa, llm_model = llm_model,
-        img_model = img_model,
-        graph = NULL, annot=pgx$genes,
-        ntop=100, psig=0.05,
-        do.diagram = TRUE,
-        userprompt='', format="markdown",
-        verbose = verbose,
-        progress=NULL)
+  for (m in ai$select) {
+    if (!is.null(pgx$ai[[m]]) && !isTRUE(ai$force)) {
+      message("[pgx.update_reports] '", m, "' already present; skipping")
+      next
     }
-  }
-
-  if("cmap" %in% select) {    
-    if(!is.null(pgx$drugs) && is.null(pgx$drugs[[1]]$report)) {  
-      message(">>> creating drug CMAP report...")
-      pgx <- pgx.update_drugs_results(pgx, model=NULL, img_model=NULL)
-      drug.db <- names(pgx$drugs)  ## NEED ALL????
-      ##drug.db <- head(drug.db,2) ## ONLY 2???
-      for(db in drug.db) {      
-        pgx$drugs[[db]]$report <- cmap.create_report(
-          pgx, model = llm_model, model2 = NULL, db = db,
-          user.prompt = NULL, force=force)
+    message("[pgx.update_reports] generating '", m, "' report...")
+    out <- tryCatch(
+      .ai_dispatch_module(m, pgx, ai),
+      error = function(e) {
+        msg <- paste0("[pgx.update_reports] '", m, "' failed: ", conditionMessage(e))
+        if (identical(ai$on_error, "abort")) stop(msg, call. = FALSE)
+        if (identical(ai$on_error, "warn"))  warning(msg, call. = FALSE)
+        else                                  message(msg)
+        NULL
       }
+    )
+    if (is.null(out)) next
+    if (inherits(out, "ai_report_multi")) {
+      ## Per-variant fan-out: each named entry becomes its own top-level
+      ## pgx$ai$<m>_<key> slot. Mirrors the wgcna / wgcna_mox pattern so
+      ## downstream consumers see one report per analytical variant
+      ## (e.g. pgx$ai$drugs_L1000_activity, pgx$ai$drugs_L1000_gene).
+      for (k in names(out)) {
+        slot_name <- paste0(m, "_", k)
+        pgx$ai[[slot_name]] <- list(report = out[[k]]$report,
+                                    prompt = out[[k]]$prompt)
+      }
+    } else {
+      pgx$ai[[m]] <- list(report = out$report, prompt = out$prompt)
     }
   }
 
-  if("summary" %in% select && is.null(pgx$report)) {    
-    message(">>> creating summary report...")
-    intrpt <- rpt.create_summary_report(pgx, llm=llm_model)
-    pgx$report <- list(
-      report = intrpt,
-      infographics = NULL,
-      tables = NULL
-    )
-  }
-  
-  return(pgx)
+  pgx$ai$meta <- .ai_build_meta(ai)
+  pgx
 }
 
 #' @export
@@ -115,7 +189,12 @@ pgx.update_infographics <- function(pgx, llm_model, img_model,
                                     force=FALSE, progress=NULL) {
 
   ## update reports
-  pgx <- pgx.update_reports(pgx, llm_model = llm_model, img_model=NULL) 
+  ## NOTE(round2-cleanup): this function is scheduled for deletion in
+  ## cleanup #2 (step 8). The call below mirrors the new ai-list API but
+  ## the underlying <m>.create_report entry points only land in step 3.
+  pgx <- pgx.update_reports(pgx, ai = list(llm_model = llm_model,
+                                           img_model = img_model,
+                                           force     = force))
 
   ## delete old if forced
   if(force) {

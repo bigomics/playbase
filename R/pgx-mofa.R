@@ -6,10 +6,7 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
                              add_gsets = FALSE,
                              factorizations = TRUE,
                              compute.enrichment = TRUE,
-                             compute.lasagna = TRUE,
-                             create.report = FALSE,
-                             llm_model = NULL,
-                             img_model = NULL
+                             compute.lasagna = TRUE
                              ) {
   has.prefix <- (mean(grepl(":", rownames(pgx$X))) > 0.8)
   is.multiomics <- (pgx$datatype == "multi-omics" && has.prefix)
@@ -132,23 +129,6 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
   mofa$posf <- mofa.compute_clusters(mofa$xx, along = "features", method = "umap")
   ## mofa$posf <- mofa.compute_clusters(mofa$xx, along = "features", method='tsne')
 
-  if (create.report) {
-    mofa$report <- mofa.create_report(
-      mofa,
-      llm_model = llm_model,
-      img_model = img_model,
-      graph = NULL,
-      annot = pgx$genes, 
-      ntop = 100, psig = 0.05,
-      do.diagram = TRUE, 
-      userprompt = '',
-      format = "markdown",
-      verbose = 1,
-      progress = NULL
-    )
-    
-  }
-        
   return(mofa)
 }
 
@@ -3925,158 +3905,6 @@ mofa.describeFactors <- function(mofa, ntop=50, psig = 0.05,
 #' Create report object.
 #'
 #' @export
-mofa.create_report <- function(mofa, llm_model,
-                               graph = NULL, annot=NULL, 
-                               ntop=100, psig=0.05,
-                               do.diagram = TRUE, img_model = NULL,
-                               userprompt='', format="markdown",
-                               description = NULL,
-                               verbose=1, progress=NULL) {
-
-  if(0) {
-    graph = NULL; annot=NULL; multi=FALSE;
-    ntop=100; psig=0.05;
-    format="markdown"; verbose=1;
-    progress=NULL
-  }
-  
-  if(is.null(llm_model)) llm_model <- ""
-
-  ## get top.factors (most correlated with some phenotype)
-  top.factors <- mofa.getTopFactors(mofa) ## always multi format
-  top.factors
-  
-  if(is.null(annot) && !is.null(mofa$annot)) {
-    annot <- mofa$annot
-  }
-  if(is.null(annot)) {
-    message("[mofa.create_report] WARNING. providing user annot table is recommended.")
-  }
-
-  if(is.null(description)) description <- mofa$experiment
-  if(is.null(description)) {
-    message("[mofa.create_report] WARNING. missing experiment description.")
-    description <- "mult-omics experiment"
-  }
-
-  ##--------------------------------------------------------------------
-  ## Step 1. Describe modules with LLM. We can use one LLM model or more.
-  ##--------------------------------------------------------------------
-  if(!is.null(progress)) progress$set(message = "Extracting top factors...", value=0.2)
-  if(verbose) message("Extracting top factors...")
-  out <- mofa.describeFactors(
-    mofa,
-    factors = top.factors,
-    ntop = ntop,  ## number of top genes or sets
-    annot = annot,
-    psig = psig,
-    experiment = description,
-    verbose = verbose,
-    model = llm_model
-  ) 
-  names(out)
-  summaries_prompts <- out$questions
-  summaries <- out$answers
-  
-  ## add compute setttings
-  results <- summaries
-  if(!is.null(mofa$settings)) {
-    settings <- mofa$settings
-    settings[['llm_model']] <- llm_model
-    settings <- paste0(names(settings),'=',settings,collapse='; ')
-    results[['compute_settings']] <- settings
-  }
-
-  ## collate all results
-  all.results <- lapply(names(results), function(me)
-    paste0("================= ",me," =================\n\n", results[[me]],"\n"))
-  all.results <- paste(all.results, collapse="\n")   
-
-  ##--------------------------------------------------------------------
-  ## Step 2: Make detailed report. We concatenate all summaries and
-  ## ask a (better) LLM model to create a report.
-  ## --------------------------------------------------------------------
-  if(!is.null(progress)) progress$set(message = "Baking full report...", value=0.6)
-  if(verbose) message("Baking full report...")
-
-  qq=diagram=report=infographic=NULL;
-  bullets=""
-
-  kernel <- toupper(mofa$settings$kernel)
-  
-  if(llm_model == "") {
-    report <- all.results
-  } else {
-    
-    qq <- paste("These are the results of a multi-omics factor analysis using",kernel,". There are descriptions of the most relevant factors. Create a detailed report for this experiment. Give a detailed interpretation of the underlying biology by connecting factors into biological functional programs, referring to key genes, proteins or metabolites. Build an cross-factor integrative biological narrative. If relevant, suggest similarity to known diseases and possible therapies. Add a discussion and conclusion. Omit abstract, future directions, limitations, or references. 
-
-Format like a scientific article, use prose as much as possible, minimize the use of tables and bullet points. For long tables show at least the top 5, and at most top 10, up and down entries. Do not inject any inline code. Only write if there was evidence in the source text.")  
-        
-    xx <- mofa$experiment
-    if(!is.null(xx) && xx!="") {
-      pp <- paste("You are a biologist interpreting results of a ",kernel," multi-omics factor analysis for this experiment:",
-        xx, ".\n\n")
-      qq <- paste(pp, qq)
-    }
-    
-    if(format=="markdown") {
-      qq <- paste(qq, "Format as markdown. Divide text in sections using hash.")
-    }
-    if(tolower(format)=="html") {
-      qq <- paste(qq, "Format as HTML. Divide text in sections using header tags.")
-    }
-    qq <- paste(qq, userprompt)
-    qq <- paste(qq, "\n\n<results>",all.results,"\n</results>")
-
-    ## Finally ask LLM
-    report <- ai.ask(qq, model = llm_model)
-    report <- gsub("^```html|```$","",report)
-        
-    ##--------------------------------------------------------------------
-    ## Step 3: Create diagram from report
-    ##-------------------------------------------------------------------
-    ## if(do.diagram && llm_model!="") {
-    ##   if(!is.null(progress)) progress$set(message = "Mashing up diagram...", value=0.8)  
-    ##   if(verbose) message("Mashing up diagram...")
-    ##   if(is.null(graph) && !is.null(mofa$graph)) graph <- mofa$graph
-    ##   diagram <- wgcna.create_diagram(
-    ##     report, llm_model = llm_model, graph = graph,
-    ##     rankdir="TB", correct=TRUE, double.check=TRUE 
-    ##   )
-    ## }
-
-    ## create bullet points
-    bullet_prompt = paste0("**Instructions**: From the given report, extract 3 one-line  bullet points summarizing key take home messages. Keep sentences short. Give just the list items. No markup inside list items. \n\n***Report***:",report)
-    bullets <- ai.ask(bullet_prompt, model = llm_model)
-
-    if(!is.null(img_model)) {
-      infographic <- ai.create_infographic(
-        mofa_rpt$report, img_model,
-        format = "image")
-    }
-    
-  }
-
-  # if there is no title, we add a generic one.
-  if(!grepl("^#[ ]|\n#[ ]",report)) {
-    tt <- paste0("# ",kernel," Analysis Report\n\n")
-    report <- paste(tt, report)
-  }
-  report <- gsub(intToUtf8("8209"),"-",report)
-
-  list(
-    summaries_prompts = summaries_prompts,
-    summaries = summaries,
-    report_prompt = qq,
-    report = report,
-    bullets = bullets,
-    diagram = diagram,
-    infographic = infographic,
-    llm_model = llm_model,
-    image_model = img_model,
-    settings = mofa$settings
-  )
-}
 
 
 ## ======================================================================
