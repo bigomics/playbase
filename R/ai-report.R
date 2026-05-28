@@ -138,13 +138,13 @@ pgx.update_infographics <- function(pgx, llm_model, img_model,
     pgx <- pgx.update_drugs_results(pgx, model=llm_model, img_model=img_model)
   }
   
-  no.infograpic <- function(rpt) {
+  no_infographic <- function(rpt) {
     is.null(rpt$infographic) || is.character(rpt$infographic)
   }
 
   if(!is.null(pgx$mofa) && "mofa" %in% select) {    
     if(force)  pgx$mofa$report$infographic <- NULL    
-    if(no.infograpic(pgx$mofa$report)) {
+    if(no_infographic(pgx$mofa$report)) {
       pgx$mofa$report$infographic <- ai.create_infographic(
         pgx$mofa$report$report, img_model, format="image")
     }
@@ -152,7 +152,7 @@ pgx.update_infographics <- function(pgx, llm_model, img_model,
 
   if(!is.null(pgx$report$report) && "summary" %in% select) {
     if(force)  pgx$report$report$infographic <- NULL    
-    if(no.infograpic(pgx$report)) {
+    if(no_infographic(pgx$report)) {
       pgx$report$infographic <- ai.create_infographic(
         pgx$report$report, img_model,
         prompt="Make an analysis workflow diagram of connected analysis steps.",
