@@ -26,7 +26,7 @@ pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
 
   if("wgcna" %in% select) {
     if(!is.null(pgx$wgcna) && is.null(pgx$wgcna$report)) {  
-      message(">>> creating WGCNA report...")
+      message("[pgx.update_reports] creating WGCNA report...")
       pgx$wgcna$report<- wgcna.create_report(
         pgx$wgcna,
         ai_model = llm_model,
@@ -43,7 +43,7 @@ pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
     }
     
     if(!is.null(pgx$wgcna_mox) && is.null(pgx$wgcna_mox$report)) {  
-      message(">>> creating WGCNA report...")
+      message("[pgx.update_reports] creating WGCNA report...")
       pgx$wgcna_mox$report <- wgcna.create_report(
         pgx$wgcna_mox,
         ai_model = llm_model,
@@ -62,7 +62,7 @@ pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
 
   if("mofa" %in% select) {    
     if(!is.null(pgx$mofa) && is.null(pgx$mofa$report)) {
-      message(">>> creating MOFA report...")
+      message("[pgx.update_reports] creating MOFA report...")
       pgx$mofa$report <- mofa.create_report(
         pgx$mofa, llm_model = llm_model,
         img_model = img_model,
@@ -77,7 +77,7 @@ pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
 
   if("cmap" %in% select) {    
     if(!is.null(pgx$drugs) && is.null(pgx$drugs[[1]]$report)) {  
-      message(">>> creating drug CMAP report...")
+      message("[pgx.update_reports] creating drug CMAP report...")
       pgx <- pgx.update_drugs_results(pgx, model=NULL, img_model=NULL)
       drug.db <- names(pgx$drugs)  ## NEED ALL????
       ##drug.db <- head(drug.db,2) ## ONLY 2???
@@ -90,7 +90,7 @@ pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
   }
 
   if("summary" %in% select && is.null(pgx$report)) {    
-    message(">>> creating summary report...")
+    message("[pgx.update_reports] creating summary report...")
     intrpt <- rpt.create_summary_report(pgx, llm = llm_model)
     pgx$report <- list(
       report = intrpt,
@@ -98,10 +98,23 @@ pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
       tables = NULL
     )
   }
-  
-  
+
   return(pgx)
 }
+
+#' @export
+pgx.has_reports <- function(pgx, ...) {
+
+  missing_wgcna  <- (!is.null(pgx$wgcna) && is.null(pgx$wgcna$report))
+  missing_wgcna2 <- (!is.null(pgx$wgcna_mox) && is.null(pgx$wgcna_mox$report))
+  missing_cmap   <- (!is.null(pgx$drugs[[1]]) && is.null(pgx$drugs[[1]]$report))
+  missing_mofa   <- (!is.null(pgx$mofa) && is.null(pgx$mofa$report))
+  missing_summary  <- (!is.null(pgx$report) && is.null(pgx$report$report))
+  
+  has_all <- !missing_wgcna && !missing_wgcna2 && !missing_cmap && !missing_mofa
+}
+
+
 
 #' @export
 ai.create_report <- function(pgx, ...) {
