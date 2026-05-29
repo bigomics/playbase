@@ -103,7 +103,7 @@ pgx.update_reports <- function(pgx, llm_model, img_model=NULL,
 }
 
 #' @export
-pgx.has_reports <- function(pgx, ...) {
+pgx.has_reports <- function(pgx) {
 
   missing_wgcna  <- (!is.null(pgx$wgcna) && is.null(pgx$wgcna$report))
   missing_wgcna2 <- (!is.null(pgx$wgcna_mox) && is.null(pgx$wgcna_mox$report))

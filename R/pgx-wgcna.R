@@ -883,6 +883,15 @@ wgcna.compute_multiomics <- function(dataX,
   names(me.genes) <- NULL
   me.genes <- unlist(me.genes, recursive = FALSE)
 
+  ## get colors
+  me.colors <- lapply(names(me.genes), function(m) rep(m,length(me.genes[[m]])))
+  me.colors <- unlist(me.colors)
+  names(me.colors) <- unlist(me.genes,use.names=FALSE)
+  mm <- lapply(layers,function(m) unique(m$net$labels))
+  dt <- unlist(lapply(names(mm),function(i) rep(i,length(mm[[i]]))))
+  names(dt) <- unlist(mm)
+  names(me.colors) <- paste0(dt[me.colors],":",names(me.colors))
+  
   ## Compute enrichment
   gsea <- NULL
   if (compute.enrichment) {
@@ -969,6 +978,7 @@ wgcna.compute_multiomics <- function(dataX,
   out <- list(
     layers = layers,
     me.genes = me.genes,
+    me.colors = me.colors,
     gsea = gsea,
     report = report.out,
     datanames = datanames,
