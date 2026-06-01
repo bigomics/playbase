@@ -22,7 +22,6 @@ compute_testGenes <- function(pgx,
                               prune.samples = TRUE,
                               remove.outputs = TRUE,
                               timeseries = FALSE) {
-
   message("[compute_testGenes] detecting stat groups...")
 
   ## Check parameters, decide group level
@@ -151,9 +150,8 @@ compute_testGenes <- function(pgx,
 
   ## remove large outputs.
   if (remove.outputs) pgx$gx.meta$outputs <- NULL
-  
+
   message("[compute_testGenes] done!")
 
   return(pgx)
-
 }

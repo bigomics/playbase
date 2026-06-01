@@ -166,6 +166,7 @@ pgx.createPGX <- function(counts,
                           max.genesets = 5000,
                           name = "Data set",
                           datatype = "RNA-seq",
+                          datatype_subtype = NULL,
                           azimuth_ref = "pbmcref",
                           probe_type = NULL,
                           creator = "unknown",
@@ -201,7 +202,10 @@ pgx.createPGX <- function(counts,
   message("[pgx.createPGX]===========================================")
   message("\n")
   message("[pgx.createPGX] datatype = ", datatype, "\n")
-    
+  if (!is.null(datatype_subtype)) {
+    message("[pgx.createPGX] datatype_subtype = ", datatype_subtype, "\n")
+  }
+
   if (is.null(counts)) stop("[pgx.createPGX] FATAL: counts must be provided")
   if (is.null(samples)) stop("[pgx.createPGX] FATAL: samples must be provided")
   if (is.null(organism)) stop("[pgx.createPGX] FATAL: organism must be provided")
@@ -387,10 +391,11 @@ pgx.createPGX <- function(counts,
       if (length(kk) > 0) feature.lengths <- annot_table[, kk[1]]
     }
     for(i in 1:nrow(counts)) {
-      rownames(counts)[i] <- playbase::rank_uniprots(rownames(counts)[i], feature.lengths[i])$feature
+      rownames(counts)[i] <- reorder_uniprots(rownames(counts)[i], feature.lengths[i])$feature
     }
-    rownames(X) <- rownames(annot_table) <- rownames(counts)
+    rownames(X) <- rownames(counts)
   }
+  if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
 
   pgx <- list(
     name = name,
@@ -399,6 +404,7 @@ pgx.createPGX <- function(counts,
     date = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
     creator = creator,
     datatype = datatype,
+    datatype_subtype = datatype_subtype,
     description = description,
     metadata = metadata,
     samples = data.frame(samples, check.names = FALSE),
@@ -418,7 +424,7 @@ pgx.createPGX <- function(counts,
   ## Create gene annotation table
   pgx$genes <- NULL
   pgx$probe_type <- probe_type
-
+  
   message("[createPGX] annotating genes")
   pgx$genes <- getProbeAnnotation(
     organism = pgx$organism,
@@ -428,7 +434,7 @@ pgx.createPGX <- function(counts,
     probetype = pgx$probe_type,
     annot_table = annot_table
   )
-
+    
   ## Reorder uniprots in pgx$genes. Valid for all datatypes.
   message("[pgx.createPGX] Reordering uniprot column in pgx$genes")
   hh <- grep("uniprot", tolower(colnames(pgx$genes)))
@@ -437,7 +443,7 @@ pgx.createPGX <- function(counts,
     kk <- grep("length|size", tolower(colnames(pgx$genes)))
     if (length(kk) > 0) feature.lengths <- as.character(pgx$genes[, kk[1]])
     for(i in 1:nrow(pgx$genes)) {
-      pgx$genes[i, hh[1]] <- playbase::rank_uniprots(pgx$genes[i, hh[1]], feature.lengths[i])$feature
+      pgx$genes[i, hh[1]] <- reorder_uniprots(pgx$genes[i, hh[1]], feature.lengths[i])$feature
     }
   }
 
@@ -472,14 +478,14 @@ pgx.createPGX <- function(counts,
     if (only.known) {
       message("[pgx.createPGX] Removing genes without symbol...")
       no.symbol <- (is.na(pgx$genes$symbol) | pgx$genes$symbol %in% c("", "-"))
-      pgx$genes <- pgx$genes[which(!no.symbol), ]
+      pgx$genes <- pgx$genes[which(!no.symbol), , drop = FALSE]
     }
 
     if (only.proteincoding) {
       message("[pgx.createPGX] Removing Rik/ORF/LOC genes...")
       is.unknown <- grepl("^rik|^loc|^orf", tolower(pgx$genes$symbol))
       is.unknown <- is.unknown & !is.na(pgx$genes$symbol)
-      pgx$genes <- pgx$genes[which(!is.unknown), ]
+      pgx$genes <- pgx$genes[which(!is.unknown), , drop = FALSE]
     }
 
     if (!is.null(exclude.genes)) {
@@ -746,7 +752,7 @@ pgx.computePGX <- function(pgx,
   ## select valid contrasts
   sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
   contr.matrix <- contr.matrix[, sel, drop = FALSE]
- 
+
   ## -------------------------------------------------------------------
   ## Clustering
   ## -------------------------------------------------------------------
@@ -823,7 +829,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
 
   timeseries <- any(grepl("^IA:*", colnames(pgx$contrasts)))
-  
+
   message("[pgx.computePGX] testing genes...")
   pgx <- compute_testGenes(
     pgx,

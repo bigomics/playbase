@@ -1151,7 +1151,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   if (ntop < Inf) {
     X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], ntop) ## faster
   }
- 
+
   if (is.null(methods)) {
     methods <- c(
       "uncorrected", "normalized_to_control",
@@ -1195,7 +1195,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
     cX <- try(limmaCorrect(X, batch, y = NULL))
     xlist[["limma.no_mod"]] <- cX
   }
- 
+
   ## ComBat ------------------------------------------------------
   if ("ComBat" %in% methods && is.null(batch)) {
     xlist[["ComBat"]] <- X
@@ -1217,7 +1217,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   if ("ComBat.no_mod" %in% methods && is.null(batch)) {
     xlist[["ComBat.no_mod"]] <- X
   }
- 
+
   ## superbatchcorrect
   if ("superBC" %in% methods) {
     df <- data.frame(y = y)
@@ -1751,8 +1751,8 @@ compare_batchcorrection_methods <- function(X,
                                             ntop = 4000,
                                             xlist.init = list(),
                                             ref = NULL,
-                                            evaluate = TRUE) {
-
+                                            evaluate = TRUE,
+                                            npc = 2) {
   if (is.null(pheno) && is.null(contrasts)) {
     stop("must give either pheno vector or contrasts matrix")
   }
@@ -1802,10 +1802,11 @@ compare_batchcorrection_methods <- function(X,
     })
   } else {
     message("Computing PCA clustering...")
+    npc_eff <- max(2, min(npc, min(sapply(xlist, function(x) min(dim(x)))) - 1))
     for (i in 1:length(xlist)) {
       set.seed(1234)
-      pca <- irlba::irlba(t2(xlist[[i]]), nu = 2, nv = 2)
-      pos[[names(xlist)[i]]] <- pca$u[, 1:2]
+      pca <- irlba::irlba(t2(xlist[[i]]), nu = npc_eff, nv = npc_eff)
+      pos[[names(xlist)[i]]] <- pca$u[, seq_len(npc_eff), drop = FALSE]
       pca.varexp[[names(xlist)[i]]] <- (pca$d^2 / sum(pca$d^2)) * 100
     }
   }

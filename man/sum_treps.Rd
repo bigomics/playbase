@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{sum_treps}
 \alias{sum_treps}
-\title{Sum up tech replicates of a linear count matrix 
+\title{Sum up tech replicates of a linear count matrix
 This function combines (sums up) features of technical replicates
 It does so in the linear space.}
 \usage{
@@ -17,7 +17,7 @@ sum_treps(counts, trep_var = "")
 counts matrix with technical replicates combined
 }
 \description{
-Sum up tech replicates of a linear count matrix 
+Sum up tech replicates of a linear count matrix
 This function combines (sums up) features of technical replicates
 It does so in the linear space.
 }

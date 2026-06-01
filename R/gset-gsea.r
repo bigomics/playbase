@@ -1107,7 +1107,7 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
   length(kk)
   i <- 1
   bar_down <- if (!is.null(col_down)) col_down else omics_colors("brand_blue")
-  bar_up   <- if (!is.null(col_up))   col_up   else omics_colors("red")
+  bar_up <- if (!is.null(col_up)) col_up else omics_colors("red")
   pal <- grDevices::colorRampPalette(c(bar_down, omics_colors("grey"), bar_up))(32)
   for (i in 1:(length(kk) - 1)) {
     r <- mean(rnk[kk[c(i, i + 1)]], na.rm = TRUE)

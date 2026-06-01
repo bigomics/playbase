@@ -412,7 +412,6 @@ read_contrasts <- function(file) {
 #' @return Sample metadata matrix (samples on rows; metadata on columns)
 #' @export
 read_Olink_NPX <- function(NPX_data) {
-
   NPX <- try(OlinkAnalyze::read_NPX(NPX_data), silent = TRUE)
   if (inherits(NPX, "try-error")) {
     message("[read_Olink_NPX]: Uploaded file does not adhere with standard Olink format.")
@@ -429,7 +428,9 @@ read_Olink_NPX <- function(NPX_data) {
   if (is.na(npx.id)) message("[read_Olink_NPX]: 'NPX' is missing.")
   if (is.na(ss.id)) message("[read_Olink_NPX]: 'SampleID' is missing.")
   if (is.na(ff.id)) message("[read_Olink_NPX]: 'Uniprot' or 'Assay' is missing.")
-  if (is.na(npx.id) | is.na(ss.id) | is.na(ff.id)) return(NULL)
+  if (is.na(npx.id) | is.na(ss.id) | is.na(ff.id)) {
+    return(NULL)
+  }
 
   ## Counts
   fm <- as.formula(paste0(ff.id, "~", ss.id))
@@ -446,12 +447,11 @@ read_Olink_NPX <- function(NPX_data) {
   rownames(samples) <- samples[[ss.id]]
   samples <- samples[, setdiff(colnames(samples), ss.id), drop = FALSE]
 
-  cm <- intersect(colnames(counts),rownames(samples))
+  cm <- intersect(colnames(counts), rownames(samples))
   counts <- counts[, cm, drop = FALSE]
   samples <- samples[cm, , drop = FALSE]
-  
-  return(list(counts=counts, samples=samples))
 
+  return(list(counts = counts, samples = samples))
 }
 
 
@@ -460,17 +460,16 @@ read_Olink_NPX <- function(NPX_data) {
 #' Attempts multiple ways.
 #' @export
 read_h5_counts <- function(h5.file) {
-
   message("[playbase::read_h5_counts] Reading h5 file: ", h5.file)
   df <- NULL
 
   FF <- tryCatch(
-  {
-    rhdf5::h5ls(h5.file)
-  },
-  error = function(w) {
-    NULL
-  }
+    {
+      rhdf5::h5ls(h5.file)
+    },
+    error = function(w) {
+      NULL
+    }
   )
 
   if (!is.null(FF) && all(c("group", "name") %in% colnames(FF))) {
@@ -494,65 +493,121 @@ read_h5_counts <- function(h5.file) {
     h5.paths <- paste0(FF[, "group"], "/", FF[, "name"])
     is_anndata <- all(c("/X/data", "/X/indices", "/X/indptr") %in% h5.paths)
     if (is_anndata) {
-      df <- tryCatch({
-        x_data    <- rhdf5::h5read(h5.file, "/X/data")
-        x_indices <- rhdf5::h5read(h5.file, "/X/indices")
-        x_indptr  <- rhdf5::h5read(h5.file, "/X/indptr")
-        ## rhdf5::h5read returns 1D arrays (with a dim attribute), not plain
-        ## character vectors. Seurat's LogMap[[<-]] dispatch fails when dimnames
-        ## are arrays rather than vectors. Strip with as.character().
-        obs_names <- as.character(rhdf5::h5read(h5.file, "/obs/_index"))
-        var_names <- as.character(rhdf5::h5read(h5.file, "/var/_index"))
-        n_obs  <- length(obs_names)
-        n_vars <- length(var_names)
-        message("[playbase::read_h5_counts] AnnData sparse CSR detected")
-        message("[playbase::read_h5_counts] Size: ", n_obs, " cells; ", n_vars, " features")
-        row_idx <- rep(seq_len(n_obs), diff(as.integer(x_indptr)))
-        mat <- Matrix::sparseMatrix(
-          i = row_idx,
-          j = as.integer(x_indices) + 1L,
-          x = as.numeric(x_data),
-          dims = c(n_obs, n_vars),
-          dimnames = list(obs_names, var_names)
-        )
-        Matrix::t(mat)  # transpose to genes x cells (standard counts convention)
-      }, error = function(w) {
-        message("[playbase::read_h5_counts] AnnData read failed: ", conditionMessage(w))
+      df <- tryCatch(
+        {
+          x_data <- rhdf5::h5read(h5.file, "/X/data")
+          x_indices <- rhdf5::h5read(h5.file, "/X/indices")
+          x_indptr <- rhdf5::h5read(h5.file, "/X/indptr")
+          ## rhdf5::h5read returns 1D arrays (with a dim attribute), not plain
+          ## character vectors. Seurat's LogMap[[<-]] dispatch fails when dimnames
+          ## are arrays rather than vectors. Strip with as.character().
+          obs_names <- as.character(rhdf5::h5read(h5.file, "/obs/_index"))
+          var_names <- as.character(rhdf5::h5read(h5.file, "/var/_index"))
+          n_obs <- length(obs_names)
+          n_vars <- length(var_names)
+          ## CSR indptr length = n_rows + 1; some tools write X as vars x obs (transposed)
+          n_csr_rows <- length(x_indptr) - 1L
+          transposed <- (n_csr_rows == n_vars && n_csr_rows != n_obs)
+          if (transposed) {
+            row_names <- var_names; col_names <- obs_names
+            n_rows <- n_vars;      n_cols    <- n_obs
+          } else {
+            row_names <- obs_names; col_names <- var_names
+            n_rows <- n_obs;        n_cols    <- n_vars
+          }
+          message("[playbase::read_h5_counts] AnnData sparse CSR detected")
+          message("[playbase::read_h5_counts] Size: ", n_obs, " cells; ", n_vars, " features")
+          row_idx <- rep(seq_len(n_rows), diff(as.integer(x_indptr)))
+          mat <- Matrix::sparseMatrix(
+            i = row_idx,
+            j = as.integer(x_indices) + 1L,
+            x = as.numeric(x_data),
+            dims = c(n_rows, n_cols),
+            dimnames = list(row_names, col_names)
+          )
+          ## ensure final result is genes x cells
+          counts_mat <- if (transposed) mat else Matrix::t(mat)
+
+          ## read /obs cell metadata
+          obs_meta <- tryCatch({
+            FF_obs <- FF[FF[, "group"] == "/obs", , drop = FALSE]
+            col_names_obs <- FF_obs[, "name"]
+            ## skip internal AnnData fields and sub-group entries
+            skip <- c("_index", "__categories")
+            is_subgroup <- col_names_obs %in% FF[FF[, "group"] != "/obs", "name"]
+            top_cols <- col_names_obs[!col_names_obs %in% skip & !is_subgroup]
+            ## also skip columns that have sub-paths (categorical stored as categories/codes)
+            has_subpath <- vapply(top_cols, function(cn) {
+              any(FF[, "group"] == paste0("/obs/", cn))
+            }, logical(1))
+            cat_cols  <- top_cols[has_subpath]
+            scal_cols <- top_cols[!has_subpath]
+
+            meta <- data.frame(row.names = obs_names)
+            for (cn in scal_cols) {
+              v <- tryCatch(as.vector(rhdf5::h5read(h5.file, paste0("/obs/", cn))), error = function(e) NULL)
+              if (!is.null(v) && length(v) == n_obs) meta[[cn]] <- v
+            }
+            for (cn in cat_cols) {
+              cats  <- tryCatch(as.character(rhdf5::h5read(h5.file, paste0("/obs/", cn, "/categories"))), error = function(e) NULL)
+              codes <- tryCatch(as.integer(rhdf5::h5read(h5.file, paste0("/obs/", cn, "/codes"))),      error = function(e) NULL)
+              if (!is.null(cats) && !is.null(codes) && length(codes) == n_obs) {
+                ## AnnData encodes missing categoricals as -1; map to NA
+                idx <- codes + 1L
+                meta[[cn]] <- ifelse(idx > 0L, cats[ifelse(idx > 0L, idx, 1L)], NA_character_)
+              }
+            }
+            if (ncol(meta) > 0) meta else NULL
+          }, error = function(e) NULL)
+
+          list(counts = counts_mat, samples = obs_meta)
+        },
+        error = function(w) {
+          message("[playbase::read_h5_counts] AnnData read failed: ", conditionMessage(w))
+          NULL
+        }
+      )
+    }
+  }
+
+  ## For AnnData path df is already list(counts, samples); unwrap for fallbacks
+  if (is.list(df) && all(c("counts", "samples") %in% names(df))) {
+    counts_mat <- df$counts
+    samples_df <- df$samples
+  } else {
+    counts_mat <- df
+    samples_df <- NULL
+  }
+
+  if (is.null(counts_mat)) {
+    counts_mat <- tryCatch(
+      {
+        Seurat::Read10X_h5(h5.file)
+      },
+      error = function(w) {
         NULL
-      })
-    }
-  }
-
-  if (is.null(df)) {
-    df <- tryCatch(
-    {
-      Seurat::Read10X_h5(h5.file)
-    },
-    error = function(w) {
-      NULL
-    }
+      }
     )
   }
 
-  if (is.null(df)) {
-    df <- tryCatch(
-    {
-      playbase::h5.readMatrix(h5.file)
-    },
-    error = function(w) {
-      NULL
-    }
+  if (is.null(counts_mat)) {
+    counts_mat <- tryCatch(
+      {
+        playbase::h5.readMatrix(h5.file)
+      },
+      error = function(w) {
+        NULL
+      }
     )
   }
 
-  if (!is.null(df) & (all(class(df) %in% c("matrix", "array")) || is(df, "sparseMatrix"))) {
+  if (!is.null(counts_mat) & (all(class(counts_mat) %in% c("matrix", "array")) || is(counts_mat, "sparseMatrix"))) {
     message("[playbase::read_h5_counts] Reading operation successfully completed. \n")
   } else {
     message("[playbase::read_h5_counts] df is null!")
   }
 
-  return(df)
-
+  return(list(counts = counts_mat, samples = samples_df))
 }
 
 
@@ -561,9 +616,8 @@ read_h5_counts <- function(h5.file) {
 #' @return abundance data matrix (features on rows; samples on columns)
 #' @export
 read_spectronaut <- function(file) {
-
   msg <- function(...) message("[playbase::read_spectronaut] ", ...)
-  
+
   counts <- suppressMessages(suppressWarnings(
     try(playbase::read_counts(file), silent = TRUE)
   ))
@@ -572,15 +626,15 @@ read_spectronaut <- function(file) {
     if (inherits(counts, "try-error")) {
       msg("FATAL: could not read abundance file")
       return(NULL)
-    }  
+    }
   }
-  
+
   counts <- counts[!is.na(rownames(counts)) & rownames(counts) != "", , drop = FALSE]
   if (!any(is.na(suppressWarnings(as.numeric(rownames(counts)))))) {
     rownames(counts) <- paste0("P", 1:nrow(counts))
   }
   msg("Initial matrix size: ", nrow(counts), " x ", ncol(counts))
-  
+
   pg.cols <- grep("^PG\\.", colnames(counts), value = TRUE)
   if (length(pg.cols) > 0) msg("pg.cols = ", paste(pg.cols, collapse = "; "))
 
@@ -591,10 +645,10 @@ read_spectronaut <- function(file) {
     msg("FATAL: No protein groups, accession or genes found. Exiting")
     return(NULL)
   }
-  
+
   protgr <- genes <- NULL
   if (length(pg.idx) > 0) protgr <- counts[, pg.cols[pg.idx], drop = FALSE]
-  if (length(genes.idx) > 0) genes <- counts[, pg.cols[genes.idx], drop = FALSE] 
+  if (length(genes.idx) > 0) genes <- counts[, pg.cols[genes.idx], drop = FALSE]
 
   ## Remove contaminants
   if (!is.null(protgr)) {
@@ -631,10 +685,10 @@ read_spectronaut <- function(file) {
   colnames(counts) <- gsub("-", "_", gsub("\\.", "_", colnames(counts)))
 
   msg("Completed. Final matrix size: ", nrow(counts), " x ", ncol(counts))
-  rm(pg.cols, protgr, genes); gc()
+  rm(pg.cols, protgr, genes)
+  gc()
 
   return(counts)
-
 }
 
 #' Read Spectronaut output hPTM abundance data file.
@@ -642,7 +696,6 @@ read_spectronaut <- function(file) {
 #' @return Abundance data matrix + annotation (features on rows; samples on columns)
 #' @export
 read_spectronaut_hPTM <- function(file) {
-
   msg <- function(...) message("[playbase::read_spectronaut_hPTM] ", ...)
 
   counts <- try(read.csv(file, sep = "\t"), silent = TRUE)
@@ -653,7 +706,7 @@ read_spectronaut_hPTM <- function(file) {
       return(NULL)
     }
   }
-  
+
   counts <- counts[!is.na(rownames(counts)) & rownames(counts) != "", , drop = FALSE]
   if (!any(is.na(suppressWarnings(as.numeric(rownames(counts)))))) {
     rownames(counts) <- paste0("P", 1:nrow(counts))
@@ -663,13 +716,13 @@ read_spectronaut_hPTM <- function(file) {
   ## PTM annotation
   ss <- "proteinid|^pg\\.|key|modification|position|location|sitelocation|siteAA"
   ann_idx <- unique(c(grep(ss, colnames(counts), ignore.case = TRUE)))
-  if (length(ann_idx) == 0)  {
+  if (length(ann_idx) == 0) {
     msg("FATAL: No PTM annotation columns found. Exiting")
     return(NULL)
   }
   ann <- counts[, ann_idx, drop = FALSE]
   counts <- counts[, -ann_idx, drop = FALSE]
-  
+
   ## Retain only PTM phospho STY & ""
   mod_idx <- grep("modification", colnames(ann), ignore.case = TRUE)[1]
   if (!is.na(mod_idx)) {
@@ -704,7 +757,7 @@ read_spectronaut_hPTM <- function(file) {
   ## Remove contaminants
   pid <- grep("proteinid", colnames(ann), ignore.case = TRUE)[1]
   if (length(pid) > 0) {
-    is.contam <- grep("cont_", ann[,pid], ignore.case = TRUE)
+    is.contam <- grep("cont_", ann[, pid], ignore.case = TRUE)
     if (any(is.contam)) {
       msg("Identified ", length(is.contam), " contaminants. Removing...")
       ann <- ann[-is.contam, , drop = FALSE]
@@ -719,17 +772,17 @@ read_spectronaut_hPTM <- function(file) {
     return(NULL)
   }
   res <- cbind(ann, counts[, ptm_qty, drop = FALSE])
-  
+
   ## Clean colnames
-  colnames(res) <- gsub("^PG\\.|[.]PTM[.]Quantity|PTM[.]|[.]PTM[.]|[.]raw", "", colnames(res)) 
+  colnames(res) <- gsub("^PG\\.|[.]PTM[.]Quantity|PTM[.]|[.]PTM[.]|[.]raw", "", colnames(res))
   colnames(res) <- gsub("^X\\.[0-9]+|\\.{2,}", "", colnames(res))
   colnames(res) <- gsub("\\.d$", "", colnames(res))
 
   msg("Completed. Final matrix size: ", nrow(res), " x ", ncol(res))
-  rm(counts, ann); gc()
+  rm(counts, ann)
+  gc()
 
   return(res)
-  
 }
 
 #' Read 10X Cell Ranger Software output (version V3 onwards).
@@ -737,9 +790,8 @@ read_spectronaut_hPTM <- function(file) {
 #' @return Count gene expression data matrix (sparse dgCMatrix)
 #' @export
 read_cellranger_output <- function(file) {
-
   msg <- function(...) message("[playbase::read_cellranger_output] ", ...)
-  
+
   msg("Reading 10X Cell Ranger output...")
   tmp <- tempfile()
   dir.create(tmp)
@@ -762,9 +814,12 @@ read_cellranger_output <- function(file) {
   for (i in 1:length(Data)) {
     files <- list.files(Data[i])
     has_mex <- all(ff1 %in% files) || all(ff2 %in% files)
-    if (has_mex) { mex_dir = Data[i]; break }
+    if (has_mex) {
+      mex_dir <- Data[i]
+      break
+    }
   }
-  
+
   if (is.null(mex_dir)) {
     msg("Could not find MEX directory (barcodes/features/matrix files) in: ", dir)
     return(NULL)
@@ -775,8 +830,8 @@ read_cellranger_output <- function(file) {
   if (is.list(counts)) counts <- counts[["Gene Expression"]]
 
   msg("Completed. Expression matrix: ", nrow(counts), " x ", ncol(counts), ".\n")
-  gc(); return(counts)
-
+  gc()
+  return(counts)
 }
 
 

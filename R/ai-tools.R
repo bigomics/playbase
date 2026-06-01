@@ -1,7 +1,6 @@
-
-##======================================================================
-##==================== TOOLS ===========================================
-##======================================================================
+## ======================================================================
+## ==================== TOOLS ===========================================
+## ======================================================================
 
 #' Plot Volcano
 #'
@@ -10,7 +9,7 @@ ai.tool_plot_volcano <- ellmer::tool(
   function(contrast, psig = 0.05) {
     message("calling tool: plot_volcano(). contrast = ", contrast)
     cmd <- "playbase::pgx.Volcano(pgx, contrast=1, psig=0.05)"
-    paste0("<code>",cmd,"</code>")
+    paste0("<code>", cmd, "</code>")
   },
   "Code using playbase library to create volcano plot for a given contrast",
   contrast = ellmer::type_string(
@@ -31,7 +30,7 @@ ai.tool_get_expression <- ellmer::tool(
     message("calling tool: get_expression(). gene = ", gene)
     pgx <- playdata::GEIGER_PGX
     list(
-      values = pgx$X[gene,],
+      values = pgx$X[gene, ],
       plot_command = "<code>base::barplot(pgx$X[gene,])</code>"
     )
   },
@@ -56,4 +55,3 @@ ai.tool_get_current_time <- ellmer::tool(
     required = FALSE
   )
 )
-

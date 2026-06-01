@@ -251,7 +251,7 @@ compute_CV <- function(counts) {
   return(cv)
 }
 
-#' Sum up tech replicates of a linear count matrix 
+#' Sum up tech replicates of a linear count matrix
 #' This function combines (sums up) features of technical replicates
 #' It does so in the linear space.
 #' @param counts Numeric matrix
@@ -259,7 +259,6 @@ compute_CV <- function(counts) {
 #' @return counts matrix with technical replicates combined
 #' @export
 sum_treps <- function(counts, trep_var = "") {
-
   if (is.null(trep_var)) {
     return(counts)
   } else if (length(trep_var) != ncol(counts)) {
@@ -273,7 +272,7 @@ sum_treps <- function(counts, trep_var = "") {
     trep_var <- as.character(trep_var)
     names(trep_var) <- colnames(counts)
     treps <- unique(trep_var)
-    for(i in 1:length(treps)) {
+    for (i in 1:length(treps)) {
       jj <- which(trep_var == treps[i])
       if (length(jj) <= 1) next
       kk <- names(jj)
@@ -281,27 +280,25 @@ sum_treps <- function(counts, trep_var = "") {
       mat <- rowSums(counts1, na.rm = TRUE)
       mat[rowSums(is.na(counts1)) == length(kk)] <- NA
       counts[, kk[1]] <- mat
-      jx  <- match(kk, colnames(counts))
+      jx <- match(kk, colnames(counts))
       counts <- counts[, -jx[-1], drop = FALSE]
     }
   }
-  
+
   return(counts)
-  
 }
 
 #' Re-order uniprot IDs (when a feature has multiple uniprot ids)
 #' Rules:
 #' If there are Swiss-Prot entries, Swiss-Prot entries come first, followed by TrEMBL entries.
 #' Among Swiss-Prot entries, if there are canonical entries, canonical entries come first (eg P05067),
-#' followed by isoforms (P05067-2). In absence of canonical entries, convert isoforms to canonical
-#' (eg P05067-2 to P05067).
+#' followed by isoforms (P05067-2). Isoform names are kept as-is (if present).
 #' Among Swiss-Prot entries (after step 2), longer proteins come first.
 #' Among TrEMBL entires, longer proteins come first.
 #' @param feature feature ids, collapsed with ";".
 #' @param lengths Character vector of feature lengths, collapsed with ";". Default NULL.
 #' @export
-rank_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
+reorder_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
 
   ff <- strsplit(as.character(feature), ";")[[1]]
   ff <- ff[nzchar(trimws(ff))]
@@ -309,28 +306,21 @@ rank_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
   if (all(as.character(feature) %in% c("", "NA", NA))) {
     return(list(feature=feature, lengths=lengths))
   }
-  
-  if (length(ff) <= 1) {
-    sp <- grep("^[OPQ][0-9]", ff)
-    if (length(sp) > 0) {
-      hh <- grep("[-_][0-9]+$", ff)
-      if (length(hh) > 0) ff <- sub("[-_][0-9]+$", "", ff)
-    }
-    return(list(feature=ff, lengths=lengths))
-  }
+
+  if (length(ff) <= 1) { return(list(feature=ff, lengths=lengths)) }
 
   ll <- NULL
   if (!is.null(lengths)) {
     lengths <- strsplit(as.character(lengths), ";")[[1]]
     lengths <- lengths[nzchar(trimws(lengths))]
     if (length(ff) != length(lengths)) {
-      message("[playbase::rank_uniprots] Protein lengths does not match features. Ignoring length.")
+      message("[playbase::reorder_uniprots] Protein lengths does not match features. Ignoring length.")
     } else {
       names(lengths) <- ff
       kk <- which(as.character(lengths) %in% c("0", "", "NA", NA))
       if (length(kk) > 0) {
         if (length(kk) == length(lengths)) {
-          message("[playbase::rank_uniprots] All protein lengths uninformative. Ignoring length.")
+          message("[playbase::reorder_uniprots] All protein lengths uninformative. Ignoring length.")
         } else {
           ll <- lengths
           ll[kk] <- "0"
@@ -346,38 +336,25 @@ rank_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
   sp <- grep("^[OPQ][0-9]", ff)
   if (length(sp) > 0) {
     ## Swiss-Prot canonical entries come first (P05067), followed by isoforms (eg., P05067-2).
-    ## In absence of canonical entries, convert isoforms to canonical (eg., P05067-2 to P05067).
+    ## Isoform names are kept as-is.
     ff.sp <- ff[sp]
     hh <- grep("[-_][0-9]+$", ff.sp)
-    if (length(hh) > 0) {      
-      if (length(hh) == length(ff.sp)) {
-        ff.sp[hh] <- sub("[-_][0-9]+$", "", ff.sp[hh])
-        if (!is.null(ll)) {
-          names(ll)[sp][hh] <- ff.sp[hh]
-          names(lengths)[sp][hh] <- ff.sp[hh]
-        }
-      } else  {
-        canon <- sub("[-_][0-9]+$", "", ff.sp[hh])
-        if (length(which(ff.sp %in% canon)) == 0) {
-          ff.sp[hh] <- canon
-          if (!is.null(ll)) {
-            names(ll)[sp][hh] <- ff.sp[hh]
-            names(lengths)[sp][hh] <- ff.sp[hh]
-          }
-        } else {
-          ff.sp <- c(ff.sp[-hh], ff.sp[hh])
-          if (!is.null(ll)) {
-            if (!isTRUE(all.equal(ff.sp, names(ll)))) {
-              ll <- ll[match(ff.sp, names(ll))]
-              lengths <- lengths[match(ff.sp, names(lengths))]
-            }
-          }
+    if (length(hh) > 0 && length(hh) < length(ff.sp)) {
+      ## Mix of canonical and isoforms: put entries with no suffix first.
+      ff.sp <- c(ff.sp[-hh], ff.sp[hh])
+      if (!is.null(ll)) {
+        ## Reorder ll to match new ff.sp order while preserving TrEMBL entries.
+        sp_rest <- setdiff(names(ll), ff.sp)
+        new_order <- c(ff.sp, sp_rest)
+        if (!isTRUE(all.equal(new_order, names(ll)))) {
+          ll <- ll[match(new_order, names(ll))]
+          lengths <- lengths[match(new_order, names(lengths))]
         }
       }
     }
   }
 
-  if (length(ff.sp) != length(ff)) ff.trembl <- ff[-sp]
+  if (length(ff.sp) != length(ff)) ff.trembl <- if (length(sp) == 0) ff else ff[-sp]
   
   ll.sp=NULL; ll.trembl=NULL
   
@@ -464,7 +441,7 @@ rank_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
     ll <- paste0(vv, collapse=";")
   }
   
-  if (verbose) message("playbase::rank_uniprots] Completed.\n")
+  if (verbose) message("playbase::reorder_uniprots] Completed.\n")
 
   return(list(feature=ff, lengths=ll))
   

@@ -488,13 +488,12 @@ pgx.variableImportance <- function(X, y,
     names(imp4) <- rownames(X)
     imp[["Boruta"]] <- imp4
   }
-  
-  if ("xgboost" %in% methods) {
 
+  if ("xgboost" %in% methods) {
     ny <- length(table(y))
     yy <- as.character(y)
     obj <- "binary:logistic"
-    if (length(unique(yy)) > 2) obj <- "multi:softprob" 
+    if (length(unique(yy)) > 2) obj <- "multi:softprob"
 
     runtime[["xgboost"]] <- system.time({
       bst <- xgboost::xgboost(
@@ -523,7 +522,6 @@ pgx.variableImportance <- function(X, y,
     names(imp6) <- xgmat$Feature
     imp6 <- imp6[match(rownames(X), names(imp6))]
     imp[["xgboost.lin"]] <- imp6
-
   }
 
   if ("splsda" %in% methods) {

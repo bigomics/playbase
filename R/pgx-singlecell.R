@@ -13,7 +13,6 @@
 #' Any existing tsne/umap embeddings and cluster assignments are copied over from the Seurat object.
 #' @export
 seurat2pgx <- function(obj, do.cluster = FALSE, organism) {
-
   message("[createPGX.10X] creating PGX object...")
 
   pgx <- list()
@@ -50,7 +49,6 @@ seurat2pgx <- function(obj, do.cluster = FALSE, organism) {
   pgx$samples$cluster <- obj@meta.data[, "seurat_clusters"]
 
   return(pgx)
-
 }
 
 #' @title Integrate single-cell data across batches
@@ -75,7 +73,6 @@ seurat2pgx <- function(obj, do.cluster = FALSE, organism) {
 pgx.scBatchIntegrate <- function(X,
                                  batch,
                                  method = c("ComBat", "limma", "CCA", "MNN", "Harmony", "liger")) {
-
   res <- list()
 
   if ("ComBat" %in% method) {
@@ -168,7 +165,6 @@ pgx.SeuratBatchIntegrate <- function(counts,
                                      qc.filter = FALSE,
                                      nanchors = -1,
                                      sct = FALSE) {
-
   ## From Seurat vignette: Integration/batch correction using
   ## CCA. Note there is no QC filtering for samples on ribo/mito
   ## content. You need to do that before.
@@ -264,12 +260,10 @@ pgx.SeuratBatchIntegrate <- function(counts,
   }
 
   return(mat.integrated)
-
 }
 
 #' @export
 pgx.read_singlecell_counts <- function(filename) {
-
   counts <- NULL
 
   if (grepl("[.]csv$", filename)) {
@@ -295,7 +289,6 @@ pgx.read_singlecell_counts <- function(filename) {
   }
 
   counts
-
 }
 
 #' @title SuperCell down sampling. Uniform down samplsing using gamma = 20.
@@ -306,7 +299,6 @@ pgx.supercell <- function(counts,
                           gamma = 20,
                           nvargenes = 1000,
                           log.transform = TRUE) {
-
   if (log.transform) { ## supercell uses log2 matrix
     X <- logCPM(counts, total = 1e4)
   } else {
@@ -328,7 +320,7 @@ pgx.supercell <- function(counts,
   ncells <- ncol(X)
 
   if (ncells < 40000) {
-    message("[pgx.supercell] SuperCell::SCimplify. Less than ", ncells, ". Use standard SCimplify..")    
+    message("[pgx.supercell] SuperCell::SCimplify. Less than ", ncells, ". Use standard SCimplify..")
     SC <- SuperCell::SCimplify(
       X,
       gamma = gamma,
@@ -355,9 +347,9 @@ pgx.supercell <- function(counts,
 
     ## PCA via irlba  (sparse-matrix OK)
     ff <- rownames(X)[order(rv, decreasing = TRUE)[seq_len(nvg)]]
-    X1 <- Matrix::t(X[ff, , drop = FALSE])  ## cells x genes
+    X1 <- Matrix::t(X[ff, , drop = FALSE]) ## cells x genes
     pca.res <- irlba::prcomp_irlba(X1, n = 10L, center = TRUE, scale. = TRUE)
-    emb <- pca.res$x  ## cells x n.pc
+    emb <- pca.res$x ## cells x n.pc
     rownames(emb) <- colnames(X)
 
     ## Subsample for kNN graph only for very large datasets, to avoid O(N^2) on full matrix.
@@ -370,7 +362,7 @@ pgx.supercell <- function(counts,
     emb.pre <- emb[pre.idx, , drop = FALSE]
 
     ## kNN via RANN (C++ kd-tree) — replaces SuperCell's slow per-edge apply loop
-    nn.res <- RANN::nn2(data = emb.pre, k = 6L)  ## k+1: nn2 includes self as first neighbor
+    nn.res <- RANN::nn2(data = emb.pre, k = 6L) ## k+1: nn2 includes self as first neighbor
     nn.idx <- nn.res$nn.idx[, -1L, drop = FALSE] ## drop self
     adj <- lapply(seq_len(nrow(nn.idx)), function(i) nn.idx[i, ])
     gg <- igraph::graph_from_adj_list(adj, duplicate = FALSE, mode = "all")
@@ -404,11 +396,10 @@ pgx.supercell <- function(counts,
     }
 
     SC <- list(membership = membership)
-    
   }
 
   message("[pgx.supercell] SuperCell::SCimplify completed")
-  
+
   meta <- as.data.frame(meta)
   dsel <- which(sapply(meta, class) %in% c("factor", "character", "logical"))
   group.argmax <- function(x) tapply(x, SC$membership, function(x) names(which.max(table(x))))
@@ -455,13 +446,12 @@ pgx.supercell <- function(counts,
   rownames(sc.meta) <- colnames(sc.counts)
 
   ## it may weirdily be needed
-  for(i in 1:ncol(sc.meta)) {
-    jj <- which(sc.meta[,i] == "NULL")
-    if (length(jj)) sc.meta[jj,i] <- NA
+  for (i in 1:ncol(sc.meta)) {
+    jj <- which(sc.meta[, i] == "NULL")
+    if (length(jj)) sc.meta[jj, i] <- NA
   }
-  
-  list(counts = sc.counts, meta = sc.meta, membership = sc.membership)
 
+  list(counts = sc.counts, meta = sc.meta, membership = sc.membership)
 }
 
 
@@ -487,7 +477,6 @@ pgx.supercell2 <- function(counts, meta, group, target_n = 20) {
   }
 
   list(counts = sc.counts, meta = sc.meta, membership = sc.membership)
-
 }
 
 ## pgx.sc_anchors <- function(counts,
@@ -527,7 +516,6 @@ pgx.createSeuratObject <- function(counts,
                                    sc_compute_settings = list(),
                                    preprocess = TRUE,
                                    method = "Harmony") {
-
   message("[pgx.createSingleCellPGX] Creating Seurat object ...")
 
   options(Seurat.object.assay.calcn = TRUE)
@@ -611,7 +599,6 @@ pgx.createSeuratObject <- function(counts,
   }
 
   return(obj)
-
 }
 
 #' @export
@@ -620,7 +607,6 @@ seurat.preprocess <- function(obj,
                               sct = FALSE,
                               tsne = TRUE,
                               umap = TRUE) {
-
   options(future.globals.maxSize = 4 * 1024^4)
 
   vars.to.regress <- NULL
@@ -685,7 +671,6 @@ seurat.preprocess <- function(obj,
   }
 
   return(obj)
-
 }
 
 #' @export
@@ -693,7 +678,6 @@ seurat.integrate <- function(obj,
                              batch,
                              sct = TRUE,
                              method = "Harmony") {
-
   obj[["RNA"]] <- split(obj[["RNA"]], f = obj@meta.data[, batch])
 
   if (sct) {
@@ -735,13 +719,11 @@ seurat.integrate <- function(obj,
   obj <- Seurat::RunUMAP(obj, dims = 1:30, reduction = dr, verbose = FALSE)
 
   return(obj)
-
 }
 
 
 #' @export
 pgx.runAzimuth <- function(counts, k.weight = NULL, reference = NULL) {
-
   options(future.globals.maxSize = 4 * 1024^4)
 
   if (is.null(k.weight)) k.weight <- 20
@@ -765,7 +747,6 @@ pgx.runAzimuth <- function(counts, k.weight = NULL, reference = NULL) {
   k1 <- !(colnames(obj1@meta.data) %in% colnames(obj@meta.data))
   k2 <- !grepl("score$|refAssay$", colnames(obj1@meta.data))
   return(obj1@meta.data[, (k1 & k2), drop = FALSE])
-
 }
 
 
@@ -1098,7 +1079,6 @@ pgx.createSingleCellPGX <- function(counts,
   message("\n\n")
 
   return(pgx)
-
 }
 ## =====================================================================================
 ## =========================== END OF FILE =============================================
