@@ -113,17 +113,39 @@ ai.create_ellmer_chat <- function(model, system_prompt) {
   chat <- NULL
   if (grepl("openai:", model)) {
     model1 <- sub("^openai:", "", model)
-    chat <- ellmer::chat_openai(model = model1, system_prompt = system_prompt)
+    chat <- ellmer::chat_openai(
+      model = model1,
+      system_prompt = system_prompt
+    )
   } else if (grepl("^groq:", model)) {
     model1 <- sub("^groq:", "", model)
-    chat <- ellmer::chat_groq(model = model1, system_prompt = system_prompt)
+    chat <- ellmer::chat_groq(
+      model = model1,
+      system_prompt = system_prompt
+    )
   } else if( grepl("^google:",model)) {
     model1 <- sub("^google:","",model)
-    chat <- ellmer::chat_google_gemini(model = model1, system_prompt = system_prompt)
+    chat <- ellmer::chat_google_gemini(
+      model = model1,
+      system_prompt = system_prompt
+    )
   } else if( grepl("^xai:grok",model)) {
-    message("Sorry Grok not yet supported... ")    
+    model1 <- sub("^xai:","",model)
+    chat <- ellmer::chat_openai_compatible(
+      base_url = "https://api.x.ai/v1",
+      name     = "xAI",
+      model    = model1,
+      ##api_args = list(reasoning_effort = "none"),
+      credentials = ellmer:::as_credentials(
+        "xAI", function() Sys.getenv("XAI_API_KEY"),
+        token = TRUE
+      )
+    )
   } else if(model %in% OLLAMA_MODELS) {
-    chat <- ellmer::chat_ollama(model = model, system_prompt = system_prompt)
+    chat <- ellmer::chat_ollama(
+      model = model,
+      system_prompt = system_prompt
+    )
   } else {
     message("unsupported model ",model,"\n")
   }
@@ -132,6 +154,10 @@ ai.create_ellmer_chat <- function(model, system_prompt) {
 
 #' @export
 ai.ask <- function(question, model, engine=c("ellmer","tidyprompt")[2]) {
+  if (inherits(model, "Chat")) {
+    resp <- ai.ask_ellmer(question, model = model, prompt = NULL)
+    return(resp)
+  }
   if(model == "ellmer" && grepl("grok",model)) model <- "tidyprompt"
   if(engine=="ellmer") {
     resp <- try(ai.ask_ellmer(question=question, model=model, prompt=NULL))
