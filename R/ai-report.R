@@ -141,6 +141,38 @@ de.create_report <- function(slice, pgx, ai) {
   )
 }
 
+#' Generate an integrated pathway-enrichment AI report.
+#'
+#' Builds one experiment-level pathway prompt across all contrasts and issues
+#' one LLM call. Deterministic evidence extraction lives in
+#' pgx-pathways-report.R.
+#'
+#' @param slice PGX gset.meta slot.
+#' @param pgx Full PGX object.
+#' @param ai Resolved AI-report options.
+#' @return List with `report` and `prompt`.
+#' @export
+pathways.create_report <- function(slice, pgx, ai) {
+  if (!requireNamespace("omicsai", quietly = TRUE)) {
+    stop("omicsai package required for AI report generation", call. = FALSE)
+  }
+  contrasts <- names(slice$meta %||% list())
+  if (!length(contrasts)) {
+    message("[pathways.create_report] no contrasts in pgx$gset.meta$meta -- skipping")
+    return(NULL)
+  }
+
+  bp <- pathways_assemble_prompt(slice, pgx, ai)
+  cfg <- omicsai::omicsai_config(model = ai$llm_model,
+                                 system_prompt = bp$system)
+  res <- omicsai::omicsai_gen_text(bp$board, config = cfg)
+  list(
+    report = res$text,
+    prompt = paste0("# SYSTEM\n\n", bp$system,
+                    "\n\n---\n\n# BOARD\n\n", bp$board)
+  )
+}
+
 #' Generate AI reports for a PGX object (phase-2 static path).
 #'
 #' Loops over `ai$select` and dispatches each module to its
