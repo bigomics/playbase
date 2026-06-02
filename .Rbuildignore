@@ -9,3 +9,4 @@
 ^\.semquery$
 ^\.active_plans$
 ^\.agents_context$
+^\.experiments$

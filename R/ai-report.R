@@ -110,6 +110,37 @@
   fn(slice, pgx, ai)
 }
 
+#' Generate an integrated differential-expression AI report.
+#'
+#' Builds one experiment-level DE prompt across all contrasts and issues one
+#' LLM call. Deterministic evidence extraction lives in pgx-de-report.R.
+#'
+#' @param slice PGX gx.meta slot.
+#' @param pgx Full PGX object.
+#' @param ai Resolved AI-report options.
+#' @return List with `report` and `prompt`.
+#' @export
+de.create_report <- function(slice, pgx, ai) {
+  if (!requireNamespace("omicsai", quietly = TRUE)) {
+    stop("omicsai package required for AI report generation", call. = FALSE)
+  }
+  contrasts <- names(slice$meta %||% list())
+  if (!length(contrasts)) {
+    message("[de.create_report] no contrasts in pgx$gx.meta$meta -- skipping")
+    return(NULL)
+  }
+
+  bp <- de_assemble_prompt(slice, pgx, ai)
+  cfg <- omicsai::omicsai_config(model = ai$llm_model,
+                                 system_prompt = bp$system)
+  res <- omicsai::omicsai_gen_text(bp$board, config = cfg)
+  list(
+    report = res$text,
+    prompt = paste0("# SYSTEM\n\n", bp$system,
+                    "\n\n---\n\n# BOARD\n\n", bp$board)
+  )
+}
+
 #' Generate AI reports for a PGX object (phase-2 static path).
 #'
 #' Loops over `ai$select` and dispatches each module to its
