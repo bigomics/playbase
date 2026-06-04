@@ -4,17 +4,10 @@
 ##
 
 # =============================================================================
-# MOFA AI-report module
+# MOFA AI-report extraction module
 # =============================================================================
-# Phase-2 static path. Ported from v03 components/board.mofa/R/ai.report/
-# (mofa_ai_report_data.R + mofa_ai_report_data_extract.R, both verbatim).
-# Surgical edits:
-#   - top-level `MOFA_PROMPTS_DIR <- file.path(OPG, ...)` replaced by
-#     `.mofa_prompt_path()` (lazy, via omicsai::omicsai_prompt_path)
-#   - top-level `FACTOR_TEMPLATE <- omicsai::omicsai_load_template(...)`
-#     deferred to `.mofa_factor_template()` accessor (omicsai is Suggests)
-# Sections 3 + 4 (assemble_prompt + create_report) appended at the bottom.
-# =============================================================================
+# Owns deterministic PGX -> prompt-data extraction for MOFA reports.
+# LLM orchestration is routed through ai-report.R and mofa.create_report().
 
 .mofa_prompt_path <- function(name) {
   if (!requireNamespace("omicsai", quietly = TRUE)) {
@@ -23,661 +16,452 @@
   omicsai::omicsai_prompt_path(paste0("mofa/", name))
 }
 
-.mofa_factor_template <- local({
-  cache <- NULL
-  function() {
-    if (is.null(cache)) {
-      cache <<- omicsai::omicsai_load_template(.mofa_prompt_path("mofa_factor_data.md"))
-    }
-    cache
-  }
-})
-
-
-
-# =============================================================================
-# Verbalisers — keep together; promote to omicsai during the compaction pass
-# =============================================================================
-# Pattern matches omicsai::omicsai_verbalize_{r,q,logfc}: pure value → label
-# functions with explicit threshold tables. Authoritative thresholds also
-# appear in mofa_interpretation.md (any change there MUST be mirrored here
-# and vice versa — the LLM is told what each label means).
-
-#' Verbalise a MOFA feature weight (no direction; sign belongs with the trait).
-#' Bins: dominant (|w| ≥ 1.0) / strong (≥ 0.5) / modest (≥ 0.25) / minimal.
-mofa_verbalize_weight <- function(w, breaks = c(0.25, 0.5, 1.0),
-                                  na_label = "not tested") {
-  out <- rep(na_label, length(w))
-  ok  <- !is.na(w)
-  a   <- abs(w[ok])
-  lab <- ifelse(a >= breaks[3], "dominant",
-         ifelse(a >= breaks[2], "strong",
-         ifelse(a >= breaks[1], "modest", "minimal")))
-  out[ok] <- lab
-  out
-}
-
-#' Verbalise a GSEA NES — direction inherits from sign; magnitude bucketed.
-#' Bins: up/down-strong (|NES| ≥ 2.5) / -moderate (≥ 1.5) / -weak (≥ 0.5) /
-#'       -nominal (< 0.5).
-mofa_verbalize_nes <- function(nes, breaks = c(0.5, 1.5, 2.5),
-                               na_label = "not tested") {
-  out <- rep(na_label, length(nes))
-  ok  <- !is.na(nes)
-  a   <- abs(nes[ok])
-  dir <- ifelse(nes[ok] >= 0, "up-", "down-")
-  mag <- ifelse(a >= breaks[3], "strong",
-         ifelse(a >= breaks[2], "moderate",
-         ifelse(a >= breaks[1], "weak", "nominal")))
-  out[ok] <- paste0(dir, mag)
-  out
-}
-
-#' Verbalise a per-view variance-explained value. Accepts either a fraction
-#' (0–1) or a percentage; auto-detects.
-#' Bins: major (≥ 30%) / moderate (≥ 15%) / minor (≥ 5%) / negligible.
-mofa_verbalize_variance <- function(v, breaks = c(5, 15, 30),
-                                    na_label = "not tested") {
-  out <- rep(na_label, length(v))
-  ok  <- !is.na(v)
-  pct <- v[ok]
-  if (length(pct) > 0 && max(pct, na.rm = TRUE) <= 1) pct <- 100 * pct
-  out[ok] <- ifelse(pct >= breaks[3], "major",
-              ifelse(pct >= breaks[2], "moderate",
-              ifelse(pct >= breaks[1], "minor", "negligible")))
-  out
-}
-
-#' Verbalise a cross-view network centrality score in [0, 1].
-#' Bins: hub (≥ 0.8) / central (≥ 0.6) / intermediate (≥ 0.3) / peripheral.
-mofa_verbalize_centrality <- function(c_, breaks = c(0.3, 0.6, 0.8),
-                                      na_label = "not tested") {
-  out <- rep(na_label, length(c_))
-  ok  <- !is.na(c_)
-  out[ok] <- ifelse(c_[ok] >= breaks[3], "hub",
-              ifelse(c_[ok] >= breaks[2], "central",
-              ifelse(c_[ok] >= breaks[1], "intermediate", "peripheral")))
-  out
-}
-
-
-# -----------------------------------------------------------------------------
-# Factor data computation (gather everything needed per factor, once)
-# -----------------------------------------------------------------------------
-
-#' Compute per-factor data dicts for every requested factor.
-#'
-#' Returns a named list, one element per factor, each carrying the raw
-#' values used by both Summary mode and Report mode.
-.mofa_compute_factor_data <- function(mofa, pgx, factors, ntop = 10L) {
-  out <- list()
-  for (f in factors) {
-    ctx <- mofa_ai_extract_factor_data(mofa, pgx, f, ntop = ntop)
-    if (!is.null(ctx)) out[[f]] <- ctx
-  }
-  out
-}
-
-#' Tier per factor (strong/moderate/weak) from per-factor metrics.
-.mofa_factor_tier <- function(metrics) {
-  score <-
-    0.45 * min(metrics$n_sig_pathways / 10, 1) +
-    0.30 * min(metrics$max_abs_nes / 2.5, 1) +
-    0.25 * min(metrics$max_abs_weight / 1.5, 1)
-  if (score >= 0.70) "strong"
-  else if (score >= 0.45) "moderate"
-  else "weak"
-}
-
-#' Order factors by signal score, descending. Returns a character vector.
-.mofa_factor_order <- function(factor_data) {
-  if (length(factor_data) == 0) return(character(0))
-  scores <- vapply(factor_data, function(fd) {
-    0.45 * min(fd$metrics$n_sig_pathways / 10, 1) +
-    0.30 * min(fd$metrics$max_abs_nes / 2.5, 1) +
-    0.25 * min(fd$metrics$max_abs_weight / 1.5, 1)
-  }, numeric(1))
-  names(sort(scores, decreasing = TRUE))
-}
-
-
-# -----------------------------------------------------------------------------
-# Leaf renderers — ONE per {{placeholder}} in mofa_report_data.md
-# -----------------------------------------------------------------------------
-
-#' {{experiment}}, {{organism}}, {{n_samples}}, {{n_views}}, {{view_names}},
-#' {{n_factors_total}}, {{n_factors_used}} — the Overview metadata block.
-mofa_data_overview <- function(mofa, pgx, n_factors_used) {
-  experiment <- multiomics_ai_experiment_label(pgx, mofa$experiment)
-  organism   <- pgx$organism %||% "unknown"
-  n_samples  <- if (!is.null(mofa$F)) nrow(mofa$F) else NA_integer_
-
-  view_names <- character(0)
-  if (!is.null(mofa$ww) && is.list(mofa$ww)) {
-    view_names <- names(mofa$ww)
-  } else if (!is.null(mofa$views)) {
-    view_names <- as.character(mofa$views)
-  }
-  n_views <- length(view_names)
-  view_names_str <- if (n_views > 0) paste(view_names, collapse = ", ") else "unknown"
-
-  n_factors_total <- length(mofa_ai_factor_choices(mofa))
-
-  list(
-    experiment       = experiment,
-    organism         = organism,
-    n_samples        = as.character(n_samples %||% "unknown"),
-    n_views          = as.character(n_views),
-    view_names       = view_names_str,
-    n_factors_total  = as.character(n_factors_total),
-    n_factors_used   = as.character(n_factors_used)
-  )
-}
-
-#' {{contrasts_block}} — contrast names from PGX, one per line.
-mofa_data_contrasts <- function(pgx) {
-  contrasts <- tryCatch(colnames(playbase::pgx.getMetaMatrix(pgx)$fc),
-                        error = function(e) character(0))
-  if (length(contrasts) == 0) return("(no contrasts available)")
-  paste(sprintf("- %s", contrasts), collapse = "\n")
-}
-
-#' {{variance_block}} — per-factor variance explained across views,
-#' verbalised. Raw % is kept only as a parenthetical anchor on the lead
-#' view (the view with the highest variance) per factor — mirrors the
-#' WGCNA "raw r on the lead trait" convention.
-mofa_data_variance <- function(mofa, factor_order) {
-  if (is.null(mofa$variance) ||
-      (!is.matrix(mofa$variance) && !is.data.frame(mofa$variance))) {
-    return("(variance-explained matrix not available)")
-  }
-  v <- as.matrix(mofa$variance)
-  keep <- intersect(rownames(v), factor_order)
-  if (length(keep) == 0) {
-    return("(variance-explained values not available for selected factors)")
-  }
-  v <- v[keep, , drop = FALSE]
-
-  rows <- list()
-  for (f in rownames(v)) {
-    vec <- v[f, ]
-    lead <- which.max(vec)
-    cells <- mofa_verbalize_variance(vec)
-    pct <- if (max(vec, na.rm = TRUE) <= 1) 100 * vec else vec
-    cells[lead] <- sprintf("%s (%s%%)", cells[lead],
-                           omicsai::omicsai_format_num(pct[lead], 0))
-    rows[[f]] <- c(Factor = f, cells)
-  }
-  df <- as.data.frame(do.call(rbind, rows),
-                      check.names = FALSE, stringsAsFactors = FALSE)
+.mofa_mdtable <- function(df) {
+  if (is.null(df) || !is.data.frame(df) || nrow(df) == 0) return("(none)")
   paste(omicsai::omicsai_format_mdtable(df), collapse = "\n")
 }
 
-#' {{factors_summary_table}}, {{lead_factor}} — cross-factor summary
-#' table + the lead factor identifier (template owns the prose framing).
-mofa_data_factors_summary <- function(factor_data, factor_order, lead_factor) {
-  if (length(factor_order) == 0) {
-    return(list(table = "(no factors to summarise)", footnote = ""))
-  }
-  rows <- lapply(factor_order, function(f) {
-    fd <- factor_data[[f]]
-    tier <- .mofa_factor_tier(fd$metrics)
-    top_pathway_theme <- if (!is.null(fd$top_pathways) && nrow(fd$top_pathways) > 0) {
-      sub(".*:", "", fd$top_pathways$pathway[1])
-    } else "—"
-    data.frame(
-      Factor             = f,
-      Tier               = tier,
-      `Top trait`        = fd$traits %||% "—",
-      `Top pathway theme`= top_pathway_theme,
-      `Sig. pathways`    = as.character(fd$metrics$n_sig_pathways),
-      check.names = FALSE, stringsAsFactors = FALSE
-    )
-  })
-  df <- do.call(rbind, rows)
-  body <- paste(omicsai::omicsai_format_mdtable(df), collapse = "\n")
-
-  ## Prose framing lives in mofa_report_data.md; we just return the
-  ## lead-factor identifier (or "—" when none).
-  list(table = body,
-       lead_factor = if (!is.na(lead_factor)) lead_factor else "—")
+.mofa_factor_choices <- function(mofa) {
+  if (is.null(mofa$W) || is.null(colnames(mofa$W))) character(0) else colnames(mofa$W)
 }
 
-#' {{factor_correlations}} — factor-factor score correlations |r| >= 0.30.
-mofa_data_factor_correlations <- function(mofa, factor_order, thresh = 0.30) {
-  if (is.null(mofa$F) || length(factor_order) < 2) {
-    return("(insufficient factors for cross-factor correlation)")
-  }
-  keep <- intersect(factor_order, colnames(mofa$F))
-  if (length(keep) < 2) return("(no factor scores available for correlation)")
-  cors <- suppressWarnings(stats::cor(mofa$F[, keep, drop = FALSE],
-                                      use = "pairwise.complete.obs"))
-  pairs <- character(0)
-  for (i in seq_len(nrow(cors) - 1L)) {
-    for (j in (i + 1L):ncol(cors)) {
-      r <- cors[i, j]
-      if (!is.na(r) && abs(r) >= thresh) {
-        pairs <- c(pairs, sprintf("- %s ↔ %s: %s (r = %s)",
-          rownames(cors)[i], colnames(cors)[j],
-          omicsai::omicsai_verbalize_r(r),
-          omicsai::omicsai_format_num(r, 2)))
-      }
-    }
-  }
-  if (length(pairs) == 0) return("(no factor pairs with |r| ≥ 0.30)")
-  paste(pairs, collapse = "\n")
+.mofa_feature_view <- function(x) sub(":.*", "", x)
+
+.mofa_feature_name <- function(x) sub("^[^:]+:", "", x)
+
+.mofa_experiment_label <- function(pgx, experiment = NULL) {
+  experiment %||% pgx$name %||% pgx$description %||% "omics experiment"
 }
 
-#' {{factor_detail}} — concatenated per-factor blocks.
-#'
-#' `variance_mat` is the optional per-factor × per-view variance-explained
-#' matrix (`mofa$variance`); when supplied, each factor block carries a
-#' verbalised one-line summary under `{{variance_line}}`.
-mofa_data_factor_detail <- function(factor_data, factor_order,
-                               variance_mat = NULL,
-                               ntop = 10L) {
-  if (length(factor_order) == 0) return("")
-  blocks <- vapply(factor_order, function(f) {
-    .mofa_render_factor_block(factor_data[[f]], f,
-                         variance_mat = variance_mat, ntop = ntop)
-  }, character(1))
-  paste(blocks, collapse = "\n\n")
+.mofa_variance_matrix <- function(mofa) {
+  if (!is.null(mofa$variance) &&
+      (is.matrix(mofa$variance) || is.data.frame(mofa$variance))) {
+    v <- as.matrix(mofa$variance)
+    if (all(.mofa_factor_choices(mofa) %in% rownames(v))) return(v)
+    if (all(.mofa_factor_choices(mofa) %in% colnames(v))) return(t(v))
+  }
+  if (!is.null(mofa$V) && (is.matrix(mofa$V) || is.data.frame(mofa$V))) {
+    v <- as.matrix(mofa$V)
+    if (all(.mofa_factor_choices(mofa) %in% colnames(v))) return(t(v))
+    if (all(.mofa_factor_choices(mofa) %in% rownames(v))) return(v)
+  }
+  matrix(numeric(0), nrow = 0L, ncol = 0L)
 }
 
-
-# -----------------------------------------------------------------------------
-# Per-factor block renderer (shared by Summary + Report)
-# -----------------------------------------------------------------------------
-
-
-#' Render one factor's data dict into a FACTOR_TEMPLATE block.
+#' Classify MOFA sample metadata columns for report interpretation.
 #'
-#' All numeric quantities (weight, NES, padj, centrality, variance) are
-#' verbalised via the verbalisers at the top of this file. The single
-#' exception is the per-view variance percentage on the lead view, which
-#' is kept as a parenthetical anchor (mirrors the WGCNA "raw r on lead
-#' trait" convention).
-.mofa_render_factor_block <- function(fd, factor_name,
-                                 variance_mat = NULL, ntop = 10L) {
-  tier <- .mofa_factor_tier(fd$metrics)
-
-  view_mix <- if (length(fd$datatype_counts) > 0) {
-    paste(sprintf("%s=%s", names(fd$datatype_counts),
-                  as.integer(fd$datatype_counts)),
-          collapse = ", ")
-  } else "unknown"
-
-  ## --- Per-factor variance line (verbalised, lead view gets raw %) ---
-  variance_line <- "—"
-  if (!is.null(variance_mat) && factor_name %in% rownames(variance_mat)) {
-    vec <- variance_mat[factor_name, ]
-    if (length(vec) > 0 && any(!is.na(vec))) {
-      labels <- mofa_verbalize_variance(vec)
-      pct <- if (max(vec, na.rm = TRUE) <= 1) 100 * vec else vec
-      lead <- which.max(vec)
-      cells <- sprintf("%s %s", names(vec), labels)
-      cells[lead] <- sprintf("%s %s (%s%%)", names(vec)[lead], labels[lead],
-                             omicsai::omicsai_format_num(pct[lead], 0))
-      variance_line <- paste(cells, collapse = ", ")
-    }
-  }
-
-  trait_summary <- fd$traits %||% "—"
-
-  pathways_str <- if (!is.null(fd$top_pathways) && nrow(fd$top_pathways) > 0) {
-    p <- head(fd$top_pathways, ntop)
-    df <- data.frame(
-      Rank                   = seq_len(nrow(p)),
-      Pathway                = sub(".*:", "", p$pathway),
-      `Direction & strength` = mofa_verbalize_nes(p$NES),
-      Significance           = omicsai::omicsai_verbalize_q(p$padj),
-      check.names = FALSE, stringsAsFactors = FALSE
-    )
-    paste(omicsai::omicsai_format_mdtable(df), collapse = "\n")
-  } else "—"
-
-  features_str <- if (!is.null(fd$top_features) && nrow(fd$top_features) > 0) {
-    f <- head(fd$top_features, ntop)
-    df <- data.frame(
-      Symbol         = paste0("*", f$symbol, "*"),
-      Contribution   = mofa_verbalize_weight(f$weight),
-      `Network role` = mofa_verbalize_centrality(f$centrality),
-      check.names = FALSE, stringsAsFactors = FALSE
-    )
-    paste(omicsai::omicsai_format_mdtable(df), collapse = "\n")
-  } else "—"
-
-  cross_view_str <- if (!is.null(fd$cross_view_features) &&
-                       length(fd$cross_view_features) > 0) {
-    paste(sprintf("*%s*", fd$cross_view_features), collapse = ", ")
-  } else "—"
-
-  omicsai::omicsai_substitute_template(.mofa_factor_template(), list(
-    factor               = factor_name,
-    n_features           = as.character(fd$metrics$n_features),
-    tier                 = tier,
-    view_mix             = view_mix,
-    variance_line        = variance_line,
-    trait_summary        = trait_summary,
-    n_sig_pathways       = as.character(fd$metrics$n_sig_pathways),
-    n_total_pathways     = as.character(fd$metrics$n_total_pathways %||%
-                                         fd$metrics$n_sig_pathways),
-    pathway_themes_table = pathways_str,
-    n_top                = as.character(min(ntop, fd$metrics$n_features)),
-    top_features_table   = features_str,
-    cross_view_features  = cross_view_str
-  ))
-}
-
-
-# -----------------------------------------------------------------------------
-# Orchestrator
-# -----------------------------------------------------------------------------
-
-#' Build structured report tables from MOFA results.
-#'
-#' Renders the canonical data block: a single markdown document substituted
-#' into `prompts/mofa/mofa_report_data.md`, plus a structured `data` list
-#' for any downstream callers that want the raw values.
-#'
-#' @return list(text = character, data = list, ranking = data.frame)
-mofa_build_report_tables <- function(mofa, pgx,
-                                     n_factors = 8L, ntop = 10L,
-                                     include_variance = TRUE,
-                                     include_contrasts = TRUE) {
-  all_factors <- mofa_ai_factor_choices(mofa)
-  if (length(all_factors) == 0) {
-    return(list(text = "(no MOFA factors available)",
-                data = list(), ranking = data.frame()))
-  }
-
-  factor_data <- .mofa_compute_factor_data(mofa, pgx, all_factors, ntop = ntop)
-  if (length(factor_data) == 0) {
-    return(list(text = "(no reportable MOFA factor contexts)",
-                data = list(), ranking = data.frame()))
-  }
-
-  ordered <- .mofa_factor_order(factor_data)
-  keep <- head(ordered, as.integer(n_factors))
-  factor_data <- factor_data[keep]
-  lead_factor <- if (length(keep) > 0) keep[1] else NA_character_
-
-  overview <- mofa_data_overview(mofa, pgx, n_factors_used = length(keep))
-
-  contrasts_block <- if (include_contrasts) mofa_data_contrasts(pgx)
-                     else "(contrasts omitted)"
-
-  variance_block <- if (include_variance) mofa_data_variance(mofa, keep)
-                    else "(variance-explained omitted)"
-
-  variance_mat <- if (!is.null(mofa$variance) &&
-                      (is.matrix(mofa$variance) ||
-                       is.data.frame(mofa$variance))) {
-    as.matrix(mofa$variance)
-  } else NULL
-
-  factors_summary <- mofa_data_factors_summary(factor_data, keep, lead_factor)
-  factor_corrs    <- mofa_data_factor_correlations(mofa, keep)
-  per_factor      <- mofa_data_factor_detail(factor_data, keep,
-                                        variance_mat = variance_mat,
-                                        ntop = ntop)
-
-  tmpl <- omicsai::omicsai_load_template(
-    .mofa_prompt_path("mofa_report_data.md")
+#' @param samples PGX sample metadata table.
+#' @param contrasts PGX contrasts table.
+#' @return List with `exact_primary`, `biological`, and `nuisance` columns.
+mofa_classify_design_columns <- function(samples, contrasts) {
+  sample_cols <- colnames(samples %||% data.frame())
+  contrast_cols <- colnames(contrasts %||% data.frame())
+  contrast_vars <- unique(sub(":.*", "", contrast_cols))
+  nuisance <- sample_cols[grepl(
+    "(^sample$|sample_id|Subject_ID|pt_id|cat_id|^rep$|^Plate$|^Position$|^layer$|batch|run|qc|file|id$)",
+    sample_cols,
+    ignore.case = TRUE
+  )]
+  exact_primary <- intersect(sample_cols, contrast_vars)
+  biological <- setdiff(sample_cols, nuisance)
+  list(
+    exact_primary = exact_primary,
+    biological = biological,
+    nuisance = nuisance
   )
-  text <- omicsai::omicsai_substitute_template(tmpl, c(
-    overview,
-    list(
-      contrasts_block          = contrasts_block,
-      variance_block           = variance_block,
-      factors_summary_table    = factors_summary$table,
-      lead_factor              = factors_summary$lead_factor,
-      factor_correlations      = factor_corrs,
-      factor_detail            = per_factor
-    )
-  ))
+}
 
-  ranking_rows <- lapply(keep, function(f) {
-    fd <- factor_data[[f]]
+.mofa_trait_rows_for_columns <- function(trait_names, columns) {
+  unique(unlist(lapply(columns, function(col) {
+    grep(paste0("^", gsub("([\\W])", "\\\\\\1", col), "="), trait_names, value = TRUE)
+  })))
+}
+
+.mofa_trait_matrix <- function(mofa) {
+  if (!is.null(mofa$Z) && (is.matrix(mofa$Z) || is.data.frame(mofa$Z))) {
+    z <- as.matrix(mofa$Z)
+    if (all(.mofa_factor_choices(mofa) %in% colnames(z))) return(z)
+    if (all(.mofa_factor_choices(mofa) %in% rownames(z))) return(t(z))
+  }
+  matrix(numeric(0), nrow = 0L, ncol = 0L)
+}
+
+.mofa_factor_pathway_metrics <- function(mofa, factor, q = 0.05) {
+  g <- NULL
+  if (!is.null(mofa$gsea$table) && factor %in% names(mofa$gsea$table)) {
+    g <- mofa$gsea$table[[factor]]
+  }
+  if (!is.data.frame(g) || !all(c("pathway", "NES", "padj") %in% names(g))) {
+    return(list(n_sig = 0L, max_abs_nes = 0))
+  }
+  padj <- suppressWarnings(as.numeric(g$padj))
+  nes <- suppressWarnings(as.numeric(g$NES))
+  sig <- !is.na(padj) & padj < q
+  list(
+    n_sig = sum(sig),
+    max_abs_nes = if (any(sig)) max(abs(nes[sig]), na.rm = TRUE) else 0
+  )
+}
+
+.mofa_max_abs_weight <- function(mofa, factor) {
+  if (is.null(mofa$W) || !factor %in% colnames(mofa$W)) return(0)
+  max(abs(as.numeric(mofa$W[, factor])), na.rm = TRUE)
+}
+
+#' Rank MOFA factors for reporting.
+#'
+#' @param factor_summary Output from `mofa_extract_factor_summary()`.
+#' @return Character vector of factor names.
+mofa_rank_factors <- function(factor_summary) {
+  if (is.null(factor_summary) || nrow(factor_summary) == 0) return(character(0))
+  score <- 2.0 * abs(factor_summary$trait_r) +
+    0.8 * factor_summary$total_variance +
+    0.15 * pmin(factor_summary$n_sig_pathways, 20) / 20
+  factor_summary$factor[order(score, decreasing = TRUE)]
+}
+
+#' Extract MOFA experiment design metadata.
+#'
+#' @param mofa MOFA result object.
+#' @param pgx Full PGX object.
+#' @return Data frame with one metadata row per field.
+mofa_extract_experiment_design <- function(mofa, pgx) {
+  design <- mofa_classify_design_columns(pgx$samples, pgx$contrasts)
+  views <- if (!is.null(mofa$ww) && is.list(mofa$ww)) names(mofa$ww) else colnames(.mofa_variance_matrix(mofa))
+  data.frame(
+    Field = c(
+      "Experiment", "Organism", "Datatype", "Samples", "Features", "Views",
+      "Factors", "Sample metadata", "Contrast names",
+      "Exact primary design candidates", "Biological metadata candidates",
+      "Nuisance/design candidates"
+    ),
+    Value = c(
+      .mofa_experiment_label(pgx, mofa$experiment),
+      pgx$organism %||% "unknown",
+      pgx$datatype %||% "unknown",
+      as.character(if (!is.null(mofa$F)) nrow(mofa$F) else nrow(pgx$samples)),
+      as.character(if (!is.null(mofa$W)) nrow(mofa$W) else nrow(pgx$X)),
+      if (length(views)) paste(views, collapse = ", ") else "unknown",
+      as.character(length(.mofa_factor_choices(mofa))),
+      paste(colnames(pgx$samples %||% data.frame()), collapse = ", "),
+      paste(colnames(pgx$contrasts %||% data.frame()), collapse = ", "),
+      paste(design$exact_primary, collapse = ", "),
+      paste(design$biological, collapse = ", "),
+      paste(design$nuisance, collapse = ", ")
+    ),
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+}
+
+#' Extract ranked MOFA factor summary.
+#'
+#' @param mofa MOFA result object.
+#' @param pgx Full PGX object.
+#' @param n_factors Maximum factors to return.
+#' @return Data frame with factor-level summary rows.
+mofa_extract_factor_summary <- function(mofa, pgx, n_factors = 6L) {
+  factors <- .mofa_factor_choices(mofa)
+  if (!length(factors)) return(data.frame())
+  v <- .mofa_variance_matrix(mofa)
+  z <- .mofa_trait_matrix(mofa)
+  design <- mofa_classify_design_columns(pgx$samples, pgx$contrasts)
+  trait_names <- rownames(z)
+  biological_traits <- .mofa_trait_rows_for_columns(trait_names, design$biological)
+  nuisance_traits <- .mofa_trait_rows_for_columns(trait_names, design$nuisance)
+  if (!length(biological_traits)) biological_traits <- setdiff(trait_names, nuisance_traits)
+
+  rows <- lapply(factors, function(f) {
+    vf <- if (f %in% rownames(v)) v[f, , drop = TRUE] else numeric(0)
+    zf <- if (f %in% colnames(z)) z[, f, drop = TRUE] else numeric(0)
+    zb <- zf[intersect(names(zf), biological_traits)]
+    if (!length(zb)) zb <- zf
+    top_trait <- "none"
+    top_r <- NA_real_
+    if (length(zb)) {
+      i <- which.max(abs(zb))
+      top_trait <- names(zb)[i]
+      top_r <- as.numeric(zb[i])
+    }
+    pm <- .mofa_factor_pathway_metrics(mofa, f)
     data.frame(
-      factor         = f,
-      tier           = .mofa_factor_tier(fd$metrics),
-      n_sig_pathways = fd$metrics$n_sig_pathways,
-      max_abs_nes    = fd$metrics$max_abs_nes,
-      max_abs_weight = fd$metrics$max_abs_weight,
+      factor = f,
+      total_variance = sum(vf, na.rm = TRUE),
+      lead_view = if (length(vf)) names(vf)[which.max(vf)] else "unknown",
+      view_class = if (length(vf)) omicsai::omicsai_mofa_view_class(vf) else "view-specific",
+      biological_trait = top_trait,
+      trait_r = top_r,
+      trait_label = omicsai::omicsai_verbalize_r(top_r),
+      n_sig_pathways = pm$n_sig,
+      max_abs_nes = pm$max_abs_nes,
+      max_abs_weight = .mofa_max_abs_weight(mofa, f),
       stringsAsFactors = FALSE
     )
   })
-  ranking <- if (length(ranking_rows) > 0) do.call(rbind, ranking_rows)
-             else data.frame()
-
-  list(text = text, data = factor_data, ranking = ranking)
+  df <- do.call(rbind, rows)
+  ranked <- mofa_rank_factors(df)
+  df <- df[match(ranked, df$factor), , drop = FALSE]
+  head(df, as.integer(n_factors))
 }
 
-
-# -----------------------------------------------------------------------------
-# Per-factor Summary mode (single-factor, used by the Summary tab)
-# -----------------------------------------------------------------------------
-
-#' Build prompt parameters for a single MOFA factor summary.
+#' Extract MOFA per-view variance table.
 #'
-#' Produces the same per-factor block shape as Report mode by routing
-#' through `.mofa_render_factor_block()`. The downstream `{{module_detail}}`
-#' placeholder in `wgcna_summary.md`-equivalent template receives the
-#' rendered FACTOR_TEMPLATE block.
+#' @param mofa MOFA result object.
+#' @param factors Character vector of factors to include.
+#' @return Long data frame of factor, view, variance, and verbal label.
+mofa_extract_view_variance <- function(mofa, factors) {
+  v <- .mofa_variance_matrix(mofa)
+  keep <- intersect(factors, rownames(v))
+  if (!length(keep)) return(data.frame())
+  rows <- list()
+  for (f in keep) {
+    rows[[f]] <- data.frame(
+      factor = f,
+      view = colnames(v),
+      variance = as.numeric(v[f, ]),
+      variance_pct = paste0(omicsai::omicsai_format_num(100 * as.numeric(v[f, ]), 1L), "%"),
+      variance_label = omicsai::omicsai_verbalize_mofa_variance(as.numeric(v[f, ])),
+      stringsAsFactors = FALSE
+    )
+  }
+  do.call(rbind, rows)
+}
+
+#' Extract selected MOFA factor-trait correlations.
 #'
-#' @return Named list: experiment, factor, factor_detail (+ a few extra
-#'   convenience fields kept for backward compatibility with the existing
-#'   summary template wording).
-mofa_build_summary_params <- function(mofa, factor_name, pgx, ntop = 12L) {
-  fd <- mofa_ai_extract_factor_data(mofa, pgx, factor_name, ntop = ntop)
-  if (is.null(fd)) return(NULL)
+#' @param mofa MOFA result object.
+#' @param pgx Full PGX object.
+#' @param factors Character vector of factors to include.
+#' @param top_n Maximum trait rows per factor.
+#' @return Data frame with selected factor-trait correlations.
+mofa_extract_trait_correlations <- function(mofa, pgx, factors, top_n = 8L) {
+  z <- .mofa_trait_matrix(mofa)
+  if (!nrow(z) || !ncol(z)) return(data.frame())
+  design <- mofa_classify_design_columns(pgx$samples, pgx$contrasts)
+  biological_traits <- .mofa_trait_rows_for_columns(rownames(z), design$biological)
+  nuisance_traits <- .mofa_trait_rows_for_columns(rownames(z), design$nuisance)
+  rows <- list()
+  for (f in intersect(factors, colnames(z))) {
+    vals <- z[, f]
+    ord <- names(head(sort(abs(vals), decreasing = TRUE), top_n))
+    keep <- unique(c(intersect(ord, biological_traits), intersect(ord, nuisance_traits), ord))
+    keep <- head(keep, top_n)
+    rows[[f]] <- data.frame(
+      factor = f,
+      trait = keep,
+      trait_class = ifelse(keep %in% nuisance_traits, "nuisance/design", "biological"),
+      r = as.numeric(vals[keep]),
+      label = omicsai::omicsai_verbalize_r(as.numeric(vals[keep])),
+      stringsAsFactors = FALSE
+    )
+  }
+  if (!length(rows)) data.frame() else do.call(rbind, rows)
+}
 
-  variance_mat <- if (!is.null(mofa$variance) &&
-                      (is.matrix(mofa$variance) ||
-                       is.data.frame(mofa$variance))) {
-    as.matrix(mofa$variance)
-  } else NULL
+#' Extract top positive and negative MOFA loading features.
+#'
+#' @param mofa MOFA result object.
+#' @param factors Character vector of factors to include.
+#' @param ntop Number of positive and negative features per factor.
+#' @param annot Optional feature annotation table.
+#' @return Data frame with factor-feature loading evidence.
+mofa_extract_factor_features <- function(mofa, factors, ntop = 8L, annot = NULL) {
+  if (is.null(mofa$W) || !length(factors)) return(data.frame())
+  rows <- list()
+  for (f in intersect(factors, colnames(mofa$W))) {
+    w <- as.numeric(mofa$W[, f])
+    names(w) <- rownames(mofa$W)
+    pos <- names(head(sort(w, decreasing = TRUE), ntop))
+    neg <- names(head(sort(w, decreasing = FALSE), ntop))
+    feats <- c(pos, neg)
+    symbols <- .mofa_feature_name(feats)
+    if (!is.null(annot)) {
+      symbols <- tryCatch(
+        playbase::probe2symbol(feats, annot, "symbol", fill_na = TRUE),
+        error = function(e) symbols
+      )
+      symbols <- ifelse(is.na(symbols) | symbols == "", .mofa_feature_name(feats), symbols)
+    }
+    rows[[f]] <- data.frame(
+      factor = f,
+      side = rep(c("positive", "negative"), c(length(pos), length(neg))),
+      view = .mofa_feature_view(feats),
+      feature = feats,
+      symbol = symbols,
+      weight = as.numeric(w[feats]),
+      contribution = omicsai::omicsai_verbalize_mofa_weight(as.numeric(w[feats])),
+      stringsAsFactors = FALSE
+    )
+  }
+  if (!length(rows)) data.frame() else do.call(rbind, rows)
+}
 
-  factor_detail <- .mofa_render_factor_block(fd, factor_name,
-                                        variance_mat = variance_mat,
-                                        ntop = ntop)
+#' Extract top MOFA factor pathway enrichments.
+#'
+#' @param mofa MOFA result object.
+#' @param factors Character vector of factors to include.
+#' @param ntop Number of pathways per factor.
+#' @param q Adjusted p-value threshold.
+#' @return Data frame with factor pathway evidence.
+mofa_extract_factor_pathways <- function(mofa, factors, ntop = 8L, q = 0.05) {
+  rows <- list()
+  for (f in factors) {
+    g <- NULL
+    if (!is.null(mofa$gsea$table) && f %in% names(mofa$gsea$table)) {
+      g <- mofa$gsea$table[[f]]
+    }
+    if (!is.data.frame(g) || !all(c("pathway", "NES", "padj") %in% names(g))) next
+    g$NES <- suppressWarnings(as.numeric(g$NES))
+    g$padj <- suppressWarnings(as.numeric(g$padj))
+    g <- g[!is.na(g$padj) & g$padj < q, , drop = FALSE]
+    if (!nrow(g)) next
+    g <- head(g[order(abs(g$NES), decreasing = TRUE), , drop = FALSE], ntop)
+    rows[[f]] <- data.frame(
+      factor = f,
+      pathway = omicsai::omicsai_clean_pathway_label(g$pathway),
+      NES = g$NES,
+      direction_strength = omicsai::omicsai_verbalize_mofa_nes(g$NES),
+      significance = omicsai::omicsai_verbalize_q(g$padj),
+      stringsAsFactors = FALSE
+    )
+  }
+  if (!length(rows)) data.frame() else do.call(rbind, rows)
+}
 
-  ## Summary mode renders mofa_summary.md (outer) which embeds the
-  ## inner FACTOR_TEMPLATE via {{factor_detail}}. All prose lives in
-  ## the templates; this function returns raw values only.
+.mofa_format_factor_summary <- function(df) {
+  if (!nrow(df)) return("(no factors available)")
+  x <- df[, c("factor", "total_variance", "lead_view", "view_class",
+              "biological_trait", "trait_r", "trait_label", "n_sig_pathways")]
+  x$total_variance <- paste0(omicsai::omicsai_format_num(100 * x$total_variance, 1L), "%")
+  x$trait_r <- omicsai::omicsai_format_num(x$trait_r, 2L)
+  .mofa_mdtable(x)
+}
+
+.mofa_format_view_variance <- function(df) {
+  if (!nrow(df)) return("(variance not available)")
+  .mofa_mdtable(df[, c("factor", "view", "variance_pct", "variance_label")])
+}
+
+.mofa_format_trait_correlations <- function(df) {
+  if (!nrow(df)) return("(trait correlations not available)")
+  x <- df[, c("factor", "trait", "trait_class", "r", "label")]
+  x$r <- omicsai::omicsai_format_num(x$r, 2L)
+  .mofa_mdtable(x)
+}
+
+.mofa_format_features <- function(df) {
+  if (!nrow(df)) return("(feature loadings not available)")
+  x <- df[, c("factor", "side", "view", "symbol", "weight", "contribution")]
+  x$weight <- omicsai::omicsai_format_num(x$weight, 2L)
+  .mofa_mdtable(x)
+}
+
+.mofa_format_pathways <- function(df) {
+  if (!nrow(df)) return("(no significant pathway enrichments)")
+  x <- df[, c("factor", "pathway", "NES", "direction_strength", "significance")]
+  x$NES <- omicsai::omicsai_format_num(x$NES, 2L)
+  .mofa_mdtable(x)
+}
+
+#' Build deterministic evidence tables for a MOFA AI report.
+#'
+#' @param mofa MOFA result object.
+#' @param pgx Full PGX object.
+#' @param n_factors Number of factors selected for report detail.
+#' @param ntop Number of feature/pathway/trait rows per factor.
+#' @return List with rendered `text` and raw `data` tables.
+mofa_build_report_tables <- function(mofa, pgx, n_factors = 6L, ntop = 8L) {
+  if (!requireNamespace("omicsai", quietly = TRUE)) {
+    stop("omicsai package required for AI report generation", call. = FALSE)
+  }
+  design <- mofa_extract_experiment_design(mofa, pgx)
+  summary <- mofa_extract_factor_summary(mofa, pgx, n_factors = n_factors)
+  factors <- summary$factor %||% character(0)
+  variance <- mofa_extract_view_variance(mofa, factors)
+  traits <- mofa_extract_trait_correlations(mofa, pgx, factors, top_n = ntop)
+  features <- mofa_extract_factor_features(mofa, factors, ntop = ntop, annot = pgx$genes)
+  pathways <- mofa_extract_factor_pathways(mofa, factors, ntop = ntop)
+  contrasts <- colnames(pgx$contrasts %||% data.frame())
+  contrasts_block <- if (length(contrasts)) paste(sprintf("- %s", contrasts), collapse = "\n") else "(no contrasts available)"
+
+  tmpl <- omicsai::omicsai_load_prompt_template("mofa/mofa_report_data.md")
+  text <- omicsai::omicsai_substitute_template(tmpl, list(
+    experiment_design_table = .mofa_mdtable(design),
+    contrasts_block = contrasts_block,
+    factor_summary_table = .mofa_format_factor_summary(summary),
+    view_variance_table = .mofa_format_view_variance(variance),
+    trait_correlations_table = .mofa_format_trait_correlations(traits),
+    factor_features_table = .mofa_format_features(features),
+    factor_pathways_table = .mofa_format_pathways(pathways)
+  ))
+
   list(
-    experiment    = fd$experiment,
-    factor        = factor_name,
-    factor_detail = factor_detail
+    text = text,
+    data = list(
+      experiment_design = design,
+      factor_summary = summary,
+      view_variance = variance,
+      trait_correlations = traits,
+      factor_features = features,
+      factor_pathways = pathways
+    )
   )
 }
-
-
-# -----------------------------------------------------------------------------
-# Methods section (deterministic appendix)
-# -----------------------------------------------------------------------------
 
 #' Build deterministic methods section for MOFA report.
 mofa_build_methods <- function(mofa, pgx) {
-  template <- omicsai::omicsai_load_template(
-    .mofa_prompt_path("mofa_methods.md")
-  )
-
+  template <- omicsai::omicsai_load_prompt_template("mofa/mofa_methods.md")
   report_date <- format(Sys.Date(), "%Y-%m-%d")
   params <- list(
-    experiment = multiomics_ai_experiment_label(pgx, mofa$experiment),
-    n_factors  = length(mofa_ai_factor_choices(mofa)),
-    n_samples  = if (!is.null(mofa$F)) nrow(mofa$F) else NA_integer_,
+    experiment = .mofa_experiment_label(pgx, mofa$experiment),
+    n_factors = length(.mofa_factor_choices(mofa)),
+    n_samples = if (!is.null(mofa$F)) nrow(mofa$F) else NA_integer_,
     n_features = if (!is.null(mofa$W)) nrow(mofa$W) else NA_integer_,
-    date       = report_date
+    date = report_date
   )
-
   omicsai::collapse_lines(
     omicsai::omicsai_substitute_template(template, params),
-    sprintf("_This report was generated with OmicsPlayground (BigOmics, %s)._",
-            report_date),
+    sprintf("_This report was generated with OmicsPlayground (BigOmics, %s)._", report_date),
     "_Note: AI-generated interpretation may contain inaccuracies and must be independently verified._",
     sep = "\n\n"
   )
 }
 
-# =============================================================================
-# Extractors (cp from v03 mofa_ai_report_data_extract.R)
-# =============================================================================
-
-mofa_ai_factor_choices <- function(mofa) {
-  if (is.null(mofa$W) || is.null(colnames(mofa$W))) return(character(0))
-  colnames(mofa$W)
-}
-
-mofa_ai_trait_summary <- function(mofa, factor_name) {
-  if (is.null(mofa$Y) || is.null(mofa$F) || !factor_name %in% colnames(mofa$F)) {
-    return("None")
-  }
-
-  factor_scores <- mofa$F[, factor_name]
-  trait_names <- colnames(mofa$Y)
-  if (length(trait_names) == 0) return("None")
-
-  cors <- sapply(trait_names, function(t) {
-    y <- mofa$Y[, t]
-    if (!is.numeric(y) || sum(!is.na(y)) < 4) return(NA_real_)
-    tryCatch(cor(factor_scores, y, use = "pairwise.complete.obs"),
-             error = function(e) NA_real_)
-  })
-  cors <- cors[!is.na(cors)]
-
-  if (length(cors) == 0) return("None")
-
-  sig <- cors[abs(cors) >= 0.5]
-  picked <- if (length(sig) > 0) {
-    sig[order(-abs(sig))]
-  } else {
-    cors[order(-abs(cors))][seq_len(min(3L, length(cors)))]
-  }
-
-  paste(
-    sprintf("%s (%s)", names(picked), omicsai::omicsai_verbalize_r(picked)),
-    collapse = ", "
-  )
-}
-
-mofa_ai_extract_factor_data <- function(mofa, pgx, factor_name, ntop = 12L) {
-  if (is.null(mofa) || is.null(factor_name) || !nzchar(factor_name)) return(NULL)
-  if (is.null(mofa$W) || !factor_name %in% colnames(mofa$W)) return(NULL)
-
-  w <- mofa$W[, factor_name]
-  w <- w[!is.na(w)]
-  if (length(w) == 0) return(NULL)
-
-  top_idx <- multiomics_ai_top_idx_by_abs(ntop, w)
-  top_features <- names(w)[top_idx]
-  top_weights <- w[top_features]
-
-  symbols <- top_features
-  if (!is.null(pgx$genes)) {
-    symbols <- tryCatch(
-      playbase::probe2symbol(top_features, pgx$genes, "symbol", fill_na = TRUE),
-      error = function(e) top_features
-    )
-    symbols <- ifelse(is.na(symbols) | symbols == "", top_features, symbols)
-  }
-
-  centrality_vals <- rep(NA_real_, length(top_features))
-  centrality_data <- tryCatch(
-    playbase::mofa.plot_centrality(mofa, factor_name, justdata = TRUE),
-    error = function(e) NULL
-  )
-  if (is.data.frame(centrality_data) &&
-    "centrality" %in% colnames(centrality_data) &&
-    "feature" %in% colnames(centrality_data)) {
-    idx <- match(top_features, centrality_data$feature)
-    centrality_vals <- centrality_data$centrality[idx]
-  }
-
-  prefix <- tryCatch(playbase::mofa.get_prefix(top_features), error = function(e) NULL)
-  dtype_counts <- if (!is.null(prefix)) sort(table(prefix), decreasing = TRUE) else table(character(0))
-
-  pathways <- data.frame()
-  if (!is.null(mofa$gsea) && !is.null(mofa$gsea$table) && factor_name %in% names(mofa$gsea$table)) {
-    g <- mofa$gsea$table[[factor_name]]
-    if (is.data.frame(g) && nrow(g) > 0 && all(c("pathway", "NES", "padj") %in% colnames(g))) {
-      g <- g[order(-abs(g$NES)), , drop = FALSE]
-      pathways <- g[!is.na(g$padj) & g$padj < 0.05, , drop = FALSE]
-      pathways <- head(pathways, 10L)
-    }
-  }
-
-  max_abs_nes <- if (nrow(pathways) > 0) max(abs(pathways$NES), na.rm = TRUE) else 0
-  max_abs_weight <- max(abs(top_weights), na.rm = TRUE)
-
-  list(
-    factor = factor_name,
-    experiment = multiomics_ai_experiment_label(pgx, mofa$experiment),
-    traits = mofa_ai_trait_summary(mofa, factor_name),
-    top_features = data.frame(
-      feature = top_features,
-      symbol = symbols,
-      weight = as.numeric(top_weights),
-      centrality = as.numeric(centrality_vals),
-      stringsAsFactors = FALSE
-    ),
-    top_pathways = pathways,
-    datatype_counts = dtype_counts,
-    metrics = list(
-      n_features = length(w),
-      n_sig_pathways = nrow(pathways),
-      max_abs_nes = max_abs_nes,
-      max_abs_weight = max_abs_weight
-    )
-  )
-}
-
-
-# =============================================================================
-# Section 3 — Prompt assembly
-# =============================================================================
-
-#' Assemble MOFA static-report prompt (mirror of mofa_ai_text_server Report mode).
+#' Assemble the MOFA report prompt.
 #' @keywords internal
 mofa_assemble_prompt <- function(slice, pgx, ai) {
   if (!requireNamespace("omicsai", quietly = TRUE)) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
-  tables <- mofa_build_report_tables(slice, pgx,
-                                     n_factors = 8L,
-                                     ntop = ai$ntop %||% 10L)
-  experiment_label <- multiomics_ai_experiment_label(pgx, slice$experiment)
+  n_factors <- ai$n_factors %||% 6L
+  ntop <- min(as.integer(ai$ntop %||% 8L), 12L)
+  tables <- mofa_build_report_tables(slice, pgx, n_factors = n_factors, ntop = ntop)
+  experiment_label <- .mofa_experiment_label(pgx, slice$experiment)
   rp <- omicsai::report_prompt(
-    role        = omicsai::frag("system_base"),
-    task        = omicsai::frag("text/report"),
-    species     = omicsai::omicsai_species_prompt(pgx$organism),
-    context     = omicsai::frag("mofa/mofa_interpretation",
-                                list(experiment = experiment_label)),
+    role = omicsai::frag("system_base"),
+    task = omicsai::frag("text/report"),
+    species = omicsai::omicsai_species_prompt(pgx$organism),
+    context = omicsai::frag("mofa/mofa_interpretation",
+                            list(experiment = experiment_label)),
     board_rules = omicsai::frag("mofa/mofa_report_rules"),
-    data        = tables$text
+    data = tables$text
   )
   omicsai::build_prompt(rp)
 }
 
-
-# =============================================================================
-# Section 4 — Entry point (orchestrator-facing)
-# =============================================================================
-
-#' Generate a MOFA AI report (phase-2 static path).
-#' @param slice pgx$mofa.
-#' @param pgx full pgx object.
-#' @param ai resolved `ai` list.
-#' @return list(report, prompt) or NULL when mofa slot is empty.
+#' Generate a MOFA AI report.
+#'
+#' @param slice PGX `mofa` slot.
+#' @param pgx Full PGX object.
+#' @param ai Resolved AI-report options.
+#' @return List with `report` and `prompt`, or NULL when MOFA is absent.
 #' @export
 mofa.create_report <- function(slice, pgx, ai) {
   if (!requireNamespace("omicsai", quietly = TRUE)) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
   if (is.null(slice)) return(NULL)
-  bp  <- mofa_assemble_prompt(slice, pgx, ai)
+  bp <- mofa_assemble_prompt(slice, pgx, ai)
   cfg <- omicsai::omicsai_config(model = ai$llm_model,
                                  system_prompt = bp$system)
   res <- omicsai::omicsai_gen_text(bp$board, config = cfg)
@@ -686,36 +470,4 @@ mofa.create_report <- function(slice, pgx, ai) {
     prompt = paste0("# SYSTEM\n\n", bp$system,
                     "\n\n---\n\n# BOARD\n\n", bp$board)
   )
-}
-
-
-# -----------------------------------------------------------------------------
-# Shared multi-omics helpers (cp from v03 components/board.mofa/R/ai.report/
-# ai_report_data_extract_shared.R, verbatim). Consumed by mofa + lasagna.
-# -----------------------------------------------------------------------------
-
-multiomics_ai_experiment_label <- function(pgx, experiment = NULL) {
-  experiment %||% pgx$name %||% pgx$description %||% "omics experiment"
-}
-
-multiomics_ai_drop_interaction_contrasts <- function(contrasts) {
-  contrasts <- contrasts %||% character(0)
-  sort(unique(contrasts[!grepl("^IA", contrasts)]))
-}
-
-multiomics_ai_top_idx_by_abs <- function(n, ...) {
-  vals <- list(...)
-  if (length(vals) == 0) return(integer(0))
-  len <- length(vals[[1]])
-  if (len == 0) return(integer(0))
-
-  score <- rep(0, len)
-  for (v in vals) {
-    if (length(v) != len) next
-    a <- abs(as.numeric(v))
-    a[is.na(a)] <- -Inf
-    score <- score + a
-  }
-
-  head(order(score, decreasing = TRUE, na.last = TRUE), as.integer(n))
 }
