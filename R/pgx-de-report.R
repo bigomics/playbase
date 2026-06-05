@@ -177,13 +177,12 @@ de_build_report_tables <- function(slice, pgx, ntop = 12L, cross_n = 35L) {
   contrast_summary <- .de_contrast_summary(pgx, slice)
   cross_contrast <- .de_cross_contrast_table(pgx, slice, n = cross_n)
   contrast_detail <- .de_contrast_detail(pgx, slice, ntop = ntop)
-  info <- .ai_report_get(pgx, "info",
-                         n_contrasts = length(contrasts),
-                         fallback = "(unnamed)")
-
-  params <- c(info, list(
-    sample_metadata_table = paste(
-      omicsai::omicsai_format_mdtable(sample_metadata), collapse = "\n"
+  params <- list(
+    experiment_info = .ai_report_get(
+      pgx, "experiment_info",
+      slice = slice,
+      n_contrasts = length(contrasts),
+      fallback = "(unnamed)"
     ),
     contrast_summary_table = paste(
       omicsai::omicsai_format_mdtable(contrast_summary), collapse = "\n"
@@ -192,7 +191,7 @@ de_build_report_tables <- function(slice, pgx, ntop = 12L, cross_n = 35L) {
       omicsai::omicsai_format_mdtable(cross_contrast), collapse = "\n"
     ),
     contrast_detail = contrast_detail
-  ))
+  )
 
   template <- omicsai::omicsai_load_template(
     .ai_report_prompt_path("de", "de_report_data.md")

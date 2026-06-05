@@ -177,13 +177,13 @@ pathways_build_report_tables <- function(slice, pgx, ntop = 12L,
     pgx, slice, fx, q, n = ntop, q_threshold = q_threshold
   )
 
-  info <- .ai_report_get(pgx, "info",
-                         n_features = NULL,
-                         n_contrasts = length(contrasts),
-                         fallback = "(unnamed)")
-  params <- c(info, list(
-    sample_metadata_table = paste(
-      omicsai::omicsai_format_mdtable(sample_metadata), collapse = "\n"
+  params <- list(
+    experiment_info = .ai_report_get(
+      pgx, "experiment_info",
+      slice = slice,
+      n_contrasts = length(contrasts),
+      fallback = "(unnamed)",
+      include_missing = FALSE
     ),
     contrast_landscape_table = paste(
       omicsai::omicsai_format_mdtable(contrast_landscape), collapse = "\n"
@@ -192,7 +192,7 @@ pathways_build_report_tables <- function(slice, pgx, ntop = 12L,
       omicsai::omicsai_format_mdtable(cross_contrast), collapse = "\n"
     ),
     contrast_evidence = contrast_evidence
-  ))
+  )
 
   template <- omicsai::omicsai_load_template(
     .ai_report_prompt_path("pathways", "pathways_report_data.md")

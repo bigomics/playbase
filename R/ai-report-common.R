@@ -12,7 +12,8 @@
                            what = c("label", "info", "sample_metadata",
                                     "design_columns", "contrast_names",
                                     "contrast_groups", "contrast_context",
-                                    "contrast_matrix_block"),
+                                    "contrast_matrix_block",
+                                    "experiment_info"),
                            ...) {
   what <- match.arg(what)
   args <- list(...)
@@ -53,7 +54,19 @@
       contrast = args$contrast,
       max_levels = args$max_levels %||% 8L
     ),
-    contrast_matrix_block = .ai_report_get_contrast_matrix_block(pgx)
+    contrast_matrix_block = .ai_report_get_contrast_matrix_block(pgx),
+    experiment_info = .ai_report_get_experiment_info(
+      pgx,
+      slice = args$slice,
+      n_features = args$n_features,
+      n_samples = args$n_samples,
+      n_contrasts = args$n_contrasts,
+      fallback = args$fallback %||% "omics experiment",
+      override = args$override,
+      include_missing = args$include_missing %||% TRUE,
+      max_levels = args$max_levels %||% 8L,
+      contrasts_block = args$contrasts_block
+    )
   )
 }
 
@@ -202,7 +215,11 @@
 
 .ai_report_get_contrast_matrix_block <- function(pgx) {
   cm <- pgx$model.parameters$contr.matrix
-  if (is.null(cm)) return("(no contrasts available)")
+  if (is.null(cm)) {
+    contrasts <- .ai_report_get_contrast_names(pgx)
+    if (!length(contrasts)) return("(no contrasts available)")
+    return(paste(sprintf("- %s", contrasts), collapse = "\n"))
+  }
 
   group_names <- rownames(cm)
   lines <- vapply(colnames(cm), function(cn) {
@@ -212,4 +229,42 @@
             paste(pos, collapse = "+"), paste(neg, collapse = "+"))
   }, character(1))
   paste(lines, collapse = "\n")
+}
+
+.ai_report_get_experiment_info <- function(pgx, slice = NULL,
+                                           n_features = NULL,
+                                           n_samples = NULL,
+                                           n_contrasts = NULL,
+                                           fallback = "omics experiment",
+                                           override = NULL,
+                                           include_missing = TRUE,
+                                           max_levels = 8L,
+                                           contrasts_block = NULL) {
+  contrasts <- .ai_report_get_contrast_names(pgx, slice = slice)
+  info <- .ai_report_get_info(
+    pgx,
+    n_features = n_features,
+    n_samples = n_samples,
+    n_contrasts = n_contrasts %||% length(contrasts),
+    fallback = fallback,
+    override = override
+  )
+  sample_metadata <- .ai_report_get_sample_metadata(
+    pgx,
+    max_levels = max_levels,
+    include_missing = include_missing
+  )
+  sample_metadata_table <- if (nrow(sample_metadata)) {
+    paste(omicsai::omicsai_format_mdtable(sample_metadata), collapse = "\n")
+  } else {
+    "(no sample metadata available)"
+  }
+
+  template <- omicsai::omicsai_load_template(
+    .ai_report_prompt_path("common", "experiment_info.md")
+  )
+  omicsai::omicsai_substitute_template(template, c(info, list(
+    sample_metadata_table = sample_metadata_table,
+    contrasts_block = contrasts_block %||% .ai_report_get_contrast_matrix_block(pgx)
+  )))
 }

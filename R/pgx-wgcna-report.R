@@ -381,6 +381,10 @@ wgcna.getTopModules <- function(wgcna, min_modules = 5L,
 #' @return The (possibly mutated) `wgcna` object.
 #' @export
 wgcna.ensureStats <- function(wgcna) {
+  if (!is.null(wgcna$layers) && is.null(wgcna$datExpr)) {
+    return(wgcna)
+  }
+
   needs_labels <- is.null(wgcna$net$labels) || length(wgcna$net$labels) == 0
   needs_stats  <- is.null(wgcna$stats) || length(wgcna$stats) == 0
 
@@ -421,148 +425,24 @@ wgcna.ensureStats <- function(wgcna) {
   wgcna
 }
 
-
-# -----------------------------------------------------------------------------
-# Describe modules (legacy LLM helper)
-# -----------------------------------------------------------------------------
-
-#' Per-module LLM description helper.
-#'
-#' Used by `wgcna.create_report()` and other pre-AI-report-tab features. The
-#' newer AI-report tab in board.wgcna does not call this; it builds its own
-#' structured prompts via the omicsai stack.
-#'
-#' @export
-wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
-                                  annot=NULL, multi=FALSE, modules=NULL,
-                                  experiment=NULL, verbose=1, model=DEFAULT_LLM,
-                                  docstyle = "detailed summary", numpar = 2,
-                                  level="gene")  {
-
-  if(is.null(annot)) {
-    message("[wgcna.describeModules] WARNING. user annot table is recommended.")
+.wgcna_mod_traits <- function(wgcna) {
+  if (!is.null(wgcna$layers) && is.null(wgcna$datExpr)) {
+    mats <- lapply(wgcna$layers, function(layer) {
+      tryCatch(playbase:::wgcna.get_modTraits(layer), error = function(e) NULL)
+    })
+    mats <- Filter(function(x) is.matrix(x) || is.data.frame(x), mats)
+    if (!length(mats)) return(NULL)
+    cols <- Reduce(union, lapply(mats, colnames))
+    mats <- lapply(mats, function(x) {
+      x <- as.matrix(x)
+      out <- matrix(NA_real_, nrow = nrow(x), ncol = length(cols),
+                    dimnames = list(rownames(x), cols))
+      out[, colnames(x)] <- x
+      out
+    })
+    return(do.call(rbind, mats))
   }
-
-  if(multi) {
-    top <- wgcna.getMultiTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
-      psig=psig, level=NULL, rename="gene_title")
-  } else {
-    top <- wgcna.getTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
-      psig=psig, level=level, rename="gene_title")
-  }
-
-  if(is.null(modules)) {
-    modules <- union(names(top$genes), names(top$sets))
-  }
-
-  if(is.null(experiment) && !is.null(wgcna$experiment)) experiment <- wgcna$experiment
-  if(is.null(experiment)) experiment <- ""
-
-  if(length(modules)==0) {
-    info("[wgcna.describeModules] warning: empty module list!")
-    return(NULL)
-  }
-
-  ## If no LLM is available we do just a manual summary
-  model <- setdiff(model, c("", NA))
-  if (is.null(model) || length(model) == 0) {
-    desc <- list()
-    for(m in modules) {
-      ss=gg=pp=nn="<none>"
-
-      if(!is.null(top$genes[[m]])) {
-        gg <- paste( top$genes[[m]], collapse=', ')
-      }
-      if(!is.null(top$sets[[m]])) {
-        ss <- paste( sub(".*:","",top$sets[[m]]), collapse='; ')
-      }
-      if(m %in% names(top$pheno)) {
-        pp <- paste( top$pheno[[m]], collapse='; ')
-      }
-      if(m %in% names(top$neg.pheno)) {
-        nn <- paste( top$neg.pheno[[m]], collapse='; ')
-      }
-      d <- ""
-      if(!is.null(pp)) d <- paste(d, "**Positively correlated phenotypes**:", pp, "\n\n")
-      if(!is.null(nn)) d <- paste(d, "**Negatively correlated phenotypes**:", nn, "\n\n")
-      if(!is.null(gg) && gg!="") {
-        d <- paste(d, "**Key genes**:", gg, "\n\n")
-      }
-      if(!is.null(ss) && ss!="") {
-        d <- paste(d, "**Top enriched gene sets**:", ss, "\n\n")
-      }
-      desc[[m]] <- d
-    }
-
-    res <- list(
-      prompt = NULL,
-      questions = NULL,
-      answers = desc
-    )
-    return(res)
-  }
-
-  prompt <- paste("Give a",docstyle,"of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. After that, shortly discuss if any of these key genes/proteins/metabolites might be involved in the biological function. No need to mention all, just a few. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about \"<EXPERIMENT>\". Use maximum",numpar,"paragraphs. Use prose, do not use any bullet points or tables. \n\nHere is list of enriched gene sets:\n <GENESETS>\n\n")
-
-  prompt <- paste("These are part of the results of a WGCNA analysis of an experiment about \"<EXPERIMENT>\". Give a", docstyle, "of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. Discuss the possible relationship with positively correlated phenotypes <PHENOTYPES> and, if not obvious, negatively correlated phenotypes <NEGPHENOTYPES>. Use maximum", numpar, "paragraphs. Do not use any bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n")
-
-  if (verbose > 1) cat(prompt)
-
-  desc <- list()
-  questions <- list()
-  for (k in modules) {
-    if (verbose > 0) message("Describing module ", k)
-
-    ss=gg=pp=nn=""
-    if(length(top$sets[[k]])>0) {
-      ss <- sub( ".*:","", top$sets[[k]] )
-      ss <- paste(ss, collapse=';')
-    } else {
-      ss <- "[no significant genesets]"
-    }
-
-    if(k %in% names(top$pheno)) {
-      pp <- paste0("'",top$pheno[[k]],"'")
-      pp <- paste( pp, collapse=';')
-    }
-    if(k %in% names(top$neg.pheno)) {
-      nn <- paste0("'",top$neg.pheno[[k]],"'")
-      nn <- paste( nn, collapse=';')
-    }
-
-    q <- prompt
-
-    if(length(top$genes[[k]])>0) {
-      gg <- paste( top$genes[[k]], collapse=';')
-      q <- paste(q, "\nHere is the list of key genes/proteins/metabolites, or so-called 'features'. Only use features that are in this list in your answer. Do not mention features not in this list. : <KEYGENES>\n")
-    }
-
-    q <- sub("<MODULE>", k, q)
-    q <- sub("<PHENOTYPES>", pp, q)
-    q <- sub("<NEGPHENOTYPES>", nn, q)
-    q <- sub("<EXPERIMENT>", experiment, q)
-    q <- sub("<GENESETS>", ss, q)
-    q <- sub("<KEYGENES>", gg, q)
-
-    answer <- ""
-    for (m in model) {
-      if (verbose > 0) message("  ...asking LLM model ", m)
-      a <- ai.ask(q, model = m)
-      a <- paste0(a, "\n\n[AI generated using ", m, "]\n")
-      if (length(model) > 1) a <- paste0("\n-------------------------------\n\n", a)
-      answer <- paste0(answer, a)
-    }
-
-    desc[[k]] <- answer
-    questions[[k]] <- q
-  }
-
-  res <- list(
-    prompt = prompt,
-    questions = questions,
-    answers = desc
-  )
-  return(res)
+  tryCatch(playbase:::wgcna.get_modTraits(wgcna), error = function(e) NULL)
 }
 
 # =============================================================================
@@ -652,9 +532,7 @@ extract_module_data <- function(wgcna, module, pgx,
 
   size <- length(wgcna$me.genes[[module]])
 
-  if (is.null(M)) {
-    M <- tryCatch(playbase:::wgcna.get_modTraits(wgcna), error = function(e) NULL)
-  }
+  if (is.null(M)) M <- .wgcna_mod_traits(wgcna)
 
   top_trait <- ""
   top_r <- NA_real_
@@ -755,7 +633,7 @@ extract_module_data <- function(wgcna, module, pgx,
                                  ntop_enrichment = 20L, ntop_genes = 50L) {
   annot <- if (!is.null(wgcna$annot)) wgcna$annot else pgx$genes
 
-  M <- tryCatch(playbase:::wgcna.get_modTraits(wgcna), error = function(e) NULL)
+  M <- .wgcna_mod_traits(wgcna)
   top <- tryCatch(
     playbase::wgcna.getTopGenesAndSets(wgcna, annot = annot, ntop = 40,
                                        level = "gene", rename = "gene_title"),
@@ -1058,8 +936,6 @@ wgcna_build_report_tables <- function(wgcna, pgx,
     .compute_families_text(wgcna, pgx, module_order)
   } else NULL
 
-  contrasts_block <- if (include_contrasts) data_contrast(pgx)
-                     else "(contrasts omitted)"
   module_cors <- if (include_module_cors) data_eigen_cor(wgcna, module_order)
                  else "(module-module correlations omitted)"
 
@@ -1077,7 +953,13 @@ wgcna_build_report_tables <- function(wgcna, pgx,
   text <- omicsai::omicsai_substitute_template(tmpl, c(
     overview_params,
     list(
-      contrasts_block            = contrasts_block,
+      experiment_info            = if (include_contrasts) {
+        .ai_report_get(pgx, "experiment_info", override = wgcna$experiment)
+      } else {
+        .ai_report_get(pgx, "experiment_info", override = wgcna$experiment,
+                       n_contrasts = 0L,
+                       contrasts_block = "(contrasts omitted)")
+      },
       modules_summary_table      = modsum$table,
       modules_summary_footnote   = modsum$footnote,
       module_module_correlations = module_cors,
@@ -1166,10 +1048,8 @@ wgcna_build_report_tables <- function(wgcna, pgx,
 
 #' Render one module's data dict into a MODULE_SUMMARY block.
 #'
-#' Shared by `data_module_detail()` (Report mode, looped) and
-#' `wgcna_build_summary_params()` (Summary mode, single module). The `md`
-#' argument is one element from `.compute_module_data()`'s output. This
-#' function builds only the value dict; MODULE_SUMMARY owns all prose.
+#' The `md` argument is one element from `.compute_module_data()`'s output.
+#' This function builds only the value dict; MODULE_SUMMARY owns all prose.
 .render_module_block <- function(md, mod_name, wgcna,
                                  families_text = NULL,
                                  ntop_enrichment = 20L,
@@ -1205,101 +1085,6 @@ wgcna_build_report_tables <- function(wgcna, pgx,
     enrichment_overlaps           = overlaps
   ))
 }
-
-
-# -----------------------------------------------------------------------------
-# Per-module summary mode (single-module, used by the Summary tab)
-# -----------------------------------------------------------------------------
-
-#' Build prompt parameters for a single WGCNA module summary.
-#'
-#' Produces the same per-module block shape as Report mode by routing through
-#' `.compute_module_data()` and `.render_module_block()`. The downstream
-#' `{{module_detail}}` placeholder in `wgcna_summary.md` receives the
-#' rendered MODULE_SUMMARY block.
-#'
-#' @return Named list: experiment, module, module_detail.
-wgcna_build_summary_params <- function(wgcna, module, pgx) {
-  wgcna <- playbase::wgcna.ensureStats(wgcna)
-
-  module_data <- .compute_module_data(wgcna, pgx, modules = module)
-  md <- module_data[[module]]
-
-  module_detail <- .render_module_block(md, module, wgcna)
-
-  list(
-    experiment    = if (!is.null(wgcna$experiment)) wgcna$experiment else "",
-    module        = module,
-    module_detail = module_detail
-  )
-}
-
-
-# -----------------------------------------------------------------------------
-# Methods section (deterministic appendix)
-# -----------------------------------------------------------------------------
-
-#' Build deterministic methods section for WGCNA report.
-wgcna_build_methods <- function(wgcna, pgx) {
-  template_path <- .wgcna_prompt_path("wgcna_methods.md")
-  template <- paste(readLines(template_path, warn = FALSE), collapse = "\n")
-
-  n_wgcna <- length(unlist(wgcna$me.genes))
-  if (is.null(n_wgcna) || n_wgcna == 0) {
-    n_wgcna <- tryCatch(ncol(wgcna$datExpr), error = function(e) NA)
-  }
-
-  feature_type <- "features"
-  if (!is.null(pgx$datatype)) {
-    datatype <- paste(pgx$datatype, collapse = ", ")
-    if (grepl("prot", datatype, ignore.case = TRUE)) {
-      feature_type <- "proteins"
-    } else if (grepl("rna|transcript|gene", datatype, ignore.case = TRUE)) {
-      feature_type <- "genes"
-    }
-  }
-
-  n_samples <- tryCatch(nrow(wgcna$datExpr), error = function(e) {
-    tryCatch(nrow(pgx$samples), error = function(e2) NA)
-  })
-
-  network_type <- if (!is.null(wgcna$networktype)) wgcna$networktype
-                  else if (!is.null(wgcna$net$networkType)) wgcna$net$networkType
-                  else "signed"
-  power <- if (!is.null(wgcna$power)) wgcna$power
-           else if (!is.null(wgcna$net$power)) wgcna$net$power
-           else "NA"
-  min_mod_size <- if (!is.null(wgcna$minModSize)) wgcna$minModSize else "20"
-  merge_cut_height <- if (!is.null(wgcna$mergeCutHeight)) wgcna$mergeCutHeight else "0.15"
-  min_kme <- if (!is.null(wgcna$minKME)) wgcna$minKME else "0.3"
-
-  modules_no_grey <- setdiff(names(wgcna$me.genes), c("grey", "MEgrey"))
-  n_modules <- length(modules_no_grey)
-  grey_size <- length(wgcna$me.genes[["MEgrey"]]) + length(wgcna$me.genes[["grey"]])
-
-  n_genesets <- tryCatch({
-    first_mod <- modules_no_grey[1]
-    nrow(wgcna$gse[[first_mod]])
-  }, error = function(e) "NA")
-
-  params <- list(
-    n_features_wgcna = as.character(n_wgcna),
-    feature_type = feature_type,
-    n_samples = as.character(n_samples),
-    network_type = as.character(network_type),
-    power = as.character(power),
-    min_mod_size = as.character(min_mod_size),
-    merge_cut_height = as.character(merge_cut_height),
-    min_kme = as.character(min_kme),
-    n_modules = as.character(n_modules),
-    grey_size = as.character(grey_size),
-    n_genesets_tested = as.character(n_genesets),
-    date = format(Sys.Date(), "%Y-%m-%d")
-  )
-
-  omicsai::omicsai_substitute_template(template, params)
-}
-
 
 # =============================================================================
 # Section 3 — Prompt assembly (omicsai fragments)

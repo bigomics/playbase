@@ -480,18 +480,7 @@ rpt.create_full_report <- function(pgx, ntop=20, llm=NULL,
       message("found WGCNA report")
       wgcna_report <- pgx$wgcna$report$report
     } else {
-      out <- wgcna.describeModules(
-        pgx$wgcna,
-        modules = NULL,
-        multi = FALSE, 
-        ntop = 50,
-        annot = pgx$genes, 
-        experiment = pgx$description,
-        verbose = FALSE,
-        model = NULL
-      ) 
-      names(out)
-      wgcna_report <- list_to_content(out$answers, newline=TRUE)
+      message("WGCNA report not found; skipping legacy on-the-fly summary")
     }
   }
 

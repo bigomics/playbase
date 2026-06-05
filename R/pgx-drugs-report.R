@@ -275,18 +275,6 @@ dc_percent <- function(x, digits = 1L) {
   sprintf(paste0("%.", digits, "f%%"), 100 * x)
 }
 
-## Internal: split pipe / semicolon / comma separated annotation tokens.
-## L1000 / CMap annotations sometimes ship mixed-encoding bytes; iconv with
-## sub = "" silently drops invalid sequences so strsplit's regex engine
-## can run without "input string is invalid" / "unable to translate" warnings.
-dc_parse_tokens <- function(x) {
-  x <- as.character(x %||% "")
-  x[is.na(x)] <- ""
-  x <- iconv(x, from = "UTF-8", to = "UTF-8", sub = "")
-  x[is.na(x)] <- ""
-  lapply(x, function(s) trimws(strsplit(s, split = "[\\|;,]")[[1]]))
-}
-
 ## -----------------------------------------------------------------------------
 ## L1000 annotation fallback — reads the bundled CSV when pgx$drugs[[method]]$annot
 ## is missing. Only used when calling playbase::drugs.enrichmentTable() from the
@@ -310,8 +298,7 @@ dc_load_annot_fallback <- function() {
 
 ## -----------------------------------------------------------------------------
 ## Direction subset + tier-rank ordering of an MOA / target enrichment table.
-## Adds `support` and `support_rank` columns. Used by dc_summary_terms() and
-## dc_corroborating_targets().
+## Adds `support` and `support_rank` columns for report context summaries.
 ## -----------------------------------------------------------------------------
 dc_enrichment_direction_subset <- function(dt, direction = c("opposing", "mimicking")) {
   direction <- match.arg(direction)
@@ -326,134 +313,6 @@ dc_enrichment_direction_subset <- function(dt, direction = c("opposing", "mimick
   out[order(out$support_rank, out$padj, out$pval, -abs(out$NES), out$pathway), , drop = FALSE]
 }
 
-dc_summary_terms <- function(dt, direction = c("opposing", "mimicking"), n = 3L) {
-  dt <- dc_enrichment_direction_subset(dt, direction = direction)
-  if (is.null(dt) || nrow(dt) == 0) {
-    empty <- if (is.data.frame(dt)) dt[0, , drop = FALSE] else data.frame()
-    return(list(
-      overall = empty, supported = empty,
-      significant = empty, nominal = empty, unsupported = empty
-    ))
-  }
-
-  significant <- dt[dt$support == "significant", , drop = FALSE]
-  nominal     <- dt[dt$support == "nominal", , drop = FALSE]
-  unsupported <- dt[dt$support == "unsupported", , drop = FALSE]
-  supported <- if (nrow(significant) > 0) {
-    significant
-  } else if (nrow(nominal) > 0) {
-    nominal
-  } else {
-    dt[0, , drop = FALSE]
-  }
-
-  list(
-    overall     = head(dt, n),
-    supported   = head(supported, n),
-    significant = head(significant, n),
-    nominal     = head(nominal, n),
-    unsupported = head(unsupported, n)
-  )
-}
-
-dc_corroborating_targets <- function(dsea_table, moa_target, moa_terms,
-                                     direction = c("opposing", "mimicking"),
-                                     n = 3L) {
-  direction <- match.arg(direction)
-  if (is.null(dsea_table) || !is.data.frame(dsea_table) || nrow(dsea_table) == 0 ||
-      is.null(moa_target) || !is.data.frame(moa_target) || nrow(moa_target) == 0 ||
-      is.null(moa_terms) || length(moa_terms) == 0) {
-    return(data.frame())
-  }
-
-  moa_tokens <- dc_parse_tokens(dsea_table$moa)
-  target_tokens <- dc_parse_tokens(dsea_table$target)
-  keep <- vapply(moa_tokens, function(tokens) any(tokens %in% moa_terms), logical(1))
-  if (!any(keep)) return(moa_target[0, , drop = FALSE])
-
-  supported_targets <- unique(unlist(target_tokens[keep]))
-  supported_targets <- setdiff(supported_targets, c("", " ", NA, "NA", "N/A"))
-  if (length(supported_targets) == 0) return(moa_target[0, , drop = FALSE])
-
-  dt <- dc_enrichment_direction_subset(moa_target, direction = direction)
-  if (is.null(dt) || nrow(dt) == 0) return(dt)
-  dt <- dt[dt$pathway %in% supported_targets, , drop = FALSE]
-  if (nrow(dt) == 0) return(dt)
-  head(dt[order(dt$support_rank, dt$padj, dt$pval, -abs(dt$NES), dt$pathway), , drop = FALSE], n)
-}
-
-dc_annotation_confidence <- function(frac_annotated) {
-  if (is.na(frac_annotated)) return("unknown")
-  if (frac_annotated < 0.20) return("very low")
-  if (frac_annotated < 0.30) return("low")
-  if (frac_annotated < 0.60) return("moderate")
-  "high"
-}
-
-dc_build_moa_summary <- function(moa_class, n = 3L) {
-  list(
-    opposing  = dc_summary_terms(moa_class, direction = "opposing", n = n),
-    mimicking = dc_summary_terms(moa_class, direction = "mimicking", n = n)
-  )
-}
-
-dc_build_target_summary <- function(dsea_table, moa_target, moa_summary, n = 3L) {
-  opposing_terms  <- moa_summary$opposing$supported$pathway %||% character(0)
-  mimicking_terms <- moa_summary$mimicking$supported$pathway %||% character(0)
-
-  list(
-    opposing = list(
-      supported = dc_corroborating_targets(
-        dsea_table = dsea_table, moa_target = moa_target,
-        moa_terms = opposing_terms, direction = "opposing", n = n
-      ),
-      overall = dc_summary_terms(moa_target, direction = "opposing", n = n)
-    ),
-    mimicking = list(
-      supported = dc_corroborating_targets(
-        dsea_table = dsea_table, moa_target = moa_target,
-        moa_terms = mimicking_terms, direction = "mimicking", n = n
-      ),
-      overall = dc_summary_terms(moa_target, direction = "mimicking", n = n)
-    )
-  )
-}
-
-dc_recommended_exemplars <- function(dsea_table, moa_terms,
-                                     direction = c("opposing", "mimicking"),
-                                     n = 3L) {
-  direction <- match.arg(direction)
-  if (is.null(dsea_table) || !is.data.frame(dsea_table) || nrow(dsea_table) == 0 ||
-      is.null(moa_terms) || length(moa_terms) == 0) {
-    return(data.frame())
-  }
-
-  dt <- dsea_table[!is.na(dsea_table$NES), , drop = FALSE]
-  dt <- if (direction == "opposing") {
-    dt[dt$NES < 0, , drop = FALSE]
-  } else {
-    dt[dt$NES > 0, , drop = FALSE]
-  }
-  if (nrow(dt) == 0) return(dt)
-
-  moa_tokens <- dc_parse_tokens(dt$moa)
-  keep <- vapply(moa_tokens, function(tokens) any(tokens %in% moa_terms), logical(1))
-  dt <- dt[keep, , drop = FALSE]
-  if (nrow(dt) == 0) return(dt)
-
-  dt <- dt[!(is.na(dt$moa) | dt$moa == ""), , drop = FALSE]
-  if (nrow(dt) == 0) return(dt)
-
-  dt$support_rank <- vapply(seq_len(nrow(dt)), function(i) {
-    match(
-      playbase::drugs.supportBucket(dt$padj[i], dt$pval[i]),
-      c("significant", "nominal", "unsupported")
-    )
-  }, integer(1))
-
-  head(dt[order(dt$support_rank, dt$padj, -abs(dt$NES), dt$drug), , drop = FALSE], n)
-}
-
 ## -----------------------------------------------------------------------------
 ## Context builder — extract deterministic data for one contrast/method context.
 ## -----------------------------------------------------------------------------
@@ -463,6 +322,59 @@ extract_drugconnectivity_context_data <- function(pgx, contrast, method,
                                                   moa_target = NULL,
                                                   only_annotated = FALSE,
                                                   n_top = 15L) {
+  summary_terms <- function(dt, direction, n = 3L) {
+    dt <- dc_enrichment_direction_subset(dt, direction = direction)
+    if (is.null(dt) || nrow(dt) == 0) {
+      empty <- if (is.data.frame(dt)) dt[0, , drop = FALSE] else data.frame()
+      return(list(overall = empty, supported = empty,
+                  significant = empty, nominal = empty, unsupported = empty))
+    }
+    significant <- dt[dt$support == "significant", , drop = FALSE]
+    nominal <- dt[dt$support == "nominal", , drop = FALSE]
+    unsupported <- dt[dt$support == "unsupported", , drop = FALSE]
+    supported <- if (nrow(significant)) significant else if (nrow(nominal)) nominal else dt[0, , drop = FALSE]
+    list(
+      overall = head(dt, n),
+      supported = head(supported, n),
+      significant = head(significant, n),
+      nominal = head(nominal, n),
+      unsupported = head(unsupported, n)
+    )
+  }
+
+  targets_for_moa <- function(moa_terms, direction, n = 3L) {
+    if (is.null(moa_target) || !is.data.frame(moa_target) || !nrow(moa_target) ||
+        is.null(moa_terms) || !length(moa_terms)) {
+      return(data.frame())
+    }
+    moa_tokens <- .drugs_parseTokens(dsea_table$moa)
+    target_tokens <- .drugs_parseTokens(dsea_table$target)
+    keep <- vapply(moa_tokens, function(tokens) any(tokens %in% moa_terms), logical(1))
+    if (!any(keep)) return(moa_target[0, , drop = FALSE])
+    targets <- setdiff(unique(unlist(target_tokens[keep])), c("", " ", NA, "NA", "N/A"))
+    if (!length(targets)) return(moa_target[0, , drop = FALSE])
+    dt <- dc_enrichment_direction_subset(moa_target, direction = direction)
+    if (is.null(dt) || !nrow(dt)) return(dt)
+    dt <- dt[dt$pathway %in% targets, , drop = FALSE]
+    if (!nrow(dt)) return(dt)
+    head(dt[order(dt$support_rank, dt$padj, dt$pval, -abs(dt$NES), dt$pathway), , drop = FALSE], n)
+  }
+
+  exemplars_for_moa <- function(moa_terms, direction, n = 3L) {
+    if (is.null(moa_terms) || !length(moa_terms)) return(data.frame())
+    dt <- dsea_table[!is.na(dsea_table$NES), , drop = FALSE]
+    dt <- if (direction == "opposing") dt[dt$NES < 0, , drop = FALSE] else dt[dt$NES > 0, , drop = FALSE]
+    if (!nrow(dt)) return(dt)
+    keep <- vapply(.drugs_parseTokens(dt$moa), function(tokens) any(tokens %in% moa_terms), logical(1))
+    dt <- dt[keep & !(is.na(dt$moa) | dt$moa == ""), , drop = FALSE]
+    if (!nrow(dt)) return(dt)
+    dt$support_rank <- vapply(seq_len(nrow(dt)), function(i) {
+      match(playbase::drugs.supportBucket(dt$padj[i], dt$pval[i]),
+            c("significant", "nominal", "unsupported"))
+    }, integer(1))
+    head(dt[order(dt$support_rank, dt$padj, -abs(dt$NES), dt$drug), , drop = FALSE], n)
+  }
+
   if (is.null(dsea_table)) {
     fallback_annot <- if (is.null(pgx$drugs[[method]]$annot)) dc_load_annot_fallback() else NULL
     dsea_table <- playbase::drugs.enrichmentTable(
@@ -485,24 +397,36 @@ extract_drugconnectivity_context_data <- function(pgx, contrast, method,
   top_opposing  <- head(dsea_table[order(dsea_table$NES), , drop = FALSE], n_top)
   top_mimicking <- head(dsea_table[order(-dsea_table$NES), , drop = FALSE], n_top)
   top_abs       <- head(dsea_table[order(-abs(dsea_table$NES)), , drop = FALSE], n_top)
-  moa_summary   <- dc_build_moa_summary(moa_class, n = 3L)
-  target_summary <- dc_build_target_summary(
-    dsea_table = dsea_table, moa_target = moa_target,
-    moa_summary = moa_summary, n = 3L
+  moa_summary <- list(
+    opposing = summary_terms(moa_class, "opposing", n = 3L),
+    mimicking = summary_terms(moa_class, "mimicking", n = 3L)
   )
-  exemplars <- list(
-    opposing  = dc_recommended_exemplars(
-      dsea_table = dsea_table,
-      moa_terms = moa_summary$opposing$supported$pathway %||% character(0),
-      direction = "opposing", n = 3L
+  target_summary <- list(
+    opposing = list(
+      supported = targets_for_moa(moa_summary$opposing$supported$pathway %||% character(0), "opposing"),
+      overall = summary_terms(moa_target, "opposing", n = 3L)
     ),
-    mimicking = dc_recommended_exemplars(
-      dsea_table = dsea_table,
-      moa_terms = moa_summary$mimicking$supported$pathway %||% character(0),
-      direction = "mimicking", n = 3L
+    mimicking = list(
+      supported = targets_for_moa(moa_summary$mimicking$supported$pathway %||% character(0), "mimicking"),
+      overall = summary_terms(moa_target, "mimicking", n = 3L)
     )
   )
+  exemplars <- list(
+    opposing = exemplars_for_moa(moa_summary$opposing$supported$pathway %||% character(0), "opposing"),
+    mimicking = exemplars_for_moa(moa_summary$mimicking$supported$pathway %||% character(0), "mimicking")
+  )
   frac_annotated <- mean(has_annot)
+  annotation_confidence <- if (is.na(frac_annotated)) {
+    "unknown"
+  } else if (frac_annotated < 0.20) {
+    "very low"
+  } else if (frac_annotated < 0.30) {
+    "low"
+  } else if (frac_annotated < 0.60) {
+    "moderate"
+  } else {
+    "high"
+  }
 
   caveats <- c(
     "Connectivity reflects L1000 cell-line perturbation signatures, not direct clinical efficacy.",
@@ -530,7 +454,7 @@ extract_drugconnectivity_context_data <- function(pgx, contrast, method,
     reliability = list(
       has_annotations = any(has_annot),
       frac_annotated  = frac_annotated,
-      annotation_confidence = dc_annotation_confidence(frac_annotated),
+      annotation_confidence = annotation_confidence,
       n_sig_moa_classes = if (is.data.frame(moa_class)) sum(moa_class$padj < 0.05, na.rm = TRUE) else 0L,
       n_sig_targets     = if (is.data.frame(moa_target)) sum(moa_target$padj < 0.05, na.rm = TRUE) else 0L
     ),
@@ -541,17 +465,30 @@ extract_drugconnectivity_context_data <- function(pgx, contrast, method,
 ## -----------------------------------------------------------------------------
 ## Markdown formatters — render context fields into compact tables and prose.
 ## -----------------------------------------------------------------------------
-dc_compact_drug_table <- function(dt, n = 10L) {
-  if (is.null(dt) || !is.data.frame(dt) || nrow(dt) == 0) return("No data available.")
+dc_compact_table <- function(dt, n = 10L, type = c("drug", "moa"), label = "Pathway") {
+  type <- match.arg(type)
+  empty <- if (type == "drug") "No data available." else "No significant enrichment available."
+  if (is.null(dt) || !is.data.frame(dt) || nrow(dt) == 0) return(empty)
   dt <- head(dt, n)
-  fmt <- data.frame(
-    Drug = dt$drug,
-    NES = dt$NES,
-    `q-value` = dt$padj,
-    MOA = ifelse(is.na(dt$moa) | dt$moa == "", "-", dt$moa),
-    Target = ifelse(is.na(dt$target) | dt$target == "", "-", dt$target),
-    check.names = FALSE, stringsAsFactors = FALSE
-  )
+  fmt <- if (type == "drug") {
+    data.frame(
+      Drug = dt$drug,
+      NES = dt$NES,
+      `q-value` = dt$padj,
+      MOA = ifelse(is.na(dt$moa) | dt$moa == "", "-", dt$moa),
+      Target = ifelse(is.na(dt$target) | dt$target == "", "-", dt$target),
+      check.names = FALSE, stringsAsFactors = FALSE
+    )
+  } else {
+    data.frame(
+      Name = dt$pathway,
+      NES = dt$NES,
+      `q-value` = dt$padj,
+      Size = dt$size,
+      check.names = FALSE, stringsAsFactors = FALSE
+    )
+  }
+  if (type == "moa") colnames(fmt)[1] <- label
   paste(omicsai::omicsai_format_mdtable(
     fmt,
     formatters = list(
@@ -561,66 +498,25 @@ dc_compact_drug_table <- function(dt, n = 10L) {
   ), collapse = "\n")
 }
 
-dc_compact_moa_table <- function(dt, n = 10L, label = "Pathway") {
-  if (is.null(dt) || !is.data.frame(dt) || nrow(dt) == 0) return("No significant enrichment available.")
-  dt <- head(dt, n)
-  fmt <- data.frame(
-    Name = dt$pathway,
-    NES = dt$NES,
-    `q-value` = dt$padj,
-    Size = dt$size,
-    check.names = FALSE, stringsAsFactors = FALSE
-  )
-  colnames(fmt)[1] <- label
-  paste(omicsai::omicsai_format_mdtable(
-    fmt,
-    formatters = list(
-      NES = function(x) omicsai::omicsai_format_num(x, 3),
-      `q-value` = omicsai::omicsai_format_pvalue
-    )
-  ), collapse = "\n")
-}
-
-dc_summary_label <- function(dt) {
-  if (is.null(dt) || !is.data.frame(dt) || nrow(dt) == 0) return("no supported MOA term")
-  label <- dt$pathway[1]
-  support <- dt$support[1] %||% "unsupported"
-  if (identical(support, "significant")) return(label)
-  paste0(label, " (", support, ")")
-}
-
-dc_format_summary_entries <- function(dt, n = 3L, include_support = TRUE) {
+dc_format_entries <- function(dt, n = 3L, type = c("summary", "exemplar"),
+                              include_support = TRUE) {
+  type <- match.arg(type)
   if (is.null(dt) || !is.data.frame(dt) || nrow(dt) == 0) return("none")
   dt <- head(dt, n)
   entries <- vapply(seq_len(nrow(dt)), function(i) {
-    parts <- c(
-      dt$pathway[i],
-      paste0("NES=", omicsai::omicsai_format_num(dt$NES[i], 2))
-    )
+    name <- if (type == "summary") dt$pathway[i] else dt$drug[i]
+    parts <- c(name)
+    if (type == "exemplar") parts <- c(parts, dt$moa[i])
+    parts <- c(parts, paste0("NES=", omicsai::omicsai_format_num(dt$NES[i], 2)))
     if (!is.na(dt$padj[i])) {
       parts <- c(parts, paste0("q=", omicsai::omicsai_format_pvalue(dt$padj[i])))
     }
-    if (isTRUE(include_support) && "support" %in% colnames(dt)) {
+    if (type == "summary" && isTRUE(include_support) && "support" %in% colnames(dt)) {
       parts <- c(parts, dt$support[i])
     }
-    paste0(parts[1], " (", paste(parts[-1], collapse = ", "), ")")
-  }, character(1))
-  paste(entries, collapse = "; ")
-}
-
-dc_format_exemplars <- function(dt, n = 3L) {
-  if (is.null(dt) || !is.data.frame(dt) || nrow(dt) == 0) return("none")
-  dt <- head(dt, n)
-  entries <- vapply(seq_len(nrow(dt)), function(i) {
-    parts <- c(
-      dt$drug[i],
-      dt$moa[i],
-      paste0("NES=", omicsai::omicsai_format_num(dt$NES[i], 2))
-    )
-    if (!is.na(dt$padj[i])) {
-      parts <- c(parts, paste0("q=", omicsai::omicsai_format_pvalue(dt$padj[i])))
-    }
-    paste0(parts[1], " [", paste(parts[-1], collapse = ", "), "]")
+    open <- if (type == "summary") " (" else " ["
+    close <- if (type == "summary") ")" else "]"
+    paste0(parts[1], open, paste(parts[-1], collapse = ", "), close)
   }, character(1))
   paste(entries, collapse = "; ")
 }
@@ -632,12 +528,12 @@ dc_evidence_summary_block <- function(ctx) {
   target_summary <- ctx$target_summary
 
   list(
-    supported_opposing_moa          = dc_format_summary_entries(moa_summary$opposing$supported, n = 3L),
-    supported_mimicking_moa         = dc_format_summary_entries(moa_summary$mimicking$supported, n = 3L),
-    corroborating_opposing_targets  = dc_format_summary_entries(target_summary$opposing$supported, n = 3L),
-    corroborating_mimicking_targets = dc_format_summary_entries(target_summary$mimicking$supported, n = 3L),
-    preferred_opposing_exemplars    = dc_format_exemplars(ctx$exemplars$opposing, n = 3L),
-    preferred_mimicking_exemplars   = dc_format_exemplars(ctx$exemplars$mimicking, n = 3L)
+    supported_opposing_moa          = dc_format_entries(moa_summary$opposing$supported, n = 3L),
+    supported_mimicking_moa         = dc_format_entries(moa_summary$mimicking$supported, n = 3L),
+    corroborating_opposing_targets  = dc_format_entries(target_summary$opposing$supported, n = 3L),
+    corroborating_mimicking_targets = dc_format_entries(target_summary$mimicking$supported, n = 3L),
+    preferred_opposing_exemplars    = dc_format_entries(ctx$exemplars$opposing, n = 3L, type = "exemplar"),
+    preferred_mimicking_exemplars   = dc_format_entries(ctx$exemplars$mimicking, n = 3L, type = "exemplar")
   )
 }
 
@@ -673,10 +569,10 @@ dc_render_contrast_block <- function(ctx, tier_label, ntop = 10L) {
     corroborating_mimicking_targets = ev$corroborating_mimicking_targets,
     preferred_opposing_exemplars    = ev$preferred_opposing_exemplars,
     preferred_mimicking_exemplars   = ev$preferred_mimicking_exemplars,
-    top_opposing_table              = dc_compact_drug_table(ctx$top_opposing, n = ntop),
-    top_mimicking_table             = dc_compact_drug_table(ctx$top_mimicking, n = ntop),
-    moa_class_table                 = dc_compact_moa_table(ctx$moa_class, n = ntop, label = "MOA Class"),
-    moa_target_table                = dc_compact_moa_table(ctx$moa_target, n = ntop, label = "Target")
+    top_opposing_table              = dc_compact_table(ctx$top_opposing, n = ntop),
+    top_mimicking_table             = dc_compact_table(ctx$top_mimicking, n = ntop),
+    moa_class_table                 = dc_compact_table(ctx$moa_class, n = ntop, type = "moa", label = "MOA Class"),
+    moa_target_table                = dc_compact_table(ctx$moa_target, n = ntop, type = "moa", label = "Target")
   ))
 }
 

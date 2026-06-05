@@ -2304,19 +2304,8 @@ wgcna.runConsensusWGCNA <- function(exprList,
   }
 
   if(summary) {
-    if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
-    message("Annotating modules using ", ai_model)    
-    ai <- wgcna.describeModules(
-      res,
-      multi = FALSE,
-      ntop = 50,
-      model = ai_model,
-      annot = annot,
-      experiment = experiment,
-      verbose = 0
-    )
-    res$summary <- ai$answers
-    res$prompts <- ai$questions
+    message("[wgcna.runConsensusWGCNA] summary=TRUE ignored; ",
+            "legacy wgcna.describeModules() was removed. Use pgx.update_reports().")
   }
 
   res
@@ -5827,5 +5816,4 @@ wgcna.calculateSignificanceScore <- function(wgcna, collapse=TRUE, sort.by="scor
 
   return(Q)
 }
-
 
