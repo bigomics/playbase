@@ -35,67 +35,9 @@
   term
 }
 
-.pathways_modeled_context <- function(pgx, contrast) {
-  labels <- pgx$contrasts[, contrast]
-  keep <- !is.na(labels) & nzchar(labels)
-  labels <- labels[keep]
-  samples <- pgx$samples[keep, , drop = FALSE]
-
-  variables <- colnames(pgx$samples)
-  variables <- variables[!vapply(pgx$samples, is.numeric, logical(1))]
-  variables <- variables[vapply(
-    pgx$samples[, variables, drop = FALSE],
-    function(x) length(unique(x[!is.na(x)])) <= 8L,
-    logical(1)
-  )]
-  if (!length(variables)) return("-")
-
-  groups <- split(seq_along(labels), labels)
-  parts <- vapply(names(groups), function(group) {
-    idx <- groups[[group]]
-    values <- vapply(variables, function(variable) {
-      x <- as.character(samples[[variable]][idx])
-      x[is.na(x) | !nzchar(x)] <- "<missing>"
-      tab <- sort(table(x), decreasing = TRUE)
-      paste0(variable, "=", paste0(names(tab), "(", as.integer(tab), ")",
-                                    collapse = ", "))
-    }, character(1))
-    paste0(group, " (n=", length(idx), "): ", paste(values, collapse = "; "))
-  }, character(1))
-  paste(parts, collapse = " | ")
-}
-
-
 # -----------------------------------------------------------------------------
 # Output-table extractors
 # -----------------------------------------------------------------------------
-
-.pathways_sample_metadata <- function(pgx) {
-  rows <- lapply(colnames(pgx$samples), function(variable) {
-    x <- pgx$samples[[variable]]
-    if (is.numeric(x)) {
-      present <- x[is.finite(x)]
-      summary <- if (length(present)) {
-        paste0(
-          omicsai::omicsai_format_num(min(present), 3L), " to ",
-          omicsai::omicsai_format_num(max(present), 3L)
-        )
-      } else {
-        "no finite values"
-      }
-    } else {
-      tab <- sort(table(x, useNA = "ifany"), decreasing = TRUE)
-      values <- paste0(names(tab), "(", as.integer(tab), ")")
-      summary <- paste(head(values, 8L), collapse = ", ")
-      if (length(values) > 8L) summary <- paste0(summary, ", ...")
-    }
-    data.frame(variable = variable, summary = summary, stringsAsFactors = FALSE)
-  })
-  if (!length(rows)) {
-    return(data.frame(variable = character(), summary = character()))
-  }
-  do.call(rbind, rows)
-}
 
 .pathways_contrast_landscape <- function(pgx, fx, q, q_threshold = 0.05) {
   rows <- lapply(colnames(fx), function(contrast) {
@@ -104,7 +46,8 @@
     significant <- is.finite(effect) & is.finite(qvalue) & qvalue < q_threshold
     data.frame(
       contrast = contrast,
-      modeled_sample_context = .pathways_modeled_context(pgx, contrast),
+      modeled_sample_context = .ai_report_get(pgx, "contrast_context",
+                                              contrast = contrast),
       significant_pathways = sum(significant),
       elevated = sum(significant & effect > 0),
       suppressed = sum(significant & effect < 0),
@@ -169,7 +112,8 @@
 
     paste0(
       "## ", contrast, "\n\n",
-      "Modeled sample context: ", .pathways_modeled_context(pgx, contrast),
+      "Modeled sample context: ", .ai_report_get(pgx, "contrast_context",
+                                                 contrast = contrast),
       "\n\n",
       if (any(significant)) {
         paste0("Terms below are significant at q < ", q_threshold, ".")
@@ -221,7 +165,8 @@ pathways_build_report_tables <- function(slice, pgx, ntop = 12L,
   rownames(fx) <- rownames(q) <- terms[keep]
   colnames(fx) <- colnames(q) <- contrasts
 
-  sample_metadata <- .pathways_sample_metadata(pgx)
+  sample_metadata <- .ai_report_get(pgx, "sample_metadata",
+                                    include_missing = FALSE)
   contrast_landscape <- .pathways_contrast_landscape(
     pgx, fx, q, q_threshold = q_threshold
   )
@@ -232,13 +177,11 @@ pathways_build_report_tables <- function(slice, pgx, ntop = 12L,
     pgx, slice, fx, q, n = ntop, q_threshold = q_threshold
   )
 
-  params <- list(
-    experiment = pgx$name %||% "(unnamed)",
-    description = pgx$description %||% "(not supplied)",
-    organism = pgx$organism %||% "unknown",
-    datatype = paste(pgx$datatype %||% "unknown", collapse = ", "),
-    n_samples = as.character(nrow(pgx$samples)),
-    n_contrasts = as.character(length(contrasts)),
+  info <- .ai_report_get(pgx, "info",
+                         n_features = NULL,
+                         n_contrasts = length(contrasts),
+                         fallback = "(unnamed)")
+  params <- c(info, list(
     sample_metadata_table = paste(
       omicsai::omicsai_format_mdtable(sample_metadata), collapse = "\n"
     ),
@@ -249,10 +192,10 @@ pathways_build_report_tables <- function(slice, pgx, ntop = 12L,
       omicsai::omicsai_format_mdtable(cross_contrast), collapse = "\n"
     ),
     contrast_evidence = contrast_evidence
-  )
+  ))
 
   template <- omicsai::omicsai_load_template(
-    omicsai::omicsai_prompt_path("pathways/pathways_report_data.md")
+    .ai_report_prompt_path("pathways", "pathways_report_data.md")
   )
   list(
     text = omicsai::omicsai_substitute_template(template, params),
@@ -274,13 +217,5 @@ pathways_build_report_tables <- function(slice, pgx, ntop = 12L,
 pathways_assemble_prompt <- function(slice, pgx, ai) {
   ntop <- min(as.integer(ai$ntop), 12L)
   data_block <- pathways_build_report_tables(slice, pgx, ntop = ntop)$text
-  prompt <- omicsai::report_prompt(
-    role = omicsai::frag("system_base"),
-    task = omicsai::frag("text/report"),
-    species = omicsai::omicsai_species_prompt(pgx$organism),
-    context = omicsai::frag("pathways/pathways_interpretation"),
-    board_rules = omicsai::frag("pathways/pathways_report_rules"),
-    data = data_block
-  )
-  omicsai::build_prompt(prompt)
+  .ai_report_build_prompt(pgx, "pathways", data_block)
 }

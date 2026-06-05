@@ -10,10 +10,7 @@
 # LLM orchestration is routed through ai-report.R and mofa.create_report().
 
 .mofa_prompt_path <- function(name) {
-  if (!requireNamespace("omicsai", quietly = TRUE)) {
-    stop("omicsai package required for AI report templates", call. = FALSE)
-  }
-  omicsai::omicsai_prompt_path(paste0("mofa/", name))
+  .ai_report_prompt_path("mofa", name)
 }
 
 .mofa_mdtable <- function(df) {
@@ -30,7 +27,7 @@
 .mofa_feature_name <- function(x) sub("^[^:]+:", "", x)
 
 .mofa_experiment_label <- function(pgx, experiment = NULL) {
-  experiment %||% pgx$name %||% pgx$description %||% "omics experiment"
+  .ai_report_get(pgx, "label", override = experiment)
 }
 
 .mofa_variance_matrix <- function(mofa) {
@@ -54,21 +51,8 @@
 #' @param contrasts PGX contrasts table.
 #' @return List with `exact_primary`, `biological`, and `nuisance` columns.
 mofa_classify_design_columns <- function(samples, contrasts) {
-  sample_cols <- colnames(samples %||% data.frame())
-  contrast_cols <- colnames(contrasts %||% data.frame())
-  contrast_vars <- unique(sub(":.*", "", contrast_cols))
-  nuisance <- sample_cols[grepl(
-    "(^sample$|sample_id|Subject_ID|pt_id|cat_id|^rep$|^Plate$|^Position$|^layer$|batch|run|qc|file|id$)",
-    sample_cols,
-    ignore.case = TRUE
-  )]
-  exact_primary <- intersect(sample_cols, contrast_vars)
-  biological <- setdiff(sample_cols, nuisance)
-  list(
-    exact_primary = exact_primary,
-    biological = biological,
-    nuisance = nuisance
-  )
+  .ai_report_get(list(samples = samples, contrasts = contrasts),
+                 "design_columns")
 }
 
 .mofa_trait_rows_for_columns <- function(trait_names, columns) {
@@ -128,6 +112,12 @@ mofa_rank_factors <- function(factor_summary) {
 mofa_extract_experiment_design <- function(mofa, pgx) {
   design <- mofa_classify_design_columns(pgx$samples, pgx$contrasts)
   views <- if (!is.null(mofa$ww) && is.list(mofa$ww)) names(mofa$ww) else colnames(.mofa_variance_matrix(mofa))
+  info <- .ai_report_get(
+    pgx, "info",
+    override = mofa$experiment,
+    n_samples = if (!is.null(mofa$F)) nrow(mofa$F) else NULL,
+    n_features = if (!is.null(mofa$W)) nrow(mofa$W) else NULL
+  )
   data.frame(
     Field = c(
       "Experiment", "Organism", "Datatype", "Samples", "Features", "Views",
@@ -136,11 +126,11 @@ mofa_extract_experiment_design <- function(mofa, pgx) {
       "Nuisance/design candidates"
     ),
     Value = c(
-      .mofa_experiment_label(pgx, mofa$experiment),
-      pgx$organism %||% "unknown",
-      pgx$datatype %||% "unknown",
-      as.character(if (!is.null(mofa$F)) nrow(mofa$F) else nrow(pgx$samples)),
-      as.character(if (!is.null(mofa$W)) nrow(mofa$W) else nrow(pgx$X)),
+      info$experiment,
+      info$organism,
+      info$datatype,
+      info$n_samples,
+      info$n_features,
       if (length(views)) paste(views, collapse = ", ") else "unknown",
       as.character(length(.mofa_factor_choices(mofa))),
       paste(colnames(pgx$samples %||% data.frame()), collapse = ", "),
@@ -381,10 +371,10 @@ mofa_build_report_tables <- function(mofa, pgx, n_factors = 6L, ntop = 8L) {
   traits <- mofa_extract_trait_correlations(mofa, pgx, factors, top_n = ntop)
   features <- mofa_extract_factor_features(mofa, factors, ntop = ntop, annot = pgx$genes)
   pathways <- mofa_extract_factor_pathways(mofa, factors, ntop = ntop)
-  contrasts <- colnames(pgx$contrasts %||% data.frame())
+  contrasts <- .ai_report_get(pgx, "contrast_names")
   contrasts_block <- if (length(contrasts)) paste(sprintf("- %s", contrasts), collapse = "\n") else "(no contrasts available)"
 
-  tmpl <- omicsai::omicsai_load_prompt_template("mofa/mofa_report_data.md")
+  tmpl <- omicsai::omicsai_load_template(.mofa_prompt_path("mofa_report_data.md"))
   text <- omicsai::omicsai_substitute_template(tmpl, list(
     experiment_design_table = .mofa_mdtable(design),
     contrasts_block = contrasts_block,
@@ -410,7 +400,7 @@ mofa_build_report_tables <- function(mofa, pgx, n_factors = 6L, ntop = 8L) {
 
 #' Build deterministic methods section for MOFA report.
 mofa_build_methods <- function(mofa, pgx) {
-  template <- omicsai::omicsai_load_prompt_template("mofa/mofa_methods.md")
+  template <- omicsai::omicsai_load_template(.mofa_prompt_path("mofa_methods.md"))
   report_date <- format(Sys.Date(), "%Y-%m-%d")
   params <- list(
     experiment = .mofa_experiment_label(pgx, mofa$experiment),
@@ -437,16 +427,10 @@ mofa_assemble_prompt <- function(slice, pgx, ai) {
   ntop <- min(as.integer(ai$ntop %||% 8L), 12L)
   tables <- mofa_build_report_tables(slice, pgx, n_factors = n_factors, ntop = ntop)
   experiment_label <- .mofa_experiment_label(pgx, slice$experiment)
-  rp <- omicsai::report_prompt(
-    role = omicsai::frag("system_base"),
-    task = omicsai::frag("text/report"),
-    species = omicsai::omicsai_species_prompt(pgx$organism),
-    context = omicsai::frag("mofa/mofa_interpretation",
-                            list(experiment = experiment_label)),
-    board_rules = omicsai::frag("mofa/mofa_report_rules"),
-    data = tables$text
+  .ai_report_build_prompt(
+    pgx, "mofa", tables$text,
+    context_vars = list(experiment = experiment_label)
   )
-  omicsai::build_prompt(rp)
 }
 
 #' Generate a MOFA AI report.
@@ -462,12 +446,5 @@ mofa.create_report <- function(slice, pgx, ai) {
   }
   if (is.null(slice)) return(NULL)
   bp <- mofa_assemble_prompt(slice, pgx, ai)
-  cfg <- omicsai::omicsai_config(model = ai$llm_model,
-                                 system_prompt = bp$system)
-  res <- omicsai::omicsai_gen_text(bp$board, config = cfg)
-  list(
-    report = res$text,
-    prompt = paste0("# SYSTEM\n\n", bp$system,
-                    "\n\n---\n\n# BOARD\n\n", bp$board)
-  )
+  .ai_report_run_prompt(bp, ai)
 }

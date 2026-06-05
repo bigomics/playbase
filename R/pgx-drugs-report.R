@@ -268,10 +268,7 @@ drugs.supportBucket <- function(padj, pval = NA_real_) {
 # =============================================================================
 
 .drugs_prompt_path <- function(name) {
-  if (!requireNamespace("omicsai", quietly = TRUE)) {
-    stop("omicsai package required for AI report templates", call. = FALSE)
-  }
-  omicsai::omicsai_prompt_path(paste0("drugs/", name))
+  .ai_report_prompt_path("drugs", name)
 }
 
 dc_percent <- function(x, digits = 1L) {
@@ -481,7 +478,7 @@ extract_drugconnectivity_context_data <- function(pgx, contrast, method,
   if (is.null(moa_class))  moa_class  <- playbase::drugs.moaEnrichment(dsea_table, "moa")
   if (is.null(moa_target)) moa_target <- playbase::drugs.moaEnrichment(dsea_table, "target")
 
-  experiment <- pgx$name %||% pgx$description %||% "omics experiment"
+  experiment <- .ai_report_get(pgx, "label")
   has_annot <- (dsea_table$moa != "" | dsea_table$target != "")
   has_annot[is.na(has_annot)] <- FALSE
 
@@ -856,7 +853,7 @@ drugconnectivity_build_report_tables <- function(pgx, method,
   )
 
   text <- omicsai::omicsai_substitute_template(header_tmpl, list(
-    experiment               = pgx$name %||% pgx$description %||% "omics experiment",
+    experiment               = .ai_report_get(pgx, "label"),
     analysis_type            = at$analysis_type,
     analysis_type_description = at$analysis_type_description,
     rank_table               = rank_table,
@@ -874,7 +871,7 @@ drugconnectivity_build_methods <- function(pgx, method) {
 
   at <- playbase::drugs.analysisInfo(method)
   params <- list(
-    experiment = pgx$name %||% pgx$description %||% "omics experiment",
+    experiment = .ai_report_get(pgx, "label"),
     analysis_type = at$analysis_type,
     analysis_type_description = at$analysis_type_description,
     date = format(Sys.Date(), "%Y-%m-%d")
@@ -896,16 +893,10 @@ drugs_assemble_prompt <- function(pgx, method, ai) {
   }
   tables <- drugconnectivity_build_report_tables(pgx, method,
                                                  ntop = ai$ntop %||% 10L)
-  rp <- omicsai::report_prompt(
-    role        = omicsai::frag("system_base"),
-    task        = omicsai::frag("text/report"),
-    species     = omicsai::omicsai_species_prompt(pgx$organism),
-    context     = omicsai::frag("drugs/drugconnectivity_interpretation",
-                                list(experiment = pgx$name %||% "omics experiment")),
-    board_rules = omicsai::frag("drugs/drugconnectivity_report_rules"),
-    data        = tables$text
+  .ai_report_build_prompt(
+    pgx, "drugs", tables$text,
+    context_vars = list(experiment = .ai_report_get(pgx, "label"))
   )
-  omicsai::build_prompt(rp)
 }
 
 
@@ -945,15 +936,9 @@ drugs.create_report <- function(slice, pgx, ai) {
   out <- list()
   for (db in dbs) {
     bp  <- drugs_assemble_prompt(pgx, db, ai)
-    cfg <- omicsai::omicsai_config(model = ai$llm_model,
-                                   system_prompt = bp$system)
-    res <- omicsai::omicsai_gen_text(bp$board, config = cfg)
+    res <- .ai_report_run_prompt(bp, ai)
     key <- .drugs_safe_db_key(db)
-    out[[key]] <- list(
-      report = res$text,
-      prompt = paste0("# SYSTEM\n\n", bp$system,
-                      "\n\n---\n\n# BOARD\n\n", bp$board)
-    )
+    out[[key]] <- res
   }
   structure(out, class = c("ai_report_multi", "list"))
 }

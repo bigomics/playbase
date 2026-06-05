@@ -574,10 +574,7 @@ wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
 # =============================================================================
 
 .wgcna_prompt_path <- function(name) {
-  if (!requireNamespace("omicsai", quietly = TRUE)) {
-    stop("omicsai package required for AI report templates", call. = FALSE)
-  }
-  omicsai::omicsai_prompt_path(paste0("wgcna/", name))
+  .ai_report_prompt_path("wgcna", name)
 }
 
 .wgcna_module_summary_template <- local({
@@ -870,12 +867,7 @@ extract_module_data <- function(wgcna, module, pgx,
 #' Returns a list of named substitutions for the Overview block of the
 #' data template. Caller merges these into the substitute() arg list.
 data_overview <- function(wgcna, pgx) {
-  experiment <- if (!is.null(wgcna$experiment)) wgcna$experiment
-                else if (!is.null(pgx$description)) pgx$description
-                else "omics experiment"
-  organism <- if (!is.null(pgx$organism)) pgx$organism else "unknown"
-  n_samples <- tryCatch(nrow(pgx$samples), error = function(e) NA_integer_)
-  n_features_total <- tryCatch(nrow(pgx$X), error = function(e) NA_integer_)
+  info <- .ai_report_get(pgx, "info", override = wgcna$experiment)
   n_features_used <- length(unlist(wgcna$me.genes))
   if (is.null(n_features_used) || n_features_used == 0) {
     n_features_used <- tryCatch(ncol(wgcna$datExpr), error = function(e) NA_integer_)
@@ -888,10 +880,10 @@ data_overview <- function(wgcna, pgx) {
   merge_cut_height <- if (!is.null(wgcna$mergeCutHeight)) wgcna$mergeCutHeight else "0.15"
 
   list(
-    experiment       = as.character(experiment),
-    organism         = as.character(organism),
-    n_samples        = as.character(n_samples),
-    n_features_total = as.character(n_features_total),
+    experiment       = info$experiment,
+    organism         = info$organism,
+    n_samples        = info$n_samples,
+    n_features_total = info$n_features,
     n_features_used  = as.character(n_features_used),
     power            = as.character(power),
     min_mod_size     = as.character(min_mod_size),
@@ -905,17 +897,7 @@ data_overview <- function(wgcna, pgx) {
 #' Returns a markdown bullet list (one line per contrast) or a placeholder
 #' string if no contrast matrix is available.
 data_contrast <- function(pgx) {
-  cm <- pgx$model.parameters$contr.matrix
-  if (is.null(cm)) return("(no contrasts available)")
-
-  group_names <- rownames(cm)
-  lines <- vapply(colnames(cm), function(cn) {
-    pos <- group_names[cm[, cn] > 0]
-    neg <- group_names[cm[, cn] < 0]
-    sprintf("- %s: %s vs %s", cn,
-            paste(pos, collapse = "+"), paste(neg, collapse = "+"))
-  }, character(1))
-  paste(lines, collapse = "\n")
+  .ai_report_get(pgx, "contrast_matrix_block")
 }
 
 
@@ -1269,9 +1251,10 @@ wgcna_build_methods <- function(wgcna, pgx) {
 
   feature_type <- "features"
   if (!is.null(pgx$datatype)) {
-    if (grepl("prot", pgx$datatype, ignore.case = TRUE)) {
+    datatype <- paste(pgx$datatype, collapse = ", ")
+    if (grepl("prot", datatype, ignore.case = TRUE)) {
       feature_type <- "proteins"
-    } else if (grepl("rna|transcript|gene", pgx$datatype, ignore.case = TRUE)) {
+    } else if (grepl("rna|transcript|gene", datatype, ignore.case = TRUE)) {
       feature_type <- "genes"
     }
   }
@@ -1340,15 +1323,7 @@ wgcna_assemble_prompt <- function(slice, pgx, ai) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
   data_block <- wgcna_build_report_tables(slice, pgx)$text
-  rp <- omicsai::report_prompt(
-    role        = omicsai::frag("system_base"),
-    task        = omicsai::frag("text/report"),
-    species     = omicsai::omicsai_species_prompt(pgx$organism),
-    context     = omicsai::frag("wgcna/wgcna_interpretation"),
-    board_rules = omicsai::frag("wgcna/wgcna_report_rules"),
-    data        = data_block
-  )
-  omicsai::build_prompt(rp)
+  .ai_report_build_prompt(pgx, "wgcna", data_block)
 }
 
 
@@ -1378,11 +1353,5 @@ wgcna.create_report <- function(slice, pgx, ai) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
   bp  <- wgcna_assemble_prompt(slice, pgx, ai)
-  cfg <- omicsai::omicsai_config(model = ai$llm_model, system_prompt = bp$system)
-  res <- omicsai::omicsai_gen_text(bp$board, config = cfg)
-  list(
-    report = res$text,
-    prompt = paste0("# SYSTEM\n\n", bp$system,
-                    "\n\n---\n\n# BOARD\n\n", bp$board)
-  )
+  .ai_report_run_prompt(bp, ai)
 }

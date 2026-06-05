@@ -14,43 +14,6 @@
 # Metadata extraction
 # -----------------------------------------------------------------------------
 
-.de_sample_metadata <- function(pgx) {
-  samples <- pgx$samples
-  rows <- lapply(colnames(samples), function(nm) {
-    x <- samples[[nm]]
-    if (is.numeric(x)) {
-      present <- x[is.finite(x)]
-      summary <- if (length(present)) {
-        paste0(
-          omicsai::omicsai_format_num(min(present), 3L), " to ",
-          omicsai::omicsai_format_num(max(present), 3L),
-          if (sum(is.na(x))) paste0("; ", sum(is.na(x)), " missing") else ""
-        )
-      } else {
-        "no finite values"
-      }
-    } else {
-      tab <- sort(table(x, useNA = "ifany"), decreasing = TRUE)
-      values <- paste0(names(tab), "(", as.integer(tab), ")")
-      summary <- paste(head(values, 8L), collapse = ", ")
-      if (length(values) > 8L) summary <- paste0(summary, ", ...")
-    }
-    data.frame(variable = nm, summary = summary, stringsAsFactors = FALSE)
-  })
-  if (!length(rows)) {
-    return(data.frame(variable = character(), summary = character()))
-  }
-  do.call(rbind, rows)
-}
-
-.de_contrast_groups <- function(pgx, contrast) {
-  values <- pgx$contrasts[, contrast]
-  values <- values[!is.na(values) & nzchar(values)]
-  tab <- table(values)
-  if (!length(tab)) return("-")
-  paste0(names(tab), " (n=", as.integer(tab), ")", collapse = " vs ")
-}
-
 .de_annotate_genes <- function(pgx, features) {
   annot <- pgx$genes
   out <- data.frame(feature = features, symbol = features, title = "",
@@ -119,7 +82,8 @@
     significant <- good & mx$meta.q < 0.05
     data.frame(
       contrast = contrast,
-      modeled_groups = .de_contrast_groups(pgx, contrast),
+      modeled_groups = .ai_report_get(pgx, "contrast_groups",
+                                      contrast = contrast),
       tested = sum(good),
       significant = sum(significant),
       up = sum(significant & mx$meta.fx > 0),
@@ -177,7 +141,8 @@
     }
     paste0(
       "## ", contrast, "\n\n",
-      "Modeled groups: ", .de_contrast_groups(pgx, contrast), "\n\n",
+      "Modeled groups: ", .ai_report_get(pgx, "contrast_groups",
+                                         contrast = contrast), "\n\n",
       "### Reliable upregulated markers\n\n",
       up_table, "\n\n",
       "### Reliable downregulated markers\n\n",
@@ -208,19 +173,15 @@ de_build_report_tables <- function(slice, pgx, ntop = 12L, cross_n = 35L) {
     stop("DE report requires at least one contrast", call. = FALSE)
   }
 
-  sample_metadata <- .de_sample_metadata(pgx)
+  sample_metadata <- .ai_report_get(pgx, "sample_metadata")
   contrast_summary <- .de_contrast_summary(pgx, slice)
   cross_contrast <- .de_cross_contrast_table(pgx, slice, n = cross_n)
   contrast_detail <- .de_contrast_detail(pgx, slice, ntop = ntop)
+  info <- .ai_report_get(pgx, "info",
+                         n_contrasts = length(contrasts),
+                         fallback = "(unnamed)")
 
-  params <- list(
-    experiment = pgx$name %||% "(unnamed)",
-    description = pgx$description %||% "(not supplied)",
-    organism = pgx$organism %||% "unknown",
-    datatype = paste(pgx$datatype %||% "unknown", collapse = ", "),
-    n_samples = as.character(nrow(pgx$samples)),
-    n_features = as.character(nrow(pgx$X)),
-    n_contrasts = as.character(length(contrasts)),
+  params <- c(info, list(
     sample_metadata_table = paste(
       omicsai::omicsai_format_mdtable(sample_metadata), collapse = "\n"
     ),
@@ -231,10 +192,10 @@ de_build_report_tables <- function(slice, pgx, ntop = 12L, cross_n = 35L) {
       omicsai::omicsai_format_mdtable(cross_contrast), collapse = "\n"
     ),
     contrast_detail = contrast_detail
-  )
+  ))
 
   template <- omicsai::omicsai_load_template(
-    omicsai::omicsai_prompt_path("de/de_report_data.md")
+    .ai_report_prompt_path("de", "de_report_data.md")
   )
   list(
     text = omicsai::omicsai_substitute_template(template, params),
@@ -256,13 +217,5 @@ de_build_report_tables <- function(slice, pgx, ntop = 12L, cross_n = 35L) {
 de_assemble_prompt <- function(slice, pgx, ai) {
   ntop <- min(as.integer(ai$ntop), 12L)
   data_block <- de_build_report_tables(slice, pgx, ntop = ntop)$text
-  prompt <- omicsai::report_prompt(
-    role = omicsai::frag("system_base"),
-    task = omicsai::frag("text/report"),
-    species = omicsai::omicsai_species_prompt(pgx$organism),
-    context = omicsai::frag("de/de_interpretation"),
-    board_rules = omicsai::frag("de/de_report_rules"),
-    data = data_block
-  )
-  omicsai::build_prompt(prompt)
+  .ai_report_build_prompt(pgx, "de", data_block)
 }
