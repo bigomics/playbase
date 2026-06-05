@@ -152,10 +152,10 @@ pgx.compute_drugs_clust <- function(pgx) {
 }
 
 
-#' Update older versions of pgx$drugs with MOA, report and infographic
+#' Update older versions of pgx$drugs with cluster and MOA results
 #'
 #' @export
-pgx.update_drugs_results <- function(pgx, model, img_model) {
+pgx.update_drugs_results <- function(pgx) {
 
   if(is.null(pgx$drugs)) {
     return(pgx)
@@ -174,37 +174,6 @@ pgx.update_drugs_results <- function(pgx, model, img_model) {
     }
   }
   
-  if(is.null(pgx$drugs[[1]]$report) && !is.null(model)) {
-    dbg("[pgx.update_drugs_results] updating reports...")
-    for(db in names(pgx$drugs)) {
-      pgx$drugs[[db]]$report <- cmap.create_report(
-        pgx, model=model, model2=NULL, db=db, user.prompt = NULL)
-    }
-  }
-
-  ## check infographic
-  rpt <- pgx$drugs[[1]]$report
-  if(is.null(rpt$infographic) && !is.null(img_model)) {
-    dbg("[pgx.update_drugs_results] updating infographics...")    
-    for(db in names(pgx$drugs)) {    
-      rpt <- pgx$drugs[[db]]$report
-      outfile <- ai.cmap_create_infographic(
-        report = rpt$report,
-        model = img_model,
-        filename = "/tmp/drug-infographic.png",
-        aspectratio = "16:9",
-        add.fallback = TRUE
-      )
-      if(grepl("jpg$",outfile,ignore.case=TRUE)) {
-        img <- jpeg::readJPEG(outfile)
-      }
-      if(grepl("png$",outfile,ignore.case=TRUE)) {
-        img <- png::readPNG(outfile)
-      }
-      pgx$drugs[[db]]$report$infographic <- img
-    }
-  }
-
   return(pgx)
 }
 
@@ -527,118 +496,3 @@ metaLINCS.plotlyActivationMap <- function(res, contrast = NULL,
   )
   return(fig)
 }
-
-
-## ======================================================================
-## ======================= AI REPORT ====================================
-## ======================================================================
-
-#'
-#'
-#' @export
-cmap.create_report <- function(pgx, model, model2=NULL, db=1,
-                               ct=NULL, ntop=20, ntop2=100, 
-                               user.prompt=NULL, force=FALSE) {
-
-  if(is.null(pgx$drugs)) return(NULL)  
-  if(is.null(model2)) model2=model
-
-  db.name <- db
-  if(is.numeric(db)) db.name <- names(pgx$drugs)[db]
-  db.name
-
-  rpt <- pgx$drugs[[db.name]]$report
-  if(!is.null(rpt) && !force) {
-    message("[cmap.create_report] object already has report")
-    return(rpt)
-  }
-  
-  ## check if moa results are there
-  has.moa <- !is.null(pgx$drugs[[db]]$moa)
-  if(!has.moa) {
-    res <- pgx$drugs[[db]]
-    pgx$drugs[[db]][['moa']] <- metaLINCS::computeMoaEnrichment(res) 
-  }
-  
-  D1 <- pgx.getTopMOA(pgx, ct, n=ntop, db=db.name, level=1)
-  D2 <- pgx.getTopMOA(pgx, ct, n=ntop, db=db.name, level=2)
-  D3 <- pgx.getTopDrugs(pgx, ct, n=ntop2, db=db.name, na.rm=TRUE)
-  D4 <- pgx.getTopGS(pgx, ct, n=ntop2)
-  
-  toplist <- list(
-    "Top most enriched MOA classes are" =
-      table_to_content(D1), 
-    "Top most enriched MOA drug target genes are" =
-      table_to_content(D2),
-    "Top most correlated drugs are" =
-      table_to_content(D3), 
-    "Top most enriched gene sets are" =
-      table_to_content(D4) 
-  )
-
-  results=NULL
-  if(grepl("sensitivity",db)) {
-    results <- paste("Drug Synergy Analysis using Connectivity Map (CMap) analysis. Synergy of the mechanism of action (MOA) is based on correlation enrichment with computed drug sensitivity profiles of ",db," database. Positive correlation indicate possible synergy with the given drug. Negative correlation indicate possible antagonism with given drug. Indicate clearly that this is not a regular drug similarity analysis but a drug synergy/resistance analysis using CMap.\n\n**Top tables**:",
-    list_to_content(toplist, newline=TRUE), sep=""
-    )
-  } else {
-    results <- paste("Drug Mechanism of Action. Drug Connectivity Map (CMap) analysis of selected comparison. Similarity of the mechanism of action (MOA) is based on correlation enrichment with drug perturbation profiles of ",db," database:",
-      "\n\n**Top tables**:", list_to_content(toplist, newline=TRUE), sep=""
-    )
-  }
-
-  prompt <- paste("**Instructions**: Below are results tables from a drug connectivity MOA analysis for different comparisons. Summarize this into a single report. Give an analysis for each comparison but group comparison together if they are similar in their results. Create an integrated pharmacological narrative focussing on inferred mechanisms-of-action class and possible drug targets. Validate inferred drug MOA with the given (measured) enriched up/down gene sets. Do not describe gene sets on its own, only in connection with drug pharmacological MOA. Write in continuous prose is preferred. Minimize use of tables and bullet points, Format in markdown with title and sections.")
-  prompt <- paste(prompt, "\n\n**Analysis results**: ",results)
-
-  ## Ask LLM
-  if(!is.null(user.prompt)) prompt <- paste(prompt, user.prompt)
-  prompt <- paste0(prompt, "\nExperiment description: ", pgx$description)
-  prompt <- paste0(prompt, "\nDatabase: ", db.name)
-
-  rpt <- ai.ask(prompt, model = model2)
-
-  ## create bullets
-  bullets <- ai.ask(paste("Give a short 2-3 bullet point summary of the following  drug connectivity report. Focus on similarity with drugs MOA. Use very short sentences, no titles. Return only the list items.\n\n**Report**:",rpt),  model = model)
-
-  ## infographic??
-  
-  
-  out <- list(
-    prompt = prompt,
-    bullets = bullets,
-    report = rpt,
-    database = db.name,
-    llm_model = model,
-    llm_model2 = model2
-  )
-  return(out)
-}
-
-
-#' Create an infographic from a drug connectivity report.
-#'
-#' @export
-ai.cmap_create_infographic <- function(report, model, filename,
-                                       aspectratio = c("4:3","16:9","3:4")[2],
-                                       add.fallback = TRUE)
-{
-  prompt <- paste("**Instructions**: Create an infographic for the following pharmacological mechanism-of-action analysis report.\n\n**summary**:", report)
-  if(is.null(model) || model=="") {
-    model <- ai.get_image_models()
-  }
-  if(add.fallback) {
-    ## add fallback models
-    model <- unique(c(model,playbase::ai.get_image_models()))  
-  }
-  out <- ai.create_image(
-    prompt,
-    model = model,
-    format = "file",
-    filename = filename,
-    aspect_ratio = aspectratio,
-    size = 1024
-  )
-  if(is.null(out) || !file.exists(out)) return(NULL)
-  return(out)
-}
-

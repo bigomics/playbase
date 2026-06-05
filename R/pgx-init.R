@@ -326,7 +326,7 @@ pgx.initialize <- function(pgx, progress=NULL) {
       pgx$drugs$annot <- NULL
       pgx$drugs$combo <- NULL
     }
-    pgx <- pgx.update_drugs_results(pgx, model=NULL, img_model=NULL)
+    pgx <- pgx.update_drugs_results(pgx)
   }
   
   ## ----------------------------------------------------------------

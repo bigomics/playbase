@@ -64,9 +64,6 @@ pgx.wgcna <- function(
   gset.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]",
   compute.enrichment = TRUE,
   summary = NULL,
-  report = TRUE,
-  ai_model = NULL,
-  img_model = NULL,
   verbose = 1,
   progress = NULL
 ) {
@@ -170,16 +167,8 @@ pgx.wgcna <- function(
     )
   }
 
-  if (report && !is.null(ai_model)) {
-    if (!is.null(progress)) progress$set(message = "Creating report...", value = 0.6)
-    wgcna$report <- wgcna.create_report(
-      wgcna, ai_model = ai_model, graph=NULL, annot=pgx$genes, multi=FALSE,
-      ntop=100, topratio=0.85, psig=0.05, do.diagram = TRUE,
-      userprompt='', format="markdown", verbose=1, progress=NULL)    
-  }
-
   ## update
-  wgcna <- wgcna.init(wgcna, llm=ai_model, img_model=img_model, annot=pgx$genes)
+  wgcna <- wgcna.init(wgcna, annot=pgx$genes)
   
   ## save setting in object
   settings <- list(
@@ -194,8 +183,6 @@ pgx.wgcna <- function(
     # maxBlockSize = 9999,
     # gset.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]",
     # compute.enrichment = TRUE,
-    # summary = TRUE,
-    # ai_model = ai_model,
     NULL
   )
 
@@ -586,14 +573,9 @@ wgcna.create_lasagna_model <- function(wgcna, layers=NULL) {
 #' Init/update function
 #'
 #' @export
-wgcna.init <- function(wgcna, llm = NULL, img_model = NULL, annot = NULL,
+wgcna.init <- function(wgcna, annot = NULL,
                        sv.tom = 40, progress = NULL) {
-  if (!is.null(llm) && llm == "") llm <- NULL
-  if (!is.null(img_model) && img_model == "") img_model <- NULL
-
   if(is.null(wgcna)) return(NULL)
-  if(!is.null(llm) && llm=="") llm <- NULL
-  if(!is.null(img_model) && img_model=="") img_model <- NULL
   is.multi <- ("layers" %in% names(wgcna))
   
   if (is.null(wgcna$svTOM) && !is.null(wgcna$TOM)) {
@@ -636,49 +618,6 @@ wgcna.init <- function(wgcna, llm = NULL, img_model = NULL, annot = NULL,
     wgcna$graph <- wgcna$lasagna$graph
   }
 
-  if (is.null(wgcna$report) && !is.null(llm)) {
-    message("[wgcna.init] creating report...")
-    if (!is.null(progress)) progress$inc(0.1, "creating report...")
-    wgcna$report <- wgcna.create_report(
-      wgcna, ai_model=llm, graph=NULL, annot=annot, multi=is.multi,
-      ntop=100, topratio=0.85, psig=0.05, do.diagram = TRUE,
-      userprompt='', format="markdown", verbose=1, progress=NULL)
-  }
-
-  if (is.null(wgcna$report$diagram) && !is.null(llm)) {
-    message("[wgcna.init] creating missing diagram...")
-    if (!is.null(progress)) progress$inc(0.1, "creating diagram...")
-    diagram <- wgcna.create_diagram(
-      wgcna$report$report,
-      ai_model = llm, graph = wgcna$graph,
-      rankdir = "TB", correct = TRUE, double.check = TRUE
-    )
-    wgcna$report$diagram <- diagram
-  }
-
-  ## add infographic if missing
-  if (is.null(wgcna$report$infographic) && !is.null(img_model) &&
-        !is.null(wgcna$report) ) {
-    message("[wgcna.init] creating missing infographic...")
-    if (!is.null(progress)) progress$inc(0.1, "creating infographic...")
-    rpt <- wgcna$report
-    tmp <- wgcna.create_infographic(
-      rpt$report,
-      diagram = rpt$diagram,
-      prompt = NULL,
-      model = img_model,
-      add.fallback = FALSE,
-      filename = tempfile(fileext='.png'))
-    if(grepl("png$",tmp,ignore.case=TRUE)) {
-      img <- png::readPNG(tmp)
-    } else if(grepl("jpg$|jpeg$",tmp,ignore.case=TRUE)) {
-      img <- jpeg::readJPEG(tmp)
-    } else {
-      message("[wgcna.init] Error: invalid output image")
-      img <- NULL
-    }
-    wgcna$report$infographic <- img
-  }
   wgcna
 }
 
@@ -708,8 +647,6 @@ wgcna.compute_multiomics <- function(dataX,
                                      gset.methods = c("fisher", "gsetcor", "xcor"),
                                      gset.ntop = 1000,
                                      gset.xtop = 100,
-                                     report = TRUE,
-                                     ai_model = DEFAULT_LLM,
                                      experiment = "",
                                      verbose = 1,
                                      progress = NULL) {
@@ -736,8 +673,6 @@ wgcna.compute_multiomics <- function(dataX,
     gset.methods <- c("fisher", "gsetcor", "xcor")
     gset.ntop <- 1000
     gset.xtop <- 100
-    report <- TRUE
-    ai_model <- ""
     experiment <- ""
     verbose <- 1
     progress <- NULL
@@ -928,25 +863,6 @@ wgcna.compute_multiomics <- function(dataX,
     lasagna.graph <- lasagna.model$graph
   }
 
-  report.out <- NULL
-  if (report) {
-    ## Create summaries of each module.
-    ##
-    if (!is.null(progress)) progress$set(message = "Creating report...", value = 0.8)
-    if (!is.null(ai_model)) message("Creating report using ", ai_model)
-    if (is.null(ai_model) || ai_model == "") message("Creating dummy report")
-    report.out <- wgcna.create_report(
-      layers,
-      ai_model,
-      annot = annot,
-      multi = TRUE,
-      graph = lasagna.graph,
-      topratio = 0.85,
-      psig = 0.05,
-      verbose = 1
-    )
-  }
-
   ## get some settings
   power <- sapply(layers, function(a) a$net$power, USE.NAMES = FALSE)
   names(power) <- names(layers)
@@ -965,8 +881,6 @@ wgcna.compute_multiomics <- function(dataX,
     # maxBlockSize = 9999,
     gset.methods = gset.methods,
     # compute.enrichment = TRUE,
-    # summary = TRUE,
-    # ai_model = ai_model,
     NULL
   )
 
@@ -980,7 +894,6 @@ wgcna.compute_multiomics <- function(dataX,
     me.genes = me.genes,
     me.colors = me.colors,
     gsea = gsea,
-    report = report.out,
     datanames = datanames,
     lasagna = lasagna.model,  ## deprecate??
     graph = lasagna.graph,  
@@ -2177,9 +2090,6 @@ wgcna.runConsensusWGCNA <- function(exprList,
                                     cons.psig = 0.05,
                                     compute.stats = TRUE,
                                     compute.enrichment = TRUE,
-                                    summary = TRUE,
-                                    ai_model = DEFAULT_LLM,
-                                    experiment = "",
                                     gsea.mingenes = 10,
                                     gsea.ntop = 1000,
                                     gset.methods = c("fisher", "gsetcor", "xcor"),
@@ -2373,22 +2283,6 @@ wgcna.runConsensusWGCNA <- function(exprList,
       min.genes = gsea.mingenes,
       ntop = gsea.ntop
     )
-  }
-
-  if (summary) {
-    if (!is.null(progress)) progress$set(message = "Annotating modules...", value = 0.6)
-    message("Annotating modules using ", ai_model)
-    ai <- wgcna.describeModules(
-      res,
-      multi = FALSE,
-      ntop = 50,
-      model = ai_model,
-      annot = annot,
-      experiment = experiment,
-      verbose = 0
-    )
-    res$summary <- ai$answers
-    res$prompts <- ai$questions
   }
 
   res
@@ -2967,8 +2861,6 @@ wgcna.runPreservationWGCNA <- function(exprList,
     drop.ref = FALSE,
     compute.stats = FALSE,
     compute.enrichment = FALSE,
-    summary = FALSE,
-    ai_model = NULL,
     gsea.mingenes = 10,
     gset.methods = gset.methods
   )
@@ -5656,393 +5548,6 @@ wgcna.scaleTOMs <- function(TOMs, scaleP = 0.95) {
   return(TOMs)
 }
 
-
-#' Create report
-#'
-#' @export
-wgcna.create_report <- function(wgcna, ai_model,
-                                graph = NULL, annot=NULL, multi=NULL,
-                                ntop=100, topratio=0.85, psig=0.05,
-                                do.diagram = TRUE,
-                                userprompt='', format="markdown",
-                                verbose=1, progress=NULL) {
-  if(0) {
-    graph = NULL; annot=NULL; multi=FALSE;
-    ntop=100; topratio=0.85; psig=0.05;
-    format="markdown"; verbose=1;
-    progress=NULL
-  }
-  
-  if(is.null(ai_model)) ai_model <- ""
-  if(is.null(topratio)) topratio <- 0.85
-
-  if(is.null(multi)) {
-    is.mono <- all(c("datExpr","datTraits","net") %in% names(wgcna))
-    multi <- !is.null(wgcna$layers) || !is.mono
-  }
-  
-  if(!multi) {
-    layers <- list(gx = wgcna)
-  } else if (!is.null(wgcna$layers)) {
-    layers <- wgcna$layers
-  } else {
-    layers <- wgcna
-  }
-
-  ## get top modules (most correlated with some phenotype)
-  top.modules <- wgcna.getTopModules(layers, topratio=topratio, 
-    multi=TRUE) ## always multi format
-  top.modules
-
-  if (is.null(annot) && !is.null(layers[[1]]$annot)) {
-    annot <- layers[[1]]$annot
-  }
-  if (is.null(annot)) {
-    message("[wgcna.create_report] WARNING. providing user annot table is recommended.")
-  }
-
-  ## --------------------------------------------------------------------
-  ## Step 1. Describe modules with LLM. We can use one LLM model or more.
-  ## --------------------------------------------------------------------
-  if (!is.null(progress)) progress$set(message = "Extracting top modules...", value = 0.2)
-  if (verbose) message("Extracting top modules...")
-  out <- wgcna.describeModules(
-    layers,
-    modules = top.modules,
-    multi = TRUE, ## always true (we use list)
-    ntop = ntop, ## number of top genes or sets
-    annot = annot,
-    psig = psig,
-    experiment = wgcna$experiment,
-    verbose = verbose,
-    model = ""
-  )
-  names(out)
-  descriptions_prompts <- out$questions
-  descriptions <- out$answers
-
-  ## --------------------------------------------------------------------
-  ## Step 2: Make consensus summary from the descriptions.
-  ## --------------------------------------------------------------------
-  summaries <- list()
-  summaries_prompts <- list()
-  results <- NULL
-  if (ai_model != "") {
-    if (!is.null(progress)) progress$set(message = "Simmering modules...", value = 0.3)
-    if (verbose) message("Simmering modules...")
-    k <- 1
-    for (k in names(descriptions)) {
-      ss <- descriptions[[k]]
-      q2 <- paste("Following are descriptions of a certain WGCNA module by one or more LLMs. Create a consensus conclusion out of the independent descriptions. Describe the underlying biology, relate correlated phenotypes and mention key genes, proteins or metabolites. Just answer, no confirmation, use 1-2 paragraphs. Use prose as much as possible, do not use tables or bullet points.\n\n", ss)
-      cc <- ai.ask(q2, model = ai_model)
-      summaries[[k]] <- cc
-      summaries_prompts[[k]] <- q2
-    }
-    results <- summaries
-  } else {
-    if (verbose) message("Skipping module summaries...")
-    results <- descriptions
-  }
-
-  ## add compute setttings
-  ## if(!is.null(wgcna$settings)) {
-  ##   settings <- paste0(names(wgcna$settings),'=',wgcna$settings,collapse='; ')
-  ##   results[['compute_settings']] <- settings
-  ## }
-
-  ## collate all results
-  all.results <- lapply(names(results), function(me) {
-    paste0("================= ", me, " =================\n\n", results[[me]], "\n")
-  })
-  all.results <- paste(all.results, collapse = "\n")
-
-  ## --------------------------------------------------------------------
-  ## Step 3: Make detailed report. We concatenate all summaries and
-  ## ask a (better) LLM model to create a report.
-  ## --------------------------------------------------------------------
-  if (!is.null(progress)) progress$set(message = "Baking full report...", value = 0.6)
-  if (verbose) message("Baking full report...")
-
-  qq <- diagram <- report <- NULL
-  bullets <- ""
-
-  if (ai_model == "") {
-    report <- all.results
-  } else {
-    
-    qq <- "These are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed report for this experiment. Give a detailed interpretation of the underlying biology by connecting WGCNA modules into biological functional programs, referring to key genes, proteins or metabolites. Build an cross-module integrative biological narrative. Suggest similarity to known diseases and possible therapies. Add a discussion and conclusion. Omit abstract, future directions, limitations, or references. 
-
-Format like a scientific article, use prose as much as possible, minimize the use of tables and bullet points. For long tables show at least the top 5, and at most top 10, up and down entries. Do not inject any inline code. Only write if there was evidence in the source text."
-
-    if (multi) {
-      qq <- gsub("WGCNA", "multiomics WGCNA", qq)
-    }
-
-    xx <- wgcna$experiment
-    pp <- paste("You are a biologist interpreting results from a WGCNA analysis for this experiment:", xx, ".\n\n")
-    qq <- paste(pp, qq)
-
-    if (format == "markdown") {
-      qq <- paste(qq, "Format as markdown. Divide text in sections using hash.")
-    }
-    if (tolower(format) == "html") {
-      qq <- paste(qq, "Format as HTML. Divide text in sections using header tags.")
-    }
-    qq <- paste(qq, userprompt)
-    qq <- paste(qq, "\n\n<results>", all.results, "\n</results>")
-    ## Finally ask LLM
-    report <- ai.ask(qq, model = ai_model)
-    report <- gsub("^```html|```$", "", report)
-
-    ## --------------------------------------------------------------------
-    ## Step 4: Create diagram from report
-    ## -------------------------------------------------------------------
-    if (do.diagram && ai_model != "") {
-      if (!is.null(progress)) progress$set(message = "Mashing up diagram...", value = 0.8)
-      if (verbose) message("Mashing up diagram...")
-      if (is.null(graph) && !is.null(wgcna$graph)) graph <- wgcna$graph
-      diagram <- wgcna.create_diagram(
-        report,
-        ai_model = ai_model, graph = graph,
-        rankdir = "TB", correct = TRUE, double.check = TRUE
-      )
-    }
-
-    ## create bullet points
-    bullet_prompt <- paste0("**Instructions**: From the given report, extract 3 one-line  bullet points summarizing key take home messages. Keep sentences short. Give just the list items. No markup inside list items. \n\n***Report***:", report)
-    bullets <- ai.ask(bullet_prompt, model = ai_model)
-  }
-
-  # if there is no title, we add a generic one.
-  if (!grepl("^#[ ]|\n#[ ]", report)) {
-    tt <- "# WGCNA Analysis Report\n\n"
-    report <- paste(tt, report)
-  }
-  report <- gsub(intToUtf8("8209"), "-", report)
-
-  list(
-    descriptions_prompts = descriptions_prompts,
-    descriptions = descriptions,
-    summaries_prompts = summaries_prompts,
-    summaries = summaries,
-    report_prompt = qq,
-    report = report,
-    diagram = diagram,
-    bullets = bullets
-  )
-}
-
-correct_dot_diagram <- function(diagram) {
-  diagram <- iconv2ascii(diagram)
-  diagram <- gsub(".*```(mermaid|dot)\n|```", "", diagram)
-  diagram <- gsub(".*<[a-z]+>|</[a-z]+>.*", "", diagram)
-
-  ## force as digraph
-  diagram <- sub("^graph", "digraph", diagram)
-
-  ## crazy arrows
-  diagram <- gsub("-x->", "->", diagram)
-
-  ## remove anything after DOT last curly bracket
-  diagram <- sub("\\}\n.*", "}\n", diagram)
-  diagram <- gsub("\\[solid\\]", "[style=solid]", diagram)
-  diagram <- gsub("\\[dashed\\]", "[style=dashed]", diagram)
-
-  # avoid these problematic colors
-  diagram <- gsub("lightgreen", "palegreen", diagram) ## avoid
-  diagram <- gsub("lightorange", "lightsalmon", diagram) ## avoid
-  diagram <- gsub("fillcolor=black", "fillcolor=lightgrey", diagram) ## avoid
-  diagram <- gsub("#000000", "#AAAAAA", diagram) ## no black
-
-  # match 3- or 6-digit hex color with replace with quoted version
-  diagram <- gsub("(?<!['\"])\\b(#(?:[0-9A-Fa-f]{3}){1,2})\\b(?!['\"])",
-    "\"\\1\"", diagram,
-    perl = TRUE
-  )
-  diagram
-}
-
-
-#' Create DOT string object from graph object for sending to
-#' LLM. Clean unneeded attributes.
-#'
-wgcna.graph2dot <- function(graph) {
-  aa <- names(igraph::vertex_attr(graph))
-  aa <- intersect(aa, c("layer", "fc", "value"))
-  for (a in aa) graph <- igraph::delete_vertex_attr(graph, a)
-
-  bb <- names(igraph::edge_attr(graph))
-  bb <- intersect(bb, c("rho", "connection_type"))
-  for (b in bb) graph <- igraph::delete_edge_attr(graph, b)
-
-  file <- tempfile(fileext = ".dot")
-  igraph::write_graph(graph, file = file, format = "dot")
-  dot <- readChar(file, file.info(file)$size)
-  unlink(file)
-  dot
-}
-
-#' Change layout of DOT string object
-#'
-dot.rankdir <- function(dot, dir) {
-  if (dir == "TB") dot <- sub("rankdir=LR", "rankdir=TB", dot)
-  if (dir == "LR") dot <- sub("rankdir=TB", "rankdir=LR", dot)
-  dot
-}
-
-#' @export
-wgcna.create_diagram <- function(wgcna, ai_model, graph = NULL,
-                                 format = c("dot", "mermaid")[1], rankdir = "TB",
-                                 correct = TRUE, double.check = TRUE,
-                                 maxtry = 5, return.dbg = FALSE) {
-  if (all(c("datExpr", "report") %in% names(wgcna))) {
-    wgcna_report <- wgcna$report$report
-    if (is.null(graph)) graph <- wgcna$graph
-  } else {
-    wgcna_report <- wgcna
-  }
-
-  ## cleanup
-  wgcna_report <- iconv2ascii(wgcna_report)
-
-  dot <- NULL
-  if (!is.null(graph)) {
-    ## If we pass a graph (from e.g. Lasagna) we tell the LLM to use
-    ## the graph as starting point or template. This constrains the
-    ## connections and minimizes 'hallucinations'
-    message("[wgcna.create_diagram] using graph template...")
-    dot <- wgcna.graph2dot(graph)
-    qq <- "Create annotated directed diagram connecting modules according to the following WGCNA report. Use the given input graph as backbone. Use only strong connections."
-  } else {
-    ## If we do not pass a graph (from e.g. Lasagna) we let the LLM
-    ## connect the modules itself based on its external knowledge.
-    message("[wgcna.create_diagram] no graph template...")
-    qq <- "Create a annotated diagram connecting modules in the following WGCNA report."
-  }
-  qq <- paste(qq, "All modules must be connected with at least one other module. Annotate modules with main biological function and key features (gene, proteins or metabolites). Add extra nodes for inferred intermediate phenotypes. Use known scientific information to infer connectivity and directionality. Determine which phenotypes are causal and which phenotypes are observed effects. Suggest cause and effect relations that explain phenotypes and modules. Group modules with same biological functions.")
-  if (format == "mermaid") {
-    qq <- paste(qq, "\n\nGive the result in Mermaid format.")
-  } else {
-    qq <- paste(qq, "\n\nGive the result in DOT format.")
-  }
-  qq <- paste(qq, "Do not use comments. Layout in TB direction. Do not use any special characters, without headers or footer text. Do not use subgraphs. Edge weights correspond to correlation. Use solid lines for positive correlation, use dashed lines for negative correlation. Annotate modules with module name, biological function and key gene/protein or metabolite. Color fill nodes matching the WGCNA module names with light palette or with high transparency so we can still read well the text. Use hexadecimal color coding, add hash sign and put inside single quotes. Never use black for fill. Again, do not fill any nodes with black, use grey instead. Color phenotype nodes lightyellow. Use rectangular shapes for module nodes, use oval shapes for phenotype nodes. I repeat, do not just copy the input graph.")
-
-  qq <- paste(qq, "\n\n<report>", wgcna_report, "</report>")
-  if (!is.null(dot)) qq <- paste(qq, "\n\nbackbone:", dot)
-
-  code.error <- TRUE
-  ntry <- 1
-  while(code.error && ntry <= maxtry) {
-
-    ## add time stamp to avoid prompt caching
-    qq1 <- qq
-    qq1 <- paste(qq1, date()) 
-
-    aa <- ai.ask(qq1, model = ai_model)
-    aa0 <- aa
-
-    ## cleanup a little bit
-    aa <- iconv2ascii(aa)
-    aa <- gsub(".*<[a-z]+>|</[a-z]+>.*", "", aa)
-    diagram <- gsub(".*```(mermaid|dot)\n|```", "", aa)
-    diagram <- gsub("&", "and", diagram)
-    diagram <- dot.rankdir(diagram, dir = rankdir)
-
-    if (correct && format == "dot") {
-      diagram <- correct_dot_diagram(diagram)
-    }
-
-    ## check valid code
-    if (format == "dot") {
-      dg <- DiagrammeR::grViz(diagram)
-      out <- try(DiagrammeRsvg::export_svg(dg))
-      code.error <- inherits(out, "try-error")
-    } else {
-      code.error <- FALSE
-    }
-    ntry <- ntry + 1
-  }
-
-  if (code.error && return.dbg) {
-    return(list(aa0 = aa0, aa = aa, diagram = diagram))
-  }
-
-  diagram
-}
-
-
-#' Given the output from wgcna.create_report() this function creates
-#' an infographic by calling Gemini3. The genAI model is given the
-#' report and asked to adhere to the included or external given
-#' diagram (in DOT format).
-#'
-#' @export
-wgcna.create_infographic <- function(report, model, diagram=NULL,
-                                     prompt=NULL, add.fallback = FALSE,
-                                     format = c("file","image")[1],
-                                     filename = "infographic.png") {  
-
-  prompt <- paste(prompt, "\nCreate a graphical abstract according to the given diagram and information in the WGCNA report. Use scientific infographic style. Illustrate biological concepts with small graphics. \n\n", report, "\n---------------\n\n", diagram)
-  if (is.null(model) || model == "") {
-    model <- ai.get_image_models()
-  }
-  if (add.fallback) {
-    ## add fallback models
-    model <- unique(c(model, playbase::ai.get_image_models()))
-  }
-  outfile <- try(ai.create_image(
-    prompt = prompt, model = model,
-    format = "file", filename = filename
-  ))
-  if(inherits(outfile,"try-error")) return(NULL)
-  if(format == "image") {
-    if(grepl("png$",outfile,ignore.case=TRUE)) {
-      img <- png::readPNG(outfile)
-    } else if(grepl("jpg$|jpeg$",outfile,ignore.case=TRUE)) {
-      img <- jpeg::readJPEG(outfile)
-    } else {
-      message("[wgcna.init] Error: invalid output image")
-      img <- NULL
-    }
-    return(invisible(img))
-  }
-  return(invisible(outfile))
-}
-
-#' @export
-wgcna.create_module_infographic <- function(rpt, module, prompt = NULL,
-                                            #model = "gemini-2.5-flash-image"
-                                            model="gemini-3-pro-image-preview",
-                                            format = c("file","image")[1],
-                                            add.fallback = FALSE,
-                                            filename = "module-infographic.png") {
-  if (!module %in% names(rpt$summaries)) {
-    stop(paste("module", module, "not in report summaries"))
-  }
-  mm <- paste0("**", module, "**: ", rpt$summaries[[module]])
-  prompt <- paste(prompt, "Create an infographic summarizing the biological narrative of the following WGCNA module. Use visual style like scientific journals. Illustrate biological concepts with small graphics. Match the background with the name of the module with a very light shade. Include the module name in the title or image. No ornaments or frames around picture.\n\n", mm)
-  if (is.null(model) || model == "") {
-    model <- ai.get_image_models()
-  }
-  if (add.fallback) {
-    ## add fallback models
-    model <- unique(c(model, playbase::ai.get_image_models()))
-  }
-  outfile <- try(ai.create_image(prompt, model, filename = filename))
-  if(inherits(outfile,"try-error")) return(NULL)
-  if(format == "image") {
-    if(grepl("png$",outfile,ignore.case=TRUE)) {
-      img <- png::readPNG(outfile)
-    } else if(grepl("jpg$|jpeg$",outfile,ignore.case=TRUE)) {
-      img <- jpeg::readJPEG(outfile)
-    } else {
-      message("[wgcna.init] Error: invalid output image")
-      img <- NULL
-    }
-    return(invisible(img))
-  }
-  return(invisible(outfile))
-}
 
 #' Calculate compound significance scores per gene
 #' @param wgcna WGCNA result object with stats.
