@@ -2,17 +2,20 @@
 % Please edit documentation in R/ai-report.R
 \name{pgx.update_reports}
 \alias{pgx.update_reports}
-\title{Update all reports in pgx object. Create if missing.}
+\title{Generate AI reports for a PGX object.}
 \usage{
-pgx.update_reports(
-  pgx,
-  llm_model,
-  img_model = NULL,
-  verbose = 1,
-  force = FALSE,
-  select = c("wgcna", "mofa", "cmap", "summary")
-)
+pgx.update_reports(pgx, ai = NULL)
+}
+\arguments{
+\item{pgx}{PGX object.}
+
+\item{ai}{Report-generation options. \code{NULL} returns \code{pgx} unchanged.}
+}
+\value{
+PGX object with \code{pgx$ai} populated.
 }
 \description{
-Update all reports in pgx object. Create if missing.
+Dispatches each selected module to \code{ai.<module>.create_report(pgx, slice, ai)}
+and stores reports under \code{pgx$ai$<module>$report} and
+\code{pgx$ai$<module>$prompt}. Run-level metadata is stored in \code{pgx$ai$meta}.
 }

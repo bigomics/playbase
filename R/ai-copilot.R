@@ -15,10 +15,11 @@
   paste0("## ", title, "\n\n", value, "\n")
 }
 
-#' Create a compact text context for the legacy copilot.
+#' Build compact text context for the legacy copilot.
 #'
 #' @export
-ai.create_report <- function(pgx, sections = NULL, collate = TRUE, ntop = 20, ...) {
+ai.build_report_context <- function(pgx, sections = NULL, collate = TRUE,
+                                    ntop = 20, ...) {
   all_sections <- c(
     "description",
     "dataset_info",
