@@ -85,22 +85,24 @@
 
 .ai_dispatch_module <- function(module, pgx, ai) {
   fn_name <- .ai_report_module_function(module)
-  if (is.null(fn_name) || !exists(fn_name, mode = "function")) {
-    message("[pgx.update_reports] skipping '", module,
-            "' -- no entry point '", fn_name, "()'")
-    return(NULL)
+  if (is.null(fn_name)) {
+    return(structure(list(reason = "module not found"),
+                     class = "ai_report_skip"))
+  }
+  if (!exists(fn_name, mode = "function")) {
+    return(structure(list(reason = paste0("no entry point '", fn_name, "()'")),
+                     class = "ai_report_skip"))
   }
   fn <- get(fn_name, mode = "function")
   fn_args <- names(formals(fn))
   if (length(fn_args) < 3 || !identical(fn_args[1:3], c("pgx", "slice", "ai"))) {
-    message("[pgx.update_reports] skipping '", module, "' -- '", fn_name,
-            "' does not use signature (pgx, slice, ai)")
-    return(NULL)
+    return(structure(list(
+      reason = paste0("'", fn_name, "' does not use signature (pgx, slice, ai)")
+    ), class = "ai_report_skip"))
   }
   slice <- .ai_report_module_slice(module, pgx)
   if (is.null(slice)) {
-    message("[pgx.update_reports] skipping '", module, "' -- slot is empty")
-    return(NULL)
+    return(structure(list(reason = "slot is empty"), class = "ai_report_skip"))
   }
   fn(pgx, slice, ai)
 }
@@ -152,7 +154,15 @@ pgx.update_reports <- function(pgx, ai = NULL) {
         NULL
       }
     )
-    if (is.null(out)) next
+    if (inherits(out, "ai_report_skip")) {
+      message("[pgx.update_reports] skipping '", module, "', ", out$reason)
+      next
+    }
+    if (is.null(out)) {
+      message("[pgx.update_reports] skipping '", module,
+              "', no report returned")
+      next
+    }
     if (inherits(out, "ai_report_multi")) {
       for (key in names(out)) {
         slot_name <- paste0(module, "_", key)
