@@ -1384,6 +1384,13 @@ ggVolcano <- function(x,
   df$tooltip <- gsub("[\\'\\`-]", "", df$tooltip)
   df$name <- gsub("[\\'\\`-]", "", df$name)
 
+  ## Track whether the caller supplied explicit axis limits. When they do,
+  ## the view is set via coord_cartesian() (which clips) instead of the scale
+  ## limits (which would drop out-of-range points and their labels).
+  user_xlim <- !is.null(xlim)
+  user_ylim <- !is.null(ylim)
+  user_limits <- user_xlim || user_ylim
+
   if (is.null(ylim)) ylim <- max(y, na.rm = TRUE) * 1.1
   if (is.null(xlim)) {
     max.absx <- max(abs(x), na.rm = TRUE)
@@ -1531,13 +1538,19 @@ ggVolcano <- function(x,
       ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey")
   }
 
+  ## For user-supplied axes drop the hard scale limit (so points are not
+  ## removed) and let coord_cartesian clip the view below; non-supplied axes
+  ## keep their data-driven scale limits and expansion as before.
+  y_scale_limits <- if (user_ylim) NULL else c(0, ylim)
+  x_scale_limits <- if (user_xlim) NULL else xlim
+
   plt <- plt +
     ggplot2::scale_y_continuous(
-      limits = c(0, ylim),
+      limits = y_scale_limits,
       expand = ggplot2::expansion(mult = c(0, 0.05))
     ) +
     ggplot2::scale_x_continuous(
-      limits = xlim,
+      limits = x_scale_limits,
       expand = ggplot2::expansion(mult = c(0.07, 0.07))
     ) +
     ggplot2::labs(x = xlab, y = ylab) +
@@ -1605,10 +1618,20 @@ ggVolcano <- function(x,
     } else {
       plt <- plt + ggplot2::theme(legend.position = "none")
     }
+  }
 
-    if (isTRUE(ggprism_border)) {
-      plt <- plt + ggplot2::coord_cartesian(clip = "off")
-    }
+  ## Apply the axis view via a single coord_cartesian() so that (a) explicit
+  ## user limits clip rather than drop points, and (b) those limits survive
+  ## the ggprism border's clip="off" setting (a second coord_* would override
+  ## the first). Only added when actually needed to keep the default path
+  ## unchanged.
+  if (user_limits || isTRUE(use_ggprism && ggprism_border)) {
+    clip_val <- if (isTRUE(use_ggprism) && isTRUE(ggprism_border)) "off" else "on"
+    plt <- plt + ggplot2::coord_cartesian(
+      xlim = if (user_xlim) xlim else NULL,
+      ylim = if (user_ylim) c(0, ylim) else NULL,
+      clip = clip_val
+    )
   }
 
   if (!is.null(facet)) {
@@ -5192,6 +5215,8 @@ plotlyMA <- function(x,
 #' @param label Vector of labels for highlighted genes. Default NULL.
 #' @param label.cex Text size for labels. Default 1.
 #' @param shape Shape of points. Default is filled circle.
+#' @param xlim Numeric length-2 vector setting the x-axis range. Default NULL (auto).
+#' @param ylim Numeric length-2 vector setting the y-axis range. Default NULL (auto).
 #' @param color_up_down Color up/down regulated features
 #' @param marker.type Marker type (scatter, line, etc). Default "scatter".
 #' @param displayModeBar Show plotly modebar? Logical. Default TRUE.
@@ -5215,6 +5240,8 @@ plotlyVolcano <- function(x,
                           label.cex = 1,
                           shape = "circle",
                           max.absy = NULL,
+                          xlim = NULL,
+                          ylim = NULL,
                           color_up_down = TRUE,
                           colors = c(
                             up = "#f23451", notsig = "#8F8F8F",
@@ -5448,6 +5475,10 @@ plotlyVolcano <- function(x,
   xrange <- c(-1, 1) * max.absx * 1.05
   if (min(x, na.rm = TRUE) >= 0) xrange <- c(0, 1) * max.absx * 1.05
   yrange <- c(0, 1) * max.absy * 1.05
+  ## Caller-supplied axis limits override the computed ranges (clipping the
+  ## view without dropping data).
+  if (!is.null(xlim)) xrange <- xlim
+  if (!is.null(ylim)) yrange <- ylim
   xaxis <- list(title = xlab, range = xrange, showgrid = FALSE)
   yaxis <- list(title = list(text = ylab, standoff = 20L), range = yrange, showgrid = FALSE)
 
