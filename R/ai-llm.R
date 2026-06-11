@@ -135,6 +135,7 @@ ai.create_ellmer_chat <- function(model, system_prompt) {
       base_url = "https://api.x.ai/v1",
       name     = "xAI",
       model    = model1,
+      system_prompt = system_prompt,
       ##api_args = list(reasoning_effort = "none"),
       credentials = ellmer:::as_credentials(
         "xAI", function() Sys.getenv("XAI_API_KEY"),
