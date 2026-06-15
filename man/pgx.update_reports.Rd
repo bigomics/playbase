@@ -9,13 +9,13 @@ pgx.update_reports(pgx, ai = NULL)
 \arguments{
 \item{pgx}{PGX object.}
 
-\item{ai}{Report-generation options. \code{NULL} returns \code{pgx} unchanged.}
+\item{ai}{Report-generation options. `NULL` returns `pgx` unchanged.}
 }
 \value{
-PGX object with \code{pgx$ai} populated.
+PGX object with `pgx$ai` populated.
 }
 \description{
-Dispatches each selected module to \code{ai.<module>.create_report(pgx, slice, ai)}
-and stores reports under \code{pgx$ai$<module>$report} and
-\code{pgx$ai$<module>$prompt}. Run-level metadata is stored in \code{pgx$ai$meta}.
+Dispatches each selected module to `ai.<module>.create_report(pgx, slice, ai)`
+and stores reports under `pgx$ai$<module>$report` and
+`pgx$ai$<module>$prompt`. Run-level metadata is stored in `pgx$ai$meta`.
 }

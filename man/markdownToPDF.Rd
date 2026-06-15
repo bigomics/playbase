@@ -16,6 +16,35 @@ markdownToPDF(
   quiet = TRUE
 )
 }
+\arguments{
+\item{text}{Character vector containing markdown content to render. Multiple
+values are collapsed with newlines before rendering.}
+
+\item{file}{Single output path ending in `.pdf` or `.docx`.}
+
+\item{tmpdir}{Optional temporary directory used for the intermediate Quarto
+project files. Defaults to `tempdir()`.}
+
+\item{engine}{Quarto/LaTeX PDF engine name, such as `"pdflatex"` or
+`"lualatex"`.}
+
+\item{font}{Optional font or LaTeX font family passed into Quarto frontmatter.
+When `NULL`, a default is chosen for supported PDF engines.}
+
+\item{documentclass}{LaTeX document class to use for PDF output.}
+
+\item{force.ascii}{Logical flag indicating whether markdown content should be
+converted to ASCII before rendering.}
+
+\item{logo}{Optional path to a logo image added to the PDF header when the
+file exists.}
+
+\item{quiet}{Logical flag passed to `quarto::quarto_render()` to suppress
+Quarto output.}
+}
 \description{
-Export markdown to PDF
+This keeps the historical Quarto-based report export flow used by the
+webapp, while moving argument and output checks into small private helpers.
+The intent is to preserve the familiar rendering logic and make failures
+easier to diagnose when report export runs in production.
 }
