@@ -9,8 +9,7 @@ DEFAULT_LLM = NULL
 REMOTE_MODELS <- c(
   "openai:gpt-5.4-nano",
   "openai:gpt-5.4-mini",  
-  "xai:grok-4-1-fast-non-reasoning", 
-  "groq:openai/gpt-oss-20b",
+  "xai:grok-4.3", 
   "groq:openai/gpt-oss-120b",
   "google:gemini-3-flash-preview",
   "google:gemini-3.1-flash-lite-preview"  
