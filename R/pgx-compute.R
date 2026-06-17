@@ -196,7 +196,6 @@ pgx.createPGX <- function(counts,
                           add.gmt = TRUE,
                           settings = list(),
                           sc_compute_settings = list()) {
-
   message("[pgx.createPGX]===========================================")
   message("[pgx.createPGX]=========== pgx.createPGX =================")
   message("[pgx.createPGX]===========================================")
@@ -390,7 +389,7 @@ pgx.createPGX <- function(counts,
       kk <- grep("length|size", tolower(colnames(annot_table)))
       if (length(kk) > 0) feature.lengths <- annot_table[, kk[1]]
     }
-    for(i in 1:nrow(counts)) {
+    for (i in 1:nrow(counts)) {
       rownames(counts)[i] <- reorder_uniprots(rownames(counts)[i], feature.lengths[i])$feature
     }
     rownames(X) <- rownames(counts)
@@ -424,7 +423,7 @@ pgx.createPGX <- function(counts,
   ## Create gene annotation table
   pgx$genes <- NULL
   pgx$probe_type <- probe_type
-  
+
   message("[createPGX] annotating genes")
   pgx$genes <- getProbeAnnotation(
     organism = pgx$organism,
@@ -434,7 +433,7 @@ pgx.createPGX <- function(counts,
     probetype = pgx$probe_type,
     annot_table = annot_table
   )
-    
+
   ## Reorder uniprots in pgx$genes. Valid for all datatypes.
   message("[pgx.createPGX] Reordering uniprot column in pgx$genes")
   hh <- grep("uniprot", tolower(colnames(pgx$genes)))
@@ -442,7 +441,7 @@ pgx.createPGX <- function(counts,
     feature.lengths <- NULL
     kk <- grep("length|size", tolower(colnames(pgx$genes)))
     if (length(kk) > 0) feature.lengths <- as.character(pgx$genes[, kk[1]])
-    for(i in 1:nrow(pgx$genes)) {
+    for (i in 1:nrow(pgx$genes)) {
       pgx$genes[i, hh[1]] <- reorder_uniprots(pgx$genes[i, hh[1]], feature.lengths[i])$feature
     }
   }
