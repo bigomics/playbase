@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 ##
 
@@ -412,12 +412,14 @@ wgcna.compute <- function(X,
 
   if (!is.null(contrasts)) {
     message("[wgcna.compute] adding contrasts to datTraits")
+    contrasts <- contrasts[, !duplicated(colnames(contrasts)), drop = FALSE]
     ctx <- makeContrastsFromLabelMatrix(contrasts)
     ctx <- sign(ctx)
     ctx[ctx == 0] <- NA
     ctx[ctx == -1] <- 0
     datTraits <- cbind(datTraits, ctx)
   }
+  datTraits <- datTraits[, !duplicated(colnames(datTraits)), drop = FALSE]
 
   if (is.null(datTraits)) {
     message("WARNING:: no valid traits. creating random traits.")

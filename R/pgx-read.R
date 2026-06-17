@@ -505,17 +505,62 @@ read_h5_counts <- function(h5.file) {
           var_names <- as.character(rhdf5::h5read(h5.file, "/var/_index"))
           n_obs <- length(obs_names)
           n_vars <- length(var_names)
+          ## CSR indptr length = n_rows + 1; some tools write X as vars x obs (transposed)
+          n_csr_rows <- length(x_indptr) - 1L
+          transposed <- (n_csr_rows == n_vars && n_csr_rows != n_obs)
+          if (transposed) {
+            row_names <- var_names; col_names <- obs_names
+            n_rows <- n_vars;      n_cols    <- n_obs
+          } else {
+            row_names <- obs_names; col_names <- var_names
+            n_rows <- n_obs;        n_cols    <- n_vars
+          }
           message("[playbase::read_h5_counts] AnnData sparse CSR detected")
           message("[playbase::read_h5_counts] Size: ", n_obs, " cells; ", n_vars, " features")
-          row_idx <- rep(seq_len(n_obs), diff(as.integer(x_indptr)))
+          row_idx <- rep(seq_len(n_rows), diff(as.integer(x_indptr)))
           mat <- Matrix::sparseMatrix(
             i = row_idx,
             j = as.integer(x_indices) + 1L,
             x = as.numeric(x_data),
-            dims = c(n_obs, n_vars),
-            dimnames = list(obs_names, var_names)
+            dims = c(n_rows, n_cols),
+            dimnames = list(row_names, col_names)
           )
-          Matrix::t(mat) # transpose to genes x cells (standard counts convention)
+          ## ensure final result is genes x cells
+          counts_mat <- if (transposed) mat else Matrix::t(mat)
+
+          ## read /obs cell metadata
+          obs_meta <- tryCatch({
+            FF_obs <- FF[FF[, "group"] == "/obs", , drop = FALSE]
+            col_names_obs <- FF_obs[, "name"]
+            ## skip internal AnnData fields and sub-group entries
+            skip <- c("_index", "__categories")
+            is_subgroup <- col_names_obs %in% FF[FF[, "group"] != "/obs", "name"]
+            top_cols <- col_names_obs[!col_names_obs %in% skip & !is_subgroup]
+            ## also skip columns that have sub-paths (categorical stored as categories/codes)
+            has_subpath <- vapply(top_cols, function(cn) {
+              any(FF[, "group"] == paste0("/obs/", cn))
+            }, logical(1))
+            cat_cols  <- top_cols[has_subpath]
+            scal_cols <- top_cols[!has_subpath]
+
+            meta <- data.frame(row.names = obs_names)
+            for (cn in scal_cols) {
+              v <- tryCatch(as.vector(rhdf5::h5read(h5.file, paste0("/obs/", cn))), error = function(e) NULL)
+              if (!is.null(v) && length(v) == n_obs) meta[[cn]] <- v
+            }
+            for (cn in cat_cols) {
+              cats  <- tryCatch(as.character(rhdf5::h5read(h5.file, paste0("/obs/", cn, "/categories"))), error = function(e) NULL)
+              codes <- tryCatch(as.integer(rhdf5::h5read(h5.file, paste0("/obs/", cn, "/codes"))),      error = function(e) NULL)
+              if (!is.null(cats) && !is.null(codes) && length(codes) == n_obs) {
+                ## AnnData encodes missing categoricals as -1; map to NA
+                idx <- codes + 1L
+                meta[[cn]] <- ifelse(idx > 0L, cats[ifelse(idx > 0L, idx, 1L)], NA_character_)
+              }
+            }
+            if (ncol(meta) > 0) meta else NULL
+          }, error = function(e) NULL)
+
+          list(counts = counts_mat, samples = obs_meta)
         },
         error = function(w) {
           message("[playbase::read_h5_counts] AnnData read failed: ", conditionMessage(w))
@@ -525,8 +570,17 @@ read_h5_counts <- function(h5.file) {
     }
   }
 
-  if (is.null(df)) {
-    df <- tryCatch(
+  ## For AnnData path df is already list(counts, samples); unwrap for fallbacks
+  if (is.list(df) && all(c("counts", "samples") %in% names(df))) {
+    counts_mat <- df$counts
+    samples_df <- df$samples
+  } else {
+    counts_mat <- df
+    samples_df <- NULL
+  }
+
+  if (is.null(counts_mat)) {
+    counts_mat <- tryCatch(
       {
         Seurat::Read10X_h5(h5.file)
       },
@@ -536,8 +590,8 @@ read_h5_counts <- function(h5.file) {
     )
   }
 
-  if (is.null(df)) {
-    df <- tryCatch(
+  if (is.null(counts_mat)) {
+    counts_mat <- tryCatch(
       {
         playbase::h5.readMatrix(h5.file)
       },
@@ -547,13 +601,13 @@ read_h5_counts <- function(h5.file) {
     )
   }
 
-  if (!is.null(df) & (all(class(df) %in% c("matrix", "array")) || is(df, "sparseMatrix"))) {
+  if (!is.null(counts_mat) & (all(class(counts_mat) %in% c("matrix", "array")) || is(counts_mat, "sparseMatrix"))) {
     message("[playbase::read_h5_counts] Reading operation successfully completed. \n")
   } else {
     message("[playbase::read_h5_counts] df is null!")
   }
 
-  return(df)
+  return(list(counts = counts_mat, samples = samples_df))
 }
 
 

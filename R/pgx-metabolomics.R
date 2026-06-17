@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 
@@ -1320,6 +1320,11 @@ mx.create_metabolite_sets <- function(annot, gmin = 0, metmin = 5,
   }
 
   ## order on size, take out duplicated pathways
+  if (length(gmt) == 0L) {
+    info("[pgx.add_GMT] no metabolite sets matched annotation; returning empty list")
+    # prevent gmt[order(-sapply(gmt, length))] crash
+    return(list())
+  }
   gmt <- gmt[order(-sapply(gmt, length))]
   gmt <- gmt[!duplicated(names(gmt))]
   pw.id <- gsub(".*\\[|\\]", "", names(gmt))

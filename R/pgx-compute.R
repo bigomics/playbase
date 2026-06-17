@@ -1,29 +1,24 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 #' Create a pgx object
-#'
 #' This function creates a pgx object from files, which is the core object in the
 #' OmicsPlayground. It then runs the specified differential expression methods.
-#'
 #' @param counts.file Path to counts data file. Rows are genes, columns are samples.
 #' @param samples.file Path to samples data file. Rows are samples, columns are sample info.
 #' @param contrasts.file (optional) Path to contrasts file. Rows and columns define contrasts.
 #' @param gxmethods a string with the gene-level methods to use. The default value is \code{"trend.limma,edger.qlf,deseq2.wald"}
 #' @param gsetmethods a string with the gene-set methods to use. The default value is \code{"fisher,gsva,fgsea"}
 #' @param extra a string with the extra modules to use. The default value is \code{"meta.go,deconv,infer,drugs,wordcloud"}
-#'
 #' @return list. represents a pgx object. It contains the data and analysis results.
 #' @examples
 #' \dontrun{
-#'
 #' library(playbase)
 #' counts <- system.file("extdata", "counts.csv", package = "playbase")
 #' contrasts <- system.file("extdata", "contrasts.csv", package = "playbase")
 #' samples <- system.file("extdata", "samples.csv", package = "playbase")
-#'
 #' mypgx <- pgx.createFromFiles(counts, samples, contrasts)
 #' }
 #' @export
@@ -124,6 +119,9 @@ pgx.createFromFiles <- function(counts.file,
 #' @param batch.correct.method BC method. Default is "no_batch_correct" (meaning no batch correction).
 #' @param batch.pars BC variable. Default "autodetect" as per QC/BC tab in upload.
 #' @param covariates variables to regress out. Valid only for linear model-based tests.
+#' @param dma Differential methylation analysis. If datatype=="methylomics", can be DMP (default) vs. DMR. Else NULL.
+#' @param remove.xy.probes Logical. Only activated when datatype=="methylomics". Remove X- and Y-linked CpG probes.
+#' @param meth_type Type of array: 450K array or EPIC array
 #' @param auto.scale Logical indicating whether to automatically scale/center genes. Default is TRUE.
 #' @param filter.genes Logical indicating whether to filter lowly expressed genes. Default is TRUE.
 #' @param prune.samples Logical indicating whether to remove samples without contrasts. Default is FALSE.
@@ -158,7 +156,6 @@ pgx.createFromFiles <- function(counts.file,
 #' - `GMT`: Gene set matrix
 #' @import data.table
 #' @return List. PGX object containing input data and parameters.
-#'
 #' @export
 pgx.createPGX <- function(counts,
                           samples,
@@ -169,6 +166,7 @@ pgx.createPGX <- function(counts,
                           max.genesets = 5000,
                           name = "Data set",
                           datatype = "RNA-seq",
+                          datatype_subtype = NULL,
                           azimuth_ref = "pbmcref",
                           probe_type = NULL,
                           creator = "unknown",
@@ -180,7 +178,10 @@ pgx.createPGX <- function(counts,
                           dotimeseries = FALSE,
                           batch.correct.method = "no_batch_correct",
                           batch.pars = "<autodetect>",
-                          covariates = NULL, ## new
+                          covariates = NULL,
+                          dma = NULL, ## new
+                          remove.xy.probes = FALSE, ## new
+                          meth_type = NULL, ## new
                           auto.scale = TRUE,
                           filter.genes = TRUE,
                           exclude.genes = NULL,
@@ -200,6 +201,9 @@ pgx.createPGX <- function(counts,
   message("[pgx.createPGX]===========================================")
   message("\n")
   message("[pgx.createPGX] datatype = ", datatype, "\n")
+  if (!is.null(datatype_subtype)) {
+    message("[pgx.createPGX] datatype_subtype = ", datatype_subtype, "\n")
+  }
 
   if (is.null(counts)) stop("[pgx.createPGX] FATAL: counts must be provided")
   if (is.null(samples)) stop("[pgx.createPGX] FATAL: samples must be provided")
@@ -399,6 +403,7 @@ pgx.createPGX <- function(counts,
     date = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
     creator = creator,
     datatype = datatype,
+    datatype_subtype = datatype_subtype,
     description = description,
     metadata = metadata,
     samples = data.frame(samples, check.names = FALSE),
@@ -409,6 +414,7 @@ pgx.createPGX <- function(counts,
     total_counts = Matrix::colSums(counts, na.rm = TRUE),
     counts_multiplier = counts_multiplier,
     covariates = covariates,
+    dma = dma,
     settings = settings,
     versions = versions,
     sc_compute_settings = sc_compute_settings
@@ -423,6 +429,7 @@ pgx.createPGX <- function(counts,
     organism = pgx$organism,
     probes = rownames(pgx$counts),
     datatype = pgx$datatype,
+    meth_type = meth_type,
     probetype = pgx$probe_type,
     annot_table = annot_table
   )
@@ -461,7 +468,7 @@ pgx.createPGX <- function(counts,
     ii <- match(rownames(pgx$counts), rownames(pgx$genes))
     pgx$genes <- pgx$genes[ii, , drop = FALSE]
   }
-
+  
   ## -------------------------------------------------------------------
   ## Filter genes
   ## -------------------------------------------------------------------
@@ -485,14 +492,25 @@ pgx.createPGX <- function(counts,
       exstr <- strsplit(tolower(exclude.genes), split = "[ ,]")[[1]]
       exexpr <- paste(c(paste0("^", exstr), paste0(exstr, "$")), collapse = "|")
       exgene <- grepl(exexpr, tolower(pgx$genes$symbol))
-      if (sum(exgene)) {
-        pgx$genes <- pgx$genes[which(!exgene), , drop = FALSE]
-      }
+      if (sum(exgene)) pgx$genes <- pgx$genes[which(!exgene), , drop = FALSE]
     }
 
-    ## conform
     pgx$counts <- pgx$counts[rownames(pgx$genes), , drop = FALSE]
     pgx$X <- pgx$X[rownames(pgx$genes), , drop = FALSE]
+  }
+
+  ## Methylomics arrays: if user-specified, remove X- & Y-linked CpG probes.
+  if (pgx$datatype == "methylomics" & remove.xy.probes) {
+    kk <- intersect(c("chr", "map"), colnames(pgx$genes))[1]
+    if (length(kk) > 0) {
+      jj <- grep("chrX|chrY|^X|^Y", pgx$genes[,kk], ignore.case = TRUE)
+      if (length(jj) > 0) {
+        message("[pgx.createPGX] Methylomics: removing ", length(jj), " X- & Y-linked CpG probes...")
+        pgx$counts <- pgx$counts[-jj, , drop = FALSE]
+        pgx$X <- pgx$X[-jj, , drop = FALSE]
+        pgx$genes <- pgx$genes[-jj, , drop = FALSE]
+      }
+    }
   }
 
   ## -------------------------------------------------------------------
@@ -625,6 +643,7 @@ pgx.createPGX <- function(counts,
   message("\n\n")
 
   return(pgx)
+
 }
 
 
@@ -684,6 +703,7 @@ pgx.computePGX <- function(pgx,
                            libx.dir = NULL,
                            progress = NULL,
                            user_input_dir = getwd()) {
+  
   message("[pgx.computePGX]===========================================")
   message("[pgx.computePGX]========== pgx.computePGX =================")
   message("[pgx.computePGX]===========================================")
@@ -778,11 +798,6 @@ pgx.computePGX <- function(pgx,
     pgx <- pgx.clusterGenes(pgx, methods = mm, level = "gene")
   }
 
-  ## -----------------------------------------------------------------------------
-  ## Filter genes (previously in compute_testGenesSingleOmics). NEED
-  ## RETHINK?? MOVE TO PGXCREATE??
-  ## -----------------------------------------------------------------------------
-
   ## Shrink number of genes (highest SD/var)
   if (max.genes > 0 && nrow(pgx$counts) > max.genes) {
     message("shrinking data matrices: n= ", max.genes)
@@ -797,10 +812,6 @@ pgx.computePGX <- function(pgx,
   gg <- intersect(rownames(pgx$counts), rownames(pgx$X))
   pgx$counts <- pgx$counts[gg, ]
   pgx$X <- pgx$X[gg, ]
-
-  ## ======================================================================
-  ## ================= Run tests ==========================================
-  ## ======================================================================
 
   pgx$timings <- c()
   GENETEST.METHODS <- c(
@@ -865,6 +876,9 @@ pgx.computePGX <- function(pgx,
     user_input_dir = user_input_dir
   )
 
+  ## methylomics: ensure all OPG graphics & tables use beta.
+  if (pgx$datatype == "methylomics") pgx$X <- playbase::mToBeta(pgx$X)
+  
   info("[pgx.computePGX] DONE")
   return(pgx)
 }
