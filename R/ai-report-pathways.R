@@ -73,11 +73,7 @@
     effect <- fx[, contrast]
     qvalue <- q[, contrast]
     significant <- is.finite(effect) & is.finite(qvalue) & qvalue < q_threshold
-    candidates <- which(if (any(significant)) {
-      significant
-    } else {
-      is.finite(effect) & is.finite(qvalue)
-    })
+    candidates <- which(is.finite(effect) & is.finite(qvalue))
     candidates <- candidates[order(qvalue[candidates], -abs(effect[candidates]))]
     up <- head(candidates[effect[candidates] > 0], n)
     down <- head(candidates[effect[candidates] < 0], n)
@@ -117,8 +113,8 @@
   paste(blocks, collapse = "\n\n---\n\n")
 }
 
-pathways_build_report_tables <- function(slice, pgx, ntop = 12L,
-                                         cross_n = 35L, q_threshold = 0.05) {
+pathways_build_report_tables <- function(slice, pgx, ntop = 50L,
+                                         cross_n = 50L, q_threshold = 0.05) {
   if (!requireNamespace("omicsai", quietly = TRUE)) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
@@ -204,7 +200,7 @@ ai.pathways.create_report <- function(pgx, slice, ai) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
 
-  ntop <- min(as.integer(ai$ntop), 12L)
+  ntop <- min(as.integer(ai$ntop), 50L)
   data_block <- pathways_build_report_tables(slice, pgx, ntop = ntop)$text
   bp <- .ai_report_build_prompt(pgx, "pathways", data_block)
   out <- .ai_report_run_prompt(bp, ai)

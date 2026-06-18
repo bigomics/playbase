@@ -32,8 +32,7 @@
 .de_gene_table <- function(pgx, mx, direction, n = 12L) {
   keep <- is.finite(mx$meta.fx) & is.finite(mx$meta.q)
   keep <- keep & if (direction == "up") mx$meta.fx > 0 else mx$meta.fx < 0
-  significant <- keep & mx$meta.q < 0.05
-  candidates <- which(if (any(significant)) significant else keep)
+  candidates <- which(keep)
   if (!length(candidates)) return(data.frame())
 
   ord <- candidates[order(mx$meta.q[candidates], -abs(mx$meta.fx[candidates]),
@@ -140,7 +139,7 @@
   paste(details, collapse = "\n\n---\n\n")
 }
 
-de_build_report_tables <- function(slice, pgx, ntop = 12L, cross_n = 35L) {
+de_build_report_tables <- function(slice, pgx, ntop = 50L, cross_n = 50L) {
   if (!requireNamespace("omicsai", quietly = TRUE)) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
@@ -203,7 +202,7 @@ ai.de.create_report <- function(pgx, slice, ai) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
 
-  ntop <- min(as.integer(ai$ntop), 12L)
+  ntop <- min(as.integer(ai$ntop), 50L)
   data_block <- de_build_report_tables(slice, pgx, ntop = ntop)$text
   bp <- .ai_report_build_prompt(pgx, "de", data_block)
   out <- .ai_report_run_prompt(bp, ai)

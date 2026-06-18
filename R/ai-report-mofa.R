@@ -63,7 +63,7 @@ mofa_rank_factors <- function(factor_summary) {
   factor_summary$factor[order(score, decreasing = TRUE)]
 }
 
-.mofa_report_data <- function(mofa, pgx, n_factors = 6L, ntop = 8L) {
+.mofa_report_data <- function(mofa, pgx, n_factors = 6L, ntop = 25L) {
   factors <- .mofa_factor_choices(mofa)
   if (!length(factors)) {
     empty <- data.frame()
@@ -198,7 +198,7 @@ mofa_rank_factors <- function(factor_summary) {
     if (!is.data.frame(g) || !all(c("pathway", "NES", "padj") %in% names(g))) next
     g$NES <- suppressWarnings(as.numeric(g$NES))
     g$padj <- suppressWarnings(as.numeric(g$padj))
-    g <- g[!is.na(g$padj) & g$padj < 0.05, , drop = FALSE]
+    g <- g[!is.na(g$NES), , drop = FALSE]
     if (!nrow(g)) next
     g <- head(g[order(abs(g$NES), decreasing = TRUE), , drop = FALSE], ntop)
     rows[[f]] <- data.frame(
@@ -268,7 +268,7 @@ mofa_rank_factors <- function(factor_summary) {
 #' @param n_factors Number of factors selected for report detail.
 #' @param ntop Number of feature/pathway/trait rows per factor.
 #' @return List with rendered `text` and raw `data` tables.
-mofa_build_report_tables <- function(mofa, pgx, n_factors = 6L, ntop = 8L) {
+mofa_build_report_tables <- function(mofa, pgx, n_factors = 6L, ntop = 25L) {
   if (!requireNamespace("omicsai", quietly = TRUE)) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
@@ -313,7 +313,7 @@ mofa_assemble_prompt <- function(slice, pgx, ai) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
   n_factors <- ai$n_factors %||% 6L
-  ntop <- min(as.integer(ai$ntop %||% 8L), 12L)
+  ntop <- min(as.integer(ai$ntop %||% 25L), 50L)
   tables <- mofa_build_report_tables(slice, pgx, n_factors = n_factors, ntop = ntop)
   .ai_report_build_prompt(
     pgx, "mofa", tables$text,
