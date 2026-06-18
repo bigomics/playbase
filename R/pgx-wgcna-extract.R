@@ -1,12 +1,12 @@
 ## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 
 # =============================================================================
-# WGCNA AI-report extraction module
+# WGCNA result extraction helpers
 # =============================================================================
-# Helpers consumed by the omicsplayground board.wgcna AI-report layer plus
-# multi-omics / consensus variants. This module owns all "describe the
-# computed WGCNA result" logic; pgx-wgcna.R retains only the compute side
-# (wgcna.compute, wgcna.computeGeneStats, plot helpers, etc).
+# Helpers consumed by the omicsplayground board.wgcna layer plus multi-omics /
+# consensus variants. This module owns the "extract the computed WGCNA result"
+# logic; pgx-wgcna.R retains only the compute side (wgcna.compute,
+# wgcna.computeGeneStats, plot helpers, etc).
 #
 # Migration history (epic playbase-fad):
 #   - Original symbols lived in pgx-wgcna.R lines 5599-5989 alongside the
@@ -419,148 +419,4 @@ wgcna.ensureStats <- function(wgcna) {
   }
 
   wgcna
-}
-
-
-# -----------------------------------------------------------------------------
-# Describe modules (legacy LLM helper)
-# -----------------------------------------------------------------------------
-
-#' Per-module LLM description helper.
-#'
-#' Used by `wgcna.create_report()` and other pre-AI-report-tab features. The
-#' newer AI-report tab in board.wgcna does not call this; it builds its own
-#' structured prompts via the omicsai stack.
-#'
-#' @export
-wgcna.describeModules <- function(wgcna, ntop=50, psig = 0.05,
-                                  annot=NULL, multi=FALSE, modules=NULL,
-                                  experiment=NULL, verbose=1, model=DEFAULT_LLM,
-                                  docstyle = "detailed summary", numpar = 2,
-                                  level="gene")  {
-
-  if(is.null(annot)) {
-    message("[wgcna.describeModules] WARNING. user annot table is recommended.")
-  }
-
-  if(multi) {
-    top <- wgcna.getMultiTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
-      psig=psig, level=NULL, rename="gene_title")
-  } else {
-    top <- wgcna.getTopGenesAndSets(wgcna, annot=annot, ntop=ntop,
-      psig=psig, level=level, rename="gene_title")
-  }
-
-  if(is.null(modules)) {
-    modules <- union(names(top$genes), names(top$sets))
-  }
-
-  if(is.null(experiment) && !is.null(wgcna$experiment)) experiment <- wgcna$experiment
-  if(is.null(experiment)) experiment <- ""
-
-  if(length(modules)==0) {
-    info("[wgcna.describeModules] warning: empty module list!")
-    return(NULL)
-  }
-
-  ## If no LLM is available we do just a manual summary
-  model <- setdiff(model, c("", NA))
-  if (is.null(model) || length(model) == 0) {
-    desc <- list()
-    for(m in modules) {
-      ss=gg=pp=nn="<none>"
-
-      if(!is.null(top$genes[[m]])) {
-        gg <- paste( top$genes[[m]], collapse=', ')
-      }
-      if(!is.null(top$sets[[m]])) {
-        ss <- paste( sub(".*:","",top$sets[[m]]), collapse='; ')
-      }
-      if(m %in% names(top$pheno)) {
-        pp <- paste( top$pheno[[m]], collapse='; ')
-      }
-      if(m %in% names(top$neg.pheno)) {
-        nn <- paste( top$neg.pheno[[m]], collapse='; ')
-      }
-      d <- ""
-      if(!is.null(pp)) d <- paste(d, "**Positively correlated phenotypes**:", pp, "\n\n")
-      if(!is.null(nn)) d <- paste(d, "**Negatively correlated phenotypes**:", nn, "\n\n")
-      if(!is.null(gg) && gg!="") {
-        d <- paste(d, "**Key genes**:", gg, "\n\n")
-      }
-      if(!is.null(ss) && ss!="") {
-        d <- paste(d, "**Top enriched gene sets**:", ss, "\n\n")
-      }
-      desc[[m]] <- d
-    }
-
-    res <- list(
-      prompt = NULL,
-      questions = NULL,
-      answers = desc
-    )
-    return(res)
-  }
-
-  prompt <- paste("Give a",docstyle,"of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. After that, shortly discuss if any of these key genes/proteins/metabolites might be involved in the biological function. No need to mention all, just a few. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about \"<EXPERIMENT>\". Use maximum",numpar,"paragraphs. Use prose, do not use any bullet points or tables. \n\nHere is list of enriched gene sets:\n <GENESETS>\n\n")
-
-  prompt <- paste("These are part of the results of a WGCNA analysis of an experiment about \"<EXPERIMENT>\". Give a", docstyle, "of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. Discuss the possible relationship with positively correlated phenotypes <PHENOTYPES> and, if not obvious, negatively correlated phenotypes <NEGPHENOTYPES>. Use maximum", numpar, "paragraphs. Do not use any bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n")
-
-  if (verbose > 1) cat(prompt)
-
-  desc <- list()
-  questions <- list()
-  for (k in modules) {
-    if (verbose > 0) message("Describing module ", k)
-
-    ss=gg=pp=nn=""
-    if(length(top$sets[[k]])>0) {
-      ss <- sub( ".*:","", top$sets[[k]] )
-      ss <- paste(ss, collapse=';')
-    } else {
-      ss <- "[no significant genesets]"
-    }
-
-    if(k %in% names(top$pheno)) {
-      pp <- paste0("'",top$pheno[[k]],"'")
-      pp <- paste( pp, collapse=';')
-    }
-    if(k %in% names(top$neg.pheno)) {
-      nn <- paste0("'",top$neg.pheno[[k]],"'")
-      nn <- paste( nn, collapse=';')
-    }
-
-    q <- prompt
-
-    if(length(top$genes[[k]])>0) {
-      gg <- paste( top$genes[[k]], collapse=';')
-      q <- paste(q, "\nHere is the list of key genes/proteins/metabolites, or so-called 'features'. Only use features that are in this list in your answer. Do not mention features not in this list. : <KEYGENES>\n")
-    }
-
-    q <- sub("<MODULE>", k, q)
-    q <- sub("<PHENOTYPES>", pp, q)
-    q <- sub("<NEGPHENOTYPES>", nn, q)
-    q <- sub("<EXPERIMENT>", experiment, q)
-    q <- sub("<GENESETS>", ss, q)
-    q <- sub("<KEYGENES>", gg, q)
-
-    answer <- ""
-    for (m in model) {
-      if (verbose > 0) message("  ...asking LLM model ", m)
-      a <- ai.ask(q, model = m)
-      a <- paste0(a, "\n\n[AI generated using ", m, "]\n")
-      if (length(model) > 1) a <- paste0("\n-------------------------------\n\n", a)
-      answer <- paste0(answer, a)
-    }
-
-    desc[[k]] <- answer
-    questions[[k]] <- q
-  }
-
-  res <- list(
-    prompt = prompt,
-    questions = questions,
-    answers = desc
-  )
-  return(res)
 }

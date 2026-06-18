@@ -650,6 +650,7 @@ pgx.createPGX <- function(counts,
 #' @param extra.methods Additional analysis methods to run. Default is c("meta.go", "infer", "deconv", "drugs", "wordcloud", "wgcna")[c(1, 2)].
 #' @param libx.dir Directory containing custom analysis modules.
 #' @param progress A progress object for tracking status.
+#' @param ai_features Optional list of AI features to run after core compute.
 #'
 #' @details
 #' The slots created by pgx.computePGX are the following:
@@ -689,6 +690,7 @@ pgx.computePGX <- function(pgx,
                            pgx.dir = NULL,
                            libx.dir = NULL,
                            progress = NULL,
+                           ai_features = NULL,
                            user_input_dir = getwd()) {
   message("[pgx.computePGX]===========================================")
   message("[pgx.computePGX]========== pgx.computePGX =================")
@@ -870,6 +872,16 @@ pgx.computePGX <- function(pgx,
     libx.dir = libx.dir,
     user_input_dir = user_input_dir
   )
+
+  if (!is.null(ai_features)) {
+    if (!is.list(ai_features)) {
+      stop("[pgx.computePGX] ai_features must be a list", call. = FALSE)
+    }
+    if (!is.null(ai_features$reports)) {
+      message("[pgx.computePGX] generating AI reports...")
+      pgx <- pgx.update_reports(pgx, ai = ai_features$reports)
+    }
+  }
 
   info("[pgx.computePGX] DONE")
   return(pgx)

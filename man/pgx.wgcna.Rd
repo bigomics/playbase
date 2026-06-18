@@ -19,9 +19,6 @@ pgx.wgcna(
   gset.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]",
   compute.enrichment = TRUE,
   summary = NULL,
-  report = TRUE,
-  ai_model = NULL,
-  img_model = NULL,
   verbose = 1,
   progress = NULL
 )

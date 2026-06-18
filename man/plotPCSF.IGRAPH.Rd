@@ -17,9 +17,6 @@ plotPCSF.IGRAPH(
   ...
 )
 }
-\arguments{
-\item{x}{}
-}
 \description{
 Plot static igraph PCSF graph from result of
   pgx.computePCSF. To be called from plotPCSF.

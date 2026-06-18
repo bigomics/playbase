@@ -22,6 +22,7 @@ pgx.computePGX(
   pgx.dir = NULL,
   libx.dir = NULL,
   progress = NULL,
+  ai_features = NULL,
   user_input_dir = getwd()
 )
 }
@@ -49,6 +50,8 @@ pgx.computePGX(
 \item{libx.dir}{Directory containing custom analysis modules.}
 
 \item{progress}{A progress object for tracking status.}
+
+\item{ai_features}{Optional list of AI features to run after core compute.}
 
 \item{time}{Whether perform time series analysis or not. Default FALSE}
 }

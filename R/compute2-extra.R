@@ -19,8 +19,7 @@ compute_extra <- function(pgx, extra = c(
                             "meta.go", "infer", "deconv", "drugs", ## "graph",
                             "connectivity", "wordcloud", "wgcna", "wgcna_mox", "mofa"
                           ), sigdb = NULL, pgx.dir = "./data", libx.dir = "./libx",
-                          user_input_dir = getwd(),
-                          llm_model = NULL, img_model = NULL
+                          user_input_dir = getwd()
                           ) {
   timings <- c()
 
@@ -239,8 +238,7 @@ compute_extra <- function(pgx, extra = c(
       tryCatch(
         {
           pgx$wgcna <- pgx.wgcna(
-            pgx,
-            ai_model = llm_model ## no AI by default (yet)
+            pgx
           )
         },
         error = function(e) {
@@ -273,8 +271,7 @@ compute_extra <- function(pgx, extra = c(
             compute.enrichment = TRUE,
             add.gsets = FALSE,
             add.pheno = FALSE,
-            do.consensus = FALSE,
-            report = FALSE
+            do.consensus = FALSE
           )
         },
         error = function(e) {
@@ -299,9 +296,7 @@ compute_extra <- function(pgx, extra = c(
             ntop = 2000,
             gset.ntop = 2000,
             numfactors = 10,
-            add_gsets = FALSE,
-            llm_model = llm_model,
-            img_model = img_model
+            add_gsets = FALSE
           )
         },
         error = function(e) {

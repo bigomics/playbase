@@ -1,7 +1,7 @@
 Package: playbase
 Type: Package
 Title: Core back-end functionality and logic for OmicsPlayground
-Version: 4.1.0
+Version: 4.1.02
 Author: BigOmics Analytics SA
 Maintainer: The package maintainer <ivo.kwee@bigomics.com>
 Description: More about what it does (maybe more than one line)
@@ -20,10 +20,8 @@ Imports:
     AnnotationHub,
     ape,
     ArrayExpress,
-    assertthat,
     aws.s3,
     base,
-    base64enc,
     batchelor,
     beeswarm,
     Biobase,
@@ -44,8 +42,6 @@ Imports:
     data.table,
     DeconRNASeq,
     DESeq2,
-    DiagrammeR,
-    DiagrammeRsvg,
     dplyr,
     DT,
     dynamicTreeCut,
@@ -79,15 +75,11 @@ Imports:
     harmony,
     HiClimR,
     htmlwidgets,
-    httr,
     igraph,
     iheatmapr,
     IntNMF,
     irlba,
     isva,
-    jpeg,
-    jsonlite,
-    knitr,
     lazyeval,
     limma,
     magrittr,
@@ -108,6 +100,7 @@ Imports:
     MultiAssayExperiment,
     nipalsMCIA,
     OlinkAnalyze,
+    omicsai,
     org.Hs.eg.db,
     org.Mm.eg.db,
     org.Rn.eg.db,
@@ -146,7 +139,6 @@ Imports:
     rliger,
     rpart,
     rpart.plot,
-    rsvg,
     Rtsne,
     ruv,
     RUVSeq,
