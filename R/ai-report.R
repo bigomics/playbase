@@ -57,6 +57,10 @@
   )
 }
 
+.ai_report_normheadings <- function(report) {
+  omicsai::omicsai_normheadings(report)
+}
+
 .ai_report_module_function <- function(module) {
   switch(module,
     wgcna     = "ai.wgcna.create_report",
@@ -166,11 +170,16 @@ pgx.update_reports <- function(pgx, ai = NULL) {
     if (inherits(out, "ai_report_multi")) {
       for (key in names(out)) {
         slot_name <- paste0(module, "_", key)
-        pgx$ai[[slot_name]] <- list(report = out[[key]]$report,
-                                    prompt = out[[key]]$prompt)
+        pgx$ai[[slot_name]] <- list(
+          report = .ai_report_normheadings(out[[key]]$report),
+          prompt = out[[key]]$prompt
+        )
       }
     } else {
-      pgx$ai[[module]] <- list(report = out$report, prompt = out$prompt)
+      pgx$ai[[module]] <- list(
+        report = .ai_report_normheadings(out$report),
+        prompt = out$prompt
+      )
     }
   }
 

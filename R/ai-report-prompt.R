@@ -77,7 +77,7 @@
                                  system_prompt = bp$system)
   res <- omicsai::omicsai_gen_text(bp$board, config = cfg)
   list(
-    report = res$text,
+    report = .ai_report_normheadings(res$text),
     prompt = paste0("# SYSTEM\n\n", bp$system,
                     "\n\n---\n\n# BOARD\n\n", bp$board)
   )
