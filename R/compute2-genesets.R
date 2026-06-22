@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 
@@ -89,6 +89,10 @@ compute_testGenesets <- function(pgx,
     }
   }
 
+  if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {
+    X1 <- playbase::betaToM(X1) 
+  }
+  
   gset.meta <- gset.fitContrastsWithAllMethods(
     gmt = gmt,
     X = X1,

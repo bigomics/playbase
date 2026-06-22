@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 ##
 
@@ -398,12 +398,14 @@ wgcna.compute <- function(X,
 
   if (!is.null(contrasts)) {
     message("[wgcna.compute] adding contrasts to datTraits")
+    contrasts <- contrasts[, !duplicated(colnames(contrasts)), drop = FALSE]
     ctx <- makeContrastsFromLabelMatrix(contrasts)
     ctx <- sign(ctx)
     ctx[ctx == 0] <- NA
     ctx[ctx == -1] <- 0
     datTraits <- cbind(datTraits, ctx)
   }
+  datTraits <- datTraits[, !duplicated(colnames(datTraits)), drop = FALSE]
 
   if (is.null(datTraits)) {
     message("WARNING:: no valid traits. creating random traits.")
@@ -523,11 +525,10 @@ wgcna.compute <- function(X,
 
 #' Create lasagna graph for wgcna object
 #'
-#' 
-wgcna.create_lasagna_model <- function(wgcna, layers=NULL) {
-
-  if(is.null(layers)) {
-    if(!is.null(wgcna$layers)) {
+#'
+wgcna.create_lasagna_model <- function(wgcna, layers = NULL) {
+  if (is.null(layers)) {
+    if (!is.null(wgcna$layers)) {
       layers <- wgcna$layers
     } else {
       layers <- list(gx = wgcna)
@@ -577,7 +578,7 @@ wgcna.init <- function(wgcna, annot = NULL,
                        sv.tom = 40, progress = NULL) {
   if(is.null(wgcna)) return(NULL)
   is.multi <- ("layers" %in% names(wgcna))
-  
+
   if (is.null(wgcna$svTOM) && !is.null(wgcna$TOM)) {
     ## sv.tom <- ceiling(min(sv.tom,dim(datExpr)/2))
     message("[wgcna.init] computing reduced svTOM")
@@ -593,7 +594,7 @@ wgcna.init <- function(wgcna, annot = NULL,
   if (is.null(wgcna$modTraits) && !is.multi) {
     wgcna$modTraits <- cor(wgcna$net$MEs, wgcna$datTraits)
   }
-  
+
   if (is.null(wgcna$stats)) {
     is.single <- all(c("net","datExpr","datTraits","svTOM") %in% names(wgcna)) 
     is.mox <- all(c("layers") %in% names(wgcna))
@@ -613,7 +614,7 @@ wgcna.init <- function(wgcna, annot = NULL,
 
   if (is.null(wgcna$graph)) {
     message("[wgcna.init] computing graph...")
-    if (!is.null(progress)) progress$inc(0.1, "computing graph...")        
+    if (!is.null(progress)) progress$inc(0.1, "computing graph...")
     wgcna$lasagna <- wgcna.create_lasagna_model(wgcna)
     wgcna$graph <- wgcna$lasagna$graph
   }
@@ -852,14 +853,14 @@ wgcna.compute_multiomics <- function(dataX,
       mm.gsea <- gsea[mm]
       names(mm.gsea) <- mm
       layers[[k]]$gsea <- mm.gsea
-    }    
+    }
   }
 
   lasagna.model <- NULL
   lasagna.graph <- NULL
-  do.lasagna = TRUE
-  if(do.lasagna) {
-    lasagna.model <- wgcna.create_lasagna_model(layers=layers, wgcna=NULL)
+  do.lasagna <- TRUE
+  if (do.lasagna) {
+    lasagna.model <- wgcna.create_lasagna_model(layers = layers, wgcna = NULL)
     lasagna.graph <- lasagna.model$graph
   }
 
@@ -885,18 +886,18 @@ wgcna.compute_multiomics <- function(dataX,
   )
 
   ## translate annotation table to symbol?
-  if(0 && !is.null(annot) && "symbol" %in% colnames(annot)) {
-    annot <- rename_by2(annot, annot, "symbol", keep.prefix=TRUE)
+  if (0 && !is.null(annot) && "symbol" %in% colnames(annot)) {
+    annot <- rename_by2(annot, annot, "symbol", keep.prefix = TRUE)
   }
-  
+
   out <- list(
     layers = layers,
     me.genes = me.genes,
     me.colors = me.colors,
     gsea = gsea,
     datanames = datanames,
-    lasagna = lasagna.model,  ## deprecate??
-    graph = lasagna.graph,  
+    lasagna = lasagna.model, ## deprecate??
+    graph = lasagna.graph,
     ## datExpr = datExpr,
     ## datTraits = datTraits,
     ## modTraits = modTraits,
@@ -4142,7 +4143,6 @@ wgcna.labels2colors <- function(colors, ...) {
 }
 
 
-
 #' @export
 wgcna.plotModuleTraitHeatmap <- function(wgcna, setpar = TRUE, cluster = FALSE,
                                          multi = FALSE, main = NULL, justdata = FALSE,
@@ -5553,9 +5553,9 @@ wgcna.scaleTOMs <- function(TOMs, scaleP = 0.95) {
 #' @param wgcna WGCNA result object with stats.
 #' @return Data frame of compound significance scores.
 #' @export
-wgcna.calculateSignificanceScore <- function(wgcna, collapse=TRUE, sort.by="score",
-                                             digits=4, annot=NULL, rownames=NULL,
-                                             annot.cols=c("feature","symbol","gene_title")) {
+wgcna.calculateSignificanceScore <- function(wgcna, collapse = TRUE, sort.by = "score",
+                                             digits = 4, annot = NULL, rownames = NULL,
+                                             annot.cols = c("feature", "symbol", "gene_title")) {
   Q <- list()
   if (!is.null(wgcna$layers)) {
     ww <- wgcna$layers
@@ -5578,50 +5578,54 @@ wgcna.calculateSignificanceScore <- function(wgcna, collapse=TRUE, sort.by="scor
     rxs <- function(x, k = 2) apply(x**k, 1, max, na.rm = TRUE)^(1 / k)
     # Q1 <- data.frame(c1, rxs(m1,k=1), rxs(t1), rxs(f1))
     Q1 <- data.frame(c1, x1, rxs(t1), rxs(f1))
-    colnames(Q1) <- c("module","MM","max.TS","max.FC")
-    Q1$score <- apply(Q1[,c(2,3,4)],1,prod)    
-    if(sort.by %in% colnames(Q1)) Q1 <- Q1[order(-Q1[,sort.by]),]
-    Q1[,2:ncol(Q1)] <- round(Q1[,2:ncol(Q1)], digits=digits)
+    colnames(Q1) <- c("module", "MM", "max.TS", "max.FC")
+    Q1$score <- apply(Q1[, c(2, 3, 4)], 1, prod)
+    if (sort.by %in% colnames(Q1)) Q1 <- Q1[order(-Q1[, sort.by]), ]
+    Q1[, 2:ncol(Q1)] <- round(Q1[, 2:ncol(Q1)], digits = digits)
     Q[[k]] <- Q1
   }
-  
-  if(is.null(annot)) annot <- wgcna$annot
-  if(!is.null(annot.cols) && length(annot.cols) && !is.null(annot)) {
-    i=1
-    for(i in 1:length(Q)) {
+
+  if (is.null(annot)) annot <- wgcna$annot
+  if (!is.null(annot.cols) && length(annot.cols) && !is.null(annot)) {
+    i <- 1
+    for (i in 1:length(Q)) {
       Q1 <- Q[[i]]
-      Q1 <- rename_by2(Q1, annot, "feature", na.rm=FALSE)      
+      Q1 <- rename_by2(Q1, annot, "feature", na.rm = FALSE)
       rr <- rownames(Q1)
       kk <- match(rr, rownames(annot))
       sel <- intersect(annot.cols, colnames(annot))
-      aa <- annot[kk, sel, drop=FALSE]
+      aa <- annot[kk, sel, drop = FALSE]
       ## if feature and symbol are same drop
-      if(all(c("feature","symbol") %in% colnames(aa))) {
-        if( mean(aa$symbol == aa$feature,na.rm=TRUE)) {
+      if (all(c("feature", "symbol") %in% colnames(aa))) {
+        if (mean(aa$symbol == aa$feature, na.rm = TRUE)) {
           aa$symbol <- NULL
         }
       }
       rr <- mofa.strip_prefix(rr)
-      Q[[i]] <- data.frame(aa, Q[[i]], row.names=rr)
+      Q[[i]] <- data.frame(aa, Q[[i]], row.names = rr)
     }
   }
 
-  if (length(Q)>1) {
-    for(k in 1:length(Q)) rownames(Q[[k]]) <- paste0(names(Q)[k],":",
-      rownames(Q[[k]]))
+  if (length(Q) > 1) {
+    for (k in 1:length(Q)) {
+      rownames(Q[[k]]) <- paste0(
+        names(Q)[k], ":",
+        rownames(Q[[k]])
+      )
+    }
   }
   names(Q) <- NULL
   Q <- do.call(rbind, Q)
-  if(sort.by %in% colnames(Q)) Q <- Q[order(-Q[,sort.by]),]    
+  if (sort.by %in% colnames(Q)) Q <- Q[order(-Q[, sort.by]), ]
 
-  if(is.null(rownames)) rownames <- !("feature" %in% colnames(Q))
-  if(!rownames) {
+  if (is.null(rownames)) rownames <- !("feature" %in% colnames(Q))
+  if (!rownames) {
     rownames(Q) <- NULL
   }
 
-  if(!collapse) {
+  if (!collapse) {
     ## split by module
-    Q <- tapply(1:nrow(Q), Q$module, function(i) Q[i,])    
+    Q <- tapply(1:nrow(Q), Q$module, function(i) Q[i, ])
   }
 
   return(Q)

@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 
@@ -1156,7 +1156,7 @@ ramp.annotate_metabolites <- function(id) {
   idx <- iconv2utf8(idx)
 
   ## chem properties
-  suppressMessages(chemprop <- RaMP::getChemicalProperties(idx, db=rampDB))
+  suppressMessages(chemprop <- RaMP::getChemicalProperties(idx, db = rampDB))
   chemdata <- chemprop$chem_props
   colnames(chemdata)
   sel.chem <- c("chem_source_id", "common_name", "mol_formula", "monoisotop_mass")
@@ -1166,7 +1166,7 @@ ramp.annotate_metabolites <- function(id) {
   rownames(annot) <- NULL
 
   ## add lipid class info
-  chem <- suppressMessages(RaMP::getChemClass(mets = idx, inferIdMapping = TRUE, db=rampDB))
+  chem <- suppressMessages(RaMP::getChemClass(mets = idx, inferIdMapping = TRUE, db = rampDB))
   metclass <- chem$met_classes
   dim(metclass)
   if (nrow(metclass)) {
@@ -1320,6 +1320,11 @@ mx.create_metabolite_sets <- function(annot, gmin = 0, metmin = 5,
   }
 
   ## order on size, take out duplicated pathways
+  if (length(gmt) == 0L) {
+    info("[pgx.add_GMT] no metabolite sets matched annotation; returning empty list")
+    # prevent gmt[order(-sapply(gmt, length))] crash
+    return(list())
+  }
   gmt <- gmt[order(-sapply(gmt, length))]
   gmt <- gmt[!duplicated(names(gmt))]
   pw.id <- gsub(".*\\[|\\]", "", names(gmt))
@@ -1374,7 +1379,7 @@ ramp.get_metabolite_sets <- function(id, db = c("pathway", "onto", "class"),
     message("WARNING:: failed to connect github server")
     return(NULL)
   }
-  
+
   ## Query RaMP for patways
   gmt.pathway <- list()
   if ("pathway" %in% db) {
