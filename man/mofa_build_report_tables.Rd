@@ -4,7 +4,7 @@
 \alias{mofa_build_report_tables}
 \title{Build deterministic evidence tables for a MOFA AI report.}
 \usage{
-mofa_build_report_tables(mofa, pgx, n_factors = 6L, ntop = 8L)
+mofa_build_report_tables(mofa, pgx, n_factors = 6L, ntop = 25L)
 }
 \arguments{
 \item{mofa}{MOFA result object.}

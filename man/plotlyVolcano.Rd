@@ -21,6 +21,8 @@ plotlyVolcano(
   label.cex = 1,
   shape = "circle",
   max.absy = NULL,
+  xlim = NULL,
+  ylim = NULL,
   color_up_down = TRUE,
   colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#3181de", notsel = "#cccccc88"),
   title = "Volcano plot",
@@ -57,6 +59,10 @@ plotlyVolcano(
 \item{label.cex}{Text size for labels. Default 1.}
 
 \item{shape}{Shape of points. Default is filled circle.}
+
+\item{xlim}{Numeric length-2 vector setting the x-axis range. Default NULL (auto).}
+
+\item{ylim}{Numeric length-2 vector setting the y-axis range. Default NULL (auto).}
 
 \item{color_up_down}{Color up/down regulated features}
 
