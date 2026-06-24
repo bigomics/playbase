@@ -45,6 +45,10 @@
 ##
 ##   list(
 ##     genes        = c("TP53", "BRCA1", ...),     # all gene symbols
+##     genes_by_dataset = list(                    # gene symbols per dataset
+##       "TCGA_BRCA" = c("TP53", "BRCA1", ...),
+##       "GSE12345" = c("TP53", "EGFR", ...)
+##     ),
 ##     samples      = c("ds1::s1", "ds1::s2", ...), # all sample IDs
 ##     phenotypes   = c("age", "sex", ...),        # all phenotype column names
 ##     phenotypes_by_dataset = list(               # phenotypes per dataset
@@ -197,6 +201,7 @@ buildTileDB <- function(pgx_folder, tiledb_path, overwrite = FALSE, verbose = TR
 
   arr <- tiledb::tiledb_array(tiledb_path)
   all_phenotype_data <- list()
+  genes_by_dataset <- list()
 
   for (i in seq_along(pgx_files)) {
     pgx_file <- pgx_files[i]
@@ -210,6 +215,7 @@ buildTileDB <- function(pgx_folder, tiledb_path, overwrite = FALSE, verbose = TR
 
       ## Prepare and write counts/z-scores data
       data <- tiledb.prepareData(pgx)
+      genes_by_dataset[[file_prefix]] <- data$genes
       tiledb.writeData(arr, data, file_prefix)
 
       ## Extract phenotype data
@@ -234,6 +240,7 @@ buildTileDB <- function(pgx_folder, tiledb_path, overwrite = FALSE, verbose = TR
   metadata_path <- paste0(tiledb_path, "_metadata.rds")
   metadata <- list(
     genes = all_genes,
+    genes_by_dataset = genes_by_dataset,
     samples = all_samples,
     phenotypes = all_phenotypes,
     phenotypes_by_dataset = phenotypes_by_dataset,
@@ -365,6 +372,31 @@ listGenesTileDB <- function(tiledb_path) {
   ## databases drop these at build time (tiledb.prepareData); this also hides
   ## them in databases built before that change, without a rebuild.
   genes[!grepl("^[.-]", genes)]
+}
+
+
+#' @title List genes by dataset
+#' @param tiledb_path Path to the TileDB database
+#' @param dataset Optional dataset name. If NULL, returns the list for all datasets.
+#' @return Named list of gene vectors per dataset, or a character vector if
+#'   \code{dataset} is given. Returns an empty list for databases built before
+#'   per-dataset gene tracking. Features without a usable identifier are dropped,
+#'   matching \code{\link{listGenesTileDB}}.
+#' @export
+listGenesByDatasetTileDB <- function(tiledb_path, dataset = NULL) {
+  metadata <- readRDS(paste0(tiledb_path, "_metadata.rds"))
+
+  gbd <- metadata$genes_by_dataset
+  if (is.null(gbd)) return(list())
+  ## Hide "-"/"." placeholder features, as listGenesTileDB() does.
+  gbd <- lapply(gbd, function(g) g[!grepl("^[.-]", g)])
+
+  if (is.null(dataset)) return(gbd)
+  if (!dataset %in% names(gbd)) {
+    warning("Dataset not found: ", dataset)
+    return(character(0))
+  }
+  gbd[[dataset]]
 }
 
 
@@ -903,6 +935,7 @@ tiledb.addDataset <- function(tiledb_path, pgx_file, overwrite = TRUE, verbose =
   new_samples <- paste0(file_prefix, "::", data$samples)
 
   metadata$genes <- sort(unique(c(metadata$genes, data$genes)))
+  metadata$genes_by_dataset[[file_prefix]] <- data$genes
   metadata$samples <- c(metadata$samples, new_samples)
   metadata$phenotypes <- sort(unique(c(metadata$phenotypes, pheno$phenotypes)))
   metadata$phenotypes_by_dataset[[file_prefix]] <- pheno$phenotypes
@@ -984,10 +1017,13 @@ tiledb.addDataset.create <- function(tiledb_path, pgx_file, verbose = TRUE) {
   all_samples <- paste0(file_prefix, "::", data$samples)
   phenotypes_by_dataset <- list()
   phenotypes_by_dataset[[file_prefix]] <- pheno$phenotypes
+  genes_by_dataset <- list()
+  genes_by_dataset[[file_prefix]] <- data$genes
 
   metadata_path <- paste0(tiledb_path, "_metadata.rds")
   metadata <- list(
     genes = sort(unique(data$genes)),
+    genes_by_dataset = genes_by_dataset,
     samples = all_samples,
     phenotypes = sort(unique(pheno$phenotypes)),
     phenotypes_by_dataset = phenotypes_by_dataset,
@@ -1028,8 +1064,9 @@ tiledb.removeDataset.internal <- function(tiledb_path, dataset_name, metadata, v
     metadata$phenotype_data <- metadata$phenotype_data[pheno_datasets != dataset_name, , drop = FALSE]
   }
 
-  ## Remove from phenotypes_by_dataset
+  ## Remove from phenotypes_by_dataset and genes_by_dataset
   metadata$phenotypes_by_dataset[[dataset_name]] <- NULL
+  metadata$genes_by_dataset[[dataset_name]] <- NULL
 
   ## Remove from pgx_files
   pgx_basenames <- tools::file_path_sans_ext(basename(metadata$pgx_files))
@@ -1098,6 +1135,12 @@ tiledb.needUpdate <- function(pgx_dir, tiledb_path = NULL) {
     return(TRUE)
   }
 
+  ## Older databases predate per-dataset gene tracking; flag them so they are
+  ## rebuilt and gain the genes_by_dataset field (see tiledb.updateDatasetFolder).
+  if (is.null(metadata$genes_by_dataset)) {
+    return(TRUE)
+  }
+
   tiledb_datasets <- tools::file_path_sans_ext(basename(metadata$pgx_files))
 
   ## Check if any pgx files are missing from TileDB
@@ -1141,6 +1184,18 @@ tiledb.updateDatasetFolder <- function(pgx_dir, tiledb_path = NULL, new_pgx = NU
   }
 
   metadata_path <- paste0(tiledb_path, "_metadata.rds")
+
+  ## One-time schema upgrade: databases built before per-dataset gene tracking
+  ## have no genes_by_dataset field. Incremental updates cannot backfill it for
+  ## datasets that are already present, so rebuild the whole database from the
+  ## folder. Runs once; afterwards the field is present and this is skipped.
+  if (dir.exists(tiledb_path) && file.exists(metadata_path)) {
+    old_md <- tryCatch(readRDS(metadata_path), error = function(e) NULL)
+    if (!is.null(old_md) && is.null(old_md$genes_by_dataset)) {
+      if (verbose) message("[tiledb.updateDatasetFolder] Upgrading database schema (full rebuild)...")
+      return(invisible(buildTileDB(pgx_dir, tiledb_path, overwrite = TRUE, verbose = verbose)))
+    }
+  }
 
   ## If specific file provided, just add that one
   if (!is.null(new_pgx)) {
