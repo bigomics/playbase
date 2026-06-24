@@ -227,7 +227,7 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
 #' @param X Numeric matrix of predictor variables, rows are variables
 #' @param time Vector of event/censoring times
 #' @param status Vector indicating event (1) or censoring (0)
-#' @param methods Methods for computing variable importance. Options are "glmnet", "randomforest", "boruta", "xgboost", "pls".
+#' @param methods Methods for computing variable importance. Options are "glmnet", "randomforest", "xgboost", "pls".
 #'
 #' @return Named list with variable importance scores by method.
 #'
@@ -240,7 +240,6 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
 #' \itemize{
 #' \item glmnet: Absolute value of coefficients from elastic net Cox model
 #' \item randomForest: Variable importance from random survival forest
-#' \item boruta: Boruta variable selection algorithm
 #' \item xgboost: Importance scores from XGBoost survival model
 #' \item pls: Absolute coefficients from partial least squares Cox model
 #' }
@@ -250,7 +249,8 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
 #'
 #' @export
 pgx.survivalVariableImportance <- function(X, time, status,
-                                           methods = c("glmnet", "randomforest", "boruta", "xgboost", "pls")) {
+                                           methods = c("glmnet", "randomforest",
+                                             "xgboost", "pls")) {
   ## ----------------------------------------------------------------------
   ## multi-class version
   ## ----------------------------------------------------------------------
@@ -290,20 +290,6 @@ pgx.survivalVariableImportance <- function(X, time, status,
     imp[["randomForest"]] <- vimp
   }
 
-  if ("boruta" %in% methods) {
-    imp4 <- rep(0, nrow(X))
-    niter <- 4
-    for (k in 1:niter) {
-      jj <- sample(ncol(X), ncol(X) * 0.9)
-      out3 <- Boruta(t(X[, jj, drop = FALSE]), y[jj])
-      fd <- factor(out3$finalDecision, levels = c("Rejected", "Tentative", "Confirmed"))
-      fd <- (as.integer(fd) - 1) / 2
-      imp4 <- imp4 + fd / niter
-    }
-
-    names(imp4) <- rownames(X)
-    imp[["Boruta"]] <- imp4
-  }
 
   if ("xgboost" %in% methods) {
     yy <- ifelse(!status, -time, time)
@@ -372,7 +358,7 @@ pgx.variableImportance <- function(X, y,
                                    methods = c(
                                      "glmnet", "randomforest",
                                      "xgboost", "splsda", "correlation", "ftest",
-                                     "boruta", CARET.METHODS
+                                     CARET.METHODS
                                    )[1:6],
                                    scale = TRUE, reduce = 1000, resample = 0,
                                    add.noise = 0) {
@@ -471,23 +457,6 @@ pgx.variableImportance <- function(X, y,
     imp[["randomForest"]] <- fit_rf$importance[, 1]
   }
 
-  if ("boruta" %in% methods) {
-    imp4 <- rep(0, nrow(X))
-    niter <- 4
-    runtime[["Boruta"]] <- system.time({
-      for (k in 1:niter) {
-        jj <- sample(ncol(X), ncol(X) * 0.9)
-        out3 <- Boruta::Boruta(t(X[, jj, drop = FALSE]), y[jj])
-        fd <- factor(out3$finalDecision,
-          levels = c("Rejected", "Tentative", "Confirmed")
-        )
-        fd <- (as.integer(fd) - 1) / 2
-        imp4 <- imp4 + fd / niter
-      }
-    })
-    names(imp4) <- rownames(X)
-    imp[["Boruta"]] <- imp4
-  }
 
   if ("xgboost" %in% methods) {
     ny <- length(table(y))

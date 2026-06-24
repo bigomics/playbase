@@ -28,7 +28,6 @@ Imports:
     BiocParallel,
     biomaRt,
     bit64,
-    Boruta,
     caret,
     circlize,
     cluster,
