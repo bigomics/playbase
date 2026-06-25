@@ -166,6 +166,7 @@ Imports:
     sva,
     tidyprompt,
     tidyr,
+    tiledb,
     TileDBArray,
     tools,
     torch,
