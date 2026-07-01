@@ -779,7 +779,7 @@ deep.plotRedux <- function(net, pheno = NULL, method = "tsne", views = NULL, par
     })
   } else if (method == "umap") {
     px <- max(min(15, nrow(redux[[1]]) / 6), 1)
-    redux <- lapply(redux, function(r) uwot::umap(r, n_neighbors = px))
+    redux <- lapply(redux, function(r) uwot::umap2(r, n_neighbors = px))
   } else if (method == "pca") {
     px <- min(30, nrow(redux[[1]]) / 4)
     redux <- lapply(redux, function(x) svd(x, nv = 2)$u[, 1:2])

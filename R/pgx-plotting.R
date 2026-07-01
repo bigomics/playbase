@@ -290,7 +290,7 @@ pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap"), nb = NULL, ...)
 
   if (is.null(nb)) nb <- ceiling(min(15, dim(X1) / 8))
   for (m in method) {
-    if (m == "umap") pos <- try(uwot::umap(t(X1), n_neighbors = max(2, nb)))
+    if (m == "umap") pos <- try(uwot::umap2(t(X1), n_neighbors = max(2, nb)))
     if (m == "tsne") {
       pos <- try(Rtsne::Rtsne(t(X1),
         perplexity = 2 * nb,
