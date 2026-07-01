@@ -180,14 +180,8 @@ pathways_build_report_tables <- function(slice, pgx, ntop = 50L,
 }
 
 pathways_build_methods <- function(slice, pgx) {
-  params <- list(
-    experiment = .ai_report_get(pgx, "label"),
-    date = format(Sys.Date(), "%Y-%m-%d"),
-    n_contrasts = length(names(slice$meta %||% list())),
-    n_samples = tryCatch(nrow(pgx$samples), error = function(e) NA_integer_),
-    n_features = tryCatch(nrow(pgx$X), error = function(e) NA_integer_)
-  )
-  build_report_methods("pathways", "pathways_methods.md", params = params)
+  build_report_methods("pathways", "pathways_methods.md",
+                       params = .methods_params(pgx, slice, "pathways"))
 }
 
 ai.pathways.create_report <- function(pgx, slice, ai) {

@@ -592,11 +592,13 @@ pgx.createPGX <- function(counts,
       xlist <- playbase::runBatchCorrectionMethods(X, batch, pheno, methods = mm, ntop = Inf)
       cX <- xlist[[mm]]
     } else {
+      impute_method <- "SVD2"
+      pgx$impute_method <- impute_method ## recorded for the AI-report methods block
       is.mox <- is.multiomics(rownames(X))
       if (is.mox) {
-        impX <- imputeMissing.mox(X, method = "SVD2")
+        impX <- imputeMissing.mox(X, method = impute_method)
       } else {
-        impX <- imputeMissing(X, method = "SVD2")
+        impX <- imputeMissing(X, method = impute_method)
       }
       xlist <- playbase::runBatchCorrectionMethods(impX, batch, pheno, methods = mm, ntop = Inf)
       cX <- xlist[[mm]]

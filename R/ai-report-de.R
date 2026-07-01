@@ -111,18 +111,19 @@
   )
 }
 
-.de_contrast_detail <- function(pgx, slice, ntop) {
+.de_contrast_detail <- function(pgx, slice, ntop, feature = "gene") {
+  labels <- c(gene = feature)
   details <- vapply(names(slice$meta), function(contrast) {
     mx <- slice$meta[[contrast]]
     up <- .de_gene_table(pgx, mx, "up", n = ntop)
     down <- .de_gene_table(pgx, mx, "down", n = ntop)
     up_table <- if (nrow(up)) {
-      paste(omicsai::omicsai_format_mdtable(up), collapse = "\n")
+      paste(omicsai::omicsai_format_mdtable(up, col_labels = labels), collapse = "\n")
     } else {
       "(none)"
     }
     down_table <- if (nrow(down)) {
-      paste(omicsai::omicsai_format_mdtable(down), collapse = "\n")
+      paste(omicsai::omicsai_format_mdtable(down, col_labels = labels), collapse = "\n")
     } else {
       "(none)"
     }
@@ -148,11 +149,15 @@ de_build_report_tables <- function(slice, pgx, ntop = 50L, cross_n = 50L) {
     stop("DE report requires at least one contrast", call. = FALSE)
   }
 
+  vocab <- omicsai::omicsai_datatype_vocab(pgx$datatype)
+  feature <- vocab$feature
+
   sample_metadata <- .ai_report_get(pgx, "sample_metadata")
   contrast_summary <- .de_contrast_summary(pgx, slice)
   cross_contrast <- .de_cross_contrast_table(pgx, slice, n = cross_n)
-  contrast_detail <- .de_contrast_detail(pgx, slice, ntop = ntop)
-  params <- list(
+  contrast_detail <- .de_contrast_detail(pgx, slice, ntop = ntop,
+                                         feature = feature)
+  params <- c(list(
     experiment_info = .ai_report_get(
       pgx, "experiment_info",
       slice = slice,
@@ -163,10 +168,11 @@ de_build_report_tables <- function(slice, pgx, ntop = 50L, cross_n = 50L) {
       omicsai::omicsai_format_mdtable(contrast_summary), collapse = "\n"
     ),
     cross_contrast_table = paste(
-      omicsai::omicsai_format_mdtable(cross_contrast), collapse = "\n"
+      omicsai::omicsai_format_mdtable(
+        cross_contrast, col_labels = c(gene = feature)), collapse = "\n"
     ),
     contrast_detail = contrast_detail
-  )
+  ), vocab)
 
   template <- omicsai::omicsai_load_template(
     .ai_report_prompt_path("de", "de_report_data.md")
@@ -182,14 +188,8 @@ de_build_report_tables <- function(slice, pgx, ntop = 50L, cross_n = 50L) {
 }
 
 de_build_methods <- function(slice, pgx) {
-  params <- list(
-    experiment = .ai_report_get(pgx, "label"),
-    date = format(Sys.Date(), "%Y-%m-%d"),
-    n_contrasts = length(names(slice$meta %||% list())),
-    n_samples = tryCatch(nrow(pgx$samples), error = function(e) NA_integer_),
-    n_features = tryCatch(nrow(pgx$X), error = function(e) NA_integer_)
-  )
-  build_report_methods("de", "de_methods.md", params = params)
+  build_report_methods("de", "de_methods.md",
+                       params = .methods_params(pgx, slice, "de"))
 }
 
 ai.de.create_report <- function(pgx, slice, ai) {
