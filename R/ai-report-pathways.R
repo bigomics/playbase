@@ -28,6 +28,24 @@
   term
 }
 
+# Per-geneset meta effect for one contrast, with a fallback direction.
+# meta.fx (the average member-gene fold-change) is NaN for sets whose member
+# genes are absent from the matrix -- pervasive in multi-omics (layer-prefixed
+# rows miss the bare-symbol GMT) and sparse proteomics -- which would otherwise
+# make the report drop genuinely significant sets. Where meta.fx is undefined
+# but per-method effects (mx$fc) exist, fall back to their mean so the set keeps
+# a direction and is reported.
+.pathways_meta_fx <- function(mx, keep) {
+  eff <- mx$meta.fx[keep]
+  bad <- !is.finite(eff)
+  if (any(bad) && !is.null(mx$fc)) {
+    fc <- as.matrix(mx$fc)[keep, , drop = FALSE]
+    fallback <- rowMeans(fc, na.rm = TRUE)
+    eff[bad] <- fallback[bad]
+  }
+  eff
+}
+
 .pathways_contrast_landscape <- function(pgx, fx, q, q_threshold = 0.05) {
   rows <- lapply(colnames(fx), function(contrast) {
     effect <- fx[, contrast]
@@ -128,7 +146,7 @@ pathways_build_report_tables <- function(slice, pgx, ntop = 50L,
   if (!any(keep)) {
     stop("Pathway report requires pathway-oriented terms", call. = FALSE)
   }
-  fx <- sapply(slice$meta, function(mx) mx$meta.fx[keep])
+  fx <- sapply(slice$meta, .pathways_meta_fx, keep = keep)  # meta.fx + fallback
   q <- sapply(slice$meta, function(mx) mx$meta.q[keep])
   if (is.null(dim(fx))) {
     fx <- matrix(fx, ncol = 1L)
