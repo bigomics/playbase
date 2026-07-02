@@ -130,10 +130,6 @@ pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
     W <- W + 1e-2 * matrix(stats::rnorm(length(W)), nrow(W), ncol(W))
   }
   nb <- floor(min(max(ncol(W) / 4, 1), 10))
-  nb
-  message("[pgx.calculateWordCloud] dim(W) = ", paste(dim(W), collapse = "x"))
-  message("[pgx.calculateWordCloud] setting perplexity = ", nb)
-
   pos1 <- try(Rtsne::Rtsne(t(as.matrix(W)), perplexity = nb, check_duplicates = FALSE)$Y)
   class(pos1)
   if ("try-error" %in% class(pos1)) {
@@ -142,7 +138,7 @@ pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
       check_duplicates = FALSE
     )$Y)
   }
-  pos2 <- uwot::umap(t(as.matrix(W)), n_neighbors = max(nb, 2))
+  pos2 <- uwot::umap2(t(as.matrix(W)), n_neighbors = max(nb, 2))
   rownames(pos1) <- rownames(pos2) <- colnames(W)
   colnames(pos1) <- colnames(pos2) <- c("x", "y")
   pos1 <- pos1[match(res$word, rownames(pos1)), ]

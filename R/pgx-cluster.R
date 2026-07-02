@@ -510,13 +510,13 @@ pgx.clusterMatrix <- function(X,
     if (verbose > 0) message("[pgx.clusterMatrix] Calculating UMAP 2D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
-      pos <- uwot::tumap(t(X),
+      pos <- uwot::umap2(t(X),
         n_components = 2,
         n_neighbors = nb,
         local_connectivity = ceiling(nb / 15)
       )
     } else {
-      custom.config <- umap.defaults
+      custom.config <- umap::umap.defaults
       custom.config$n_components <- 2
       custom.config$n_neighbors <- pmax(min(dimx[2] / 4, perplexity), 2)
       pos <- umap::umap(t(X), custom.config)$layout
@@ -531,7 +531,7 @@ pgx.clusterMatrix <- function(X,
     if (verbose > 0) message("[pgx.clusterMatrix] Calculating UMAP 3D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
-      pos <- uwot::tumap(
+      pos <- uwot::umap2(
         t(X),
         n_components = 3,
         n_neighbors = nb,
