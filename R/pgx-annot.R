@@ -1767,21 +1767,40 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
       message("WARNING: Probe type not found. Valid probe types: ", paste(keytypes, collapse = " "))
     }
     # fallback before giving up; try gprofiler to convert to UNIPROT
-    gp.organism <- orthogene::map_species(
-      species = organism, method = "gprofiler",
-      output_format = "id", verbose = FALSE
-    )
-    gp.out <- tryCatch(
+    ## gp.organism <- orthogene::map_species(
+    ##   species = organism, method = "gprofiler",
+    ##   output_format = "id", verbose = FALSE
+    ## )
+    ## gp.out <- tryCatch(
+    ##   {
+    ##     gprofiler2::gconvert(probesx, organism = gp.organism, target = "UNIPROT_GN_ACC")
+    ##   },
+    ##   error = function(e) {
+    ##     return(NULL)
+    ##   }
+    ## )
+    ortho_species <- getOrthoSpecies(organism, use = "map")
+    gp.organism <- NULL
+    if (!is.null(ortho_species)) {
+      gp.organism <- orthogene::map_species(
+        species = ortho_species,
+        method = "gprofiler",
+        output_format = "id",
+        verbose = FALSE
+      )
+    }
+    gp.out <- NULL
+    if (!is.null(gp.organism)) {
+      gp.out <- tryCatch(
       {
         gprofiler2::gconvert(probesx, organism = gp.organism, target = "UNIPROT_GN_ACC")
       },
       error = function(e) {
         return(NULL)
       }
-    )
-    if (!is.null(gp.out)) {
-      key_matches["GPROFILER"] <- length(unique(gp.out$input)) / length(probesx)
+      )
     }
+    if (!is.null(gp.out)) { key_matches["GPROFILER"] <- length(unique(gp.out$input)) / length(probesx) }
   }
 
   if (max(key_matches, na.rm = TRUE) < 0.01) {
