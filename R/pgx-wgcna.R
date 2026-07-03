@@ -1005,8 +1005,7 @@ wgcna.computeModules <- function(
 
   ## clustering
   if (verbose > 0) message("Clustering features using ", clustMethod, " linkage")
-  ## geneTree <- flashClust::flashClust(as.dist(dissTOM), method=clustMethod)
-  geneTree <- stats::hclust(as.dist(dissTOM), method = clustMethod)
+  geneTree <- fastcluster::hclust(as.dist(dissTOM), method = clustMethod)
 
   ## sometimes there is a height error. following is a fix.
   geneTree$height <- round(geneTree$height, 6)
@@ -1209,7 +1208,7 @@ wgcna.mergeCloseModules <- function(datExpr, colors, cutHeight, MEs = NULL) {
     MEs <- WGCNA::moduleEigengenes(datExpr, colors = colors)$eigengenes
     dim(MEs)
   }
-  hc <- hclust(as.dist(1 - cor(MEs)), method = "average")
+  hc <- fastcluster::hclust(as.dist(1 - cor(MEs)), method = "average")
   idx <- cutree(hc, h = cutHeight)
   names(idx) <- sub("^ME", "", names(idx))
   table(idx)
@@ -1953,7 +1952,7 @@ wgcna.merge_block_dendrograms <- function(net, X, method = 1) {
 
   ## compute parent dendrogram
   M <- do.call(rbind, mx)
-  hclust_p <- hclust(dist(M), method = "average")
+  hclust_p <- fastcluster::hclust(dist(M), method = "average")
   dend_p <- as.dendrogram(hclust_p)
   dend.list <- lapply(hc, as.dendrogram)
 
@@ -3065,8 +3064,8 @@ wgcna.plotPreservationModuleTraits <- function(pres,
   if (order.by == "clust") {
     consZ1 <- consZ
     consZ1[is.na(consZ1)] <- 0
-    ii <- hclust(dist(consZ1))$order
-    jj <- hclust(dist(t(consZ1)))$order
+    ii <- fastcluster::hclust(dist(consZ1))$order
+    jj <- fastcluster::hclust(dist(t(consZ1)))$order
     Zsummary <- Zsummary[ii, , drop = FALSE]
     consZ <- consZ[ii, jj, drop = FALSE]
   }
@@ -3675,7 +3674,7 @@ wgcna.plotDendroAndColors <- function(wgcna, main = NULL,
     if (clust && ncol(kme) > 2) {
       cc <- cor(kme, use = "pairwise")
       cc[!is.finite(cc)] <- 0 ## guard against NaN/Inf from any constant columns
-      ii <- hclust(as.dist(1 - cc))$order
+      ii <- fastcluster::hclust(as.dist(1 - cc))$order
       kmeColors <- kmeColors[, ii, drop = FALSE]
     }
     kmeColors
@@ -4250,7 +4249,7 @@ wgcna.plotEigenGeneClusterDendrogram <- function(wgcna = NULL,
     ## plot dendrogram with hclust function
     if (setMargins && horiz) par(mar = c(4, 4, 4, 8))
     if (setMargins && !horiz) par(mar = c(8, 4, 4, 1))
-    hc <- hclust(as.dist(1 - cor(ME)), method = "average")
+    hc <- fastcluster::hclust(as.dist(1 - cor(ME)), method = "average")
     if (plot) {
       save.labels <- hc$labels
       if (!showlabels) hc$labels <- rep("", ncol(ME))
@@ -4420,9 +4419,9 @@ wgcna.plotEigenGeneAdjacencyHeatmap <- function(wgcna,
 
   if (fixclust) {
     ii <- rownames(R)
-    hc <- hclust(as.dist(1 - R0[ii, ii]), method = "average")
+    hc <- fastcluster::hclust(as.dist(1 - R0[ii, ii]), method = "average")
   } else {
-    hc <- hclust(as.dist(1 - R0), method = "average")
+    hc <- fastcluster::hclust(as.dist(1 - R0), method = "average")
   }
   if (plotDendro) {
     par(cex = cex.lab)
@@ -4509,8 +4508,8 @@ wgcna.plotMultiEigengeneCorrelation <- function(wgcna, addtraits = TRUE,
     }
 
     ## cluster unweighted matrix
-    ii <- hclust(dist(R1), method = "average")$order
-    jj <- hclust(dist(t(R1)), method = "average")$order
+    ii <- fastcluster::hclust(dist(R1), method = "average")$order
+    jj <- fastcluster::hclust(dist(t(R1)), method = "average")$order
     R1 <- R1[ii, jj]
 
     ## This conditions the correlation on phenotype. Important.
@@ -4571,7 +4570,7 @@ wgcna.plotEigenGeneGraph <- function(wgcna, add_traits = TRUE, main = NULL,
 
   layout <- NULL
   if(as.phylo) {
-    clust <- hclust(as.dist(1 - corx))
+    clust <- fastcluster::hclust(as.dist(1 - corx))
     phylo <- ape::as.phylo(clust)
     gr <- igraph::as.igraph(phylo, directed = FALSE)
     layout <- igraph::layout_with_kk
@@ -4784,11 +4783,11 @@ wgcna.plotSampleDendroAndColors <- function(wgcna, input.type = "wgcna",
     corx <- cor(t(ME0), use = "pairwise")
   }
   corx[is.na(corx)] <- 0
-  sampleTree <- hclust(as.dist(1 - corx), method = "average")
+  sampleTree <- fastcluster::hclust(as.dist(1 - corx), method = "average")
 
   corx <- cor(ME, use = "pairwise")
   corx[is.na(corx)] <- 0
-  jj <- hclust(as.dist(1 - corx))$order
+  jj <- fastcluster::hclust(as.dist(1 - corx))$order
   colors <- WGCNA::numbers2colors(ME[, jj])
 
   if (justdata) {
@@ -4832,14 +4831,14 @@ wgcna.plotLabeledCorrelationHeatmap <- function(R, nSamples,
     R0[is.na(R0)] <- 0
     is.sym <- nrow(R) == ncol(R) && all(rownames(R) == colnames(R))
     if (is.dist) {
-      ii <- hclust(as.dist(abs(R0)))$order
+      ii <- fastcluster::hclust(as.dist(abs(R0)))$order
       jj <- ii
     } else if (is.sym) {
-      ii <- hclust(dist(R0), method = "average")$order
+      ii <- fastcluster::hclust(dist(R0), method = "average")$order
       jj <- ii
     } else {
-      ii <- hclust(dist(R0), method = "average")$order
-      jj <- hclust(dist(t(R0)), method = "average")$order
+      ii <- fastcluster::hclust(dist(R0), method = "average")$order
+      jj <- fastcluster::hclust(dist(t(R0)), method = "average")$order
     }
     R <- R[ii, jj]
   }
@@ -5046,7 +5045,7 @@ wgcna.plotModuleHeatmap <- function(wgcna,
     R <- cor(wgcna$datExpr[, genes])
     R <- sign(R) * abs(R)**rgamma
     if (cluster) {
-      ii <- hclust(as.dist(1 - R), method = "average")$order
+      ii <- fastcluster::hclust(as.dist(1 - R), method = "average")$order
       R <- R[ii, ii]
     }
     R[abs(R) < min.rho] <- NA
@@ -5161,7 +5160,7 @@ wgcna.filterColors <- function(X, colors, minKME = 0.3, mergeCutHeight = 0.15,
 wgcna.tomclust <- function(X, power = 6) {
   A <- WGCNA::adjacency(t(X), power = power, type = "signed")
   TOM <- fastTOMsimilarity(A, tomtype = "signed", lowrank = 40)
-  hc <- hclust(as.dist(1 - TOM), method = "average")
+  hc <- fastcluster::hclust(as.dist(1 - TOM), method = "average")
   hc
 }
 
@@ -5185,7 +5184,7 @@ wgcna.checkDendroHeights <- function(datExpr, n = 200, powers = NULL, maxpower =
   for (i in 1:length(powers)) {
     A <- WGCNA::adjacency(tX, power = powers[i], type = "signed")
     TOM <- fastTOMsimilarity(A, tomtype = "signed", lowrank = 40)
-    hc <- hclust(as.dist(1 - TOM), method = "average")
+    hc <- fastcluster::hclust(as.dist(1 - TOM), method = "average")
     ht[[i]] <- hc$height
   }
   names(ht) <- paste0("p=", powers)
