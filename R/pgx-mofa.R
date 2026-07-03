@@ -2468,7 +2468,7 @@ snf.cluster <- function(xx, pheno = NULL, plot = TRUE) {
   posx <- lapply(Data2, function(x) {
     Rtsne::Rtsne(t(x), perplexity = k, check_duplicates = FALSE)$Y
   })
-  ## posx <- lapply( Data2, function(x) uwot::umap(t(x), n_neighbors=15))
+  ## posx <- lapply( Data2, function(x) uwot::umap2(t(x), n_neighbors=15))
   for (i in 1:length(posx)) rownames(posx[[i]]) <- colnames(xx[[1]])
   rownames(W) <- colnames(W) <- rownames(posx[[1]])
 

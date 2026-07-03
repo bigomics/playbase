@@ -53,17 +53,17 @@
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
   fragments <- .ai_report_prompt_fragments(module)
-  context <- if (length(context_vars)) {
-    omicsai::frag(fragments$context, context_vars)
-  } else {
-    omicsai::frag(fragments$context)
-  }
+  # Datatype-aware vocabulary: resolved once and injected into every prompt
+  # fragment so modality nouns ({{feature}}, {{quantity}}, {{analysis}}, ...)
+  # are filled from pgx$datatype rather than hardcoded transcriptomics wording.
+  vocab <- omicsai::omicsai_datatype_vocab(pgx$datatype)
+  context_params <- utils::modifyList(vocab, context_vars)
   prompt <- omicsai::report_prompt(
-    role = omicsai::frag("system_base"),
-    task = omicsai::frag("text/report"),
+    role = omicsai::frag("system_base", vocab),
+    task = omicsai::frag("text/report", vocab),
     species = omicsai::omicsai_species_prompt(pgx$organism),
-    context = context,
-    board_rules = omicsai::frag(fragments$rules),
+    context = omicsai::frag(fragments$context, context_params),
+    board_rules = omicsai::frag(fragments$rules, vocab),
     data = data
   )
   omicsai::build_prompt(prompt)

@@ -268,6 +268,53 @@
   )))
 }
 
+#' Collect deterministic methods provenance from a pgx object.
+#'
+#' Reads what the pipeline actually did for a report slice, so the Methods block
+#' can name the real engines, normalization, and imputation instead of a
+#' hardcoded transcriptomics list. The engines are the column names of the
+#' slice's first meta result (\code{slice$meta[[1]]$q}); normalization is
+#' \code{pgx$norm_method}; imputation is the method recorded on
+#' \code{pgx$model.parameters$impute_method} (see \code{compute_testGenes}).
+#'
+#' @param pgx PGX object.
+#' @param slice Module slice (e.g. \code{pgx$gx.meta} or \code{pgx$gset.meta}).
+#' @return Named list with \code{engines} (character vector), \code{norm}
+#'   (string), and \code{impute} (string).
+collect_methods <- function(pgx, slice) {
+  meta <- slice$meta %||% list()
+  engines <- character(0)
+  if (length(meta)) {
+    qmat <- meta[[1]]$q
+    if (!is.null(qmat)) engines <- colnames(qmat)
+  }
+  list(
+    engines = engines,
+    norm = pgx$norm_method %||% "not recorded",
+    impute = pgx$model.parameters$impute_method %||% "none (no imputation applied)"
+  )
+}
+
+# Assemble the parameter block shared by every module's methods template:
+# experiment identity, counts, the engines that ran (label + engine-filtered
+# bibliography), provenance (norm/impute), and datatype vocabulary. norm/impute
+# are harmless extras for templates that omit them (e.g. pathways).
+.methods_params <- function(pgx, slice, module) {
+  prov <- collect_methods(pgx, slice)
+  eng <- omicsai::omicsai_methods_engines(prov$engines, module)
+  c(list(
+    experiment = .ai_report_get(pgx, "label"),
+    date = format(Sys.Date(), "%Y-%m-%d"),
+    n_contrasts = length(names(slice$meta %||% list())),
+    n_samples = tryCatch(nrow(pgx$samples), error = function(e) NA_integer_),
+    n_features = tryCatch(nrow(pgx$X), error = function(e) NA_integer_),
+    engines = eng$label,
+    norm = prov$norm,
+    impute = prov$impute,
+    bibliography = eng$bibliography
+  ), omicsai::omicsai_datatype_vocab(pgx$datatype))
+}
+
 #' Build a deterministic methods appendix for a report.
 #'
 #' Loads the report-specific methods template, substitutes the provided

@@ -98,7 +98,7 @@ pgx.computeDrugEnrichment <- function(pgx, X = NULL, xdrugs = NULL,
     if (ncol(cX) >= 5) {
       nn <- min(15L, ncol(cX) - 1L)
       clust <- try(
-        uwot::umap(t(cX), fast_sgd = TRUE, verbose = FALSE, n_neighbors = nn),
+        uwot::umap2(t(cX), fast_sgd = TRUE, verbose = FALSE, n_neighbors = nn),
         silent = TRUE
       )
       if (inherits(clust, "try-error")) {
@@ -140,7 +140,7 @@ pgx.compute_drugs_clust <- function(pgx) {
     smat[is.na(smat)] <- 0
     nn <- min(15L, nrow(smat) - 1L)
     clust <- try(
-      uwot::umap(smat, fast_sgd = TRUE, verbose = FALSE, n_neighbors = nn),
+      uwot::umap2(smat, fast_sgd = TRUE, verbose = FALSE, n_neighbors = nn),
       silent = TRUE
     )
     if (!inherits(clust, "try-error")) {
