@@ -114,6 +114,10 @@ pgx.createFromFiles <- function(counts.file,
 #' for the gene annotation table and the probe to symbol conversion.
 #' @param contrasts Data frame defining sample contrasts.
 #' @param X (Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.
+#' @param preprocess (Optional) Named list of preprocessing options. If provided and
+#'   `X` is NULL, `X` is built from `counts` via [pgx.preprocess()] (normalization,
+#'   imputation, missingness filter, outlier removal) instead of a plain log2 transform.
+#'   This is how the Shiny upload flow and the compute endpoint obtain identical `X`.
 #' @param is.logx Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.
 #' @param dotimeseries Logical indicating if timeseries analysis has been activated by the user at upload
 #' @param batch.correct.method BC method. Default is "no_batch_correct" (meaning no batch correction).
@@ -173,6 +177,7 @@ pgx.createPGX <- function(counts,
                           description = "No description provided.",
                           metadata = NULL,
                           X = NULL,
+                          preprocess = NULL,
                           norm_method = "CPM",
                           is.logx = NULL,
                           dotimeseries = FALSE,
@@ -212,6 +217,20 @@ pgx.createPGX <- function(counts,
   message("[pgx.createPGX] dim.counts: ", dim(counts)[1], " x ", dim(counts)[2])
   message("[pgx.createPGX] class.counts: ", class(counts))
   message("[pgx.createPGX] counts has ", sum(is.na(counts)), " missing values")
+
+  ## Opt-in: build X from raw counts via the shared preprocessing pipeline.
+  ## Runs before de-duplication so counts and X are averaged/uniquified together,
+  ## matching the Shiny upload flow (normalization module -> createPGX).
+  if (is.null(X) && !is.null(preprocess) && datatype != "scRNA-seq") {
+    message("[pgx.createPGX] building X via pgx.preprocess()")
+    pp <- pgx.preprocess(counts,
+      samples = samples, contrasts = contrasts,
+      annot = annot_table, options = preprocess
+    )
+    counts <- pp$counts
+    X <- pp$X
+    if (!is.null(annot_table)) annot_table <- pp$annot
+  }
 
   ndup <- sum(duplicated(rownames(counts)))
   if (ndup > 0) {
