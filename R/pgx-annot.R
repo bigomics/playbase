@@ -1767,18 +1767,6 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
       message("WARNING: Probe type not found. Valid probe types: ", paste(keytypes, collapse = " "))
     }
     # fallback before giving up; try gprofiler to convert to UNIPROT
-    ## gp.organism <- orthogene::map_species(
-    ##   species = organism, method = "gprofiler",
-    ##   output_format = "id", verbose = FALSE
-    ## )
-    ## gp.out <- tryCatch(
-    ##   {
-    ##     gprofiler2::gconvert(probesx, organism = gp.organism, target = "UNIPROT_GN_ACC")
-    ##   },
-    ##   error = function(e) {
-    ##     return(NULL)
-    ##   }
-    ## )
     ortho_species <- getOrthoSpecies(organism, use = "map")
     gp.organism <- NULL
     if (!is.null(ortho_species)) {
