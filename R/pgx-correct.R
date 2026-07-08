@@ -1792,6 +1792,7 @@ compare_batchcorrection_methods <- function(X,
   ## PCA is faster than UMAP
   pos <- NULL
   pca.varexp <- NULL
+  loadings <- NULL
   t2 <- double_center_scale_fast
   if (clust.method == "tsne" && nmissing == 0) {
     message("Computing t-SNE clustering...")
@@ -1805,9 +1806,16 @@ compare_batchcorrection_methods <- function(X,
     npc_eff <- max(2, min(npc, min(sapply(xlist, function(x) min(dim(x)))) - 1))
     for (i in 1:length(xlist)) {
       set.seed(1234)
-      pca <- irlba::irlba(t2(xlist[[i]]), nu = npc_eff, nv = npc_eff)
+      M <- t2(xlist[[i]])
+      pca <- irlba::irlba(M, nu = npc_eff, nv = npc_eff)
       pos[[names(xlist)[i]]] <- pca$u[, seq_len(npc_eff), drop = FALSE]
-      pca.varexp[[names(xlist)[i]]] <- (pca$d^2 / sum(pca$d^2)) * 100
+      ## % variance explained relative to TOTAL variance (sum(M^2) == sum of all
+      ## eigenvalues), not just the top npc_eff PCs irlba returns, so the values
+      ## and their cumulative sum are honest (else they inflate and cum hits 100)
+      pca.varexp[[names(xlist)[i]]] <- (pca$d^2 / sum(M^2)) * 100
+      v <- pca$v[, seq_len(npc_eff), drop = FALSE]
+      rownames(v) <- rownames(xlist[[i]])
+      loadings[[names(xlist)[i]]] <- v
     }
   }
 
@@ -1845,6 +1853,7 @@ compare_batchcorrection_methods <- function(X,
     xlist = xlist,
     pos = pos,
     pca.varexp = pca.varexp,
+    loadings = loadings,
     scores = res$scores,
     pheno = pars$pheno,
     pars = pars,
