@@ -1793,6 +1793,7 @@ compare_batchcorrection_methods <- function(X,
   pos <- NULL
   pca.varexp <- NULL
   loadings <- NULL
+  pheno.cor <- NULL
   t2 <- double_center_scale_fast
   if (clust.method == "tsne" && nmissing == 0) {
     message("Computing t-SNE clustering...")
@@ -1804,11 +1805,32 @@ compare_batchcorrection_methods <- function(X,
   } else {
     message("Computing PCA clustering...")
     npc_eff <- max(2, min(npc, min(sapply(xlist, function(x) min(dim(x)))) - 1))
+    ## numeric-code sample annotations once (factors -> level codes, as
+    ## PCAtools::eigencorplot does); drop constant columns that cannot correlate
+    meta_num <- NULL
+    if (!is.null(samples) && ncol(samples)) {
+      to_num <- function(v) if (is.numeric(v)) v else as.numeric(as.factor(v))
+      ## vapply over columns (NOT sapply over the whole object) so this works
+      ## whether samples is a data.frame or a character matrix -- sapply on a
+      ## matrix iterates element-wise and would collapse every column to a
+      ## constant. This also preserves each column's type (numeric kept as-is,
+      ## factor/character level-coded like PCAtools::eigencorplot).
+      meta_num <- vapply(
+        colnames(samples),
+        function(cn) to_num(samples[, cn]),
+        numeric(nrow(samples))
+      )
+      rownames(meta_num) <- rownames(samples)
+      keep <- apply(meta_num, 2, function(x) length(unique(x[!is.na(x)])) > 1)
+      meta_num <- meta_num[, keep, drop = FALSE]
+    }
     for (i in 1:length(xlist)) {
       set.seed(1234)
       M <- t2(xlist[[i]])
       pca <- irlba::irlba(M, nu = npc_eff, nv = npc_eff)
-      pos[[names(xlist)[i]]] <- pca$u[, seq_len(npc_eff), drop = FALSE]
+      U <- pca$u[, seq_len(npc_eff), drop = FALSE]
+      rownames(U) <- colnames(xlist[[i]])
+      pos[[names(xlist)[i]]] <- U
       ## % variance explained relative to TOTAL variance (sum(M^2) == sum of all
       ## eigenvalues), not just the top npc_eff PCs irlba returns, so the values
       ## and their cumulative sum are honest (else they inflate and cum hits 100)
@@ -1816,6 +1838,13 @@ compare_batchcorrection_methods <- function(X,
       v <- pca$v[, seq_len(npc_eff), drop = FALSE]
       rownames(v) <- rownames(xlist[[i]])
       loadings[[names(xlist)[i]]] <- v
+      ## correlation of each numeric-coded annotation with each PC, for the
+      ## phenotype-projection biplot in the UI (annotations x npc)
+      if (!is.null(meta_num) && ncol(meta_num)) {
+        mm <- meta_num[rownames(U), , drop = FALSE]
+        pheno.cor[[names(xlist)[i]]] <-
+          t(suppressWarnings(stats::cor(U, mm, use = "pairwise.complete.obs")))
+      }
     }
   }
 
@@ -1854,6 +1883,7 @@ compare_batchcorrection_methods <- function(X,
     pos = pos,
     pca.varexp = pca.varexp,
     loadings = loadings,
+    pheno.cor = pheno.cor,
     scores = res$scores,
     pheno = pars$pheno,
     pars = pars,
