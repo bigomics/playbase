@@ -1809,20 +1809,37 @@ compare_batchcorrection_methods <- function(X,
     ## PCAtools::eigencorplot does); drop constant columns that cannot correlate
     meta_num <- NULL
     if (!is.null(samples) && ncol(samples)) {
-      to_num <- function(v) if (is.numeric(v)) v else as.numeric(as.factor(v))
-      ## vapply over columns (NOT sapply over the whole object) so this works
-      ## whether samples is a data.frame or a character matrix -- sapply on a
-      ## matrix iterates element-wise and would collapse every column to a
-      ## constant. This also preserves each column's type (numeric kept as-is,
-      ## factor/character level-coded like PCAtools::eigencorplot).
-      meta_num <- vapply(
-        colnames(samples),
-        function(cn) to_num(samples[, cn]),
-        numeric(nrow(samples))
-      )
-      rownames(meta_num) <- rownames(samples)
-      keep <- apply(meta_num, 2, function(x) length(unique(x[!is.na(x)])) > 1)
-      meta_num <- meta_num[, keep, drop = FALSE]
+      ## Build the numeric annotation matrix to correlate against the PCs.
+      ## Numeric columns are kept as-is; categorical columns are one-hot encoded
+      ## (one binary indicator per level) so each level gets its own point-
+      ## biserial correlation / arrow, rather than arbitrary integer level codes
+      ## that would impose a fake ordering on unordered categories. Indexing
+      ## columns by name (not sapply over the whole object) also keeps this
+      ## correct when samples is a character matrix rather than a data.frame.
+      onehot_or_num <- function(cn) {
+        v <- samples[, cn]
+        ## numeric if it already is, or if every non-missing value coerces
+        ## cleanly -- covers numeric columns stored as strings when samples is a
+        ## character matrix rather than a data.frame
+        vn <- suppressWarnings(as.numeric(as.character(v)))
+        if (is.numeric(v) || !any(is.na(vn) & !is.na(v))) {
+          return(matrix(vn, ncol = 1, dimnames = list(NULL, cn)))
+        }
+        v <- as.factor(v)
+        ## skip pure-identifier columns (every sample is its own level)
+        if (nlevels(v) >= sum(!is.na(v))) {
+          return(NULL)
+        }
+        m <- vapply(levels(v), function(l) as.numeric(v == l), numeric(length(v)))
+        colnames(m) <- paste0(cn, "=", levels(v))
+        m
+      }
+      meta_num <- do.call(cbind, lapply(colnames(samples), onehot_or_num))
+      if (!is.null(meta_num)) {
+        rownames(meta_num) <- rownames(samples)
+        keep <- apply(meta_num, 2, function(x) length(unique(x[!is.na(x)])) > 1)
+        meta_num <- meta_num[, keep, drop = FALSE]
+      }
     }
     for (i in 1:length(xlist)) {
       set.seed(1234)
