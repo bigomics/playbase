@@ -16,3 +16,6 @@ Compute consensus matrix from list of matrices. The consensus
 matrix checks for consistent sign and minimal threshold for each
 matrix. Optionally filters on consistent p-value.
 }
+\seealso{
+WGCNAplus::computeConsensusMatrix
+}

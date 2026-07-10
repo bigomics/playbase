@@ -9,3 +9,6 @@ wgcna.labels2colors(colors, ...)
 \description{
 Converts WGCNA labels (numeric or color) to colors.
 }
+\seealso{
+WGCNAplus::labels2colors
+}
