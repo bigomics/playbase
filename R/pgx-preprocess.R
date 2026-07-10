@@ -151,9 +151,19 @@ pgx.preprocess <- function(counts,
   ## cleanX: align and remove outlier samples
   ## (upload_module_normalization.R: cleanX reactive)
   ## -------------------------------------------------------------------
-  kk <- intersect(rownames(X), rownames(counts))
-  X <- X[kk, , drop = FALSE]
-  counts <- counts[kk, , drop = FALSE]
+  ## Realign counts to X: normalization may drop rows (e.g. methylation BMIQ
+  ## against its probe manifest), so shrink counts to the features X kept.
+  ## X is derived from counts and stays in the same row order, so this is
+  ## just a subset. We index by %in% rather than by name because matrix
+  ## name-indexing keeps only the first match per name -- with duplicate
+  ## feature names that would silently drop rows. Duplicate features are
+  ## left untouched here and handled later in pgx.createPGX().
+  if (!identical(rownames(X), rownames(counts))) {
+    ndrop <- sum(!(rownames(counts) %in% rownames(X)))
+    counts <- counts[rownames(counts) %in% rownames(X), , drop = FALSE]
+    info("[pgx.preprocess] realigned counts to X: ", ndrop,
+      " feature(s) dropped by normalization")
+  }
   if (isTRUE(opt$remove_outliers)) {
     ## NB: when X has NAs the app returns the SVD2-imputed X (not the original).
     if (sum(is.na(X)) > 0) {
