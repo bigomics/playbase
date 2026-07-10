@@ -3,14 +3,6 @@
 ## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
-#' @export
-is.multiomics <- function(pgx) {
-  t1 <- t2 <- TRUE
-  if (!is.null(pgx$datatype)) t1 <- (pgx$datatype %in% c("multiomics", "multi-omics"))
-  t2 <- all(grepl("[:]", rownames(pgx$X)))
-  t1 || t2
-}
-
 #' Default merge by columns (cbind) with shared features on
 #' rows. Features are union of input matrices.
 #'
