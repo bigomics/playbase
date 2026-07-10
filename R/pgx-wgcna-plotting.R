@@ -46,196 +46,28 @@ wgcna.plotPreservationModuleTraits <- function(pres,
 ## =========================================================================
 
 
+#' WGCNAplus::plotModuleScores() unifies this function and
+#' wgcna.plotTopModules_multi into one auto-detecting implementation. Its
+#' single-dataset path also fires the boxplot branch for binary/logical
+#' traits, which this function's original condition (\code{yclass[trait]
+#' == "factor"}) never matched - so binary traits that used to render no
+#' plot now render a boxplot. Treated as an accepted bug fix rather than a
+#' behavior change to guard against.
+#' @seealso WGCNAplus::plotModuleScores
 #' @export
 wgcna.plotTopModules <- function(wgcna, trait, nmax = 16, setpar = TRUE) {
-  MEx <- wgcna$net$MEs
-  Y <- wgcna$datTrait
-  kk <- intersect(rownames(MEx), rownames(Y))
-  MEx <- MEx[kk, ]
-  Y <- Y[kk, , drop = FALSE]
-
-  rho <- cor(MEx, Y, use = "pairwise")
-  sel <- order(-abs(rho[, trait]))
-  sel <- head(sel, nmax)
-  n <- length(sel)
-  nr <- ceiling(sqrt(n))
-  nc <- ceiling(n / nr)
-
-  yclass <- sapply(as.data.frame(Y), class)
-  is.binary <- apply(Y, 2, function(x) all(x %in% c(TRUE, FALSE, 0, 1, NA)))
-  yclass[which(is.binary)] <- "factor"
-
-  if (setpar == 1) par(mfrow = c(nr, nc), mgp = c(2.6, 0.85, 0), mar = c(4, 4, 2.5, 1))
-  if (setpar == 2) par(mfrow = c(nc, nr), mgp = c(2.6, 0.85, 0), mar = c(4, 4, 2.5, 1))
-
-  yclass <- sapply(as.data.frame(Y), class)
-  is.binary <- apply(Y, 2, function(x) all(x %in% c(TRUE, FALSE, 0, 1, NA)))
-  yclass[which(is.binary)] <- "logical"
-  yclass
-
-  i <- sel[1]
-  for (i in head(sel, nmax)) {
-    x <- Y[, trait]
-    y <- MEx[, i]
-    label <- colnames(MEx)[i]
-    col <- substring(label, 3, 99)
-    col1 <- adjustcolor(col, alpha.f = 0.5)
-
-    if (yclass[trait] == "factor") {
-      boxplot(y ~ x,
-        main = label, col = col1,
-        xlab = trait, ylab = "ME score"
-      )
-      points(1 + x + 0.04 * rnorm(length(x)), y,
-        pch = 21, bg = col1, lwd = 0.5
-      )
-    }
-
-    if (yclass[trait] == "numeric") {
-      plot(x, y,
-        main = label,
-        pch = 21, cex = 1.1, col = 1, bg = col1, lwd = 0.25,
-        xlab = trait, ylab = "ME score"
-      )
-      abline(h = 0, lty = 2, lwd = 0.5)
-      r <- cor(x, y, use = "pairwise")
-      if (abs(r) > 0.3) {
-        abline(lm(y ~ x), col = 1, lwd = 0.6)
-        legend("bottomright", legend = paste("r=", round(r, 3)))
-      }
-    }
-  }
+  WGCNAplus::plotModuleScores(res = wgcna, trait = trait, nmax = nmax, setpar = setpar)
 }
 
 
 #' Plot top modules most correlated with trait for multi expression
 #' data.
-#'
+#' @seealso WGCNAplus::plotModuleScores
 #' @export
 wgcna.plotTopModules_multi <- function(multi, trait, nmax = 16, collapse = FALSE,
                                        plotlib = "base", setpar = TRUE) {
-  if (!"MEs" %in% names(multi)) {
-    multi$MEs <- lapply(multi$net$multiMEs, function(m) m$data)
-  }
-
-  ## we 'just' concatenate the ME matrices
-  multi$MEs <- lapply(multi$MEs, as.matrix)
-  MEx <- as.matrix(mofa.merge_data(multi$MEs))
-  Y <- lapply(multi$MEs, function(m) multi$datTraits[rownames(m), , drop = FALSE])
-  Y <- mofa.merge_data(Y)
-
-  batch <- sub(":.*", "", rownames(Y))
-  names(batch) <- rownames(Y)
-  nbatch <- length(multi$MEs)
-
-  ## select top modules
-  rho <- cor(MEx, Y, use = "pairwise")
-  sel <- names(sort(-abs(rho[, trait])))
-  sel <- head(sel, nmax)
-
-  Y <- type.convert(data.frame(Y, check.names = FALSE), as.is = FALSE)
-  if (collapse) {
-    Y <- collapseTraitMatrix(Y)
-    trait <- sub("=.*", "", trait)
-  }
-
-  n <- length(sel)
-  nr <- ceiling(sqrt(n))
-  nc <- ceiling(n / nr)
-  if (setpar == 1) par(mfrow = c(nr, nc), mgp = c(2.6, 0.85, 0), mar = c(2.5, 4, 2.5, 1))
-  if (setpar == 2) par(mfrow = c(nc, nr), mgp = c(2.6, 0.85, 0), mar = c(2.5, 4, 2.5, 1))
-
-  yclass <- sapply(as.data.frame(Y), class)
-  is.binary <- apply(Y, 2, function(x) all(x %in% c(TRUE, FALSE, 0, 1, NA)))
-  yclass[which(is.binary)] <- "logical"
-  yclass
-
-  i <- sel[1]
-  for (i in head(sel, nmax)) {
-    x <- Y[, trait]
-    y <- MEx[, i]
-    label <- i
-    col <- substring(label, 3, 99)
-    col1 <- adjustcolor(col, alpha.f = 0.66)
-    col2 <- col1
-
-    yclass[trait]
-    if (yclass[trait] %in% c("factor", "logical", "binary")) {
-      if (yclass[trait] %in% c("logical", "binary")) {
-        x <- (x == 1)
-      }
-      df <- data.frame(x = x, y = y, group = factor(batch))
-
-      par(mgp = c(2.4, 0.9, 0))
-      aa <- c(0.15, 0.55)
-      col1 <- sapply(aa, function(a) adjustcolor(col, alpha.f = a))
-
-      nb <- nbatch
-      atx <- c(seq(1, 2, length.out = nb), seq(4, 5, length.out = nb))
-      atx <- unlist(sapply(1:nbatch, function(i) i + c(-0.15, 0.15), simplify = FALSE))
-      atmid <- 1:nbatch
-
-      boxplot(
-        df$y ~ df$x + df$group,
-        # df$y ~ df$group + df$x,
-        at = atx,
-        xlim = c(0.6, nbatch + 0.4),
-        cols = col1,
-        main = label,
-        col = col1,
-        boxwex = 0.24,
-        xaxt = "n",
-        xlab = "",
-        ylab = "ME score"
-      )
-
-      mtext(levels(df$group), side = 1, line = 0.6, cex = 1.0, at = atmid)
-      bb <- c("FALSE", "TRUE")
-      legend("topright",
-        legend = bb, fill = col1,
-        cex = 0.8, y.intersp = 0.82, title = trait, title.cex = 1.1
-      )
-    } ## end of if factor
-
-    if (yclass[trait] %in% c("numeric", "integer")) {
-      df <- data.frame(x = x, y = y, group = factor(batch))
-      par(mgp = c(2.4, 0.9, 0))
-
-      aa <- seq(0.55, 0.15, length.out = nbatch)
-      col1 <- sapply(aa, function(a) adjustcolor(col, alpha.f = a))
-      names(col1) <- sort(unique(batch))
-
-      nb <- nbatch
-      colx <- col1[as.integer(factor(batch))]
-
-      plot(
-        df$x, df$y,
-        pch = 21,
-        cex = 1,
-        lwd = 0.4,
-        bg = colx,
-        main = label,
-        xlab = trait,
-        ylab = "ME score"
-      )
-      bb <- names(multi$MEs)
-      legend("topright",
-        legend = bb, fill = col1, cex = 0.9,
-        y.intersp = 0.85
-      )
-
-      ## add regression lines
-      b <- df$group[1]
-      col2 <- adjustcolor(col1, red.f = 0.5, green.f = 0.5, blue.f = 0.5)
-      names(col2) <- names(col1)
-      for (b in unique(df$group)) {
-        ii <- which(df$group == b)
-        abline(lm(df$y[ii] ~ df$x[ii]), lwd = 1, lty = 1, col = col2[1])
-      }
-    } ## end of if continuous
-  }
+  WGCNAplus::plotModuleScores(res = multi, trait = trait, nmax = nmax, collapse = collapse, setpar = setpar)
 }
-
 
 #' Plot top modules most correlated with trait for multi expression
 #' data.
@@ -682,6 +514,7 @@ rho2bluered <- function(R, a = 1, f = 0.95) {
 }
 
 
+#' @seealso WGCNAplus::plotModuleTraitHeatmap
 #' @export
 wgcna.plotModuleTraitHeatmap <- function(wgcna, setpar = TRUE, cluster = FALSE,
                                          multi = FALSE, main = NULL, justdata = FALSE,
@@ -689,47 +522,11 @@ wgcna.plotModuleTraitHeatmap <- function(wgcna, setpar = TRUE, cluster = FALSE,
                                          show = c("both", "traits", "contrasts")[1],
                                          nmax = -1, tmax = -1,
                                          text = TRUE, pstar = TRUE) {
-  if (!multi) wgcna <- list(wgcna)
-  MEs <- lapply(wgcna, function(w) as.matrix(w$net$MEs))
-  MEs <- wgcna.mergeME(MEs)
-
-  Y <- wgcna[[1]]$datTraits
-  sel <- 1:ncol(Y)
-  if (show == "traits") sel <- grep("_vs_", colnames(Y), invert = TRUE)
-  if (show == "contrasts") sel <- grep("_vs_", colnames(Y))
-  Y <- Y[, sel, drop = FALSE]
-
-  moduleTraitCor <- cor(MEs, Y, use = "pairwise.complete")
-
-  # nSamples <- nrow(wgcna[[1]]$datExpr)
-  nSamples <- t(!is.na(MEs)) %*% (!is.na(Y))
-
-  if (nmax > 0) {
-    sel <- head(order(-apply(abs(moduleTraitCor), 1, max, na.rm = TRUE)), nmax)
-    moduleTraitCor <- moduleTraitCor[sel, , drop = FALSE]
-    nSamples <- nSamples[sel, , drop = FALSE]
-  }
-  if (tmax > 0) {
-    sel <- head(order(-apply(abs(moduleTraitCor), 2, max, na.rm = TRUE)), tmax)
-    moduleTraitCor <- moduleTraitCor[, sel, drop = FALSE]
-    nSamples <- nSamples[, sel, drop = FALSE]
-  }
-
-  if (transpose) {
-    moduleTraitCor <- t(moduleTraitCor)
-    nSamples <- t(nSamples)
-  }
-
-  wgcna.plotLabeledCorrelationHeatmap(
-    R = moduleTraitCor,
-    nSamples = nSamples,
-    setpar = setpar,
-    cluster = cluster,
-    text = text,
-    main = main,
-    justdata = justdata,
-    colorlabel = colorlabel,
-    pstar = pstar
+  WGCNAplus::plotModuleTraitHeatmap(
+    wgcna = wgcna, setpar = setpar, cluster = cluster, multi = multi,
+    main = main, justdata = justdata, transpose = transpose,
+    colorlabel = colorlabel, show = show, nmax = nmax, tmax = tmax,
+    text = text, pstar = pstar
   )
 }
 
