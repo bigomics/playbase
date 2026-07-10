@@ -76,9 +76,17 @@
   cfg <- omicsai::omicsai_config(model = ai$llm_model,
                                  system_prompt = bp$system)
   res <- omicsai::omicsai_gen_text(bp$board, config = cfg)
+  ## Preserve omicsai's usage list verbatim (a plain list from
+  ## .omicsai_extract_usage(), not the S7 object) so downstream telemetry reads
+  ## its native field names (total_tokens, input_tokens_fresh/cached,
+  ## output_tokens, reasoning_tokens, cache_hit_rate); attach the model used so
+  ## a recorded report event can attribute cost to it.
+  usage <- res$metadata$usage
+  if (!is.null(usage)) usage$model <- ai$llm_model
   list(
     report = .ai_report_normheadings(res$text),
     prompt = paste0("# SYSTEM\n\n", bp$system,
-                    "\n\n---\n\n# BOARD\n\n", bp$board)
+                    "\n\n---\n\n# BOARD\n\n", bp$board),
+    usage  = usage
   )
 }
