@@ -112,6 +112,10 @@ expect_parity <- function(counts, samples, contrasts, opt) {
   got <- pgx.preprocess(counts, samples, contrasts, options = o)
   testthat::expect_equal(got$X, ref$X, tolerance = 1e-8)
   testthat::expect_equal(got$counts, ref$counts, tolerance = 1e-8)
+  ## Invariant: counts and X must stay row/col-aligned regardless of branch.
+  ## createPGX stop()s otherwise; cheap tripwire if the realign assumption breaks.
+  testthat::expect_identical(rownames(got$counts), rownames(got$X))
+  testthat::expect_identical(colnames(got$counts), colnames(got$X))
 }
 
 get_fixture <- function() {
@@ -127,9 +131,22 @@ get_fixture <- function() {
 
 test_that("pgx.preprocess reproduces the app pipeline across normalization methods", {
   fx <- get_fixture()
-  for (m in c("CPM", "TMM", "quantile", "CPM+quantile", "maxMedian")) {
+  ## keep in sync with normalizeExpression()'s method list
+  for (m in c("CPM", "TMM", "quantile", "CPM+quantile", "maxMedian", "maxSum")) {
     expect_parity(fx$counts, fx$samples, fx$contrasts, list(norm_method = m))
   }
+  ## 'reference' needs a valid ref feature; both paths agree once one is given.
+  expect_parity(fx$counts, fx$samples, fx$contrasts,
+    list(norm_method = "reference", ref_gene = rownames(fx$counts)[1]))
+})
+
+test_that("pgx.preprocess errors on reference normalization without a ref gene", {
+  fx <- get_fixture()
+  expect_error(
+    pgx.preprocess(fx$counts, fx$samples, fx$contrasts,
+      options = list(norm_method = "reference")),
+    "ref_gene"
+  )
 })
 
 test_that("pgx.preprocess reproduces the app pipeline with normalization skipped", {

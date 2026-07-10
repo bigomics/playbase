@@ -164,16 +164,24 @@ pgx.preprocess <- function(counts,
   ## cleanX: align and remove outlier samples
   ## (upload_module_normalization.R: cleanX reactive)
   ## -------------------------------------------------------------------
-  ## Realign counts to X: normalization may drop rows (e.g. methylation BMIQ
-  ## against its probe manifest), so shrink counts to the features X kept.
-  ## X is derived from counts and stays in the same row order, so this is
-  ## just a subset. We index by %in% rather than by name because matrix
-  ## name-indexing keeps only the first match per name -- with duplicate
-  ## feature names that would silently drop rows. Duplicate features are
-  ## left untouched here and handled later in pgx.createPGX().
+  ## Realign counts to X: normalization may drop and/or reorder rows, so shrink
+  ## counts to the features X kept and keep the two row-aligned (createPGX later
+  ## asserts rownames(counts) == rownames(X) element-wise). X is always a strict
+  ## row-subset of counts (built from it; normalization never adds/renames rows).
   if (!identical(rownames(X), rownames(counts))) {
     ndrop <- sum(!(rownames(counts) %in% rownames(X)))
-    counts <- counts[rownames(counts) %in% rownames(X), , drop = FALSE]
+    if (anyDuplicated(rownames(counts))) {
+      ## Duplicate feature names (e.g. RNA-seq gene symbols): column-wise
+      ## normalization preserves row order, so a %in% subset keeps counts
+      ## aligned to X and, unlike name-indexing, keeps every duplicate row.
+      ## ponytail: assumes no normalizer both reorders AND duplicates names
+      ## -- true today (dup names only in RNA-seq, which never reorders).
+      counts <- counts[rownames(counts) %in% rownames(X), , drop = FALSE]
+    } else {
+      ## Unique names: index by name so counts follows any reorder AND drop
+      ## from normalization (methylation BMIQ reorders to its probe manifest).
+      counts <- counts[rownames(X), , drop = FALSE]
+    }
     info("[pgx.preprocess] realigned counts to X: ", ndrop,
       " feature(s) dropped by normalization")
   }
