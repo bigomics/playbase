@@ -638,42 +638,18 @@ wgcna.getGeneStats <- function(wgcna, trait, module = NULL, plot = TRUE,
 
 #' Merge multiple ME matrices into one. Allow different dimensions.
 #'
+#' WGCNAplus::mergeME() has no explicit handling for \code{mlist = NULL,
+#' me2 = <matrix>}; that edge case is preserved here as an early return.
+#' @seealso WGCNAplus::mergeME
 wgcna.mergeME <- function(mlist, me2 = NULL, prefix = FALSE) {
   if (is.null(mlist) && !is.null(me2)) {
     return(me2)
   }
-  if (!is.null(me2) && !inherits(mlist, "list")) {
-    mlist <- list(mlist, me2)
-  }
-  all.samples <- sapply(mlist, rownames, simplify = FALSE)
-  all.samples <- unique(unlist(all.samples))
-  if (prefix) {
-    for (i in 1:length(mlist)) {
-      colnames(mlist[[i]]) <- paste0(names(mlist)[i], ":", colnames(mlist[[i]]))
-    }
-  }
-  is.mat <- all(sapply(mlist, inherits, what = "matrix"))
-  all.me <- sapply(mlist, colnames, simplify = FALSE)
-  all.me <- unique(unlist(all.me))
-  M <- matrix(NA, nrow = length(all.samples), ncol = length(all.me))
-  M <- as.data.frame(M)
-  rownames(M) <- all.samples
-  colnames(M) <- all.me
-  i <- 1
-  for (i in 1:length(mlist)) {
-    ii <- match(rownames(mlist[[i]]), rownames(M))
-    jj <- match(colnames(mlist[[i]]), colnames(M))
-    M[ii, jj] <- mlist[[i]]
-  }
-  if (is.mat) M <- as.matrix(M)
-  return(M)
+  WGCNAplus::mergeME(mlist = mlist, me2 = me2, prefix = prefix)
 }
 
 #' Compute enrichment of each WGCNA module using various
 #' methods. Handles single-type and multi-omics WGCNA objects.
-#'
-#' @export
-#' Compute module enrichment against a geneset matrix (GMT)
 #' @seealso WGCNAplus::computeModuleEnrichment
 #' @export
 wgcna.computeModuleEnrichment <- function(wgcna,
@@ -842,93 +818,27 @@ wgcna.computeConsensusGeneStats <- function(cons) {
   WGCNAplus::computeConsensusGeneStats(cons)
 }
 
+#' Extract clean consensus gene-statistics tables for a trait/module
 #'
-#'
+#' WGCNAplus::getConsensusGeneStats() has no guard for the case where
+#' \code{trait} isn't present in a layer's stats (which makes
+#' \code{wgcna.getGeneStats} return \code{NULL} for that layer); this
+#' function checks for that upfront and propagates \code{NULL} instead of
+#' erroring downstream.
+#' @seealso WGCNAplus::getConsensusGeneStats
 #' @export
 wgcna.getConsensusGeneStats <- function(cons, stats, trait, module = NULL) {
-  ## create extended color vector
   labels <- paste0("ME", cons$net$colors)
-  gstats <- list()
-  for (k in names(stats)) {
-    gstats[[k]] <- wgcna.getGeneStats(
-      wgcna = NULL,
-      stats = stats[[k]],
-      labels = labels,
-      trait = trait,
-      plot = FALSE,
-      module = module,
-      col = NULL,
-      main = NULL
+  gstats <- lapply(stats, function(s) {
+    wgcna.getGeneStats(
+      wgcna = NULL, stats = s, labels = labels, trait = trait,
+      plot = FALSE, module = module, col = NULL, main = NULL
     )
-  }
-
-  ## If any layer returned NULL (trait not in stats), propagate NULL
+  })
   if (any(sapply(gstats, is.null))) {
     return(NULL)
   }
-
-  ## Align rows
-  ff <- gstats[[1]]$feature
-  for (k in names(gstats)) {
-    ii <- match(ff, gstats[[k]]$feature)
-    gstats[[k]] <- gstats[[k]][ii, ]
-  }
-
-  ## Compute consensus statistics. Consensus statistics are computed
-  ## as geometric mean of score variables, and/or maximum pvalue for
-  ## p.value columns.
-  xcols <- c(3, 4, 6, 8)
-  pcols <- c(10, 5, 7, 9)
-  pcols1 <- c(5, 7, 9)
-  xcols <- c("score", "moduleMembership", "traitSignificance", "foldChange")
-  pcols <- c("scorePvalue", "MMPvalue", "TSPvalue", "foldChangePvalue")
-  pcols1 <- pcols[-1]
-  for (i in 1:length(gstats)) {
-    gstats[[i]][, "scorePvalue"] <- apply(gstats[[i]][, pcols1], 1, max, na.rm = TRUE)
-  }
-  ## xc <- lapply(gstats, function(x) log(abs(x[,xcols])*(x[,pcols]<0.05)))
-  xc <- lapply(gstats, function(x) log(abs(x[, xcols])))
-  xc <- exp(Reduce("+", xc) / length(xc))
-  xp <- Reduce(pmax, lapply(gstats, function(x) x[, pcols]))
-  df3 <- data.frame(gstats[[1]][, 1:2], xc, xp)
-  df3 <- df3[, colnames(gstats[[1]])]
-  head(df3)
-
-  ## Determine consensus status. Feature is 'C' (concordant) if sign
-  ## in all layers are equal and significant. 'D' (discordant) if sign
-  ## if not equal in all layers but significant. 'N' is any is
-  ## non-significant.
-  sign.pos <- Reduce("*", lapply(gstats, function(g) sign(g$score) == 1))
-  sign.neg <- Reduce("*", lapply(gstats, function(g) sign(g$score) == -1))
-  allsig <- Reduce("*", lapply(gstats, function(g) (g$scorePvalue) < 0.05))
-  table(allsig)
-  consensus <- c("D", "C")[1 + 1 * (sign.pos | sign.neg)]
-  consensus[which(allsig == 0)] <- "N"
-  cons.df <- data.frame(df3[, 1:2], consensus, df3[, -c(1, 2)])
-  head(cons.df)
-
-  ## This creates the full stats matrix (all subgroups)
-  df1 <- gstats[[1]][, c("feature", "module")]
-  df2 <- gstats[[1]][, 0]
-  cols <- colnames(gstats[[1]])[-c(1:2)]
-  for (k in cols) {
-    xx <- sapply(gstats, function(g) g[, k])
-    df2[[k]] <- I(xx)
-  }
-  df2 <- do.call(cbind, lapply(df2, unclass))
-  newcols <- unlist(lapply(cols, function(k) paste0(k, ".", names(gstats))))
-  colnames(df2) <- newcols
-  full.df <- data.frame(df1, consensus = cons.df$consensus, df2)
-
-  ## sort??
-  ii <- order(-cons.df$score * sign(mean(cons.df$score, na.rm = TRUE)))
-  cons.df <- cons.df[ii, ]
-  full.df <- full.df[ii, ]
-
-  list(
-    consensus = cons.df,
-    full = full.df
-  )
+  WGCNAplus::getConsensusGeneStats(cons = cons, stats = stats, trait = trait, module = module)
 }
 
 
