@@ -928,7 +928,7 @@ wgcna.plotModuleTraitHeatmap <- function(wgcna, setpar = TRUE, cluster = FALSE,
 
 
 #' Plot cluster dendrogram with eigengenes and traits.
-#'
+#' @seealso WGCNAplus::plotEigenGeneClusterDendrogram
 #' @export
 wgcna.plotEigenGeneClusterDendrogram <- function(wgcna = NULL,
                                                  ME = NULL,
@@ -940,64 +940,18 @@ wgcna.plotEigenGeneClusterDendrogram <- function(wgcna = NULL,
                                                  plot = TRUE,
                                                  multi = FALSE,
                                                  main = NULL) {
-  # Matrix with eigengenes and traits
-  if (is.null(wgcna) && is.null(ME)) {
-    stop("ERROR: wgcna or ME must be given")
-  }
-
-  if (is.null(ME)) {
-    if (multi) {
-      ME <- lapply(wgcna, function(w) as.matrix(w$net$MEs))
-      ME <- wgcna.mergeME(ME)
-      Y <- wgcna[[1]]$datTraits
-    } else {
-      ME <- wgcna$net$MEs
-      Y <- wgcna$datTraits
-    }
-
-    if (length(add_traits) == 1 && is.logical(add_traits) && add_traits == TRUE) {
-      ME <- wgcna.mergeME(ME, Y)
-    } else if (length(add_traits) > 0 && !is.logical(add_traits)) {
-      sel <- intersect(add_traits, colnames(Y))
-      if (length(sel)) ME <- wgcna.mergeME(ME, Y[, sel])
-    }
-  }
-
-  impME <- svdImpute2(as.matrix(ME))
-  ME <- WGCNA::orderMEs(impME)
-
-  if (NCOL(ME) <= 2) ME <- cbind(ME, ME) ## error if ncol(ME)<=2 !!!!
-  if (is.null(main)) main <- "Eigengene Dendrogram"
-
-  hc <- NULL
-  if (method == "wgcna") {
-    ## plot dendrogram with WGCNA function
-    WGCNA::plotEigengeneNetworks(
-      ME, main,
-      setMargins = setMargins,
-      marDendro = c(0, 4, 2, 0),
-      plotHeatmaps = FALSE
-    )
-  } else {
-    ## plot dendrogram with hclust function
-    if (setMargins && horiz) par(mar = c(4, 4, 4, 8))
-    if (setMargins && !horiz) par(mar = c(8, 4, 4, 1))
-    hc <- fastcluster::hclust(as.dist(1 - cor(ME)), method = "average")
-    if (plot) {
-      save.labels <- hc$labels
-      if (!showlabels) hc$labels <- rep("", ncol(ME))
-      plot(as.dendrogram(hc), horiz = horiz, main = main)
-      hc$labels <- save.labels
-    }
-  }
-  invisible(hc)
+  WGCNAplus::plotEigenGeneClusterDendrogram(
+    wgcna = wgcna, ME = ME, add_traits = add_traits, horiz = horiz,
+    setMargins = setMargins, method = method, showlabels = showlabels,
+    plot = plot, multi = multi, main = main
+  )
 }
 
 
 #' Plot the adjacency correlation heatmap matrix of eigengenes with or
 #' without traits. This can show how traits cluster together with the
 #' eigengenes.
-#'
+#' @seealso WGCNAplus::plotEigenGeneAdjacencyHeatmap
 #' @export
 wgcna.plotEigenGeneAdjacencyHeatmap <- function(wgcna,
                                                 add_traits = TRUE,
@@ -1024,420 +978,77 @@ wgcna.plotEigenGeneAdjacencyHeatmap <- function(wgcna,
                                                 fixclust = FALSE,
                                                 mask.intra = FALSE,
                                                 justdata = FALSE) {
-  if (0) {
-    add_traits <- TRUE
-    traits <- NULL
-    marx <- 1
-    main <- NULL
-    multi <- FALSE
-    phenotype <- NULL
-    colorlabel <- TRUE
-    text <- FALSE
-    pstar <- TRUE
-    setMargins <- TRUE
-    mar1 <- c(5.5, 5, 1.6, 1)
-    mar2 <- c(8, 10, 4, 2)
-    cex.lab <- 0.8
-    cex.text <- 0.7
-    plotDendro <- TRUE
-    plotHeatmap <- TRUE
-    dendro.horiz <- TRUE
-    dendro.width <- 0.3
-    dendro.labels <- TRUE
-    nmax <- -1
-    fixclust <- FALSE
-    mask.intra <- FALSE
-    justdata <- FALSE
-    add_me <- TRUE
-  }
-
-  if (!multi) wgcna <- list(gx = wgcna)
-
-  # Matrix with eigengenes and traits
-  ME <- NULL
-  if (add_me) {
-    ME <- lapply(wgcna, function(w) as.matrix(w$net$MEs))
-    ME <- wgcna.mergeME(ME)
-  }
-  Y <- wgcna[[1]]$datTraits
-
-  if (add_traits) {
-    sel <- colnames(Y)
-    if (!is.null(traits)) {
-      sel <- intersect(traits, sel)
-    }
-    if (is.null(ME)) {
-      ME <- Y[, sel, drop = FALSE]
-    } else {
-      ME <- wgcna.mergeME(ME, Y[, sel, drop = FALSE])
-    }
-  }
-
-  if (!add_traits && !is.null(phenotype)) {
-    if (is.null(ME)) {
-      ME <- Y[, phenotype, drop = FALSE]
-    } else {
-      ME <- wgcna.mergeME(ME, Y[, phenotype, drop = FALSE])
-    }
-  }
-
-  if (NCOL(ME) <= 2) ME <- cbind(ME, ME) ## error if ncol(ME)<=2 !!!!
-
-  ## Compute eigengene correlation matrix. Repeat 'power' times for
-  ## higher order adjacency.
-  power <- round(power)
-  R <- ME
-  for (i in 1:power) {
-    tt <- cortest(R, R)
-    R <- tt$rho
-    nSamples <- tt$n
-  }
-
-  ## If phenotype is given, we condition the heatmap using the
-  ## correlation to the phenotype.
-  if (!is.null(phenotype)) {
-    ## proper sign in case of inhibitor layer (like miRNA)
-    layersign <- rep(1, length(wgcna))
-    names(layersign) <- names(wgcna)
-    layersign[grep("^mi", names(wgcna), ignore.case = TRUE)] <- -1
-    ff <- list()
-    for (k in names(wgcna)) {
-      rho <- cor(ME, Y[, phenotype], use = "pairwise")[, 1]
-      ff[[k]] <- layersign[k] * rho
-    }
-    names(ff) <- NULL
-    ff <- unlist(ff)
-    ff <- 0.5 * (1 + ff) ## signed...
-    ff <- ff[match(rownames(R), names(ff))]
-    names(ff) <- rownames(R)
-    ff[is.na(ff)] <- 1 ## really??? NEED RETHINK
-    ww <- outer(ff, ff)
-    ## ww[is.na(ww)] <- 0
-    ww <- ww / max(ww, na.rm = TRUE)
-    R <- R * ww
-  }
-
-  if (nmax > 0) {
-    if (!is.null(phenotype)) {
-      y1 <- Y[, phenotype]
-      y1 <- y1[match(rownames(ME), names(y1))]
-      rho <- cor(ME, y1, use = "pairwise")[, 1]
-      ii <- head(order(-abs(rho)), nmax)
-    } else {
-      ii <- head(order(-Matrix::rowMeans(R**2)), nmax)
-    }
-    R <- R[ii, ii]
-  }
-
-  if (justdata) {
-    return(R)
-  }
-
-  # Plot the correlation heatmap matrix (note: this plot will overwrite
-  # the dendrogram plot)
-  if (is.null(main)) main <- "Eigengene Adjacency Heatmap"
-
-  if (plotDendro && plotHeatmap) {
-    layout.matrix <- matrix(1:2, nrow = 1, ncol = 2)
-    layout(mat = layout.matrix, heights = 1, widths = c(dendro.width, 1))
-    if (dendro.horiz && dendro.labels) {
-      mar1[4] <- mar2[2] ## copy left margin
-    }
-  }
-  if (plotDendro) par(mar = mar1)
-
-  # fixclust=FALSE
-  R0 <- R
-  R0[is.na(R0)] <- 0
-
-  if (fixclust) {
-    ii <- rownames(R)
-    hc <- fastcluster::hclust(as.dist(1 - R0[ii, ii]), method = "average")
-  } else {
-    hc <- fastcluster::hclust(as.dist(1 - R0), method = "average")
-  }
-  if (plotDendro) {
-    par(cex = cex.lab)
-    plot(as.dendrogram(hc),
-      horiz = TRUE,
-      ylab = "Eigengene dendrogram"
-    )
-    par(cex = 1)
-  }
-
-  if (plotHeatmap) {
-    ii <- hc$labels[hc$order]
-    ii <- intersect(ii, rownames(R))
-    R1 <- R[rev(ii), ii]
-    # nsamples <- nrow(Y)
-    nsamples <- nSamples[rownames(R1), colnames(R1)]
-    par(mar = mar2)
-    wgcna.plotLabeledCorrelationHeatmap(
-      R1,
-      nSamples = nsamples,
-      text = text,
-      pstar = pstar,
-      colorlabel = colorlabel,
-      cluster = FALSE,
-      setpar = FALSE,
-      main = main,
-      cex.lab = cex.lab,
-      cex.text = cex.text
-    )
-  }
-  invisible(R)
+  WGCNAplus::plotEigenGeneAdjacencyHeatmap(
+    wgcna = wgcna, add_traits = add_traits, traits = traits, add_me = add_me,
+    marx = marx, main = main, multi = multi, phenotype = phenotype,
+    colorlabel = colorlabel, text = text, pstar = pstar, power = power,
+    setMargins = setMargins, mar1 = mar1, mar2 = mar2, cex.lab = cex.lab,
+    cex.text = cex.text, plotDendro = plotDendro, plotHeatmap = plotHeatmap,
+    dendro.horiz = dendro.horiz, dendro.width = dendro.width,
+    dendro.labels = dendro.labels, nmax = nmax, fixclust = fixclust,
+    mask.intra = mask.intra, justdata = justdata
+  )
 }
 
+#' @seealso WGCNAplus::plotMultiEigengeneCorrelation
 #' @export
 wgcna.plotMultiEigengeneCorrelation <- function(wgcna, addtraits = TRUE,
                                                 phenotype = NULL, nmax = -1, main = NULL,
                                                 showvalues = FALSE, showsig = TRUE,
                                                 cex.text = 0.6, cex.lab = 0.8,
                                                 fixcluster = TRUE, setpar = TRUE) {
-  ## Show inter-correlation of modules
-  me <- lapply(wgcna, function(w) w$net$MEs)
-  if (length(me) == 1) {
-    me <- list(me[[1]], me[[1]])
-  }
-
-  comb <- combn(length(me), 2)
-  ncomb <- ncol(comb)
-  nsamples <- nrow(wgcna[[1]]$datExpr)
-  Y <- wgcna[[1]]$datTraits
-
-  ## for miRNA we need to flip sign
-  msign <- c(1, -1)[1 + 1 * (names(wgcna) %in% c("mi", "mir"))]
-
-  if (setpar) {
-    nc <- ceiling(sqrt(ncomb))
-    nr <- ceiling(ncomb / nc)
-    par(mfrow = c(nr, nc), mar = c(8, 10, 3, 1))
-  }
-
-  k <- 1
-  for (k in 1:ncol(comb)) {
-    i <- comb[1, k]
-    j <- comb[2, k]
-    M1 <- me[[i]]
-    M2 <- me[[j]]
-
-    if (addtraits) {
-      M1 <- cbind(M1, Y)
-      M2 <- cbind(M2, Y)
-    }
-    if (FALSE && !addtraits && !is.null(phenotype)) {
-      y <- Y[, phenotype, drop = FALSE]
-      M1 <- cbind(M1, y)
-      M2 <- cbind(M2, y)
-    }
-
-
-    R1 <- cor(M1, M2, use = "pairwise.complete")
-
-    if (nmax > 0) {
-      ii <- head(order(-apply(abs(R1), 1, max)), nmax)
-      jj <- head(order(-apply(abs(R1), 2, max)), nmax)
-      R1 <- R1[ii, jj]
-    }
-
-    ## cluster unweighted matrix
-    ii <- fastcluster::hclust(dist(R1), method = "average")$order
-    jj <- fastcluster::hclust(dist(t(R1)), method = "average")$order
-    R1 <- R1[ii, jj]
-
-    ## This conditions the correlation on phenotype. Important.
-    do.condition <- !is.null(phenotype)
-    if (do.condition) {
-      y <- Y[, phenotype]
-      w1 <- cor(M1[, rownames(R1)], y, use = "pairwise")[, 1]
-      w2 <- cor(M2[, colnames(R1)], y, use = "pairwise")[, 1]
-      if (msign[i] != 0) w1 <- msign[i] * w1
-      if (msign[j] != 0) w2 <- msign[j] * w2
-      w1 <- pmax(w1, 0)
-      w2 <- pmax(w2, 0)
-      ww <- outer(w1, w2)
-      ww <- ww / max(ww, na.rm = TRUE)
-      R1 <- R1 * ww
-    }
-
-    main <- paste(names(me)[i], "vs.", names(me)[j])
-    if (do.condition) main <- paste(main, "(conditioned)")
-
-    wgcna.plotLabeledCorrelationHeatmap(
-      R1,
-      nsamples,
-      text = showvalues,
-      pstar = showsig,
-      is.dist = FALSE,
-      cluster = !fixcluster,
-      setpar = FALSE,
-      main = main,
-      cex.text = cex.text,
-      cex.lab = cex.lab
-    )
-  }
+  WGCNAplus::plotMultiEigengeneCorrelation(
+    wgcna = wgcna, addtraits = addtraits, phenotype = phenotype, nmax = nmax,
+    main = main, showvalues = showvalues, showsig = showsig,
+    cex.text = cex.text, cex.lab = cex.lab, fixcluster = fixcluster,
+    setpar = setpar
+  )
 }
 
 
+#' WGCNAplus::plotEigenGeneGraph() renders module-color node fills at full
+#' opacity rather than this function's alpha.f=0.3 transparency - a
+#' cosmetic rendering difference only, no data/value change.
+#' @seealso WGCNAplus::plotEigenGeneGraph
 #' @export
 wgcna.plotEigenGeneGraph <- function(wgcna, add_traits = TRUE, main = NULL,
                                      multi = FALSE, vcex = 1, labcex = 1,
                                      mincor = 0.5, as.phylo = TRUE) {
-  ## require(igraph)
-  if (multi) {
-    ME <- lapply(wgcna, function(w) as.matrix(w$net$MEs))
-    ME <- wgcna.mergeME(ME)
-    if (add_traits) ME <- cbind(ME, wgcna[[1]]$datTraits)
-  } else {
-    ME <- wgcna$net$MEs
-    if (add_traits) ME <- cbind(ME, wgcna$datTraits)
-  }
-  if (NCOL(ME) <= 2) ME <- cbind(ME, ME) ## error if ncol(ME)<=2 !!!!
-
-  sdx <- matrixStats::colSds(as.matrix(ME * 1), na.rm = TRUE)
-  if (any(sdx == 0)) ME <- ME + runif(length(ME), 0, 1e-5)
-
-  ## Recalculate MEs with color as labels
-  corx <- cor(ME, use = "pairwise")
-  corx[is.na(corx)] <- 0
-
-  layout <- NULL
-  if(as.phylo) {
-    clust <- fastcluster::hclust(as.dist(1 - corx))
-    phylo <- ape::as.phylo(clust)
-    gr <- igraph::as.igraph(phylo, directed = FALSE)
-    layout <- igraph::layout_with_kk
-  } else {
-    adj <- (corx > mincor) * corx
-    gr <- igraph::graph_from_adjacency_matrix(adj, diag=FALSE,
-      mode="undirected", weighted=TRUE)
-    layout <- igraph::layout_with_fr
-  }
-  
-  is.node <- grepl("Node", igraph::V(gr)$name)
-  module.name <- igraph::V(gr)$name
-  if (multi) {
-    module.size <- lapply(wgcna, function(w) table(w$net$labels))
-    names(module.size) <- NULL
-    module.size <- unlist(module.size)
-    module.colors <- sapply(wgcna, function(w) w$me.colors)
-    names(module.colors) <- NULL
-    module.colors <- unlist(module.colors)
-  } else {
-    module.size <- table(wgcna$net$labels)
-    module.colors <- wgcna$me.colors
-  }
-  module.size <- module.size / mean(module.size)
-  module.colors <- adjustcolor(module.colors[module.name],alpha.f=0.3)
-  igraph::V(gr)$label <- igraph::V(gr)$name
-  igraph::V(gr)$label[is.node] <- NA
-  igraph::V(gr)$color <- module.colors
-  igraph::V(gr)$size <- vcex * 18 * (module.size[module.name])**0.4
-  igraph::V(gr)$size[is.na(igraph::V(gr)$size)] <- 0
-
-  ## par(mfrow = c(1, 1), mar = c(1, 1, 1, 1) * 0)
-  igraph::plot.igraph(
-    gr,
-    layout = layout,
-    vertex.label.cex = 0.85 * labcex,
-    edge.width = 3
+  WGCNAplus::plotEigenGeneGraph(
+    wgcna = wgcna, add_traits = add_traits, main = main, multi = multi,
+    vcex = vcex, labcex = labcex, mincor = mincor, as.phylo = as.phylo
   )
-  if (!is.null(main)) title(main, line = -1.5)
 }
 
 
 #' Plot Multi-dimensional scaling (MDS) of centered data matrix.
-#'
+#' @seealso WGCNAplus::plotMDS
 #' @export
 wgcna.plotMDS <- function(wgcna, main = NULL, scale = FALSE) {
-  cc <- wgcna.labels2colors(wgcna$net$color)
-  pc <- svd(t(scale(wgcna$datExpr, scale = scale)), nv = 2)$u[, 1:2]
-  # pc <- svd(t(scale(wgcna$datExpr)),nv=1)$u[,1:2]
-  colnames(pc) <- c("MDS-x", "MDS-y")
-  if (is.null(main)) main <- "MDS of features"
-  plot(pc, col = cc, main = main)
+  WGCNAplus::plotMDS(wgcna = wgcna, main = main, scale = scale)
 }
 
-#'
-#'
+#' @seealso WGCNAplus::plotFeatureUMAP
 #' @export
 wgcna.plotFeatureUMAP <- function(wgcna, nhub = 3, method = "clust",
                                   scale = FALSE, main = NULL,
                                   plotlib = "base", annot = NULL) {
-  if (method == "clust" && "clust" %in% names(wgcna)) {
-    pos <- wgcna$clust[["umap2d"]]
-  } else if (method == "umap") {
-    cX <- t(scale(wgcna$datExpr, scale = scale)) ## WGCNA uses correlation
-    pos <- uwot::umap2(cX)
-    colnames(pos) <- c("UMAP-x", "UMAP-y")
-    rownames(pos) <- colnames(wgcna$datExpr)
-    ##  } else if(method=="mds") {
-  } else {
-    pos <- svd(t(scale(wgcna$datExpr, scale = scale)), nv = 2)$u[, 1:2]
-    colnames(pos) <- c("MDS-x", "MDS-y")
-    rownames(pos) <- colnames(wgcna$datExpr)
-  }
-
-  if (is.null(main)) main <- "Feature UMAP colored by module"
-
-  hubgenes <- NULL
-  if (nhub > 0) {
-    ## get top hub genes
-    mm <- wgcna$stats$moduleMembership
-    hubgenes <- apply(mm, 2, function(x) head(names(sort(-x)), nhub), simplify = FALSE)
-    sel <- which(names(hubgenes) != "MEgrey")
-    hubgenes <- unlist(hubgenes[sel])
-  }
-
-  col1 <- wgcna$net$colors
-  genes1 <- names(which(col1 != "grey"))
-  if (!is.null(annot)) {
-    rownames(pos) <- probe2symbol(rownames(pos), annot, "gene_name", fill_na = TRUE)
-    names(col1) <- probe2symbol(names(col1), annot, "gene_name", fill_na = TRUE)
-    genes1 <- probe2symbol(genes1, annot, "gene_name", fill_na = TRUE)
-    if (nhub > 0) {
-      hubgenes <- setNames(probe2symbol(hubgenes, annot, "gene_name", fill_na = TRUE), names(hubgenes))
-    }
-  }
-  pgx.scatterPlotXY(
-    pos,
-    var = col1,
-    col = sort(unique(col1)),
-    hilight = genes1,
-    hilight2 = hubgenes,
-    cex.lab = 1.2,
-    label.clusters = FALSE,
-    title = main,
-    plotlib = plotlib
+  WGCNAplus::plotFeatureUMAP(
+    wgcna = wgcna, nhub = nhub, method = method, scale = scale,
+    main = main, plotlib = plotlib, annot = annot
   )
 }
 
 
 #' Plot module significance.
-#'
+#' @seealso WGCNAplus::plotModuleSignificance
 #' @export
 wgcna.plotModuleSignificance <- function(wgcna, trait, main = NULL, abs = FALSE) {
-  ## cc <- paste0("ME",wgcna$net$color)
-  cc <- wgcna.labels2colors(wgcna$net$color)
-  if ("stats" %in% names(wgcna)) {
-    traitSignificance <- wgcna$stats$traitSignificance
-  } else {
-    traitSignificance <- as.data.frame(cor(wgcna$datExpr, wgcna$datTraits, use = "p"))
-    names(traitSignificance) <- names(wgcna$datTraits)
-    rownames(traitSignificance) <- colnames(wgcna$datExpr)
-  }
-  geneSig <- traitSignificance[, trait]
-  if (is.null(main)) main <- paste("Module significance with", trait)
-  if (abs) geneSig <- abs(geneSig)
-  WGCNA::plotModuleSignificance(
-    geneSig,
-    colors = cc, main = main, boxplot = FALSE
-  )
+  WGCNAplus::plotModuleSignificance(wgcna = wgcna, trait = trait, main = main, abs = abs)
 }
 
 
-#'
-#'
+#' @seealso WGCNAplus::plotConsensusSampleDendroAndColors
 #' @export
 wgcna.plotConsensusSampleDendroAndColors <- function(cons, i,
                                                      what = c("both", "me", "traits")[1],
@@ -1448,25 +1059,15 @@ wgcna.plotConsensusSampleDendroAndColors <- function(cons, i,
                                                      marAll = c(0.2, 7, 1.5, 0.5),
                                                      colorHeightMax = 0.6,
                                                      main = NULL) {
-  wgcna.plotSampleDendroAndColors(
-    wgcna = cons$layers[[i]],
-    main = main,
-    datExpr = cons$datExpr[[i]],
-    datTraits = cons$datTraits,
-    datME = cons$net$multiME[[i]]$data,
-    what = what,
-    show.me = show.me,
-    show.traits = show.traits,
-    show.contrasts = show.contrasts,
-    marAll = marAll,
-    clust.expr = clust.expr,
-    setLayout = setLayout,
-    colorHeightMax = colorHeightMax
+  WGCNAplus::plotConsensusSampleDendroAndColors(
+    cons = cons, i = i, what = what, show.me = show.me,
+    show.traits = show.traits, show.contrasts = show.contrasts,
+    clust.expr = clust.expr, setLayout = setLayout, marAll = marAll,
+    colorHeightMax = colorHeightMax, main = main
   )
 }
 
-#'
-#'
+#' @seealso WGCNAplus::plotSampleDendroAndColors
 #' @export
 wgcna.plotSampleDendroAndColors <- function(wgcna, input.type = "wgcna",
                                             what = c("me", "traits", "both")[3],
@@ -1477,75 +1078,12 @@ wgcna.plotSampleDendroAndColors <- function(wgcna, input.type = "wgcna",
                                             marAll = c(0.2, 7, 1.5, 0.5),
                                             colorHeightMax = 0.6,
                                             main = NULL, justdata = FALSE) {
-  if (input.type == "net") {
-    ME0 <- wgcna$MEs
-    if (is.null(datExpr)) stop("must supply datExpr")
-    if (is.null(datTraits)) stop("must supply datTraits")
-  } else {
-    ME0 <- wgcna$net$MEs
-    datTraits <- 1 * wgcna$datTraits
-    datExpr <- wgcna$datExpr
-  }
-
-  if (!is.null(datME)) {
-    ME0 <- datME
-  }
-
-  ME <- ME0[, 0]
-  samples <- rownames(ME)
-  if (show.me) {
-    ME <- cbind(ME, ME0)
-  }
-  if (show.traits) {
-    sel <- grep("_vs_", colnames(datTraits), invert = TRUE)
-    ME <- cbind(ME, datTraits[samples, sel, drop = FALSE])
-  }
-  if (show.contrasts) {
-    sel <- grep("_vs_", colnames(datTraits))
-    ME <- cbind(ME, datTraits[samples, sel, drop = FALSE])
-  }
-
-  if (NCOL(ME) <= 2) ME <- cbind(ME, ME) ## error if ncol(ME)<=2 !!!!
-  sdx <- matrixStats::colSds(as.matrix(ME * 1), na.rm = TRUE)
-  ME <- ME[, which(sdx > 0), drop = FALSE]
-
-  ## Recalculate MEs with color as labels
-  if (clust.expr) {
-    corx <- cor(t(datExpr), use = "pairwise")
-  } else {
-    corx <- cor(t(ME0), use = "pairwise")
-  }
-  corx[is.na(corx)] <- 0
-  sampleTree <- fastcluster::hclust(as.dist(1 - corx), method = "average")
-
-  corx <- cor(ME, use = "pairwise")
-  corx[is.na(corx)] <- 0
-  jj <- fastcluster::hclust(as.dist(1 - corx))$order
-  colors <- WGCNA::numbers2colors(ME[, jj])
-
-  if (justdata) {
-    return(ME)
-  }
-
-  if (is.null(main)) {
-    if (what == "me") main <- "Sample dendrogram and module heatmap"
-    if (what == "traits") main <- "Sample dendrogram and trait heatmap"
-    if (what == "both") main <- "Sample dendrogram and module+traits heatmap"
-  }
-
-  ## Plot the dendrogram and the module colors underneath
-  WGCNA::plotDendroAndColors(
-    dendro = sampleTree,
-    colors = colors,
-    groupLabels = colnames(ME)[jj],
-    dendroLabels = rownames(ME),
-    hang = 0.03,
-    addGuide = FALSE,
-    guideHang = 0.05,
-    setLayout = setLayout,
-    marAll = marAll,
-    main = main,
-    colorHeightMax = colorHeightMax
+  WGCNAplus::plotSampleDendroAndColors(
+    wgcna = wgcna, input.type = input.type, what = what, show.me = show.me,
+    show.traits = show.traits, show.contrasts = show.contrasts,
+    datTraits = datTraits, datExpr = datExpr, datME = datME,
+    clust.expr = clust.expr, setLayout = setLayout, marAll = marAll,
+    colorHeightMax = colorHeightMax, main = main, justdata = justdata
   )
 }
 
