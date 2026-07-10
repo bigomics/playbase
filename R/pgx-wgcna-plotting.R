@@ -22,167 +22,22 @@ wgcna.plotConsensusOverlapHeatmap <- function(net1, net2,
   )
 }
 
+#' @seealso WGCNAplus::plotPreservationSummaries
 #' @export
 wgcna.plotPreservationSummaries <- function(pres, setpar = TRUE) {
-  # Create a simple bar plot of Zsummary:
-  Z <- pres$Zsummary
-  ntest <- ncol(Z)
-
-  if (setpar) {
-    par(mfrow = c(3, ntest), mar = c(5, 5, 4, 1))
-  }
-  xylist <- list(
-    c("moduleSize", "Zsummary.pres"),
-    c("moduleSize", "medianRank.pres"),
-    c("Zsummary.pres", "medianRank.pres")
-  )
-
-  for (xy in xylist) {
-    for (k in colnames(Z)) {
-      X <- data.frame(
-        color = substring(names(pres$moduleSize), 3, 99),
-        moduleSize = pres$moduleSize,
-        Zsummary.pres = pres$Zsummary[, k],
-        medianRank.pres = pres$medianRank[, k]
-      )
-      xvar <- xy[1]
-      yvar <- xy[2]
-      ylim <- c(0, max(X[, yvar]))
-      if (yvar == "medianRank.pres") ylim <- rev(ylim)
-      plot(
-        X[, xvar],
-        X[, yvar],
-        pch = 21,
-        cex = 2,
-        bg = X$color,
-        ylim = ylim,
-        xlab = xvar,
-        ylab = yvar
-      )
-      title(yvar, cex.main = 1.4, line = 2.2)
-      sub <- paste(k, "vs.", "reference")
-      title(sub, cex.main = 1, line = 0.9)
-      if (yvar == "Zsummary.pres") abline(h = c(2, 10), lty = 2)
-    }
-  }
+  WGCNAplus::plotPreservationSummaries(pres = pres, setpar = setpar)
 }
 
+#' @seealso WGCNAplus::plotPreservationModuleTraits
 #' @export
 wgcna.plotPreservationModuleTraits <- function(pres,
                                                subplots = c("zsummary", "consmt", "wt.consmt"),
                                                order.by = "name",
                                                setpar = TRUE, rm.na = FALSE) {
-  if (all(is.numeric(subplots))) {
-    subplots <- c("zsummary", "consmt", "wt.consmt")[subplots]
-  }
-
-  if (setpar) {
-    par(mfrow = c(2, 2), mar = c(14, 12, 4, 2))
-  }
-
-  ## compute consensus
-  Zsummary <- pres$Zsummary
-
-  cR <- pres$modTraits
-  ydim <- sapply(pres$layers, function(w) nrow(w$datTraits))
-  consZ <- wgcna.computeConsensusMatrix(cR, ydim, psig = 1, consfun = "gmean")
-  ## consZ <- consZ[rownames(cR[[1]]), colnames(cR[[1]])]
-
-  ## match
-  ii <- intersect(rownames(Zsummary), rownames(consZ))
-  Zsummary <- Zsummary[ii, , drop = FALSE]
-  consZ <- consZ[ii, , drop = FALSE]
-
-  ## order
-  order.method <- "clust"
-  if (order.by == "name") {
-    ii <- order(rownames(Zsummary))
-    Zsummary <- Zsummary[ii, , drop = FALSE]
-    consZ <- consZ[ii, , drop = FALSE]
-  }
-  if (order.by == "zsummary") {
-    ii <- order(-rowMeans(Zsummary**2))
-    Zsummary <- Zsummary[ii, , drop = FALSE]
-    consZ <- consZ[ii, , drop = FALSE]
-  }
-  if (order.by == "clust") {
-    consZ1 <- consZ
-    consZ1[is.na(consZ1)] <- 0
-    ii <- fastcluster::hclust(dist(consZ1))$order
-    jj <- fastcluster::hclust(dist(t(consZ1)))$order
-    Zsummary <- Zsummary[ii, , drop = FALSE]
-    consZ <- consZ[ii, jj, drop = FALSE]
-  }
-
-  ## --------------------------------------
-  ## Zsummary heatmap
-  ## --------------------------------------
-  if ("zsummary" %in% subplots) {
-    WGCNA::labeledHeatmap(
-      Matrix = Zsummary,
-      xLabels = colnames(Zsummary),
-      yLabels = rownames(Zsummary),
-      ySymbols = rownames(Zsummary),
-      colors = tail(WGCNA::blueWhiteRed(100), 50),
-      colorLabels = TRUE,
-      setStdMargins = FALSE
-    )
-    title("Module preservation (Zsummary)", line = 1.2, cex.main = 1.2)
-  }
-
-  ## --------------------------------------
-  ## Consensus Module-Trait
-  ## --------------------------------------
-  validcol <- function(R) {
-    which(colMeans(is.na(R)) < 1 &
-      matrixStats::colSds(R, na.rm = TRUE) > 0.01)
-  }
-
-  if ("consmt" %in% subplots) {
-    clim <- max(abs(consZ), na.rm = TRUE)
-    cval <- seq(-clim, clim, length.out = 201)
-    ii <- which(cval >= min(consZ, na.rm = TRUE) & cval <= max(consZ, na.rm = TRUE))
-    col2 <- WGCNA::blueWhiteRed(201)[ii]
-    jj <- 1:ncol(consZ)
-    if (rm.na) jj <- validcol(consZ)
-    WGCNA::labeledHeatmap(
-      Matrix = consZ[, jj, drop = FALSE],
-      xLabels = colnames(consZ)[jj],
-      yLabels = rownames(consZ),
-      ySymbols = rownames(consZ),
-      colors = col2,
-      colorLabels = TRUE,
-      setStdMargins = FALSE
-    )
-    title("Consensus Module-Traits", line = 1.2, cex.main = 1.2)
-  }
-
-  ## --------------------------------------
-  ## preservation-weighted Consensus Module-Trait
-  ## --------------------------------------
-  if ("wt.consmt" %in% subplots) {
-    wz <- rowMeans(Zsummary**2, na.rm = TRUE)
-    wz <- wz / max(wz)
-    consW <- consZ * wz[rownames(consZ)]
-
-    clim <- max(abs(consW), na.rm = TRUE)
-    cval <- seq(-clim, clim, length.out = 201)
-    ii <- which(cval >= min(consW, na.rm = TRUE) & cval <= max(consW, na.rm = TRUE))
-    col2 <- WGCNA::blueWhiteRed(201)[ii]
-
-    jj <- 1:ncol(consW)
-    if (rm.na) jj <- validcol(consW)
-    WGCNA::labeledHeatmap(
-      Matrix = consW[, jj, drop = FALSE],
-      xLabels = colnames(consW)[jj],
-      yLabels = rownames(consW),
-      ySymbols = rownames(consW),
-      colors = col2,
-      colorLabels = TRUE,
-      setStdMargins = FALSE
-    )
-    title("Preservation-weighted Consensus\nModule-Traits", line = 1, cex.main = 1.2)
-  }
+  WGCNAplus::plotPreservationModuleTraits(
+    pres = pres, subplots = subplots, order.by = order.by,
+    setpar = setpar, rm.na = rm.na
+  )
 }
 
 
@@ -480,64 +335,16 @@ wgcna.plotModuleScores <- function(res, trait,
   }
 }
 
-#'
-#'
+#' @seealso WGCNAplus::plotTraitCorrelationBarPlots
 #' @export
 wgcna.plotTraitCorrelationBarPlots <- function(res, trait, multi = FALSE,
                                                colored = TRUE, beside = TRUE,
                                                main = NULL, cex.main = 1.3,
                                                setpar = TRUE) {
-  if (setpar) {
-    nr <- ceiling(sqrt(length(trait)))
-    nc <- ceiling(length(trait) / nr)
-    par(mfrow = c(nr, nc))
-  }
-  p <- trait[1]
-  for (p in trait) {
-    groups <- NULL
-    if (multi) {
-      mt <- res$modTraits
-      groups <- names(mt)
-      m1 <- sapply(mt, function(x) x[, p])
-    } else {
-      m1 <- res$modTraits[, p]
-    }
-    colnames(m1) <- paste0(p, " (", colnames(m1), ")")
-    me.col <- grey.colors(2)
-    if (colored) {
-      me.col <- sub("ME", "", rownames(m1))
-      me.col <- rbind(me.col, me.col)
-      aa <- seq(0.7, 0.25, length.out = nrow(me.col))
-      for (i in 1:nrow(me.col)) {
-        me.col[i, ] <- adjustcolor(me.col[i, ], alpha.f = aa[i])
-      }
-    }
-
-    if (beside) {
-      barplot(t(m1),
-        las = 3, beside = TRUE, col = me.col,
-        ylab = "trait correlation (rho)"
-      )
-      tt <- p
-      if (!is.null(main)) tt <- main
-      title(tt, cex.main = cex.main)
-      if (length(groups) > 1) {
-        legend("topright", legend = groups, fill = grey.colors(length(groups)))
-      }
-    } else {
-      me.col <- NULL
-      if (colored) me.col <- sub("ME", "", rownames(m1))
-      for (i in 1:ncol(m1)) {
-        barplot(m1[, i],
-          las = 3, beside = TRUE, col = me.col,
-          ylab = "trait correlation (rho)"
-        )
-        tt <- colnames(m1)[i]
-        if (!is.null(main)) tt <- main
-        title(tt, cex.main = cex.main)
-      }
-    }
-  }
+  WGCNAplus::plotTraitCorrelationBarPlots(
+    res = res, trait = trait, multi = multi, colored = colored,
+    beside = beside, main = main, cex.main = cex.main, setpar = setpar
+  )
 }
 
 #' @seealso WGCNAplus::plotTOM
@@ -1110,53 +917,14 @@ wgcna.plotLabeledCorrelationHeatmap <- function(R, nSamples,
 #' main connectivity structure for the modules. It can be used for
 #' (edge) preservation analysis for comparing different group of
 #' samples..
-#'
+#' @seealso WGCNAplus::plotModuleHubGenes
 #' @export
 wgcna.plotModuleHubGenes <- function(wgcna, modules = NULL,
                                      alpha = 0.5, setpar = TRUE) {
-  if (is.null(modules)) {
-    modules <- colnames(wgcna$stats$moduleMembership)
-  }
-  modules <- intersect(modules, colnames(wgcna$stats$moduleMembership))
-  if (length(modules) == 0) {
-    message("ERROR. no valid modules")
-    return(NULL)
-  }
-
-  if (setpar) {
-    nr <- floor(length(modules)**0.5)
-    nc <- ceiling(length(modules) / nr)
-    nr
-    nc
-    par(mfrow = c(nr, nc), mar = c(0, 1, 2.5, 1))
-  }
-  for (k in modules) {
-    mm <- wgcna$stats$moduleMembership[, k]
-    mm.score <- head(sort(mm, decreasing = TRUE), 30)
-    topgenes <- names(mm.score)
-    A <- cor(wgcna$datExpr[, topgenes])
-    diag(A) <- 0
-    A <- (A - min(A, na.rm = TRUE)) / (max(A, na.rm = TRUE) - min(A, na.rm = TRUE))
-    A[is.na(A)] <- 0
-    gr <- igraph::graph_from_adjacency_matrix(
-      A,
-      mode = "undirected", weighted = TRUE, diag = FALSE
-    )
-    norm.mm.score <- (mm.score - min(mm.score)) / (max(mm.score) - min(mm.score))
-    clr <- sub("ME", "", k)
-    if (!is.na(as.integer(clr))) clr <- as.integer(clr)
-    if (clr == "black") clr <- "grey40"
-    plot(gr,
-      layout = igraph::layout_in_circle,
-      edge.width = 6 * igraph::E(gr)$weight**8,
-      vertex.size = 5 + 15 * norm.mm.score,
-      vertex.color = adjustcolor(clr, alpha.f = alpha),
-      vertex.frame.color = clr
-    )
-    title(paste("Module", k), line = 0.33)
-  }
+  WGCNAplus::plotModuleHubGenes(wgcna = wgcna, modules = modules, alpha = alpha, setpar = setpar)
 }
 
+#' @seealso WGCNAplus::plotGeneNetwork
 #' @export
 wgcna.plotGeneNetwork <- function(wgcna, genes, col = NULL,
                                   edge.alpha = 0.3,
@@ -1165,31 +933,10 @@ wgcna.plotGeneNetwork <- function(wgcna, genes, col = NULL,
                                   alpha = 0.5,
                                   min.rho = 0.5,
                                   setpar = TRUE) {
-  A <- cor(wgcna$datExpr[, genes])
-  A <- A * (abs(A) > min.rho)
-  A[is.na(A)] <- 0
-  gr <- igraph::graph_from_adjacency_matrix(
-    A,
-    mode = "undirected", weighted = TRUE, diag = FALSE
-  )
-  vcex <- matrixStats::colVars(wgcna$datExpr[, genes])
-  vcex <- vcex / max(abs(vcex))
-  if (is.null(col)) {
-    col <- wgcna$net$color[genes]
-  }
-  col <- sub("black", "grey40", col)
-  ecol <- c("darkred", "darkgreen")[1 + 1 * (igraph::E(gr)$weight > 0)]
-  table(ecol)
-  ecol <- adjustcolor(ecol, alpha.f = edge.alpha)
-  ewt <- abs(igraph::E(gr)$weight)
-  ewt <- (ewt / max(abs(ewt)))**rgamma
-  plot(gr,
-    layout = igraph::layout_in_circle,
-    edge.width = edge.width * ewt,
-    edge.color = ecol,
-    vertex.size = 5 + 20 * vcex,
-    vertex.color = adjustcolor(col, alpha.f = alpha),
-    vertex.frame.color = col
+  WGCNAplus::plotGeneNetwork(
+    wgcna = wgcna, genes = genes, col = col, edge.alpha = edge.alpha,
+    rgamma = rgamma, edge.width = edge.width, alpha = alpha,
+    min.rho = min.rho, setpar = setpar
   )
 }
 
@@ -1213,8 +960,7 @@ wgcna.plotModuleHeatmap <- function(wgcna,
   )
 }
 
-#'
-#'
+#' @seealso WGCNAplus::plotPowerAnalysis
 #' @export
 wgcna.plotPowerAnalysis <- function(datExpr, networktype = "signed",
                                     cex = 1, maxpower = 20, nmax = 2000,
@@ -1223,89 +969,11 @@ wgcna.plotPowerAnalysis <- function(datExpr, networktype = "signed",
                                       "dendro.IQR"
                                     ), main = NULL,
                                     RsquaredCut = 0.85, setPar = TRUE) {
-  RsquaredCut <- RsquaredCut[1]
-
-  ## Choose a set of soft-thresholding powers
-  powers <- c(c(1:10), seq(from = 12, to = 20, by = 2))
-  if (maxpower > 20) {
-    powers <- c(powers, seq(from = 20, to = maxpower, by = 5))
-  }
-
-  ## subsample for speed
-  if (ncol(datExpr) > nmax && nmax > 0) {
-    ii <- sample(1:ncol(datExpr), nmax)
-    datExpr <- datExpr[, ii]
-  }
-
-  ## Call the network topology analysis function
-  sft <- WGCNA::pickSoftThreshold(
-    datExpr,
-    powerVector = powers,
-    RsquaredCut = RsquaredCut,
-    networkType = networktype,
-    verbose = 0
+  WGCNAplus::plotPowerAnalysis(
+    datExpr = datExpr, networktype = networktype, cex = cex,
+    maxpower = maxpower, nmax = nmax, plots = plots, main = main,
+    RsquaredCut = RsquaredCut, setPar = setPar
   )
-
-  ## This is more robust
-
-  if (setPar) {
-    np <- length(plots)
-    nc <- ceiling(sqrt(np))
-    par(mfrow = c(nc, nc), mar = c(3.3, 3.5, 1, 1), mgp = c(2, 0.9, 0))
-    par(mfrow = c(1, np), mar = c(3.8, 3.8, 1, 1), mgp = c(2.4, 0.95, 0))
-  }
-
-  ## Plot the results:
-  if ("sft.modelfit" %in% plots) {
-    ## Scale-free topology fit index as a function of the soft-thresholding power
-    y <- -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2]
-    base::plot(
-      x = sft$fitIndices[, 1],
-      y = y,
-      ylim = c(min(y), 1),
-      type = "n",
-      xlab = "Soft threshold (power)",
-      ylab = "SFT model fit (signed R^2)",
-      main = main
-    )
-    abline(h = 0, col = "black", lty = 3)
-    text(sft$fitIndices[, 1], -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
-      labels = powers, cex = cex, col = "red"
-    )
-    ## this line corresponds to using an R^2 cut-off of h
-    abline(h = RsquaredCut, col = "red", lty = 2)
-    ## if(legend) legend("bottomright", legend=paste("opt. power =",optPower))
-  }
-
-  ## Mean connectivity as a function of the soft-thresholding power
-  if ("mean.k" %in% plots) {
-    base::plot(sft$fitIndices[, "Power"], sft$fitIndices[, "mean.k."],
-      type = "n",
-      xlab = "Soft threshold (power)",
-      ylab = "Mean connectivity",
-      main = main
-    )
-    text(sft$fitIndices[, "Power"], sft$fitIndices[, "mean.k."],
-      labels = powers,
-      cex = cex, col = "red"
-    )
-  }
-
-  ht <- NULL
-  if ("dendro.IQR" %in% plots) {
-    ht <- wgcna.checkDendroHeights(datExpr, n = 200, powers = powers)
-    base::plot(
-      sft$fitIndices[, 1], ht$IQR,
-      type = "n",
-      xlab = "Soft threshold (power)",
-      ylab = "Dendrogram height IQR",
-      main = main
-    )
-    text(sft$fitIndices[, 1], ht$IQR,
-      labels = powers,
-      cex = cex, col = "red"
-    )
-  }
 }
 
 #'
