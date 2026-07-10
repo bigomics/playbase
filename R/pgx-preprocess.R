@@ -143,6 +143,10 @@ pgx.preprocess <- function(counts,
       nX <- try(playbase::normalizeMethylation(X, opt$norm_method, opt$meth_type), silent = TRUE)
       if (!inherits(nX, "try-error") && !is.null(nX)) X <- nX
     } else {
+      if (identical(opt$norm_method, "reference") &&
+        (is.null(opt$ref_gene) || !any(nzchar(opt$ref_gene)))) {
+        stop("[pgx.preprocess] norm_method = 'reference' requires options$ref_gene to be set")
+      }
       X <- playbase::normalizeExpression(X, method = opt$norm_method, ref = opt$ref_gene, prior = prior)
     }
   }
