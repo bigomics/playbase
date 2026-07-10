@@ -65,6 +65,8 @@ pgx.preprocess <- function(counts,
   )
 
   counts <- as.matrix(counts)
+  info("[pgx.preprocess] input: ", nrow(counts), " features x ", ncol(counts),
+    " samples (datatype=", opt$datatype, ")")
 
   ## -------------------------------------------------------------------
   ## imputedX: NA handling + log2(counts + prior)
@@ -97,6 +99,8 @@ pgx.preprocess <- function(counts,
     prior <- ifelse(grepl("CPM|TMM", opt$norm_method), 1, prior0)
     X <- log2(counts + prior)
   }
+  info("[pgx.preprocess] NA/Inf handling + log2 transform done (mox=", is.mox,
+    "); ", sum(is.na(X)), " NA(s) remain")
 
   ## Filter features by missingness.
   if (sum(is.na(X)) > 0 && isTRUE(opt$filter_missing)) {
@@ -118,6 +122,8 @@ pgx.preprocess <- function(counts,
     } else {
       sel <- (rowMeans(is.na(X)) <= f)
     }
+    info("[pgx.preprocess] filter_missing (threshold=", f, "): ",
+      sum(!sel), " of ", length(sel), " feature(s) removed")
     X <- X[which(sel), , drop = FALSE]
     counts <- counts[which(sel), , drop = FALSE]
     if (!is.null(annot)) annot <- annot[which(sel), , drop = FALSE]
@@ -130,6 +136,7 @@ pgx.preprocess <- function(counts,
     } else {
       X <- playbase::imputeMissing(X, method = opt$impute_method)
     }
+    info("[pgx.preprocess] imputed missing values (method=", opt$impute_method, ")")
   }
 
   ## -------------------------------------------------------------------
@@ -149,6 +156,8 @@ pgx.preprocess <- function(counts,
       }
       X <- playbase::normalizeExpression(X, method = opt$norm_method, ref = opt$ref_gene, prior = prior)
     }
+    info("[pgx.preprocess] normalization done (datatype=", opt$datatype,
+      ", method=", opt$norm_method, ")")
   }
 
   ## -------------------------------------------------------------------
@@ -182,8 +191,10 @@ pgx.preprocess <- function(counts,
     if (any(is.outlier) && !all(is.outlier)) {
       X <- X[, which(!is.outlier), drop = FALSE]
       counts <- counts[, colnames(X), drop = FALSE]
+      info("[pgx.preprocess] removed ", sum(is.outlier), " outlier sample(s)")
     }
   }
 
+  info("[pgx.preprocess] output: ", nrow(X), " features x ", ncol(X), " samples")
   list(counts = counts, X = X, annot = annot, prior = prior)
 }
