@@ -6,8 +6,9 @@ getPathwayImage <- function(wp, val, sbgn.dir = NULL, as.img = FALSE) {
   img <- NULL
   if (grepl("WP", wp)) img <- wikipathview(wp, val = val)
   if (grepl("SMP", wp)) img <- pathbankview(wp, val = val)
-  if (grepl("R-HSA", wp)) img <- getReactomeSVG(wp, val = val)
-  ##  if(grepl("R-HSA",wp)) img <- getReactomeSVG.SBGN(wp, val=val, sbgn.dir=sbgn.dir)
+  ## reactome.org's live exporter is Cloudflare-blocked for server-side
+  ## requests; render from the locally bundled SBGN files instead.
+  if (grepl("R-HSA", wp)) img <- getReactomeSVG.SBGN(wp, val = val, sbgn.dir = sbgn.dir)
 
   if (is.null(img)) {
     return(NULL)
@@ -32,14 +33,20 @@ getReactomeSVG <- function(wp, val = NULL, as.img = FALSE) {
   ## wp="R-HSA-449147"
   url <- paste0("https://reactome.org/ContentService/exporter/diagram/", wp, ".svg")
   destfile <- tempfile(fileext = ".svg")
-  down <- tryCatch(
+  ok <- tryCatch(
     {
-      download.file(url, destfile)
+      suppressWarnings(download.file(url, destfile, quiet = TRUE))
+      file.exists(destfile) && file.info(destfile)$size > 0
     },
-    error = function(w) {
-      return(NULL)
-    }
+    error = function(w) FALSE
   )
+
+  ## reactome.org now blocks automated diagram downloads (Cloudflare 403),
+  ## so download.file warns and writes no file. Bail out instead of returning
+  ## a src pointing at a non-existent file.
+  if (!ok) {
+    return(NULL)
+  }
 
   if (as.img) {
     destfile <- list(
@@ -371,76 +378,54 @@ wikipathview <- function(wp, val, as.img = FALSE) {
 #'
 #' @export
 getReactomeSVG.SBGN <- function(pathway.id, val, sbgn.dir, as.img = FALSE) {
-  suppressMessages(require(SBGNview)) ## slow!! but needed!!!
+  suppressMessages(require(SBGNview))
 
-  dbg("[getReactomeSVG] pathway.id = ", pathway.id)
+  ## SBGN files are bundled locally (board.pathway/inst/sbgn), named
+  ## "http___identifiers.org_reactome_<id>.sbgn". SBGNview expects the file
+  ## name itself (it checks file.exists(file.path(sbgn.dir, input.sbgn))).
+  ## Only pathways that own a diagram have a file, so bail out cleanly otherwise.
+  sbgn.file <- paste0("http___identifiers.org_reactome_", pathway.id, ".sbgn")
+  if (is.null(sbgn.dir) || !file.exists(file.path(sbgn.dir, sbgn.file))) {
+    return(NULL)
+  }
 
-  ## this is a trick. the original object in SBGNview.data was 700MB!!
-  #  sbgn.dir <- pgx.system.file("sbgn/", package = "pathway")
-  #  sbgn.dir <- normalizePath(sbgn.dir) ## absolute path
-  sbgn.xmls <- dir(sbgn.dir, ".sbgn")
-  names(sbgn.xmls) <- sbgn.xmls
-
-  ## We temporarily switch the working directory to always readable
-  ## TMP folder
-  curwd <- getwd()
+  ## SBGNview renders on print() and drops a data folder in getwd(); contain
+  ## both in a temp dir and restore the working directory afterwards.
   tmpdir <- tempdir()
+  curwd <- getwd()
+  on.exit(setwd(curwd), add = TRUE)
   setwd(tmpdir)
 
+  ## color nodes by fold-change (val); fall back to a plain diagram on error
   obj <- tryCatch(
-    {
-      SBGNview::SBGNview(
-        gene.data = val,
-        gene.id.type = "SYMBOL",
-        sbgn.dir = sbgn.dir,
-        input.sbgn = pathway.id,
-        output.file = "reactome",
-        output.formats = c("svg")
-      )
-    },
+    SBGNview::SBGNview(
+      gene.data = val, gene.id.type = "SYMBOL",
+      sbgn.dir = sbgn.dir, input.sbgn = sbgn.file,
+      output.file = "reactome", output.formats = c("svg")
+    ),
     error = function(w) {
       SBGNview::SBGNview(
-        gene.data = NULL,
-        gene.id.type = "SYMBOL",
-        sbgn.dir = sbgn.dir,
-        input.sbgn = pathway.id,
-        output.file = "reactome",
-        output.formats = c("svg")
+        gene.data = NULL, gene.id.type = "SYMBOL",
+        sbgn.dir = sbgn.dir, input.sbgn = sbgn.file,
+        output.file = "reactome", output.formats = c("svg")
       )
     }
   )
-  if (class(obj) == "SBGNview") {
-    try(print(obj))
-  }
-  Sys.sleep(0.2) ## wait for graph
+  if ("SBGNview" %in% class(obj)) try(print(obj), silent = TRUE)
+  Sys.sleep(0.2) ## wait for the file to be written
 
-  ## back to previous working folder
-  setwd(curwd)
-
-  #  imgfile <- "/tmp/hsa00010.png"
-  #  imgfile <- file.path(tmpdir, paste0("reactome_", pathway.id, ".png"))
-  svgfile <- file.path(tmpdir, paste0("reactome_", pathway.id, ".svg"))
-
-  file.exists(svgfile)
+  ## SBGNview names the output <output.file>_<input.sbgn>.svg
+  svgfile <- file.path(tmpdir, paste0("reactome_", sbgn.file, ".svg"))
   if (!file.exists(svgfile)) {
-    return(NULL.IMG)
+    return(NULL)
   }
-
-  ## ## parse image dimensions from file
-  ## img.dim <- NULL
-  ## if (grepl("png|PNG", imgfile)) img.dim <- dim(png::readPNG(imgfile))[1:2]
-  ## if (grepl("jpg|JPG", imgfile)) img.dim <- dim(jpeg::readJPEG(imgfile))[1:2]
-  ## img.dim
 
   if (as.img) {
-    imgfile <- list(
-      ## src = imgfile,
+    return(list(
       src = svgfile,
       contentType = "image/svg+xml",
-      ## width = img.dim[2], height = img.dim[1], ## actual size
       alt = "reactome pathway (SVG)"
-    )
+    ))
   }
-
-  imgfile
+  svgfile
 }
