@@ -87,7 +87,7 @@ pgx.superBatchCorrect <- function(X, pheno,
   model.par
 
   ## get technical/biological effects
-  Y <- pgx.computeBiologicalEffects.DEPRECATED(X)
+  Y <- pgx.computeTechnicalEffects(X)
   colnames(Y) <- paste0(".", colnames(Y))
 
   ## add to phenotype matrix
@@ -677,94 +677,6 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
     return(plt)
   }
   list(R = R, P = P, V = V)
-}
-
-
-#' @title Estimate biological variation
-#'
-#' @param X Gene expression matrix, with genes in rows and samples in columns
-#' @param is.count Logical indicating if X contains counts (TRUE) or log-expression values (FALSE)
-#'
-#' @return List containing:
-#' \itemize{
-#'  \item{pct.mito}{Percent mitochondrial genes}
-#'  \item{pct.ribo}{Percent ribosomal genes}
-#'  \item{biological}{Biological coefficient of variation}
-#' }
-#'
-#' @description
-#' Estimates the biological variation and fraction of mitochondrial and ribosomal genes from a gene expression matrix.
-#'
-#' @details
-#' This function calculates the biological variation (BCV) for each gene as the coefficient of variation of expression across samples.
-#'
-#' It also calculates the percentage of mitochondrial and ribosomal genes based on gene symbols.
-#'
-#' If the input matrix X contains counts, it will be transformed to log2-CPM.
-#' If X contains log-expression values, it will be shifted to start at the 1% quantile.
-#' @examples
-#' \dontrun{
-#' data(sample.ExpressionSet)
-#' results <- pgx.computeBiologicalEffects(sample.ExpressionSet)
-#' head(results$biological)
-#' }
-#' @export
-pgx.computeBiologicalEffects.DEPRECATED <- function(X, is.count = FALSE) {
-  message("[pgx.computeBiologicalEffects] estimating biological effects...")
-
-  ## shift zero to 1% percentile
-  if (!is.count) {
-    q0 <- quantile(X[X > 0], probs = 0.01, na.rm = TRUE)
-    q0
-    tx <- pmax(X - q0, 0) ## log expression
-    cx <- pmax(2**tx - 1, 0) ## counts
-  } else {
-    cx <- X
-    tx <- log2(cx + 1)
-  }
-  nfeature <- Matrix::colSums(cx > 0) + 1
-  libsize <- Matrix::colSums(cx)
-
-  mt.genes <- grep("^MT-", rownames(X), ignore.case = TRUE, value = TRUE)
-  rb.genes <- grep("^RP[SL]", rownames(X), ignore.case = TRUE, value = TRUE)
-  mito <- ribo <- NA
-  pct.mito <- pct.ribo <- NA
-  mt.genes
-  rb.genes
-  if (length(mt.genes) >= 10) {
-    mito <- Matrix::colMeans(tx[mt.genes, , drop = FALSE])
-    pct.mito <- Matrix::colSums(cx[mt.genes, , drop = FALSE], na.rm = TRUE) / libsize
-  }
-  if (length(rb.genes) >= 10) {
-    ii <- rb.genes[order(-apply(tx[rb.genes, , drop = FALSE], 1, sd, na.rm = TRUE))]
-    sel20 <- Matrix::head(ii, 20)
-    ribo <- Matrix::colMeans(tx[rb.genes, , drop = FALSE])
-    ribo20 <- Matrix::colMeans(tx[sel20, , drop = FALSE])
-    pct.ribo <- Matrix::colSums(cx[rb.genes, , drop = FALSE], na.rm = TRUE) / libsize
-  }
-  pheno <- data.frame(
-    mito = mito,
-    ribo = ribo,
-    ## ribo20 = ribo20,
-    ## pct.mito = pct.mito,
-    ## pct.ribo = pct.ribo,
-    libsize = log2(libsize + 1),
-    ## nfeature = log2(nfeature+1),
-    check.names = FALSE
-  )
-
-  cc.score <- try(pgx.scoreCellCycle(cx))
-  Matrix::head(cc.score)
-  if (!any(class(cc.score) == "try-error")) {
-    ## cc.score <- cc.score[,c("s_score","g2m_score","diff_score")]
-    cc.score <- cc.score[, c("s_score", "g2m_score")]
-    colnames(cc.score) <- paste0("cc.", colnames(cc.score))
-    pheno <- cbind(pheno, cc.score)
-  }
-  pheno$gender <- pgx.inferGender(cx)
-
-  Matrix::head(pheno)
-  return(pheno)
 }
 
 
@@ -1792,6 +1704,8 @@ compare_batchcorrection_methods <- function(X,
   ## PCA is faster than UMAP
   pos <- NULL
   pca.varexp <- NULL
+  loadings <- NULL
+  pheno.cor <- NULL
   t2 <- double_center_scale_fast
   if (clust.method == "tsne" && nmissing == 0) {
     message("Computing t-SNE clustering...")
@@ -1803,11 +1717,63 @@ compare_batchcorrection_methods <- function(X,
   } else {
     message("Computing PCA clustering...")
     npc_eff <- max(2, min(npc, min(sapply(xlist, function(x) min(dim(x)))) - 1))
+    ## numeric-code sample annotations once (factors -> level codes, as
+    ## PCAtools::eigencorplot does); drop constant columns that cannot correlate
+    meta_num <- NULL
+    if (!is.null(samples) && ncol(samples)) {
+      ## Build the numeric annotation matrix to correlate against the PCs.
+      ## Numeric columns are kept as-is; categorical columns are one-hot encoded
+      ## (one binary indicator per level) so each level gets its own point-
+      ## biserial correlation / arrow, rather than arbitrary integer level codes
+      ## that would impose a fake ordering on unordered categories. Indexing
+      ## columns by name (not sapply over the whole object) also keeps this
+      ## correct when samples is a character matrix rather than a data.frame.
+      onehot_or_num <- function(cn) {
+        v <- samples[, cn]
+        ## numeric if it already is, or if every non-missing value coerces
+        ## cleanly -- covers numeric columns stored as strings when samples is a
+        ## character matrix rather than a data.frame
+        vn <- suppressWarnings(as.numeric(as.character(v)))
+        if (is.numeric(v) || !any(is.na(vn) & !is.na(v))) {
+          return(matrix(vn, ncol = 1, dimnames = list(NULL, cn)))
+        }
+        v <- as.factor(v)
+        ## skip pure-identifier columns (every sample is its own level)
+        if (nlevels(v) >= sum(!is.na(v))) {
+          return(NULL)
+        }
+        m <- vapply(levels(v), function(l) as.numeric(v == l), numeric(length(v)))
+        colnames(m) <- paste0(cn, "=", levels(v))
+        m
+      }
+      meta_num <- do.call(cbind, lapply(colnames(samples), onehot_or_num))
+      if (!is.null(meta_num)) {
+        rownames(meta_num) <- rownames(samples)
+        keep <- apply(meta_num, 2, function(x) length(unique(x[!is.na(x)])) > 1)
+        meta_num <- meta_num[, keep, drop = FALSE]
+      }
+    }
     for (i in 1:length(xlist)) {
       set.seed(1234)
-      pca <- irlba::irlba(t2(xlist[[i]]), nu = npc_eff, nv = npc_eff)
-      pos[[names(xlist)[i]]] <- pca$u[, seq_len(npc_eff), drop = FALSE]
-      pca.varexp[[names(xlist)[i]]] <- (pca$d^2 / sum(pca$d^2)) * 100
+      M <- t2(xlist[[i]])
+      pca <- irlba::irlba(M, nu = npc_eff, nv = npc_eff)
+      U <- pca$u[, seq_len(npc_eff), drop = FALSE]
+      rownames(U) <- colnames(xlist[[i]])
+      pos[[names(xlist)[i]]] <- U
+      ## % variance explained relative to TOTAL variance (sum(M^2) == sum of all
+      ## eigenvalues), not just the top npc_eff PCs irlba returns, so the values
+      ## and their cumulative sum are honest (else they inflate and cum hits 100)
+      pca.varexp[[names(xlist)[i]]] <- (pca$d^2 / sum(M^2)) * 100
+      v <- pca$v[, seq_len(npc_eff), drop = FALSE]
+      rownames(v) <- rownames(xlist[[i]])
+      loadings[[names(xlist)[i]]] <- v
+      ## correlation of each numeric-coded annotation with each PC, for the
+      ## phenotype-projection biplot in the UI (annotations x npc)
+      if (!is.null(meta_num) && ncol(meta_num)) {
+        mm <- meta_num[rownames(U), , drop = FALSE]
+        pheno.cor[[names(xlist)[i]]] <-
+          t(suppressWarnings(stats::cor(U, mm, use = "pairwise.complete.obs")))
+      }
     }
   }
 
@@ -1845,6 +1811,8 @@ compare_batchcorrection_methods <- function(X,
     xlist = xlist,
     pos = pos,
     pca.varexp = pca.varexp,
+    loadings = loadings,
+    pheno.cor = pheno.cor,
     scores = res$scores,
     pheno = pars$pheno,
     pars = pars,
