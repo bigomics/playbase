@@ -36,7 +36,12 @@ getPathwayImage <- function(wp, val, sbgn.dir = NULL, as.img = FALSE) {
 #'
 #' @return Named character vector: names are pathway ids, values are diagram ids.
 reactomeDiagramMap <- function() {
-  f <- system.file("extdata", "reactome_diagram_map.tsv", package = "playbase")
+  ## ships in playdata (inst/extdata); fall back to playbase's copy during the
+  ## transition until playdata is rebuilt with it.
+  f <- system.file("extdata", "reactome_diagram_map.tsv", package = "playdata")
+  if (!nzchar(f)) {
+    f <- system.file("extdata", "reactome_diagram_map.tsv", package = "playbase")
+  }
   if (!nzchar(f) || !file.exists(f)) {
     return(stats::setNames(character(0), character(0)))
   }
@@ -67,18 +72,35 @@ reactomeDiagrams <- function() {
   names(reactomeDiagramMap())
 }
 
-#' Fetch a native Reactome diagram SVG from our own mirror.
+## Decompress a .gz file to a plain file using raw byte streaming. This is as
+## fast as reading a plain file -- it avoids the character-decoding cost that
+## readChar()/readLines() incur on a gz connection.
+.gunzipToFile <- function(gzpath, destfile) {
+  con <- gzfile(gzpath, "rb")
+  on.exit(close(con), add = TRUE)
+  out <- file(destfile, "wb")
+  on.exit(close(out), add = TRUE)
+  repeat {
+    b <- readBin(con, "raw", n = 1e6L)
+    if (length(b) == 0L) break
+    writeBin(b, out)
+  }
+  invisible(destfile)
+}
+
+#' Fetch a native Reactome diagram SVG.
 #'
 #' reactome.org's live exporter is Cloudflare-blocked for server-side requests,
-#' so the native diagram SVGs are mirrored on our own static host. Set its base
-#' URL via the REACTOME_SVG_URL environment variable (empty disables the
-#' feature). Diagrams are fetched on demand and cached on disk; sub-pathways are
-#' resolved to their ancestor diagram first.
+#' so the native diagram SVGs are shipped gzipped in playdata
+#' (inst/extdata/reactome-svg) and, as a fallback, mirrored on a static host
+#' (set REACTOME_SVG_URL). A diagram is resolved (sub-pathways -> ancestor
+#' diagram), then obtained once -- decompressed from playdata if present, else
+#' downloaded from the mirror -- and cached on disk as a plain SVG.
 #'
 #' @param wp Reactome pathway stable id.
 #' @param val Ignored (kept for call compatibility); native SVGs are not colored.
 #' @param as.img Return a shiny image list instead of a plain file path.
-#' @param baseurl Base URL of the SVG mirror; empty string disables the feature.
+#' @param baseurl Base URL of the fallback SVG mirror; empty disables the fallback.
 #' @param cache.dir Directory for the on-disk cache.
 #' @return SVG file path (or image list when as.img), or NULL when unavailable.
 #' @export
@@ -86,23 +108,44 @@ getReactomeSVG <- function(wp, val = NULL, as.img = FALSE,
                            baseurl = Sys.getenv("REACTOME_SVG_URL", ""),
                            cache.dir = file.path(tempdir(), "reactome-svg")) {
   diagram.id <- reactomeDiagramId(wp)
-  if (is.null(diagram.id) || !nzchar(baseurl)) {
+  if (is.null(diagram.id)) {
     return(NULL)
   }
 
   dir.create(cache.dir, showWarnings = FALSE, recursive = TRUE)
   destfile <- file.path(cache.dir, paste0(diagram.id, ".svg"))
 
-  ## fetch once, then serve from the on-disk cache
+  ## obtain once, then serve from the on-disk cache
   if (!file.exists(destfile) || file.info(destfile)$size == 0) {
-    url <- paste0(sub("/+$", "", baseurl), "/", diagram.id, ".svg")
-    ok <- tryCatch(
-      {
-        suppressWarnings(utils::download.file(url, destfile, quiet = TRUE))
-        file.exists(destfile) && file.info(destfile)$size > 0
-      },
-      error = function(w) FALSE
+    ok <- FALSE
+
+    ## 1) prefer the gzipped SVG bundled in playdata (offline, no network)
+    gz <- system.file(
+      "extdata", "reactome-svg", paste0(diagram.id, ".svg.gz"),
+      package = "playdata"
     )
+    if (nzchar(gz) && file.exists(gz)) {
+      ok <- tryCatch(
+        {
+          .gunzipToFile(gz, destfile)
+          file.exists(destfile) && file.info(destfile)$size > 0
+        },
+        error = function(w) FALSE
+      )
+    }
+
+    ## 2) fall back to the hosted mirror
+    if (!ok && nzchar(baseurl)) {
+      url <- paste0(sub("/+$", "", baseurl), "/", diagram.id, ".svg")
+      ok <- tryCatch(
+        {
+          suppressWarnings(utils::download.file(url, destfile, quiet = TRUE))
+          file.exists(destfile) && file.info(destfile)$size > 0
+        },
+        error = function(w) FALSE
+      )
+    }
+
     if (!ok) {
       unlink(destfile)
       return(NULL)
