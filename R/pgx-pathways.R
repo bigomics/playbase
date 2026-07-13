@@ -448,54 +448,76 @@ wikipathview <- function(wp, val, as.img = FALSE) {
 #'
 #' @export
 getReactomeSVG.SBGN <- function(pathway.id, val, sbgn.dir, as.img = FALSE) {
-  suppressMessages(require(SBGNview))
+  suppressMessages(require(SBGNview)) ## slow!! but needed!!!
 
-  ## SBGN files are bundled locally (board.pathway/inst/sbgn), named
-  ## "http___identifiers.org_reactome_<id>.sbgn". SBGNview expects the file
-  ## name itself (it checks file.exists(file.path(sbgn.dir, input.sbgn))).
-  ## Only pathways that own a diagram have a file, so bail out cleanly otherwise.
-  sbgn.file <- paste0("http___identifiers.org_reactome_", pathway.id, ".sbgn")
-  if (is.null(sbgn.dir) || !file.exists(file.path(sbgn.dir, sbgn.file))) {
-    return(NULL)
-  }
+  dbg("[getReactomeSVG] pathway.id = ", pathway.id)
 
-  ## SBGNview renders on print() and drops a data folder in getwd(); contain
-  ## both in a temp dir and restore the working directory afterwards.
-  tmpdir <- tempdir()
+  ## this is a trick. the original object in SBGNview.data was 700MB!!
+  #  sbgn.dir <- pgx.system.file("sbgn/", package = "pathway")
+  #  sbgn.dir <- normalizePath(sbgn.dir) ## absolute path
+  sbgn.xmls <- dir(sbgn.dir, ".sbgn")
+  names(sbgn.xmls) <- sbgn.xmls
+
+  ## We temporarily switch the working directory to always readable
+  ## TMP folder
   curwd <- getwd()
-  on.exit(setwd(curwd), add = TRUE)
+  tmpdir <- tempdir()
   setwd(tmpdir)
 
-  ## color nodes by fold-change (val); fall back to a plain diagram on error
   obj <- tryCatch(
-    SBGNview::SBGNview(
-      gene.data = val, gene.id.type = "SYMBOL",
-      sbgn.dir = sbgn.dir, input.sbgn = sbgn.file,
-      output.file = "reactome", output.formats = c("svg")
-    ),
+    {
+      SBGNview::SBGNview(
+        gene.data = val,
+        gene.id.type = "SYMBOL",
+        sbgn.dir = sbgn.dir,
+        input.sbgn = pathway.id,
+        output.file = "reactome",
+        output.formats = c("svg")
+      )
+    },
     error = function(w) {
       SBGNview::SBGNview(
-        gene.data = NULL, gene.id.type = "SYMBOL",
-        sbgn.dir = sbgn.dir, input.sbgn = sbgn.file,
-        output.file = "reactome", output.formats = c("svg")
+        gene.data = NULL,
+        gene.id.type = "SYMBOL",
+        sbgn.dir = sbgn.dir,
+        input.sbgn = pathway.id,
+        output.file = "reactome",
+        output.formats = c("svg")
       )
     }
   )
-  if ("SBGNview" %in% class(obj)) try(print(obj), silent = TRUE)
-  Sys.sleep(0.2) ## wait for the file to be written
-
-  ## SBGNview names the output <output.file>_<input.sbgn>.svg
-  svgfile <- file.path(tmpdir, paste0("reactome_", sbgn.file, ".svg"))
-  if (!file.exists(svgfile)) {
-    return(NULL)
+  if (class(obj) == "SBGNview") {
+    try(print(obj))
   }
+  Sys.sleep(0.2) ## wait for graph
+
+  ## back to previous working folder
+  setwd(curwd)
+
+  #  imgfile <- "/tmp/hsa00010.png"
+  #  imgfile <- file.path(tmpdir, paste0("reactome_", pathway.id, ".png"))
+  svgfile <- file.path(tmpdir, paste0("reactome_", pathway.id, ".svg"))
+
+  file.exists(svgfile)
+  if (!file.exists(svgfile)) {
+    return(NULL.IMG)
+  }
+
+  ## ## parse image dimensions from file
+  ## img.dim <- NULL
+  ## if (grepl("png|PNG", imgfile)) img.dim <- dim(png::readPNG(imgfile))[1:2]
+  ## if (grepl("jpg|JPG", imgfile)) img.dim <- dim(jpeg::readJPEG(imgfile))[1:2]
+  ## img.dim
 
   if (as.img) {
-    return(list(
+    imgfile <- list(
+      ## src = imgfile,
       src = svgfile,
       contentType = "image/svg+xml",
+      ## width = img.dim[2], height = img.dim[1], ## actual size
       alt = "reactome pathway (SVG)"
-    ))
+    )
   }
-  svgfile
+
+  imgfile
 }
