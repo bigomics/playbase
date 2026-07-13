@@ -6072,6 +6072,9 @@ iheatmapr.add_col_annotation <- function(p,
 #' @param xtips Custom column tooltips
 #' @param ytips Custom row tooltips
 #' @param row_clust Cluster rows? Default is TRUE.
+#' @param col_clust Cluster columns within each split group? Default is TRUE.
+#'   Set to FALSE to keep columns in the supplied matrix order (e.g. for a
+#'   user-defined sample ordering).
 #' @param row_annot_width Width for row annotations. Default is 0.03.
 #' @param scale Scaling for data. Default is "row.center".
 #' @param colors Vector of colors to use for annotation. Default is RColorBrewer Set1.
@@ -6091,6 +6094,7 @@ iheatmapr.add_col_annotation <- function(p,
 #' @export
 pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NULL,
                                        xtips = NULL, ytips = NULL, row_clust = TRUE,
+                                       col_clust = TRUE,
                                        row_annot_width = 0.03, scale = "row.center",
                                        colors = NULL, lmar = 60, na_text = NULL,
                                        rowcex = 1, colcex = 1, show_legend = TRUE,
@@ -6138,7 +6142,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     }
   }
 
-  col_clust <- TRUE
   if (is.null(symm)) symm <- all(rownames(X) == colnames(X))
   if (symm) {
     idx <- splitx
