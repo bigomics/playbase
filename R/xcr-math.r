@@ -428,23 +428,6 @@ cor_sparse_matrix <- function(G, mat) {
   return(cor_matrix)
 }
 
-#' Fast one sample t-test for matrix object F (e.g. foldchanges) and
-#' grouping matrix G (e.g. gene sets).
-#'
-#' @export
-matrix_onesample_ttest <- function(F, G) {
-  sumG <- Matrix::colSums(G != 0)
-  sum_sq <- Matrix::crossprod(G != 0, F^2)
-  meanx <- Matrix::crossprod(G != 0, F) / (1e-8 + sumG)
-  sdx <- sqrt((sum_sq - meanx^2 * sumG) / (sumG - 1))
-  f_stats <- meanx
-  t_stats <- meanx / (1e-8 + sdx) * sqrt(sumG)
-  p_stats <- apply(abs(t_stats), 2, function(tv) {
-    2 * pt(tv, df = pmax(sumG - 1, 1), lower.tail = FALSE)
-  })
-  list(mean = as.matrix(f_stats), t = as.matrix(t_stats), p = p_stats)
-}
-
 #' Fast one sample t-test for matrix object X (e.g. expression) and
 #' grouping matrix G (e.g. gene sets).
 #'
@@ -509,36 +492,6 @@ matrix_metap <- function(plist, method = c("stouffer", "fisher", "maxp")[1]) {
   }
   dimnames(pv) <- dimnames(plist[[1]])
   return(pv)
-}
-
-
-#' Fast one sample z-test for vector object fc (e.g. foldchange) and
-#' grouping matrix G (e.g. gene sets).
-#'
-#' @export
-fc_ztest <- function(fc, G, zmat = FALSE, alpha = 0.5) {
-  gg <- intersect(rownames(G), names(fc))
-  sample_size <- Matrix::colSums(G[gg, ] != 0)
-  sample_size <- pmax(sample_size, 1) ## avoid div-by-zero
-  sample_mean <- (Matrix::t(G[gg, ] != 0) %*% fc[gg]) / sample_size
-  population_mean <- mean(fc, na.rm = TRUE)
-  population_var <- var(fc, na.rm = TRUE)
-  gfc <- (G[gg, ] != 0) * fc[gg]
-  sample_var <- sparseMatrixStats::colVars(gfc) * nrow(G) / sample_size
-  alpha <- pmin(pmax(alpha, 0), 0.999) ## limit
-  estim_sd <- sqrt(alpha * sample_var + (1 - alpha) * population_var)
-  z_statistic <- (sample_mean - population_mean) / (estim_sd / sqrt(sample_size))
-  p_value <- 2 * pnorm(abs(z_statistic[, 1]), lower.tail = FALSE)
-  if (zmat) {
-    zmat <- (Matrix::t(gfc) / estim_sd)
-  } else {
-    zmat <- NULL
-  }
-  list(
-    z_statistic = z_statistic[, 1],
-    p_value = p_value,
-    zmat = zmat
-  )
 }
 
 

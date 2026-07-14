@@ -1858,89 +1858,6 @@ compare_batchcorrection_methods <- function(X,
 
 
 #' @export
-superBC2 <- function(X, samples, y, batch = NULL,
-                     ## methods = c("technical","batch","statistical","pca","sva","npm"),
-                     methods = c("batch", "technical", "statistical", "sva", "npm"),
-                     p.pca = 0.5, p.pheno = 0.05, k.pca = 10, nv = 1,
-                     xrank = NULL, use.design = TRUE) {
-  if (y[1] %in% colnames(samples)) {
-    y <- samples[, y[1]]
-  }
-  if (!is.null(batch) && grepl("batch", colnames(samples), ignore.case = TRUE)) {
-    batch.col <- grep("batch", colnames(samples), ignore.case = TRUE)[1]
-    message("[superBC2] found batch column in sample info: ", colnames(samples)[batch.col])
-    batch <- samples[, batch.col]
-  }
-  if (!is.null(batch) && batch[1] %in% colnames(samples)) {
-    message("[superBC2] using batch column in sample info: ", batch[1])
-    batch <- samples[, batch[1]]
-  }
-
-  cX <- X
-  methods <- intersect(methods, c(
-    "technical", "batch", "statistical", "pca", "sva",
-    "ruv", "npm", "npm2"
-  ))
-
-  for (m in methods) {
-    ## correct explicit batch effect
-    if (!is.null(batch) && m == "batch") {
-      message("[superBC2] correcting for: batch")
-      if (use.design) {
-        cX <- limma::removeBatchEffect(cX, batch = batch, design = mod)
-      } else {
-        cX <- limma::removeBatchEffect(cX, batch = batch)
-      }
-    }
-
-    ## this removes typical batch effects
-    if (m %in% c("statistical", "technical", "pca")) {
-      bc <- detectBatchEffects(
-        ## cX,
-        X, ## on original matrix??
-        samples, y,
-        params = m,
-        p.pca = p.pca, p.pheno = p.pheno, k.pca = k.pca,
-        nv = nv, xrank = xrank
-      )
-      if (!is.null(bc$covariates)) {
-        message("[superBC2] correcting for: ", m)
-        B <- scale(bc$covariates)
-        B[is.nan(B) | is.na(B)] <- 0
-        B[is.infinite(B)] <- 0
-        if (use.design) {
-          mod1 <- model.matrix(~ bc$pheno)
-          cX <- limma::removeBatchEffect(cX, covariates = B, design = mod1)
-        } else {
-          cX <- limma::removeBatchEffect(cX, covariates = B)
-        }
-      }
-    }
-
-    ## 5. additional unsupervised correction
-    if (m == "sva") {
-      message("[superBC2] correcting for: SVA")
-      cX <- svaCorrect(cX, y)
-    }
-    if (m == "ruv") {
-      message("[superBC2] correcting for: RUV")
-      cX <- ruvCorrect(cX, y)
-    }
-    if (m == "npm") {
-      message("[superBC2] correcting for: NPM")
-      cX <- nnmCorrect(cX, y, use.design = use.design, return.B = TRUE)$X
-    }
-    if (m == "npm2") {
-      message("[superBC2] correcting for: NPM2")
-      cX <- gx.nnmcorrect2(cX, y, r = 0.35, use.design = use.design)$X
-    }
-  }
-
-  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
-  cX
-}
-
-#' @export
 limmaCorrect <- function(X, B, y = NULL, use.covariates = FALSE,
                          auto.detect = FALSE) {
   cX <- X
@@ -2661,12 +2578,6 @@ nnmCorrect.SIMPLE <- function(x, y, k = 3) {
   nx <- nx + rowMeans(x, na.rm = TRUE)
   return(nx)
 }
-
-
-## compatibility
-
-#' @export
-gx.nnmcorrect2 <- function(...) nnmCorrect2(..., return.B = TRUE)
 
 
 #' Estimate batch correction vectors from corrected cX and uncorrected
