@@ -5,7 +5,13 @@
 \title{Get GO gene sets for organism directly from
 AnnotationHub/OrgDB. Restrict to genes as background.}
 \usage{
-getOrganismGO(organism, use.ah = NULL, orgdb = NULL)
+getOrganismGO(
+  organism,
+  features = NULL,
+  minsize = 3,
+  batch_size = 2000,
+  db = c("annothub", "gprofiler")
+)
 }
 \description{
 Get GO gene sets for organism directly from

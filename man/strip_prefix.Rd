@@ -3,13 +3,13 @@
 \name{strip_prefix}
 \alias{strip_prefix}
 \title{non-greedy removal of prefixes. Prefix is defined as any
-alphanumerical substring (no spaces, no special chars) before the
+character substring (no spaces, no special chars) before the
 matching colon character :.}
 \usage{
 strip_prefix(s)
 }
 \description{
 non-greedy removal of prefixes. Prefix is defined as any
-alphanumerical substring (no spaces, no special chars) before the
+character substring (no spaces, no special chars) before the
 matching colon character :.
 }

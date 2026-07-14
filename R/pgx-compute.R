@@ -1120,7 +1120,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     info("[pgx.add_GMT] Adding species GO for organism", pgx$organism)
     go.genesets <- tryCatch(
       {
-        getOrganismGO(pgx$organism)
+        getOrganismGO( pgx$organism, features = full_feature_list)
       },
       error = function(e) {
         message("Error in getOrganismsGO:", e)

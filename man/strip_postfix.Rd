@@ -2,14 +2,12 @@
 % Please edit documentation in R/pgx-annot.R
 \name{strip_postfix}
 \alias{strip_postfix}
-\title{non-greedy removal of numerical postfix. Postfix is defined as (1)
-last numerical substring after - (minus), or (2) any substring
-after special separators [_.].}
+\title{non-greedy removal of numerical postfix. Postfix is defined as
+numerical substring after . (dot)}
 \usage{
 strip_postfix(s)
 }
 \description{
-non-greedy removal of numerical postfix. Postfix is defined as (1)
-last numerical substring after - (minus), or (2) any substring
-after special separators [_.].
+non-greedy removal of numerical postfix. Postfix is defined as
+numerical substring after . (dot)
 }
