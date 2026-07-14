@@ -1264,15 +1264,6 @@ getHumanOrtholog <- function(organism, symbols,
         start_idx <- (b - 1) * batch_size + 1
         end_idx <- min(b * batch_size, n_genes)
         genes_batch <- genes[start_idx:end_idx]
-
-        ## batch_out <- try(orthogene::convert_orthologs(
-        ##   gene_df = genes_batch,
-        ##   input_species = species_id,
-        ##   output_species = "human",
-        ##   method = ortho.methods[i],
-        ##   non121_strategy = "drop_both_species",
-        ##   verbose = FALSE
-        ## ), silent = TRUE)
         
         batch_out <- .convert_orthologs(
           genes = genes_batch,
@@ -1771,27 +1762,6 @@ allSpecies <- function(col = "species_name") {
   species
 }
 
-## allSpecies.ANNOTHUB <- function() {
-##   M <- .getSpeciesTable.ANNOTHUB(ah = NULL)
-##   M <- data.frame(M)
-##   M <- M[M$rdataclass == "OrgDb", ]
-##   species <- as.character(M[, "species"])
-##   names(species) <- M[, "taxonomyid"]
-##   species
-## }
-## allSpecies.ORTHOGENE <- function() {
-##   M <- orthogene::map_species(method = "gprofiler", verbose = FALSE)
-##   species <- M[, "scientific_name"]
-##   names(species) <- M[, "taxonomy_id"]
-##   species
-## }
-## allSpecies.GPROFILER <- function() {
-##   orgs <- jsonlite::fromJSON("https://biit.cs.ut.ee/gprofiler/api/util/organisms_list")
-##   species <- orgs[, "scientific_name"]
-##   names(species) <- orgs[, "taxonomy_id"]
-##   species
-## }
-
 .getSpeciesTable.GPROFILER <- function() {
   jsonlite::fromJSON("https://biit.cs.ut.ee/gprofiler/api/util/organisms_list")
 }
@@ -2125,25 +2095,6 @@ getGeneAnnotation.ORTHOGENE <- function(
   return(df)
 }
 
-#' Check if probes of organism are automatically recognized by
-#' ORTHOGENE annotation engine.
-#'
-#' @return TRUE  if probes are recognized
-#' @return FALSE if probes are not recognized
-#'
-## check_probetype.ORTHOGENE <- function(organism, probes) {
-##   map <- try(orthogene::map_genes(probes, species = organism, drop_na = FALSE, verbose = FALSE))
-##   if ("try-error" %in% class(map) || is.null(map)) {
-##     message("[check_probetype.ORTHOGENE] *WARNING* could not connect to server")
-##     return(NULL)
-##   }
-##   mean.mapped <- mean(!is.na(map$target))
-##   ## get correct OrgDb database for organism
-##   if (mean.mapped < 0.20) {
-##     return(FALSE)
-##   }
-##   return(TRUE)
-## }
 
 .check_probetype.GPROFILER <- function(organism, probes, min.map=0.20) {
   gp.organism <- .map_gprofiler_id(organism)
