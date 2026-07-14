@@ -1824,85 +1824,6 @@ collapse_by_humansymbol <- function(obj, annot) {
   map.obj
 }
 
-## #' @title Show some probe types for selected organism
-## #'
-## #' @export
-## showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
-##   if (tolower(organism) == "human") organism <- "Homo sapiens"
-##   if (tolower(organism) == "mouse") organism <- "Mus musculus"
-##   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
-##   organism
-
-##   message(paste("retrieving probe types for", organism, "..."))
-
-##   ## get correct OrgDb database for organism
-##   orgdb <- getOrgDb(organism, use.ah = use.ah)
-##   if (is.null(orgdb)) {
-##     message("[showProbeTypes] ERROR: unsupported organism '", organism, "'\n")
-##     return(NULL)
-##   }
-
-##   ## get probe types for organism
-##   if (!is.null(keytypes) && keytypes[1] == "*") {
-##     keytypes <- AnnotationDbi::keytypes(orgdb)
-##   }
-##   if (is.null(keytypes)) {
-##     keytypes <- c(
-##       "SYMBOL", "ENSEMBL", "UNIPROT", "ENTREZID",
-##       "GENENAME", "MGI", "TAIR",
-##       "ENSEMBLTRANS", "ENSEMBLPROT",
-##       "ACCNUM", "REFSEQ"
-##     )
-##   }
-##   keytypes0 <- keytypes
-##   keytypes <- intersect(keytypes, AnnotationDbi::keytypes(orgdb))
-##   keytypes
-
-##   if (length(keytypes) == 0) {
-##     message("ERROR: no valid keytypes in: ", keytypes0)
-##     return(NULL)
-##   }
-
-##   ## example probes
-##   keytype0 <- "ENTREZID"
-##   suppressMessages(suppressWarnings(
-##     probes <- try(head(AnnotationDbi::keys(orgdb, keytype = keytype0), n))
-##   ))
-##   if ("try-error" %in% class(probes)) {
-##     keytype0 <- setdiff(keytypes, "ENTREZID")[1]
-##     probes <- try(head(AnnotationDbi::keys(orgdb, keytype = keytype0), n))
-##   }
-##   keytype0
-
-##   ## Iterate over probe types
-##   key_matches <- list()
-##   key <- keytypes[1]
-##   for (key in keytypes) {
-##     ## add symbol and genename on top of key as they will be used to
-##     ## count the real number of probe matches
-##     probe_matches <- try(
-##       suppressMessages(suppressWarnings(
-##         AnnotationDbi::select(
-##           orgdb,
-##           keys = probes,
-##           keytype = keytype0,
-##           columns = key
-##         )
-##       )),
-##       silent = TRUE
-##     )
-##     if (!"try-error" %in% class(probe_matches)) {
-##       ## set empty character to NA, as we only count not-NA to define probe type
-##       types <- probe_matches[, key]
-##       types <- setdiff(types, c("", NA))
-##       key_matches[[key]] <- head(types, n)
-##     }
-##   }
-
-##   return(key_matches)
-## }
-
-
 #' @title Get all species in AnnotationHub/OrgDB
 #'
 #' @export
@@ -2133,23 +2054,6 @@ check_probetype.ORTHOGENE <- function(organism, probes) {
 }
 
 
-#' Check if probes can be detected by Orthogene or AnnotHub/OrgDb
-#' annotation engines.
-#'
-#' export
-check_probetype <- function(organism, probes) {
-  chk1 <- check_probetype.ORTHOGENE(organism, probes)
-  if (!is.null(chk1) && chk1 == TRUE) {
-    return(TRUE)
-  }
-  ## using AnnotHub/OrgDb
-  chk2 <- detect_probetype(organism, probes)
-  if (!is.null(chk2)) {
-    return(TRUE)
-  }
-  return(FALSE)
-}
-
 #' Create new feature name by concatenating some columns of input
 #' annotation table. Make all feature names unique.
 #'
@@ -2208,7 +2112,6 @@ pgx.getFeatureInfo <- function(pgx, feature) {
     annot[["summary"]] <- annot.summary
   }
 
-  ##  annot[["GO"]] <- pgx.get_goterms(pgx, annot$symbol)
   if (datatype == "metabolomics") {
     annot <- getMetaboliteInfo(
       organism = pgx$organism,
@@ -2332,16 +2235,6 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype,
   )
   names(info) <- new.names[tags]
   return(info)
-}
-
-pgx.get_goterms <- function(pgx, symbol) {
-  if (!symbol %in% rownames(pgx$GMT)) {
-    return(NULL)
-  }
-  jj <- grep("^GO", colnames(pgx$GMT), value = TRUE)
-  terms <- names(which(pgx$GMT[symbol, jj] != 0))
-  go_ids <- paste0("GO:", gsub(".*\\(GO_|\\)", "", terms))
-  go_ids
 }
 
 info.add_hyperlinks <- function(info, feature, datatype,
@@ -2739,12 +2632,3 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
   return(annot)
 }
 
-#' Annotate multi-species probetype. Probe names *must  be prefixed with
-#' data type unless classical transcriptomics/proteomics.
-#'
-getMultiSpeciesProbeAnnotation <- function(probes, organisms, probetype,
-                                           datatype = "rna-seq") {
-  ## FILL ME!!!
-  annot <- data.frame()
-  return(annot)
-}

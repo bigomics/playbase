@@ -45,7 +45,7 @@ gx.limma(
 
 \item{trend}{Logical for fitting a trend model.}
 
-\item{f.test}{Logical. Run f test is >2 levels phenotype. Replicates previous playbase::gx.limmaF().}
+\item{f.test}{Logical. Run f-test when phenotype has >2 levels.}
 
 \item{verbose}{Verbosity level.}
 }

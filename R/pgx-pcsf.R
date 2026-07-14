@@ -772,11 +772,6 @@ visplot.PCSF <- function(
     visNet <- visNet %>% visNetwork::visHierarchicalLayout(direction = "UD")
   }
 
-  #  visNet <- visNet %>%
-  #    visNetwork::visPhysics(enabled = physics) %>%
-  #    visNetwork::visOptions(highlightNearest = list(enabled = TRUE, degree = 2)) %>%
-  #    visNetwork::visLegend(width = 0.05, useGroups = TRUE, position = "right")
-
   visNet
 }
 

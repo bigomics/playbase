@@ -320,12 +320,6 @@ read_counts <- function(file, first = FALSE, unique = FALSE, paste_char = "_") {
     return(NULL)
   }
 
-  ## is_valid <- validate_counts(df)
-  ## if (!is_valid) {
-  ##   message("[read_counts] WARNING: Counts file has errors")
-  ##   ## return(NULL)
-  ## }
-
   ## determine column types (NEED RETHINK!)
   df1 <- type.convert(data.frame(head(df, 20), check.names = FALSE), as.is = TRUE)
   col.type <- sapply(df1, class)

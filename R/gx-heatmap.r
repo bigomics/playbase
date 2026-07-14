@@ -74,37 +74,6 @@ gx.PCAheatmap <- function(X, nv = 5, ngenes = 10, ...) {
 }
 
 
-#' Visualize top genes for PCA components
-#'
-#' @param X Numeric matrix of gene expression data (genes in rows, samples in columns)
-#' @param nv Number of principal components to extract
-#' @param ngenes Number of top genes to visualize per component
-#'
-#' @details This function calculates the top \code{ngenes} genes (by loading) for the first
-#' \code{nv} principal components of \code{X}. For each component, it extracts the top genes,
-#' centers and scales their expression profiles, and visualizes them as a heatmap using
-#' \code{gx.imagemap()}.
-#'
-#' @examples
-#' \dontrun{
-#' x <- matrix(rnorm(500 * 50), 500, 50)
-#' gx.PCAcomponents(x, nv = 5, ngenes = 10)
-#' }
-#'
-#' @export
-gx.PCAcomponents <- function(X, nv = 20, ngenes) {
-  if (inherits(X, "list") && "X" %in% names(X)) X <- X$X
-  res <- irlba::irlba(X - rowMeans(X, na.rm = TRUE), nv = nv)
-  for (i in 1:nv) {
-    gg <- Matrix::head(rownames(X)[order(-abs(res$u[, i]))], ngenes)
-    X1 <- X[gg, ]
-    ## X1 <- (X1 - rowMeans(X1, na.rm = TRUE)) / (1e-4 + apply(X1, 1, stats::sd, na.rm = TRUE)) ## scale??
-    X1 <- (X1 - rowMeans(X1, na.rm = TRUE)) / (1e-4 + matrixStats::rowSds(X1, na.rm = TRUE))
-    colnames(X1) <- NULL
-    gx.imagemap(X1, main = paste0("PC", i), cex = 0.8)
-  }
-}
-
 #' Create an image heatmap of a data matrix
 #'
 #' @param X Numeric data matrix with genes/features as rows and samples/conditions as columns.
