@@ -318,7 +318,7 @@ pgx.superBatchCorrect <- function(X, pheno,
       dbg("[pgx.superBatchCorrect] model.par = ", model.par)
       y1 <- pheno[, model.par, drop = FALSE]
       y1 <- apply(y1, 1, paste, collapse = ":")
-      cX <- gx.nnmcorrect(cX, y1, center.x = TRUE, center.m = TRUE)$X
+      cX <- nnmCorrect(cX, y1, center.x = TRUE, center.m = TRUE, return.B = TRUE)$X
     }
 
     if (bc == "sva") {
@@ -1245,7 +1245,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   }
 
   if ("NPM" %in% methods) {
-    ## xlist[["NNM"]] <- gx.nnmcorrect(X, y)$X
+    ## xlist[["NNM"]] <- nnmCorrect(X, y, return.B = TRUE)$X
     xlist[["NPM"]] <- nnmCorrect(X, y, use.design = TRUE)
     ## xlist[["NNM2"]] <- nnmCorrect2(X, y, use.design = TRUE)
     ##    xlist[["NNM.no_mod"]] <- nnmCorrect2(X, y, use.design = FALSE)
@@ -1928,7 +1928,7 @@ superBC2 <- function(X, samples, y, batch = NULL,
     }
     if (m == "npm") {
       message("[superBC2] correcting for: NPM")
-      cX <- gx.nnmcorrect(cX, y, use.design = use.design)$X
+      cX <- nnmCorrect(cX, y, use.design = use.design, return.B = TRUE)$X
     }
     if (m == "npm2") {
       message("[superBC2] correcting for: NPM2")
@@ -2076,91 +2076,6 @@ svaCorrect <- function(X, y, n.sv = NULL, nsd = 1000, return.sv = FALSE) {
     return(list(X = X, sv = sv))
   }
   X
-}
-
-fsvaCorrect <- function(X, y) {
-  ## Frozen SVA
-
-  if (any(is.na(X))) {
-    stop("[svaCorrect] cannot handle missing values in X")
-  }
-  dimx <- ncol(X)
-  xnames <- colnames(X)
-
-  ## sva doesn't like if the dimension is too small
-  if (ncol(X) < 10) {
-    X <- cbind(X, X, X)
-    y <- rep(y, 3)
-  }
-
-  ## get not-missing
-  ii <- which(!is.na(y))
-  has.na <- any(is.na(y))
-  y1 <- y[ii]
-  X1 <- X[, ii]
-  y0 <- y[-ii]
-  X0 <- X[, -ii]
-  names(y0) <- colnames(X0)
-  names(y1) <- colnames(X1)
-
-  ##
-  mod1x <- model.matrix(~ 1 + y1)
-  mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
-
-  ## fast method using SmartSVA
-  #  pp <- paste0(model.par, collapse = "+")
-  #  lm.expr <- paste0("lm(t(X) ~ ", pp, ", data=pheno)")
-  X.r <- t(stats::resid(lm(t(X1) ~ y1)))
-  n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
-  ## top 1000 genes only (faster)
-  X1a <- Matrix::head(X1[order(-matrixStats::rowSds(X1, na.rm = TRUE)), ], 1000)
-  ## add a little bit of noise to avoid singular error
-  ## a <- 0.01 * mean(apply(X1a, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
-  a <- 0.01 * mean(matrixStats::rowSds(X1a, na.rm = TRUE), na.rm = TRUE)
-  X1a <- X1a + a * matrix(stats::rnorm(length(X1a)), nrow(X1a), ncol(X1a))
-  sv <- try(sva::sva(X1a, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1)))
-
-  cX <- NULL
-  if (!any(class(sv) == "try-error")) {
-    message("[svaCorrect] Performing SVA correction...")
-    cX <- limma::removeBatchEffect(X1, covariates = sv$sv, design = mod1x)
-  } else {
-    message("[svaCorrect] WARNING could not get covariates. no correction.")
-  }
-
-  if (has.na) {
-    dim(X0)
-    fsvaobj <- fsva(X1, mod1x, sv, X0)
-    data1 <- list(x = X1, y = y1)
-    model <- pamr::pamr.train(data1)
-    pred_y0 <- pamr::pamr.predict(model, fsvaobj$new, threshold = 1)
-    pred_y0 <- as.character(pred_y0)
-    table(pred_y0)
-
-    ## redo SVA with predicted labels
-    XX <- cbind(X0, X1)
-    yy <- c(pred_y0, y1)
-    names(yy) <- colnames(XX)
-    mod1x <- model.matrix(~ 1 + yy)
-    mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
-
-    XXa <- Matrix::head(XX[order(-matrixStats::rowSds(XX, na.rm = TRUE)), ], 1000)
-    ## a <- 0.01 * mean(apply(XXa, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
-    a <- 0.01 * mean(matrixStats::rowSds(XXa, na.rm = TRUE), na.rm = TRUE)
-    XXa <- XXa + a * matrix(stats::rnorm(length(XXa)), nrow(XXa), ncol(XXa))
-    sv <- try(sva::sva(XXa, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
-    cX <- limma::removeBatchEffect(XX, covariates = sv, design = mod1x)
-    cX <- cX[, colnames(X)]
-    y0 <- yy[colnames(X0)]
-  }
-
-  if (is.null(cX)) {
-    return(NULL)
-  }
-  cX <- cX[, match(xnames, colnames(cX))] ## reduce to original size
-  predy <- c(y0, y1)
-  predy <- predy[match(xnames, names(predy))]
-  list(X = cX, y = predy)
 }
 
 #' @export
@@ -2751,9 +2666,6 @@ nnmCorrect.SIMPLE <- function(x, y, k = 3) {
 ## compatibility
 
 #' @export
-gx.nnmcorrect <- function(...) nnmCorrect(..., return.B = TRUE)
-
-#' @export
 gx.nnmcorrect2 <- function(...) nnmCorrect2(..., return.B = TRUE)
 
 
@@ -2770,125 +2682,6 @@ estimateBatchCorrectionVectors <- function(cX, X, k = NULL, threshold = 0.8) {
   }
   ## return batch vectors
   res$V[, 1:k, drop = FALSE]
-}
-
-
-## ----------------------------------------------------------------------
-## -------------- EXPERIMENTAL (not exported) ---------------------------
-## ----------------------------------------------------------------------
-
-#' Supervised MNN correction. Finds mutual neighbours with same label
-#' between two datasets and returns corresponding correction vectors.
-#'
-sMNN <- function(X, batch, y, nv = 0.33, nn = 3, return.idx = FALSE) {
-  getMNN <- function(x1, x2) {
-    res <- batchelor::findMutualNN(t(x1), t(x2), k1 = nn)
-    cbind(colnames(x1)[res$first], colnames(x2)[res$second])
-  }
-
-  ## if no phenotype is given, just do one group
-  if (is.null(y)) {
-    y <- rep("y", ncol(X))
-  }
-
-  ## For all combinations of batches, get correction vector
-  nbatch <- length(unique(batch))
-  comb <- combn(unique(batch), 2)
-  i <- 1
-  y0 <- y[1]
-  B <- c()
-  all.idx <- c()
-  message("[sMNN] searching in ", ncol(comb), " batch pairs...")
-  for (i in 1:ncol(comb)) {
-    for (y0 in unique(y)) {
-      x1 <- X[, which(batch == comb[1, i] & y == y0), drop = FALSE]
-      x2 <- X[, which(batch == comb[2, i] & y == y0), drop = FALSE]
-      if (ncol(x1) > 0 && ncol(x2) > 0) {
-        idx <- getMNN(x1, x2)
-        dx <- x2[, idx[, 2]] - x1[, idx[, 1]]
-        B <- cbind(B, dx)
-        all.idx <- rbind(all.idx, idx)
-      }
-    }
-  }
-  dim(B)
-  message("[sMNN] dim(B) = ", paste(dim(B), collapse = "x"))
-  message("[sMNN] Found total ", ncol(B), " MNN pairs")
-
-  ## remove batch effects in transposed gene space
-  if (nv < 1) nv <- floor(nv * min(dim(B), na.rm = TRUE))
-  nv <- max(1, min(nv, dim(B) - 1))
-  message("[sMNN] nv = ", nv)
-  B <- scale(B)
-  set.seed(1234)
-  dU <- irlba::irlba(B, nu = nv, nv = nv)$u
-  ##  dU <- scale(dU) ## no???
-  cX <- t(limma::removeBatchEffect(t(X), covariates = dU))
-
-  ## restore original mean
-  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
-
-  if (return.idx) {
-    res <- list(X = cX, idx = all.idx)
-    return(res)
-  }
-
-  cX
-}
-
-
-#' Mutual Farthest Neighbour correction
-#'
-mfnCorrect <- function(X, y, nv = 3, nn = 3, return.idx = FALSE) {
-  ## nv=0.33;nn=10
-  B <- NULL
-  all.idx <- c()
-  a <- y[2]
-  for (a in unique(y)) {
-    X1 <- X[, which(y == a)]
-    ## X1 <- X1 - rowMeans(X1)
-    R1 <- cor(X1)
-    mfn <- c()
-    ## determine mutual farthest neighbors
-    idx <- apply(R1, 1, function(x) head(order(x), nn))
-    if (nn == 1) idx <- cbind(idx)
-    if (nn > 1) idx <- t(idx)
-
-    mfn.match <- sapply(1:nrow(idx), function(j) j %in% as.vector(idx[idx[j, ], ]))
-    table(mfn.match)
-    mfn <- which(mfn.match)
-    message("Found ", length(mfn), " farthest neighbors for y= ", a)
-
-    ## get correction vectors
-    if (length(mfn) > 0) {
-      idx <- idx[mfn, , drop = FALSE]
-      X2 <- apply(idx, 1, function(i) rowMeans(X1[, i, drop = FALSE], na.rm = TRUE))
-      dX <- X1[, rownames(idx)] - X2
-      B <- cbind(B, dX)
-      idx1 <- apply(idx, 2, function(i) colnames(X1)[i])
-      idx1 <- cbind(rownames(idx), as.vector(idx1))
-      all.idx <- rbind(all.idx, idx1)
-    }
-  }
-  dim(B)
-
-  if (NCOL(B) > 0) {
-    ## apply correction
-    if (nv < 1) nv <- max(1, floor(nv * min(dim(B))))
-  }
-  dU <- svd(B, nu = nv, nv = nv)$u
-  message("Correcting with ", ncol(dU), " MFN components")
-  cX <- t(limma::removeBatchEffect(t(X), covariates = dU))
-
-  ## restore original mean
-  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
-
-  if (return.idx) {
-    res <- list(X = cX, idx = all.idx)
-    return(res)
-  }
-
-  cX
 }
 
 
