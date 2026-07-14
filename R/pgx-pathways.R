@@ -426,12 +426,6 @@ getReactomeSVG.SBGN <- function(pathway.id, val, sbgn.dir, as.img = FALSE) {
     return(NULL.IMG)
   }
 
-  ## ## parse image dimensions from file
-  ## img.dim <- NULL
-  ## if (grepl("png|PNG", imgfile)) img.dim <- dim(png::readPNG(imgfile))[1:2]
-  ## if (grepl("jpg|JPG", imgfile)) img.dim <- dim(jpeg::readJPEG(imgfile))[1:2]
-  ## img.dim
-
   if (as.img) {
     imgfile <- list(
       ## src = imgfile,
