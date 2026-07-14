@@ -171,14 +171,22 @@ pgx.update_reports <- function(pgx, ai = NULL) {
       for (key in names(out)) {
         slot_name <- paste0(module, "_", key)
         pgx$ai[[slot_name]] <- list(
-          report = .ai_report_normheadings(out[[key]]$report),
-          prompt = out[[key]]$prompt
+          report     = .ai_report_normheadings(out[[key]]$report),
+          prompt     = out[[key]]$prompt,
+          usage      = out[[key]]$usage,
+          created_at = as.numeric(Sys.time()),
+          edited     = FALSE,
+          edited_at  = ""
         )
       }
     } else {
       pgx$ai[[module]] <- list(
-        report = .ai_report_normheadings(out$report),
-        prompt = out$prompt
+        report     = .ai_report_normheadings(out$report),
+        prompt     = out$prompt,
+        usage      = out$usage,
+        created_at = as.numeric(Sys.time()),
+        edited     = FALSE,
+        edited_at  = ""
       )
     }
   }
