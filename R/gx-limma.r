@@ -25,7 +25,7 @@
 #' @param max.na Max proportion of missing values allowed for a gene.
 #' @param ref Character vector of possible reference levels.
 #' @param trend Logical for fitting a trend model.
-#' @param f.test Logical. Run f test is >2 levels phenotype. Replicates previous playbase::gx.limmaF().
+#' @param f.test Logical. Run f-test when phenotype has >2 levels.
 #' @param verbose Verbosity level.
 #'
 #' @details Performs differential expression analysis on the gene expression matrix \code{X} using limma.
@@ -55,7 +55,7 @@ gx.limma <- function(X,
                      trend = FALSE,
                      robust = FALSE,
                      method = 1,
-                     f.test = FALSE, ## If TRUE it activates previous gx.limmaF()
+                     f.test = FALSE, ## If TRUE, run f-test for >2-level phenotypes
                      verbose = 1) {
   if (!is.null(B) && NCOL(B) == 1) {
     B <- matrix(B, ncol = 1)
