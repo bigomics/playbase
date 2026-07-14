@@ -1963,7 +1963,8 @@ getOrganismGO.ANNOTHUB <- function(organism, features = NULL, use.ah = NULL, org
   return(id)
 }
 
-getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000  ) {
+getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
+                                    verbose=1) {
 
   id <- .map_gprofiler_id(organism) 
   id  

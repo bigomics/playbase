@@ -51,13 +51,16 @@ source("dev/include.R", chdir=TRUE)
   species <- rbind(species, "No organism" = NA)
   species['No organism',c('ah_species','species_name','display_name')] <- 'No organism'
   
-  # Order table by Human, Mouse and Rat to appear first in species_name
-  preferred_order <- c("Human", "Mouse", "Rat", "No organism")
-  species <- species[ unique(c(preferred_order, sort(rownames(species)))),]
-  rownames(species) <- NULL
-  
   col_order <- unique(c('species_name','display_name',sort(colnames(species))))
   species <- species[,col_order]
+
+  # Order table by Human, Mouse and Rat to appear first in species_name
+  top.orgs <- c("Human", "Mouse", "Rat", "No organism")
+  preferred_order <- unique(c(match(top.orgs, species$species_name),
+    order(species$species_name)))
+    species <- species[ preferred_order,]
+  rownames(species) <- NULL
+  
 
   species <- data.frame(species)
   return(species)
@@ -69,7 +72,7 @@ head(SPECIES_TABLE)
 
 grep("frugiperda",SPECIES_TABLE$species_name)
 grep("falciparum",SPECIES_TABLE$species_name)
-SPECIES_TABLE[1461,]
+SPECIES_TABLE[1452,]
 
 write.table(SPECIES_TABLE, file = "data-raw/SPECIES_TABLE.tsv", sep = "\t",
   quote = FALSE, row.names = FALSE)
