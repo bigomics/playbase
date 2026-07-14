@@ -2112,7 +2112,6 @@ pgx.getFeatureInfo <- function(pgx, feature) {
     annot[["summary"]] <- annot.summary
   }
 
-  ##  annot[["GO"]] <- pgx.get_goterms(pgx, annot$symbol)
   if (datatype == "metabolomics") {
     annot <- getMetaboliteInfo(
       organism = pgx$organism,
