@@ -59,12 +59,17 @@ source("dev/include.R", chdir=TRUE)
   col_order <- unique(c('species_name','display_name',sort(colnames(species))))
   species <- species[,col_order]
 
+  species <- data.frame(species)
   return(species)
 }
 
 SPECIES_TABLE <- .buildSpeciesTable()
 dim(SPECIES_TABLE)
 head(SPECIES_TABLE)
+
+grep("frugiperda",SPECIES_TABLE$species_name)
+grep("falciparum",SPECIES_TABLE$species_name)
+SPECIES_TABLE[1461,]
 
 write.table(SPECIES_TABLE, file = "data-raw/SPECIES_TABLE.tsv", sep = "\t",
   quote = FALSE, row.names = FALSE)
