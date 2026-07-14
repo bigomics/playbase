@@ -902,48 +902,6 @@ pgx.computePGX <- function(pgx,
 ## =================== UTILITY FUNCTIONS =============================
 ## ===================================================================
 
-counts.removeSampleOutliers <- function(counts) {
-  ## remove samples with 1000x more or 1000x less total counts (than median)
-  totcounts <- colSums(counts, na.rm = TRUE)
-  mx <- median(log10(totcounts))
-  ex <- (log10(totcounts) - mx)
-  sel <- which(abs(ex) > 3 | totcounts < 1) ## allowed: 0.001x - 1000x
-  sel
-  if (length(sel)) {
-    message("[createPGX] WARNING: bad samples. Removing samples: ", paste(sel, collapse = " "))
-    counts <- counts[, -sel, drop = FALSE]
-  }
-  counts
-}
-
-
-counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
-  ## remove extra-large and infinite values
-  ## X <- log2(1 + counts)
-  X <- logCPM(counts)
-  which.xxl <- which(is.xxl(X), arr.ind = TRUE)
-  nxxl <- nrow(which.xxl)
-  if (nxxl > 0) {
-    message("[createPGX] WARNING: setting ", nxxl, " XXL values to NA")
-    counts[which.xxl] <- xxl.val
-  } else {
-    message("[createPGX] no XXL values detected")
-  }
-  counts
-}
-
-counts.imputeMissing <- function(counts, method = "SVD2") {
-  epsx <- min(counts[counts > 0], na.rm = TRUE)
-  X <- log2(epsx + counts)
-  is.mox <- is.multiomics(rownames(X))
-  if (is.mox) {
-    impX <- imputeMissing.mox(X, method = method)
-  } else {
-    impX <- imputeMissing(X, method = method)
-  }
-  pmax(2**impX - epsx, 0)
-}
-
 #' @export
 counts.autoScaling <- function(counts) {
   message("[createPGX] scaling counts...")

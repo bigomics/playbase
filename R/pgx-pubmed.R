@@ -3,11 +3,6 @@
 ## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
-NCORE <- function() {
-  parallel::detectCores(all.tests = FALSE, logical = TRUE) / 2
-}
-
-
 #' @title Get PubMed context for a gene
 #'
 #' @description
