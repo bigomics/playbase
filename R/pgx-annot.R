@@ -455,7 +455,7 @@ getGeneAnnotation <- function(
           use.ah = use.ah,
           verbose = verbose
         ),
-        "gprofiler" = getGeneAnnotation.ORTHOGENE(
+        "gprofiler" = getGeneAnnotation.GPROFILER(
           organism = organism,
           probes = missing_probes,
           verbose = verbose
@@ -1868,42 +1868,43 @@ getOrganismGO.ANNOTHUB <- function(organism, features = NULL, use.ah = NULL, org
   ont_classes <- c("BP", "CC", "MF")
   if (!"GOALL" %in% AnnotationDbi::keytypes(orgdb)) {
     message("WARNING:: missing GO annotation in database!\n")
-  } else {
-    ## create GO annotets
-    message("Creating GO annotation from AnnotationHub...")
-    ont_classes <- c("BP", "CC", "MF")
-    k <- "BP"
-    for (k in ont_classes) {
-      cc <- AnnotationDbi::columns(orgdb)
-      gene.column <- intersect(c("SYMBOL", "GENENAME", "MGI", "ALIAS"), cc)
-      gene.column <- head(gene.column, 1)
-      if (length(gene.column) > 0) {
-        suppressMessages(suppressWarnings(
-          go_id <- AnnotationDbi::mapIds(
-            orgdb,
-            keys = k, keytype = "ONTOLOGY",
-            column = "GO", multiVals = "list"
-          )[[1]]
-        ))
-        go_id <- unique(go_id)
-        suppressMessages(suppressWarnings(
-          sets <- AnnotationDbi::mapIds(
-            orgdb,
-            keys = go_id, keytype = "GOALL",
-            column = gene.column, multiVals = "list"
-          )
-        ))
-
-        ## get GO title
-        sets <- sets[which(names(sets) %in% AnnotationDbi::keys(GO.db::GOTERM))]
-        sets <- lapply(sets, function(s) unique(s))
-        go <- sapply(GO.db::GOTERM[names(sets)], AnnotationDbi::Term)
-        new_names <- paste0("GO_", k, ":", go, " (", sub("GO:", "GO_", names(sets)), ")")
-        names(sets) <- new_names
-
-        ## add to list
-        go.gmt <- c(go.gmt, sets)
-      }
+    return(NULL)
+  }
+  
+  ## create GO annotets
+  message(paste0("Creating GO annotation for '",organism,"'using AnnotationHub..."))
+  ont_classes <- c("BP", "CC", "MF")
+  k <- "BP"
+  for (k in ont_classes) {
+    cc <- AnnotationDbi::columns(orgdb)
+    gene.column <- intersect(c("SYMBOL", "GENENAME", "MGI", "ALIAS"), cc)
+    gene.column <- head(gene.column, 1)
+    if (length(gene.column) > 0) {
+      suppressMessages(suppressWarnings(
+        go_id <- AnnotationDbi::mapIds(
+          orgdb,
+          keys = k, keytype = "ONTOLOGY",
+          column = "GO", multiVals = "list"
+        )[[1]]
+      ))
+      go_id <- unique(go_id)
+      suppressMessages(suppressWarnings(
+        sets <- AnnotationDbi::mapIds(
+          orgdb,
+          keys = go_id, keytype = "GOALL",
+          column = gene.column, multiVals = "list"
+        )
+      ))
+      
+      ## get GO title
+      sets <- sets[which(names(sets) %in% AnnotationDbi::keys(GO.db::GOTERM))]
+      sets <- lapply(sets, function(s) unique(s))
+      go <- sapply(GO.db::GOTERM[names(sets)], AnnotationDbi::Term)
+      new_names <- paste0("GO_", k, ":", go, " (", sub("GO:", "GO_", names(sets)), ")")
+      names(sets) <- new_names
+      
+      ## append to list
+      go.gmt <- c(go.gmt, sets)
     }
   }
   go.gmt
@@ -1942,7 +1943,7 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
     message("[getOrganismGO.GPROFILER] WARNING: organism not found")
     return(NULL)
   }
-  message(paste0("Getting GO gene sets for id '", id,"'"))
+  message(paste0("Getting GO gene sets using Gprofiler for id '", id,"'"))
 
   if(length(features) <= batch_size) {
     gost.out <- gprofiler2::gost(
@@ -2029,7 +2030,7 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
 ## because orthogene seems to detect is automatically.
 
 #' @export
-getGeneAnnotation.ORTHOGENE <- function(
+getGeneAnnotation.GPROFILER <- function(
   organism,
   probes,
   verbose = TRUE
@@ -2041,7 +2042,7 @@ getGeneAnnotation.ORTHOGENE <- function(
   #species <- try(.getGprofilerSpecies(organism))
   species <- try(.map_gprofiler_id(organism))
   if ("try-error" %in% class(species)) {
-    message("[getGeneAnnotation.ORTHOGENE] *WARNING* could not connect to server")
+    message("[getGeneAnnotation.GPROFILER] *WARNING* could not connect to server")
     return(NULL)
   }
   if (is.null(species)) {
@@ -2057,7 +2058,7 @@ getGeneAnnotation.ORTHOGENE <- function(
   gene.out <- try(orthogene::map_genes(
     genes = probes1,
     species = species,
-    run_map_species = FALSE,
+    run_map_species = FALSE,  ## disable map and check
     verbose = FALSE
   ), silent = TRUE)
 
@@ -2096,38 +2097,40 @@ getGeneAnnotation.ORTHOGENE <- function(
 }
 
 
-.check_probetype.GPROFILER <- function(organism, probes, min.map=0.20) {
-  gp.organism <- .map_gprofiler_id(organism)
-  map <- try(gprofiler2::gconvert(probes, organism = gp.organism, target = "ENSG"))
-  if ("try-error" %in% class(map) || is.null(map)) {
-    message("[check_probetype.ORTHOGENE] *WARNING* could not connect to server")
-    return(NULL)
-  }
-  mean.mapped <- mean(!is.na(map$target))
-  ## get correct OrgDb database for organism
-  if (mean.mapped < min.map) {
-    return(FALSE)
-  }
-  return(TRUE)
-}
-
-
 #' Check if probes can be detected by Orthogene or AnnotHub/OrgDb
 #' annotation engines.
 #'
 #' export
-check_probetype <- function(organism, probes) {
-  #chk1 <- check_probetype.ORTHOGENE(organism, probes)
+check_probetype <- function(organism, probes, verbose=1) {
   chk1 <- .check_probetype.GPROFILER(organism, probes, min.map=0.20)  
   if (!is.null(chk1) && chk1 == TRUE) {
+    if(verbose) message("organism/features supported by Gprofiler")
     return(TRUE)
   }
   ## using AnnotHub/OrgDb
   chk2 <- detect_probetype(organism, probes)
   if (!is.null(chk2)) {
+    if(verbose) message("organism/features supported by AnnotHub")    
     return(TRUE)
   }
+  if(verbose) message("Warning: organism/features not recognized")    
   return(FALSE)
+}
+
+.check_probetype.GPROFILER <- function(organism, probes, min.map=0.20) {
+  gp.organism <- .map_gprofiler_id(organism)
+  map <- try(gprofiler2::gconvert(probes, organism = gp.organism, target = "ENSG"))
+  if ("try-error" %in% class(map) || is.null(map)) {
+    message("[check_probetype.GPROFILER] *WARNING* organism not  recogized, or server not reachable")
+    return(NULL)
+  }
+  mean.mapped <- mean(!is.na(map$target))
+  ## get correct OrgDb database for organism
+  if (mean.mapped < min.map) {
+    message("[check_probetype.GPROFILER] *WARNING* too low mapping coverage")
+    return(FALSE)
+  }
+  return(TRUE)
 }
 
 
@@ -2709,3 +2712,43 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
   return(annot)
 }
 
+#' Return n example features (symbols) for given organism
+#' 
+#' @export
+getExampleFeatures <- function(organism, n, protein.coding=TRUE,
+                               type="SYMBOL") {
+  organism <- normalizeOrganism(organism)
+  orgdb <- getOrgDb(organism, use.ah = NULL)
+  if (is.null(orgdb)) {
+    message("[getGeneAnnotation.ANNOTHUB] ERROR: orgdb == NULL: ", is.null(orgdb))
+    return(NULL)
+  } else {
+    message(paste0("[getGeneAnnotation.ANNOTHUB] OrgDb for '",organism,"' retrieved..."))
+  }
+
+  cols <- c("SYMBOL", "GENENAME", "GENETYPE", "MAP", "ALIAS", "UNIPROT")
+  cols <- c(type, "SYMBOL", "ALIAS", "GENETYPE")
+  cols <- intersect(cols, AnnotationDbi::keytypes(orgdb))
+  if("SYMBOL" %in% cols) {
+    cols <- setdiff(cols, c("ALIAS"))    
+  }
+  
+  ez <- AnnotationDbi::keys(orgdb, keytype="ENTREZID")
+  ez <- sample(ez, 10*n)
+  
+  suppressMessages(suppressWarnings(
+    annot <- AnnotationDbi::select(
+      orgdb,
+      keys = ez,
+      columns = unique(cols),
+      keytype = "ENTREZID"
+    )
+  ))
+
+  if("GENETYPE" %in% cols && protein.coding) {
+    annot <- annot[grep("protein", annot$GENETYPE),]
+  }
+  
+  symbols <- unique(annot$SYMBOL)
+  head(symbols, n)
+}
