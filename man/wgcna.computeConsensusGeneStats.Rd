@@ -15,3 +15,6 @@ colors/labels for each layers. A separate function
 wgcna.getConsensusGeneStats() extracts clean tables from this
 results object.
 }
+\seealso{
+WGCNAplus::computeConsensusGeneStats
+}

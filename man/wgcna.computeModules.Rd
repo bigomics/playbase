@@ -34,3 +34,6 @@ Reimplementation for WGCNA::blockwiseModules(). This returns exact
 same object as WGCNA::blockwiseModules() but is faster and allows
 different clustering linkage methods (ward, complete).
 }
+\seealso{
+WGCNAplus::computeModules
+}

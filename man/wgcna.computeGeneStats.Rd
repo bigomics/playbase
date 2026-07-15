@@ -9,3 +9,6 @@ wgcna.computeGeneStats(net, datExpr = NULL, datTraits = NULL, TOM = NULL)
 \description{
 Compute general feature statistics after WGCNA results.
 }
+\seealso{
+WGCNAplus::computeGeneStats
+}
