@@ -5,7 +5,7 @@
 \title{Check if probes can be detected by Orthogene or AnnotHub/OrgDb
 annotation engines.}
 \usage{
-check_probetype(organism, probes)
+check_probetype(organism, probes, verbose = 1)
 }
 \description{
 export
