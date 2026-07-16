@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-wgcna.R
 \name{wgcna.compute}
 \alias{wgcna.compute}
-\title{Core WGCNA computation}
+\title{Core WGCNA computation (lower-level workhorse called by \code{\link{pgx.wgcna}})}
 \usage{
 wgcna.compute(
   X,
@@ -53,36 +53,51 @@ wgcna.compute(
 
 \item{minKME}{Minimum eigengene connectivity to retain a gene in a module.}
 
+\item{treeCut}{Relative or absolute tree cut height.}
+
+\item{treeCutCeiling}{Ceiling quantile used to rescale a relative \code{treeCut}.}
+
 \item{networktype}{Network type (\code{"signed"}, \code{"unsigned"}, etc.).}
 
 \item{tomtype}{TOM type (\code{"signed"}, \code{"unsigned"}, etc.).}
 
-\item{calcMethod}{TOM calculation method (\code{"fast"}, \code{"cor"}).}
+\item{clustMethod}{Hierarchical clustering method.}
+
+\item{cutMethod}{Tree cut method (\code{"hybrid"}, \code{"tree"}, \code{"static"}).}
+
+\item{calcMethod}{TOM calculation method (\code{"fast"}, \code{"adjacency"}, \code{"full"}).}
+
+\item{lowrank}{Low-rank approximation dimension for fast TOM calculation.}
+
+\item{numericlabels}{Use numeric module labels instead of colors.}
+
+\item{maxBlockSize}{Maximum block size for module detection.}
+
+\item{merge.dendro}{Merge per-block dendrograms into one.}
+
+\item{compute.stats}{Compute gene-level statistics.}
+
+\item{prefix}{Two-letter module label prefix.}
+
+\item{sv.tom}{Number of singular vectors used for the reduced TOM.}
+
+\item{drop.ref}{Drop reference level when expanding phenotype matrix.}
+
+\item{net}{Precomputed network object (skips module detection if given).}
+
+\item{is.multiomics}{Whether \code{X} is a multi-omics matrix (auto-detected if \code{NULL}).}
 
 \item{verbose}{Verbosity level.}
 }
 \value{
-A list with the following components:
-\describe{
-  \item{datExpr}{Transposed expression matrix used for WGCNA.}
-  \item{datTraits}{Numeric trait matrix derived from sample metadata.}
-  \item{svTOM}{Singular vectors of the TOM matrix (low-rank approximation).}
-  \item{net}{WGCNA network object from \code{blockwiseModules}.}
-  \item{me.genes}{Gene-to-module membership vectors.}
-  \item{me.colors}{Module color assignments.}
-  \item{W}{Module eigengene matrix.}
-  \item{modTraits}{Module-trait correlation results.}
-  \item{stats}{Module-level statistics and test results.}
-  \item{power}{Effective soft-thresholding power used.}
-  \item{minModSize}{Effective minimum module size (may be capped for small datasets).}
-  \item{mergeCutHeight}{Merge cut height for module merging.}
-  \item{minKME}{Minimum eigengene connectivity to stay in a module.}
-  \item{networktype}{Network type (\code{"signed"}, \code{"unsigned"}, etc.).}
-  \item{tomtype}{TOM type (\code{"signed"}, \code{"unsigned"}, etc.).}
-}
+A list with \code{datExpr}, \code{datTraits}, \code{svTOM}, \code{net},
+  \code{me.genes}, \code{me.colors}, \code{W}, \code{modTraits}, \code{stats},
+  \code{power}, \code{minModSize}, \code{mergeCutHeight}, \code{minKME},
+  \code{networktype}, \code{tomtype}.
 }
 \description{
-Constructs a weighted gene coexpression network and detects
-modules from an expression matrix. This is the lower-level workhorse called
-by \code{\link{pgx.wgcna}} and \code{wgcna.runConsensusWGCNA}.
+Core WGCNA computation (lower-level workhorse called by \code{\link{pgx.wgcna}})
+}
+\seealso{
+WGCNAplus::computeWGCNA
 }

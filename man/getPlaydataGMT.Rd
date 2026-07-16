@@ -2,12 +2,13 @@
 % Please edit documentation in R/pgx-wgcna.R
 \name{getPlaydataGMT}
 \alias{getPlaydataGMT}
-\title{Get merged multiomics geneset x feature matrix. Combines geneset
-and metabolite sets.}
+\title{Combined GSETxGENE/MSETxMETABOLITE geneset matrix from playdata}
 \usage{
 getPlaydataGMT()
 }
 \description{
-Get merged multiomics geneset x feature matrix. Combines geneset
-and metabolite sets.
+Combined GSETxGENE/MSETxMETABOLITE geneset matrix from playdata
+}
+\seealso{
+WGCNAplus::getPlaydataGMT
 }

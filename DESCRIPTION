@@ -18,7 +18,6 @@ biocViews:
 Imports:
     AnnotationDbi,
     AnnotationHub,
-    ape,
     ArrayExpress,
     aws.s3,
     base,
@@ -43,7 +42,6 @@ Imports:
     DESeq2,
     dplyr,
     DT,
-    dynamicTreeCut,
     edgeR,
     fastcluster,
     fgsea,
@@ -177,6 +175,7 @@ Imports:
     wateRmelon,
     webshot2,
     WGCNA,
+    WGCNAplus,
     wordcloud,
     xgboost,
     xml2,
