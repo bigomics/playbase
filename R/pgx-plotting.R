@@ -7124,7 +7124,8 @@ plotlyLasagna <- function(df, znames = NULL, cex = 1, edges = NULL) {
         idx <- as.vector(t(as.matrix(ee[, 1:2])))
         dfe <- rbind(df1[, c("x", "y", "z")], df2[, c("x", "y", "z")])[idx, ]
         dfe$pair_id <- as.vector(mapply(rep, 1:nrow(ee), 2))
-        dfe$col <- c("darkorange3", "magenta4")[1 + (ee[, 3] > 0)]
+        ## hex, not R colour names: plotly.js cannot parse "darkorange3"/"magenta4"
+        dfe$col <- rep(c("#CD6600", "#8B008B")[1 + (ee[, 3] > 0)], each = 2)
 
         fig <- fig %>%
           plotly::add_trace(
