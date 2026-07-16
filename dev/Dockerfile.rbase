@@ -22,8 +22,8 @@ COPY dev/Rprofil[e] /root/.Rprofile
 COPY dev/Renviro[n] /root/.Renviron
 
 RUN R -e "install.packages(c('remotes','renv','reticulate'))"
-RUN R -e "remotes::install_version('BiocManager', version='1.30.23')"
-RUN R -e "BiocManager::install(version='3.18')"
+RUN R -e "install.packages('BiocManager')"
+RUN R -e "BiocManager::install(version='3.22')"
 
 RUN echo ********* INSTALLING MINI-CONDA ***************
 COPY dev/install_conda.R dev/

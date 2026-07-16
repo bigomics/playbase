@@ -31,8 +31,8 @@ require <- function(pkg) (pkg %in% installed.packages()[,'Package'])
 
 if(!require("remotes")) install.packages('remotes')
 if(!require("BiocManager")) {
-  remotes::install_version('BiocManager', version='1.30.23')
-  if(!BiocManager::version()=="3.18") BiocManager::install(version='3.18')
+  install.packages('BiocManager')
+  if(!BiocManager::version()=="3.22") BiocManager::install(version='3.22')
 }
 
 missing.imports <- NULL
