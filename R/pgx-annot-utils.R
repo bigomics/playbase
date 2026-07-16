@@ -436,3 +436,56 @@ combine_feature_names <- function(annot, target) {
   new.feature
 }
 
+#' Two-pass implemenation of AnnotationDbi::select that checks for
+#' original probe names and then matches clean names.
+#' 
+AnnotationDbi_select_2pass <- function(orgdb, keys, columns, keytype,
+                                       verbose=1) {
+
+  ## First pass: 
+  annot <- try(AnnotationDbi::select(
+    orgdb,
+    keys = keys,
+    columns = columns,
+    keytype = keytype
+  ), silent = TRUE)
+
+  dim(annot)
+  if(inherits(annot, "try-error")) {
+    annot <- NULL
+    which.missing <- 1:length(keys)
+  } else {
+    which.missing <- which(is.na(annot$SYMBOL))
+  }
+  
+  ## Second pass
+  if(length(which.missing)) {
+    clean.keys <- .clean_probe_names(keys[which.missing])
+    names(clean.keys) <- keys[which.missing]
+    annot2 <- try(AnnotationDbi::select(
+      orgdb,
+      keys = clean.keys,
+      columns = columns,
+      keytype = keytype
+    ), silent = TRUE)
+    if(!inherits(annot2, "try-error")) {
+      jj <- which(!is.na(annot2$SYMBOL))
+      if(length(jj)) {
+        pp <- match( annot2[,keytype], clean.keys )
+        annot2[,keytype] <- names(clean.keys)[pp]
+        annot <- rbind(annot, annot2[jj,])
+      }
+    }
+  }
+  dim(annot)
+  
+  ## collapse to original keys (ordered). There may be duplicates
+  ## from 2-pass matching. Prefer non-NA entries
+  symbol <- annot$SYMBOL
+  if(!"SYMBOL" %in% columns) annot$GENENAME
+  annot <- annot[order(symbol, na.last=TRUE),]
+  annot <- annot[match(keys, annot[,keytype]),,drop=FALSE]
+  dim(annot)
+  
+  return(annot)
+}
