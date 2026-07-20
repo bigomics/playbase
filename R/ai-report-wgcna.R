@@ -271,7 +271,11 @@ extract_module_data <- function(wgcna, module, pgx,
       n_total = md$n_total,
       full_gse = md$gse,
       hub_genes = hub_genes_df,
-      trait_for_genes = trait_for_genes
+      trait_for_genes = trait_for_genes,
+      ## Overlap gene lists for the top significant enrichment terms. Without
+      ## this, .render_module_block() reads an unset md$enrichment_overlap and
+      ## silently falls back to "-" for every module (both report and summary).
+      enrichment_overlap = .enrichment_overlaps_vec(md$gse)
     )
   }
 
@@ -621,6 +625,24 @@ wgcna_build_methods <- function(wgcna, pgx) {
 
 # -- Leaf renderers: one per template placeholder that needs derivation. -----
 # Each returns a single string. No prose, only data -> string formatting.
+
+# Overlap gene lists for the top significant enrichment terms, as a character
+# vector of "geneset: genes" entries (.render_module_block joins with "; ").
+# Mirrors the logic previously kept only in the live board card so both the
+# report and the per-module summary expose enrichment overlaps.
+.enrichment_overlaps_vec <- function(gse, max_terms = 5L) {
+  if (!is.data.frame(gse) || nrow(gse) == 0 || !"genes" %in% colnames(gse)) {
+    return(character(0))
+  }
+  sig <- if ("q.value" %in% colnames(gse)) {
+    gse[!is.na(gse$q.value) & gse$q.value < 0.05, , drop = FALSE]
+  } else {
+    gse
+  }
+  if (nrow(sig) == 0) return(character(0))
+  sig <- utils::head(sig, max_terms)
+  sprintf("%s: %s", sig$geneset, sig$genes)
+}
 
 .eigengene_profile_str <- function(md) {
   if (is.null(md$eigengene_profile)) return("-")

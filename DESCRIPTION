@@ -104,7 +104,6 @@ Imports:
     org.Mm.eg.db,
     org.Rn.eg.db,
     orthogene,
-    pamr,
     parallel,
     partykit,
     patchwork,
