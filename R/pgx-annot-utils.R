@@ -3,6 +3,20 @@
 ## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
+MAIN_ORGANISMS = c("Human","Mouse","Rat","Homo sapiens",
+  "Rattus norvegicus","Mus musculus","hsapiens","mmusculus","rnorvegicus")
+
+#' Show all aliases
+#' 
+getSpeciesAliases <- function(species) {
+  S <- playbase::SPECIES_TABLE
+  matches <- apply(S, 2, function(g) which(tolower(g) %in% tolower(species)))
+  matches <- unique(unlist(matches))
+  kk <- c("species_name","display_name","ah_species","gprofiler_species",
+    "gprofiler_id")
+  kk <- intersect(kk, colnames(S))
+  unique(as.character(unlist(S[matches, kk])))
+}
 
 #' Merges any missing annotation in df with non-missing annotation of
 #' annot_table.
@@ -277,6 +291,32 @@ probe2symbol <- function(probes, annot_table, query = "symbol",
   return(query_col)
 }
 
+#'
+#'
+#' @export
+getOrgDb <- function(organism, use.ah = NULL) {
+  organism <- normalizeOrganism(organism)
+  orgdb <- .getOrgDb(organism, use.ah = use.ah)
+  if (is.null(orgdb)) {
+    message("[getOrgDb] ERROR: could not get orgdb")
+    return(NULL)
+  }
+
+  ## Extra check for validity of database
+  suppressMessages({
+    check.org <- grep("ORGANISM", capture.output(orgdb), value = TRUE)
+  })
+  check.org <- sub(".*ORGANISM: ", "", check.org)
+  check.org
+  if (is.null(check.org) || check.org != organism) {
+    message("[getOrgDb] ***WARNING***: AnnotationHub is corrupt! removing cache")
+    ah <- AnnotationHub::AnnotationHub(localHub = TRUE)
+    AnnotationHub::removeCache(ah, ask = FALSE)
+    orgdb <- .getOrgDb(organism, use.ah = use.ah)
+  }
+  orgdb
+}
+
 
 ## not exported
 .getOrgDb <- function(organism, use.ah = NULL) {
@@ -331,32 +371,6 @@ probe2symbol <- function(probes, annot_table, query = "symbol",
   )
 
   return(orgdb)
-}
-
-#'
-#'
-#' @export
-getOrgDb <- function(organism, use.ah = NULL) {
-  organism <- normalizeOrganism(organism)
-  orgdb <- .getOrgDb(organism, use.ah = use.ah)
-  if (is.null(orgdb)) {
-    message("[getOrgDb] ERROR: could not get orgdb")
-    return(NULL)
-  }
-
-  ## Extra check for validity of database
-  suppressMessages({
-    check.org <- grep("ORGANISM", capture.output(orgdb), value = TRUE)
-  })
-  check.org <- sub(".*ORGANISM: ", "", check.org)
-  check.org
-  if (is.null(check.org) || check.org != organism) {
-    message("[getOrgDb] ***WARNING***: AnnotationHub is corrupt! removing cache")
-    ah <- AnnotationHub::AnnotationHub(localHub = TRUE)
-    AnnotationHub::removeCache(ah, ask = FALSE)
-    orgdb <- .getOrgDb(organism, use.ah = use.ah)
-  }
-  orgdb
 }
 
 
@@ -451,11 +465,14 @@ AnnotationDbi_select_2pass <- function(orgdb, keys, columns, keytype,
   ), silent = TRUE)
 
   dim(annot)
+  ## determine symbol column
+  symbol.col <- intersect(colnames(annot),c("SYMBOL","GENENAME","ALIAS"))[1]
+
   if(inherits(annot, "try-error")) {
     annot <- NULL
     which.missing <- 1:length(keys)
   } else {
-    which.missing <- which(is.na(annot$SYMBOL))
+    which.missing <- which(is.na(annot[[symbol.col]]))
   }
   
   ## Second pass
@@ -469,7 +486,7 @@ AnnotationDbi_select_2pass <- function(orgdb, keys, columns, keytype,
       keytype = keytype
     ), silent = TRUE)
     if(!inherits(annot2, "try-error")) {
-      jj <- which(!is.na(annot2$SYMBOL))
+      jj <- which(!is.na(annot2[[symbol.col]]))
       if(length(jj)) {
         pp <- match( annot2[,keytype], clean.keys )
         annot2[,keytype] <- names(clean.keys)[pp]
@@ -481,11 +498,9 @@ AnnotationDbi_select_2pass <- function(orgdb, keys, columns, keytype,
   
   ## collapse to original keys (ordered). There may be duplicates
   ## from 2-pass matching. Prefer non-NA entries
-  symbol <- annot$SYMBOL
-  if(!"SYMBOL" %in% columns) annot$GENENAME
+  symbol <- annot[[symbol.col]]
   annot <- annot[order(symbol, na.last=TRUE),]
   annot <- annot[match(keys, annot[,keytype]),,drop=FALSE]
-  dim(annot)
   
   return(annot)
 }

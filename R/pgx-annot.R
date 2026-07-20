@@ -36,7 +36,7 @@ pgx.addGeneAnnotation <- function(pgx, annot_table = NULL) {
   datatype <- pgx$datatype
   organism <- pgx$organism
   probe_type <- pgx$probe_type
-
+  
   genes <- getProbeAnnotation(
     organism,
     probes,
@@ -44,10 +44,10 @@ pgx.addGeneAnnotation <- function(pgx, annot_table = NULL) {
     probetype = probe_type,
     annot_table = annot_table
   )
-
+  
   ## cleanup entries and reorder columns
   genes <- cleanupAnnotation(genes)
-
+  
   # Add to pgx object
   pgx$genes <- genes
 
@@ -95,6 +95,9 @@ getProbeAnnotation <- function(organism,
     rownames(annot_table) <- make_unique(rownames(annot_table))
   }    
 
+  ## only first feature
+  probes <- sub("[;].*","",probes) ## only first probe
+  
   genes <- NULL
   if (annot.unknown) {
     # annotation table is mandatory for 'No organism' (until server side
@@ -183,6 +186,9 @@ getGeneAnnotation <- function(
   probes <- trimws(probes)
   probes[probes == "" | is.na(probes)] <- "NA"
 
+  ## only first feature!
+  probes <- sub("[;].*","",probes) ## only first probe
+
   if (mean(grepl("[:]", probes)) > 0.98) {
     message("[getGeneAnnotation] WARNING. stripping multi-omics prefix")
     probes <- sub("^[a-zA-Z0-9]+:", "", probes)
@@ -194,7 +200,8 @@ getGeneAnnotation <- function(
   }
 
   # init empty (all missings)
-  annot <- data.frame(feature = probes0, stringsAsFactors = FALSE)
+  annot <- data.frame(feature = probes, stringsAsFactors = FALSE)
+  rownames(annot) <- probes0
   missing <- rep(TRUE, length(probes))
   
   for (method in methods) {
@@ -359,7 +366,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## --------------------------------------------
   ## retrieve table
   ## --------------------------------------------
-  cols <- c("SYMBOL", "GENENAME", "GENETYPE", "MAP", "ALIAS", "UNIPROT")
+  cols <- c("SYMBOL", "GENENAME", "GENETYPE", "ALIAS", "MAP", "UNIPROT")
   # cols <- c("SYMBOL", "GENENAME", "GENETYPE", "MAP")
   cols <- intersect(cols, AnnotationDbi::keytypes(orgdb))
 
@@ -622,7 +629,6 @@ getGeneAnnotation.GPROFILER <- function(
     gene_title = "",
     chr = NA,
     source = NA,
-    alias = probes,
     gene_name = probes
   )
   rownames(df) <- make_unique(probes)
@@ -1657,11 +1663,30 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
   return(annot)
 }
 
+
 #' Return n example features (symbols) for given organism
 #' 
 #' @export
-getExampleFeatures <- function(organism, n, protein.coding=TRUE,
-                               type="SYMBOL") {
+getExampleFeatures <- function(organism, n=20, db=c("gprofiler","orgdb")) {
+  if(organism %in% MAIN_ORGANISMS && length(db)==2) {
+    db <- c("orgdb","gprofiler")
+  }
+  f <- NULL
+  for(d in db) {
+    if(d == "orgdb") {
+      f <- try(getExampleFeatures.ORGDB(organism, n=n, protein.coding=TRUE,
+        type="SYMBOL"))
+    }
+    if(d == "gprofiler") {
+      f <- try(getExampleFeatures.GPROFILER(organism, n=n))
+    }
+    if(inherits(f,"try-error")) f <- NULL
+    if(!is.null(f)) break
+  }
+  return(f)
+}
+
+getExampleFeatures.ORGDB <- function(organism, n, protein.coding=TRUE, type="SYMBOL") {
   organism <- normalizeOrganism(organism)
   orgdb <- getOrgDb(organism, use.ah = NULL)
   if (is.null(orgdb)) {
@@ -1697,3 +1722,12 @@ getExampleFeatures <- function(organism, n, protein.coding=TRUE,
   symbols <- unique(annot$SYMBOL)
   head(symbols, n)
 }
+
+getExampleFeatures.GPROFILER <- function(organism, n) {
+  species_id <- .map_gprofiler_id(organism)  
+  query = c("GO:0008150")  ## biological process
+  out <- try(gprofiler2::gconvert(query, organism=species_id,
+    mthreshold=Inf, target="ENSG"))
+  sample(out$name, n)
+}
+

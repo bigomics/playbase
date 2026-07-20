@@ -11,12 +11,12 @@
 #' AnnotationHub/OrgDB. Restrict to genes as background.
 #'
 #' @export
-getOrganismGO <- function(organism, features = NULL, minsize=3, batch_size=2000,
+getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
                           db = c("annothub","gprofiler") ) {
 
   gmt1=gmt2=NULL
   if(is.null(db) || "annothub" %in% db) {
-    gmt1 <- getOrganismGO.ANNOTHUB(organism, use.ah = NULL, orgdb = NULL)
+    gmt1 <- getOrganismGO.ANNOTHUB(organism, use.ah=NULL, orgdb=NULL)
     if(is.null(db) && !is.null(gmt1)) db <- "annothub"
     message(paste("Got",length(gmt1),"GO terms from AnnotHub"))
   }
@@ -26,7 +26,8 @@ getOrganismGO <- function(organism, features = NULL, minsize=3, batch_size=2000,
   }
   
   if(!is.null(features) && "gprofiler" %in% db) {    
-    gmt2 <- getOrganismGO.GPROFILER(organism, features, batch_size)
+    gmt2 <- getOrganismGO.GPROFILER(organism, features,
+      batch_size=batch_size, exclude_iea=FALSE)
     message(paste("Got",length(gmt2),"GO terms from Gprofiler"))
   }
 
@@ -116,7 +117,7 @@ getOrganismGO.ANNOTHUB <- function(organism, features = NULL, use.ah = NULL, org
 }
 
 getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
-                                    verbose=1) {
+                                    exclude_iea=FALSE, verbose=1) {
 
   id <- .map_gprofiler_id(organism) 
   id  
@@ -125,26 +126,29 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
     return(NULL)
   }
   message(paste0("Getting GO gene sets using Gprofiler for id '", id,"'"))
-
+  res <- NULL
   if(length(features) <= batch_size) {
-    gost.out <- gprofiler2::gost(
+    gost.out <- try(gprofiler2::gost(
       query = features,
       #query = features[1:1000],    
       organism = id,
       evcodes = TRUE,   ## get gene sets
+      exclude_iea = exclude_iea,
       significant = FALSE,
       user_threshold = 1,
       correction_method = "fdr", 
       multi_query = FALSE
-    )
-    names(gost.out)
-    res <- gost.out$result
+    ), silent=TRUE)
+    if (!inherits(gost.out, "try-error")) {
+      res <- gost.out$result
+    }
   } else {
 
     n_genes <- length(features)
     n_batches <- ceiling(n_genes / batch_size)
 
-    if (verbose > 0) cat("Processing ", n_genes, " features in ", n_batches, " batches")
+    if (verbose > 0) cat("Processing ", n_genes, " features in ",
+      n_batches, " batches")
 
     batch_results <- list()
     b=1
@@ -158,6 +162,7 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
         query = genes_batch,
         organism = id,
         evcodes = TRUE,   ## get gene sets
+        exclude_iea = exclude_iea,
         significant = FALSE,
         user_threshold = 1,
         correction_method = "fdr", 
