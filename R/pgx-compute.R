@@ -1037,7 +1037,8 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   return(G)
 }
 
-pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
+pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000,
+                        include_iea = TRUE) {
   if (!"symbol" %in% colnames(pgx$genes)) {
     message(paste(
       "[pgx.add_GMT] ERROR: could not find 'symbol' column.",
@@ -1127,7 +1128,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     info("[pgx.add_GMT] Retrieving species GO for organism", pgx$organism,"...")
     go.genesets <- tryCatch(
       {
-        getOrganismGO( pgx$organism, features = full_feature_list)
+        getOrganismGO( pgx$organism, features = full_feature_list,
+          include_iea = include_iea)
       },
       error = function(e) {
         message("Error in getOrganismsGO:", e)

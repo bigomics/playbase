@@ -12,7 +12,7 @@
 #'
 #' @export
 getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
-                          db = c("annothub","gprofiler") ) {
+                          db = c("annothub","gprofiler"), include_iea=TRUE ) {
 
   gmt1=gmt2=NULL
   if(is.null(db) || "annothub" %in% db) {
@@ -27,7 +27,7 @@ getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
   
   if(!is.null(features) && "gprofiler" %in% db) {    
     gmt2 <- getOrganismGO.GPROFILER(organism, features,
-      batch_size=batch_size, exclude_iea=FALSE)
+      batch_size=batch_size, include_iea=include_iea)
     message(paste("Got",length(gmt2),"GO terms from Gprofiler"))
   }
 
@@ -117,7 +117,7 @@ getOrganismGO.ANNOTHUB <- function(organism, features = NULL, use.ah = NULL, org
 }
 
 getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
-                                    exclude_iea=FALSE, verbose=1) {
+                                    include_iea=TRUE, verbose=1) {
 
   id <- .map_gprofiler_id(organism) 
   id  
@@ -133,7 +133,7 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
       #query = features[1:1000],    
       organism = id,
       evcodes = TRUE,   ## get gene sets
-      exclude_iea = exclude_iea,
+      exclude_iea = !include_iea,
       significant = FALSE,
       user_threshold = 1,
       correction_method = "fdr", 
@@ -162,7 +162,7 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
         query = genes_batch,
         organism = id,
         evcodes = TRUE,   ## get gene sets
-        exclude_iea = exclude_iea,
+        exclude_iea = !include_iea,
         significant = FALSE,
         user_threshold = 1,
         correction_method = "fdr", 
