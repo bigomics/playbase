@@ -8,7 +8,7 @@
 getHumanOrtholog(
   organism,
   symbols,
-  ortho.methods = c("homologene", "gprofiler", "babelgene"),
+  ortho.methods = c("homologene", "gprofiler", "babelgene", "gprofiler2"),
   verbose = 1
 )
 }

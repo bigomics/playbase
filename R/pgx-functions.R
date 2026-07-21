@@ -2153,7 +2153,7 @@ psort <- function(x, p.col = NULL) {
 #' @return A data frame representing the tidied input data.
 #'
 #' @export
-tidy.dataframe <- function(Y) {
+tidy_dataframe <- function(Y) {
   Y <- Y[, which(colMeans(is.na(Y)) < 1), drop = FALSE]
   Y <- apply(Y, 2, function(x) sub("^NA$", NA, x)) ## all characters
   Y <- Y[, which(colMeans(is.na(Y)) < 1), drop = FALSE]
@@ -2192,7 +2192,7 @@ tidy.dataframe <- function(Y) {
 #' param.class(A)
 #' }
 #' @export
-param.class <- function(A) sapply(tidy.dataframe(A), class)
+param.class <- function(A) sapply(tidy_dataframe(A), class)
 
 
 #' @describeIn isanumber The function tests if the input \code{x} is of numeric type.
@@ -2272,7 +2272,7 @@ expandAnnotationMatrix <- function(A) {
 #' @export
 expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = TRUE) {
   ## get expanded annotation matrix
-  a1 <- tidy.dataframe(M)
+  a1 <- tidy_dataframe(M)
   nlevel <- apply(a1, 2, function(x) length(setdiff(unique(x), NA)))
   nterms <- colSums(!is.na(a1))
   nratio <- nlevel / nterms

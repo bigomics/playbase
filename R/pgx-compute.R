@@ -1117,14 +1117,17 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
 
 
-  ## Add organism specific GO gene sets. This is species gene symbol.
-  if (has.px2) {
+  ## Add organism specific GO gene sets. This is species gene
+  ## symbol. Skip if the GMT has enough (>1000) terms.
+  num_goterms <- sum(grepl("^GO",colnames(G)))
+  info("[pgx.add_GMT] number of GO gene sets in GMT =",num_goterms)
+  if (has.px2 && num_goterms < 1000) {
     ## add species GO genesets from AnnotationHub
     go.genesets <- NULL
-    info("[pgx.add_GMT] Adding species GO for organism", pgx$organism)
+    info("[pgx.add_GMT] Retrieving species GO for organism", pgx$organism,"...")
     go.genesets <- tryCatch(
       {
-        getOrganismGO(pgx$organism)
+        getOrganismGO( pgx$organism, features = full_feature_list)
       },
       error = function(e) {
         message("Error in getOrganismsGO:", e)
@@ -1132,7 +1135,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     )
 
     if (!is.null(go.genesets)) {
-      dbg("[pgx.add_GMT] got", length(go.genesets), "GO genesets")
+      dbg("[pgx.add_GMT] Adding", length(go.genesets), "species GO genesets")
       all_genes <- unique(pgx$genes$symbol)
       go_genes <- unique(unlist(go.genesets))
       go_genes2 <- paste0("SYMBOL:", unique(unlist(go.genesets)))
@@ -1153,6 +1156,9 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     G <- .append_gmt_to_matrix(customG, G, all_genes, minsize = 3, maxsize = 9999)
   }
 
+  num_goterms <- sum(grepl("^GO",colnames(G)))
+  info("[pgx.add_GMT] total number of GO terms = ",num_goterms)
+  
   ## -----------------------------------------------------------
   ##  Prioritize gene sets by fast rank-correlation
   ## -----------------------------------------------------------
