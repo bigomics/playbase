@@ -895,6 +895,10 @@ pgx.computePGX <- function(pgx,
       info("[pgx.computePGX] generating WGCNA module summaries...")
       pgx <- pgx.update_wgcna_summaries(pgx, ai = ai_features$wgcna_summaries)
     }
+    if (!is.null(ai_features$infographics)) {
+      info("[pgx.computePGX] generating AI infographics...")
+      pgx <- pgx.update_infographics(pgx, ai = ai_features$infographics)
+    }
   }
 
   info("[pgx.computePGX] DONE")
