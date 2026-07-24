@@ -509,7 +509,7 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   ## get human ortholog using 'orthogene'
   message("[getGeneAnnotation.ANNOTHUB] getting human orthologs...")
-  annot$ORTHOGENE <- getHumanOrtholog(organism, annot$SYMBOL)$human
+  annot$ORTHOGENE <- getHumanOrtholog(organism, annot$SYMBOL, verbose=0)$human
 
   ## Return as standardized data.frame and in the same order as input
   ## probes.
@@ -638,7 +638,7 @@ getGeneAnnotation.GPROFILER <- function(
 
     df$symbol <- out$name
     df$gene_title <- sub(" \\[.*", "", out$description)
-    df$human_ortholog <- getHumanOrtholog(organism, out$name)$human
+    df$human_ortholog <- getHumanOrtholog(organism, out$name, verbose=0)$human
     df$uniprot <- uniprot
     df$source <- "gprofiler2"
   }
@@ -1082,7 +1082,7 @@ getHumanOrtholog <- function(organism, symbols,
 #'
 #' 
 convert_orthologs <- function(genes, species, methods = c("homologene",
-  "gprofiler","babelgene", "gprofiler2", "uppercase"),
+  "gprofiler","babelgene", "gprofiler2", "uppercase"), bridge = NULL,
   bridge_species = BRIDGE_SPECIES, target_species = "hsapiens", verbose = 1)
 {
 
@@ -1107,8 +1107,17 @@ convert_orthologs <- function(genes, species, methods = c("homologene",
     }
   }
 
+  orth.ratio <- mean(!res$ortholog %in% c(NA,"","NA","N/A"))
+  if(verbose) {
+    message("[convert_orthologs] pass 1: orth.ratio = ", orth.ratio)
+  }
+  if(is.null(bridge)) {
+    ## auto enable bridge lookup if less than 10% orthology found
+    bridge <- (orth.ratio < 0.10)
+  }
+  
   ## try with bridge species
-  if(!is.null(bridge_species)) {
+  if(bridge && !is.null(bridge_species)) {
     for(b in bridge_species) {
       ii <- which(is.na(res$ortholog))
       if(length(ii)) {
@@ -1127,8 +1136,14 @@ convert_orthologs <- function(genes, species, methods = c("homologene",
         }
       }
     }
-  }
+
+    if(verbose) {
+      orth.ratio2 <- mean(!res$ortholog %in% c(NA,"","NA","N/A"))
+      message("[convert_orthologs] pass 2: orth.ratio = ", orth.ratio2)
+    }
     
+  }
+  
   res
 }
 
