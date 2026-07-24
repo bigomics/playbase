@@ -423,7 +423,10 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   ## --------------------------------------------
   ## column sorting (for what???)
   ## --------------------------------------------
-  if (!cluster_columns && !is.null(sort_columns)) {
+  ## cluster_columns may be a precomputed hclust/dendrogram (to force a
+  ## known column order while keeping the dendrogram); only the logical
+  ## FALSE case triggers annotation-based sorting.
+  if (is.logical(cluster_columns) && !cluster_columns && !is.null(sort_columns)) {
     y <- col.annot[, sort_columns, drop = FALSE]
     y1 <- as.integer(factor(y))
     jj <- fastcluster::hclust(stats::dist(t(gx)), method = "ward.D2")$order
