@@ -299,8 +299,8 @@ sum_treps <- function(counts, trep_var = "") {
 #' @param lengths Character vector of feature lengths, collapsed with ";". Default NULL.
 #' @export
 reorder_uniprots <- function(feature, lengths = NULL, verbose = FALSE) {
-  ff <- strsplit(as.character(feature), ";")[[1]]
-  ff <- ff[nzchar(trimws(ff))]
+  ff <- trimws(strsplit(as.character(feature), ";")[[1]])
+  ff <- ff[nzchar(ff)]
 
   if (all(as.character(feature) %in% c("", "NA", NA))) {
     return(list(feature = feature, lengths = lengths))
