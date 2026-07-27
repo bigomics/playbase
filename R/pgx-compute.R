@@ -468,7 +468,7 @@ pgx.createPGX <- function(counts,
     ii <- match(rownames(pgx$counts), rownames(pgx$genes))
     pgx$genes <- pgx$genes[ii, , drop = FALSE]
   }
-  
+
   ## -------------------------------------------------------------------
   ## Filter genes
   ## -------------------------------------------------------------------
@@ -503,7 +503,7 @@ pgx.createPGX <- function(counts,
   if (pgx$datatype == "methylomics" & remove.xy.probes) {
     kk <- intersect(c("chr", "map"), colnames(pgx$genes))[1]
     if (length(kk) > 0) {
-      jj <- grep("chrX|chrY|^X|^Y", pgx$genes[,kk], ignore.case = TRUE)
+      jj <- grep("chrX|chrY|^X|^Y", pgx$genes[, kk], ignore.case = TRUE)
       if (length(jj) > 0) {
         message("[pgx.createPGX] Methylomics: removing ", length(jj), " X- & Y-linked CpG probes...")
         pgx$counts <- pgx$counts[-jj, , drop = FALSE]
@@ -643,7 +643,6 @@ pgx.createPGX <- function(counts,
   message("\n\n")
 
   return(pgx)
-
 }
 
 
@@ -703,7 +702,6 @@ pgx.computePGX <- function(pgx,
                            libx.dir = NULL,
                            progress = NULL,
                            user_input_dir = getwd()) {
-  
   message("[pgx.computePGX]===========================================")
   message("[pgx.computePGX]========== pgx.computePGX =================")
   message("[pgx.computePGX]===========================================")
@@ -878,7 +876,7 @@ pgx.computePGX <- function(pgx,
 
   ## methylomics: ensure all OPG graphics & tables use beta.
   if (pgx$datatype == "methylomics") pgx$X <- playbase::mToBeta(pgx$X)
-  
+
   info("[pgx.computePGX] DONE")
   return(pgx)
 }

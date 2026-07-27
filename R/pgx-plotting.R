@@ -8028,19 +8028,27 @@ plotMethylOverview <- function(beta_matrix,
                                down_color = "#4575b4",
                                box_color = "#aaaaaa",
                                group_colors = NULL) {
-  
   msg <- function(...) message("[playbase::plotMethylOverview] ", ...)
 
   kk <- intersect(rownames(beta_matrix), rownames(annot))
-  if (length(kk) == 0) { msg("No shared CpGs. Exiting."); return(NULL) }
+  if (length(kk) == 0) {
+    msg("No shared CpGs. Exiting.")
+    return(NULL)
+  }
   beta_matrix <- beta_matrix[kk, , drop = FALSE]
-  annot <- annot[kk,  , drop = FALSE]
-  
+  annot <- annot[kk, , drop = FALSE]
+
   kk <- grep("chr|chromosome|chrom", tolower(colnames(annot)))[1]
-  if (is.na(kk)) { msg("No chr column. Exiting."); return(NULL) }
+  if (is.na(kk)) {
+    msg("No chr column. Exiting.")
+    return(NULL)
+  }
   chr_raw <- as.character(annot[, kk])
   keep <- !is.na(chr_raw) & chr_raw != "" & !grepl("cen", tolower(chr_raw))
-  if (!any(keep)) { msg("No valid CpGs. Exiting."); return(NULL) }
+  if (!any(keep)) {
+    msg("No valid CpGs. Exiting.")
+    return(NULL)
+  }
   annot <- annot[keep, , drop = FALSE]
   beta_matrix <- beta_matrix[keep, , drop = FALSE]
 
@@ -8053,7 +8061,9 @@ plotMethylOverview <- function(beta_matrix,
   if (!is.null(chromosomes)) {
     chromosomes <- unique(paste0("chr", sub("^chr", "", as.character(chromosomes))))
     chromosomes <- intersect(chroms_ordered, chromosomes)
-    if (length(chromosomes) == 0) return(NULL)
+    if (length(chromosomes) == 0) {
+      return(NULL)
+    }
   } else {
     chromosomes <- chroms_ordered
   }
@@ -8080,7 +8090,6 @@ plotMethylOverview <- function(beta_matrix,
   }
 
   if (plot.beta.boxplots) {
-
     pheno_chr <- if (!is.null(pheno)) as.character(pheno) else NULL
     phenos <- if (!is.null(pheno_chr)) sort(unique(pheno_chr[!is.na(pheno_chr) & pheno_chr != ""])) else character(0)
     grouped <- length(phenos) >= 2
@@ -8099,9 +8108,10 @@ plotMethylOverview <- function(beta_matrix,
 
     df <- data.frame(
       sample = rep(rownames(chr_means), ncol(chr_means)),
-      chrom  = factor(rep(colnames(chr_means), each = nrow(chr_means)),
-                      levels = chromosomes),
-      beta   = as.vector(chr_means),
+      chrom = factor(rep(colnames(chr_means), each = nrow(chr_means)),
+        levels = chromosomes
+      ),
+      beta = as.vector(chr_means),
       stringsAsFactors = FALSE
     )
     if (grouped) {
@@ -8156,7 +8166,6 @@ plotMethylOverview <- function(beta_matrix,
   }
   print(p)
   invisible(p)
-
 }
 
 #' @title plotMethylIdeogram
@@ -8183,27 +8192,35 @@ plotMethylIdeogram <- function(beta_matrix,
                                probe_count_bars = TRUE,
                                pheno_lines = FALSE,
                                loess_bins = 5L) {
-  
   msg <- function(...) message("[playbase::plotMethylIdeogram] ", ...)
 
   kk <- intersect(rownames(beta_matrix), rownames(annot))
-  if (!length(kk)) { msg("No shared CpGs between beta matrix and annot. Exiting\n"); return(NULL) }
+  if (!length(kk)) {
+    msg("No shared CpGs between beta matrix and annot. Exiting\n")
+    return(NULL)
+  }
   beta_matrix <- beta_matrix[kk, , drop = FALSE]
   annot <- annot[kk, , drop = FALSE]
 
   kk1 <- colnames(annot)[grep("chr|chrom", tolower(colnames(annot)))[1]]
   kk2 <- colnames(annot)[grep("pos|position|location", tolower(colnames(annot)))[1]]
-  if (is.na(kk1) || is.na(kk2)) { msg("No chroms or pos found. Exiting\n"); return(NULL) }
+  if (is.na(kk1) || is.na(kk2)) {
+    msg("No chroms or pos found. Exiting\n")
+    return(NULL)
+  }
   annot <- as.data.frame(annot[, c(kk1, kk2), drop = FALSE])
   kk <- which(!is.na(annot[, kk1]) & !is.na(annot[, kk2]))
   annot <- annot[kk, , drop = FALSE]
   beta_matrix <- beta_matrix[kk, , drop = FALSE]
   annot[, kk1] <- paste0("chr", sub("^chr", "", sub("[pq].*", "", annot[, kk1])))
-  
+
   if (is.null(chromosomes)) chromosomes <- c(1:22, "X", "Y")
   chroms <- unique(paste0("chr", sub("^chr", "", as.character(chromosomes))))
   kk <- intersect(chroms, annot[, kk1])
-  if (!length(kk)) { msg("Specified chroms not found in annot. Exiting\n"); return(NULL) }
+  if (!length(kk)) {
+    msg("Specified chroms not found in annot. Exiting\n")
+    return(NULL)
+  }
 
   annot <- annot[which(annot[, kk1] %in% kk), , drop = FALSE]
   beta_matrix <- beta_matrix[rownames(annot), , drop = FALSE]
@@ -8221,7 +8238,7 @@ plotMethylIdeogram <- function(beta_matrix,
     g2.mv <- rowMeans(beta_matrix[, idx2, drop = FALSE], na.rm = TRUE)
   }
   if (!two_groups) pheno_lines <- FALSE
-  
+
   msg("Plotting chromosome-wide binned methylation profiles...")
 
   ## Build GRanges for scatter
@@ -8232,7 +8249,7 @@ plotMethylIdeogram <- function(beta_matrix,
   pt_col <- ifelse(gr$mean_beta < 0.2, "#4575b4", pt_col)
 
   gn <- if (!is.null(organism) && tolower(organism) %in% c("mouse", "rat")) "mm10" else "hg19"
-  
+
   genome_gr <- regioneR::getGenomeAndMask(genome = gn, mask = NA)$genome
   seqn <- as.character(GenomicRanges::seqnames(genome_gr))
   chr_lengths <- setNames(GenomicRanges::width(genome_gr), seqn)
@@ -8244,32 +8261,39 @@ plotMethylIdeogram <- function(beta_matrix,
   gr <- gr[ib]
   pt_col <- pt_col[ib]
   mv_all <- mv_all[ib]
-  if (two_groups) { g1.mv = g1.mv[ib]; g2.mv = g2.mv[ib] }
+  if (two_groups) {
+    g1.mv <- g1.mv[ib]
+    g2.mv <- g2.mv[ib]
+  }
 
   ## bin per-CpG values along a chromosome
   .bin_chr <- function(chr, pos, beta, chr_lengths, bin_size, loess_bins) {
     breaks <- seq(0, chr_lengths[chr] + bin_size, by = bin_size)
     bins <- cut(pos, breaks = breaks, labels = FALSE)
     bin_mids <- breaks[-length(breaks)] + bin_size / 2
-    s_y <- tapply(beta, bins, mean,   na.rm = TRUE)
+    s_y <- tapply(beta, bins, mean, na.rm = TRUE)
     n_cpg <- tapply(beta, bins, length)
     jj <- which(!is.na(s_y))
     s_pos <- bin_mids[as.integer(names(s_y))][jj]
     s_y <- as.numeric(s_y)[jj]
     n_cpg <- as.numeric(n_cpg)[jj]
-    if (length(s_pos) == 0) return(NULL)
+    if (length(s_pos) == 0) {
+      return(NULL)
+    }
     s_pos <- pmin(pmax(as.integer(round(s_pos)), 1L), chr_lengths[chr])
     if (length(s_pos) >= 4) {
       span_chr <- min(1, loess_bins / length(s_pos))
-      fit <- try(loess(s_y ~ s_pos, weights = n_cpg, span = span_chr, degree = 1,
-              control = loess.control(surface = "direct")), silent = TRUE)
+      fit <- try(loess(s_y ~ s_pos,
+        weights = n_cpg, span = span_chr, degree = 1,
+        control = loess.control(surface = "direct")
+      ), silent = TRUE)
       if (!inherits(fit, "try-error")) s_y <- pmin(pmax(predict(fit), 0), 1)
     }
     return(list(s_pos = s_pos, s_y = s_y, n_cpg = n_cpg))
   }
 
   ## Binned overall mean (panel 1 line) + per-group means (delta only)
-  LL1  <- LL_g1 <- LL_g2 <- list()
+  LL1 <- LL_g1 <- LL_g2 <- list()
   for (chr in chroms) {
     kk <- which(as.character(GenomicRanges::seqnames(gr)) == chr)
     if (length(kk) < 2) next
@@ -8285,14 +8309,14 @@ plotMethylIdeogram <- function(beta_matrix,
   }
 
   ## Delta-beta per chromosome: group1 - group2 at matched bin positions
-  LL_delta  <- list()
+  LL_delta <- list()
   delta_max <- 0.01
   if (two_groups) {
     for (chr in intersect(names(LL_g1), names(LL_g2))) {
       dg1 <- LL_g1[[chr]]
       dg2 <- LL_g2[[chr]]
       m <- match(dg1$s_pos, dg2$s_pos)
-      ok  <- !is.na(m)
+      ok <- !is.na(m)
       if (sum(ok) < 2) next
       dpos <- dg1$s_pos[ok]
       dval <- dg1$s_y[ok] - dg2$s_y[m[ok]]
@@ -8308,7 +8332,10 @@ plotMethylIdeogram <- function(beta_matrix,
   log_denom <- log10(global_max_n + 1)
 
   chroms <- names(LL1)
-  if (length(chroms) == 0) { msg("No data left after filtering. Exiting\n"); return(NULL) }
+  if (length(chroms) == 0) {
+    msg("No data left after filtering. Exiting\n")
+    return(NULL)
+  }
 
   ## Decide panel layout
   has_panel2 <- (two_groups || isTRUE(probe_count_bars))
@@ -8343,16 +8370,20 @@ plotMethylIdeogram <- function(beta_matrix,
 
   ## Panel 1: scatter + absolute mean lines
   karyoploteR::kpDataBackground(kp, data.panel = 1, color = "#f9f9f9")
-  karyoploteR::kpAxis(kp, ymin = 0, ymax = 1, cex = 1, tick.len = 0.015,
+  karyoploteR::kpAxis(kp,
+    ymin = 0, ymax = 1, cex = 1, tick.len = 0.015,
     font = 2, tick.pos = c(0, 0.2, 0.5, 0.8, 1),
-    labels = c("0", "0.2", "0.5", "0.8", "1"))
+    labels = c("0", "0.2", "0.5", "0.8", "1")
+  )
   karyoploteR::kpAbline(kp, h = 0.2, col = "#4575b450", lty = 2, ymin = 0, ymax = 1)
   karyoploteR::kpAbline(kp, h = 0.8, col = "#d7302750", lty = 2, ymin = 0, ymax = 1)
 
   set.seed(42)
   idx <- if (length(gr) > 200000) sample(length(gr), 200000) else seq_along(gr)
-  karyoploteR::kpPoints(kp, data = gr[idx], y = gr[idx]$mean_beta,
-                        ymin = 0, ymax = 1, col = pt_col[idx], pch = 16, cex = 0.15)
+  karyoploteR::kpPoints(kp,
+    data = gr[idx], y = gr[idx]$mean_beta,
+    ymin = 0, ymax = 1, col = pt_col[idx], pch = 16, cex = 0.15
+  )
 
   if (two_groups && isTRUE(pheno_lines)) {
     ll1 <- .to_gr(LL_g1, log_denom)
@@ -8364,34 +8395,42 @@ plotMethylIdeogram <- function(beta_matrix,
     max_bp <- max(chr_lengths[chroms])
 
     if (length(chroms) == 1) { ## Single chrom: place above top border (y > 1, clipping off)
-      seg0  <- x_right * 0.78
-      seg1  <- x_right * 0.86
+      seg0 <- x_right * 0.78
+      seg1 <- x_right * 0.86
       txt_x <- seg1 + x_right * 0.01
       y1_leg <- 1.10
       y2_leg <- 1.20
     } else { ## Multiple chroms: place to right of shortest ideogram
-      seg0  <- x_right + max_bp * 0.015
-      seg1  <- x_right + max_bp * 0.045
-      txt_x <- seg1   + max_bp * 0.008
+      seg0 <- x_right + max_bp * 0.015
+      seg1 <- x_right + max_bp * 0.045
+      txt_x <- seg1 + max_bp * 0.008
       y1_leg <- 0.87
       y2_leg <- 0.73
     }
 
-    karyoploteR::kpSegments(kp, chr = shortest, x0 = seg0, x1 = seg1,
-                            y0 = y1_leg, y1 = y1_leg, col = "#000000", lwd = 2,
-                            ymin = 0, ymax = 1, clipping = FALSE)
+    karyoploteR::kpSegments(kp,
+      chr = shortest, x0 = seg0, x1 = seg1,
+      y0 = y1_leg, y1 = y1_leg, col = "#000000", lwd = 2,
+      ymin = 0, ymax = 1, clipping = FALSE
+    )
 
-    karyoploteR::kpText(kp, chr = shortest, x = txt_x, y = y1_leg,
-                        labels = phenos[1], col = "#000000", cex = 0.85,
-                        pos = 4, ymin = 0, ymax = 1, clipping = FALSE)
+    karyoploteR::kpText(kp,
+      chr = shortest, x = txt_x, y = y1_leg,
+      labels = phenos[1], col = "#000000", cex = 0.85,
+      pos = 4, ymin = 0, ymax = 1, clipping = FALSE
+    )
 
-    karyoploteR::kpSegments(kp, chr = shortest, x0 = seg0, x1 = seg1,
-                            y0 = y2_leg, y1 = y2_leg, col = "#8B4513", lwd = 2,
-                            ymin = 0, ymax = 1, clipping = FALSE)
+    karyoploteR::kpSegments(kp,
+      chr = shortest, x0 = seg0, x1 = seg1,
+      y0 = y2_leg, y1 = y2_leg, col = "#8B4513", lwd = 2,
+      ymin = 0, ymax = 1, clipping = FALSE
+    )
 
-    karyoploteR::kpText(kp, chr = shortest, x = txt_x, y = y2_leg,
-                        labels = phenos[2], col = "#8B4513", cex = 0.85,
-                        pos = 4, ymin = 0, ymax = 1, clipping = FALSE)
+    karyoploteR::kpText(kp,
+      chr = shortest, x = txt_x, y = y2_leg,
+      labels = phenos[2], col = "#8B4513", cex = 0.85,
+      pos = 4, ymin = 0, ymax = 1, clipping = FALSE
+    )
   } else {
     for (sg in gr_list1) {
       karyoploteR::kpLines(kp, data = sg, y = sg$y, ymin = 0, ymax = 1, col = "#000000", lwd = 1.5)
@@ -8401,12 +8440,13 @@ plotMethylIdeogram <- function(beta_matrix,
   ## Panel 2: delta-beta (two_groups) or probe-count bars (single-group)
   half_bin <- as.integer(bin_size / 2)
   if (two_groups && length(LL_delta) > 0) {
-
     karyoploteR::kpDataBackground(kp, data.panel = 2, color = "#f9f9f9")
 
     ## Zero reference line
-    karyoploteR::kpAbline(kp, h = 0, col = "gray50", lty = 2,
-      ymin = -delta_max, ymax = delta_max, data.panel = 2)
+    karyoploteR::kpAbline(kp,
+      h = 0, col = "gray50", lty = 2,
+      ymin = -delta_max, ymax = delta_max, data.panel = 2
+    )
 
     for (chr in names(LL_delta)) {
       d <- LL_delta[[chr]]
@@ -8452,15 +8492,17 @@ plotMethylIdeogram <- function(beta_matrix,
       }
 
       ## Overlay delta line
-      karyoploteR::kpLines(kp, sg, y = sg$delta, ymin = -delta_max, ymax = delta_max,
-        col = "#333333", lwd = 1.2, data.panel = 2)
+      karyoploteR::kpLines(kp, sg,
+        y = sg$delta, ymin = -delta_max, ymax = delta_max,
+        col = "#333333", lwd = 1.2, data.panel = 2
+      )
     }
 
     ## Axis: three ticks — bottom, zero, top
     karyoploteR::kpAxis(
       kp,
       ymin = -delta_max,
-      ymax =  delta_max,
+      ymax = delta_max,
       data.panel = 2,
       tick.pos = c(-delta_max, 0, delta_max),
       tick.len = 0.015,
@@ -8468,9 +8510,7 @@ plotMethylIdeogram <- function(beta_matrix,
       cex = 0.7,
       font = 2
     )
-    
   } else if (!two_groups && isTRUE(probe_count_bars)) {
-
     karyoploteR::kpDataBackground(kp, data.panel = 2, color = "#f9f9f9")
     for (sg in gr_list1) {
       karyoploteR::kpBars(
@@ -8509,7 +8549,7 @@ plotMethylIdeogram <- function(beta_matrix,
   ## Box chromosome panels
   for (chr in chroms) {
     rng <- IRanges::IRanges(start = 1L, end = chr_lengths[chr])
-    chr_gr <- GenomicRanges::GRanges(seqnames = chr, ranges = rng)    
+    chr_gr <- GenomicRanges::GRanges(seqnames = chr, ranges = rng)
     karyoploteR::kpRect(
       kp,
       data = chr_gr,

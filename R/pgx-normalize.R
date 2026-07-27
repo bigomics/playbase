@@ -171,7 +171,8 @@ betaToM <- function(beta, offset = 1e-6, verbose = FALSE) {
     beta <- pmin(pmax(beta, offset), 1 - offset)
     m <- log2(beta / (1 - beta))
     if (verbose) message("[playbase::betaToM] Methylomics: Beta to M values conversion completed.\n")
-    rm(beta); return(m)
+    rm(beta)
+    return(m)
   }
 }
 
@@ -190,7 +191,8 @@ mToBeta <- function(m, verbose = FALSE) {
   } else {
     beta <- (2^m / (1 + 2^m))
     if (verbose) message("[playbase::mToBeta] Methylomics: M to Beta values conversion completed.\n")
-    rm(m); return(beta)
+    rm(m)
+    return(beta)
   }
 }
 
@@ -202,9 +204,8 @@ mToBeta <- function(m, verbose = FALSE) {
 #' @return Normalized Beta values matrix.
 #' @export
 normalizeMethylation <- function(X, method = "BMIQ", meth_type = "450K array", nfit = 2000) {
-
   msg <- function(...) message("[playbase::normalizeMethylation] ", ...)
-  
+
   m <- method
   methods <- c("BMIQ", "quantile")
   if (!m %in% methods) {
@@ -215,11 +216,11 @@ normalizeMethylation <- function(X, method = "BMIQ", meth_type = "450K array", n
   msg("Input data: ", nrow(X), " probes; ", ncol(X), " samples.")
 
   X <- mToBeta(X)
-  
+
   if (m == "BMIQ") {
     c1 <- is.null(meth_type)
     c2 <- !meth_type %in% c("450K array", "EPIC array")
-    if (c1 | c2) meth_type = "450K array"
+    if (c1 | c2) meth_type <- "450K array"
     pkg <- "IlluminaHumanMethylation450kanno.ilmn12.hg19"
     if (meth_type == "EPIC array") pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
     require(pkg, character.only = TRUE)
@@ -243,16 +244,14 @@ normalizeMethylation <- function(X, method = "BMIQ", meth_type = "450K array", n
     }
 
     rm(annot, probe.types, bmiq)
-
   } else if (m == "quantile") {
     msg("wateRmelon::betaqn: beta quantile normalization")
     X <- wateRmelon::betaqn(X)
   }
-  
+
   msg("Normalization completed\n")
 
   return(X)
-  
 }
 
 #' @title Get prior value for normalization for non-gx data.

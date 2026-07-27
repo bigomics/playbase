@@ -94,23 +94,22 @@ compute_testGenes <- function(pgx,
   PRIOR.CPM <- 1
 
   if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {
-
     if ("Differentially methylated regions" %in% pgx$dma) {
-
       message("[playbase::compute_testGenes] Methylomics: DMRs...")
 
       vv <- range(counts, na.rm = TRUE)
       is.beta <- (vv[1] >= 0 & vv[2] <= 1) ## original counts
       MG <- mergeCpG(data = counts, genes = pgx$genes)
       counts <- betaToM(MG$data)
-      if (is.beta) pgx$counts=MG$data else pgx$counts=counts ## restore as original (beta or m)
-      rm(MG); gc()
+      if (is.beta) pgx$counts <- MG$data else pgx$counts <- counts ## restore as original (beta or m)
+      rm(MG)
+      gc()
 
       MG <- mergeCpG(data = X, genes = pgx$genes)
       X <- betaToM(MG$data)
       pgx$genes <- MG$genes
-      rm(MG); gc()
-      
+      rm(MG)
+      gc()
     } else {
       counts <- X <- betaToM(counts)
     }
@@ -138,7 +137,7 @@ compute_testGenes <- function(pgx,
   )
 
   message("[compute_testGenes]: fitting completed!")
-  
+
   ## Set default matrices
   rownames(gx.meta$timings) <- paste0("[test.genes]", rownames(gx.meta$timings))
   pgx$timings <- rbind(pgx$timings, gx.meta$timings)
