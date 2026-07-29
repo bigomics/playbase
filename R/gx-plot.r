@@ -169,15 +169,20 @@ gx.b3plot <- function(x, y, first = NULL,
 #' gx.hist(gx)
 #' }
 #' @export
-gx.hist <- function(gx, ...) {
+gx.hist <- function(gx, lines.col=NULL, ...) {
   h0 <- graphics::hist(
     as.vector(gx),
     col = "grey90", border = "grey80", freq = FALSE,
     ...
   )
   i <- 1
+  if(!is.null(lines.col) && length(lines.col)==1) {
+    lines.col <- rep(lines.col,ncol(gx))
+  }
+
   for (i in 1:ncol(gx)) {
     h1 <- graphics::hist(gx[, i], breaks = h0$breaks, plot = FALSE)
-    graphics::lines(h0$mids, h1$density, col = i + 1)
+    col1 <- ifelse(is.null(lines.col), i+1, lines.col[i])
+    graphics::lines(h0$mids, h1$density, col = col1)
   }
 }

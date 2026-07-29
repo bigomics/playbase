@@ -1420,14 +1420,13 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     # fallback before giving up; try gprofiler to convert to UNIPROT
     gp.organism <- .map_gprofiler_id(organism)    
     gp.out <- tryCatch(
-      {
-        gprofiler2::gconvert(probesx, organism = gp.organism, target = "UNIPROT_GN_ACC")
-      },
-      error = function(e) {
-        return(NULL)
-      }
-      )
+    {
+      gprofiler2::gconvert(probesx, organism = gp.organism, target = "UNIPROT_GN_ACC")
+    },
+    error = function(e) {
+      return(NULL)
     }
+    )
     if (!is.null(gp.out)) { key_matches["GPROFILER"] <- length(unique(gp.out$input)) / length(probesx) }
   }
 
