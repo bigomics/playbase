@@ -572,8 +572,7 @@ pgx.createPGX <- function(counts,
       pgx0$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
     } else {
       message("[pgx.createPGX] Adding GMT for ", species[i])
-      pgx0 <- pgx.add_GMT(pgx = pgx0, custom.geneset = custom.geneset,
-        max.genesets = max.genesets, normalize_cols = norm_cols)
+      pgx0 <- pgx.add_GMT(pgx = pgx0, custom.geneset = custom.geneset, max.genesets = max.genesets, normalize_cols = norm_cols)
     }
 
     LL[[species[i]]] <- list(GMT = pgx0$GMT, custom.geneset = pgx0$custom.geneset)
@@ -1104,7 +1103,7 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   return(G)
 }
 
-pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
+pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000, normalize_cols = TRUE) {
   if (!"symbol" %in% colnames(pgx$genes)) {
     message(paste(
       "[pgx.add_GMT] ERROR: could not find 'symbol' column.",

@@ -109,25 +109,22 @@ merge_annot_table <- function(df, df2, priority = 1) {
 #'
 #' @export
 normalizeOrganism <- function(organism) {
-  if (is.null(organism) || is.na(organism)) {
-    return(organism)
-  }
-  org_lower <- tolower(organism)
-  if (org_lower == "human") {
-    return("Homo sapiens")
-  }
-  if (org_lower == "mouse") {
-    return("Mus musculus")
-  }
-  if (org_lower == "rat") {
-    return("Rattus norvegicus")
-  }
-  if (grepl("canis.*familiaris|^dog$", org_lower)) {
-    return("Canis familiaris")
-  }
-  organism
-}
 
+  for(i in 1:length(organism)) {
+    
+    if (is.null(organism[i]) || is.na(organism[i])) {
+      organism[i] <- organism[i]
+    } else {      
+      if (tolower(organism[i]) == "human") organism[i] <- "Homo sapiens"
+      if (tolower(organism[i]) == "mouse") organism[i] <- "Mus musculus"
+      if (tolower(organism[i]) == "rat") organism[i] <- "Rattus norvegicus"
+      if (grepl("canis.*familiaris|^dog$", tolower(organism[i]))) organism[i] <- "Canis familiaris"
+    }
+  }
+
+  return(organism)
+
+}
 
 #' Get probetype annotation for organism and datatype. For multi-omics
 #' probe names must be prefixed with data type.
