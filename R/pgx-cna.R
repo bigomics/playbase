@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 
@@ -100,7 +100,6 @@
 ##   pos <- pos[jj]
 ##   chr <- as.character(genes_info$chr)[jj]
 ##   logcnv <- log2(cnv[jj, ] / mean(cnv, na.rm = TRUE)) ## logarithmic
-
 
 
 ##   img <- png::readPNG(img.file)

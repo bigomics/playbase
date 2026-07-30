@@ -1,8 +1,7 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
-
 
 
 NORMALIZATION.METHODS <- c("none", "mean.center", "median.center", "sum", "CPM", "TMM", "RLE", "RLE2", "quantile", "maxMedian", "maxSum")
@@ -156,6 +155,106 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
   return(X)
 }
 
+#' @title betaToM
+#' @description Convert Beta to M values; 450K+850K (EPIC) Meth Array.
+#' @param X Matrix of Beta values. Probes in rows; samples in columns.
+#' @return Matrix of M values in log2-scale
+#' @export
+betaToM <- function(beta, offset = 1e-6, verbose = FALSE) {
+  if (verbose) message("[playbase::betaToM] Methylomics: converting Beta values to M values.")
+  vv <- range(beta, na.rm = TRUE)
+  is.beta <- (vv[1] >= 0 & vv[2] <= 1)
+  if (!is.beta) {
+    if (verbose) message("[playbase::betaToM] Error: input data seems not be beta values. Returning input matrix.")
+    return(beta)
+  } else {
+    beta <- pmin(pmax(beta, offset), 1 - offset)
+    m <- log2(beta / (1 - beta))
+    if (verbose) message("[playbase::betaToM] Methylomics: Beta to M values conversion completed.\n")
+    rm(beta); return(m)
+  }
+}
+
+#' @title mToBeta
+#' @description Convert  M to Beta values; 450K+850K (EPIC) Meth Array.
+#' @param X Matrix of M values. Probes in rows; samples in columns.
+#' @return Matrix of Beta values.
+#' @export
+mToBeta <- function(m, verbose = FALSE) {
+  if (verbose) message("[playbase::mToBeta] Methylomics: converting M values to Beta values.")
+  vv <- range(m, na.rm = TRUE)
+  is.beta <- (vv[1] >= 0 & vv[2] <= 1)
+  if (is.beta) {
+    if (verbose) message("[playbase::mtoBeta] Input data seems already beta values. Returning input matrix.")
+    return(m)
+  } else {
+    beta <- (2^m / (1 + 2^m))
+    if (verbose) message("[playbase::mToBeta] Methylomics: M to Beta values conversion completed.\n")
+    rm(m); return(beta)
+  }
+}
+
+#' @title normalizeMethylation
+#' @description Normalizes a matrix of 450K and EPIC Methylation data.
+#' @param X Matrix of Beta or M-values. We use Beta. Probes in rows; samples in columns.
+#' @param method Normalization method(s) to use. At the moment BMIQ or quantile. To expand.
+#' @param nfit Number of probes type I and II for the fitting. In most cases, 5000 or 10000 is ok.
+#' @return Normalized Beta values matrix.
+#' @export
+normalizeMethylation <- function(X, method = "BMIQ", meth_type = "450K array", nfit = 2000) {
+
+  msg <- function(...) message("[playbase::normalizeMethylation] ", ...)
+  
+  m <- method
+  methods <- c("BMIQ", "quantile")
+  if (!m %in% methods) {
+    msg("Unknown mormalization method. Must be BMIQ or quantile. Returning input matrix.")
+    return(X)
+  }
+
+  msg("Input data: ", nrow(X), " probes; ", ncol(X), " samples.")
+
+  X <- mToBeta(X)
+  
+  if (m == "BMIQ") {
+    c1 <- is.null(meth_type)
+    c2 <- !meth_type %in% c("450K array", "EPIC array")
+    if (c1 | c2) meth_type = "450K array"
+    pkg <- "IlluminaHumanMethylation450kanno.ilmn12.hg19"
+    if (meth_type == "EPIC array") pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
+    require(pkg, character.only = TRUE)
+    annot <- minfi::getAnnotation(get(pkg))
+    kk <- intersect(rownames(annot), rownames(X))
+    if (length(kk) == 0) {
+      msg("BMIQ: no CpG probes in common between X and annotation manifesto. Returning input matrix.")
+      return(X)
+    }
+    X <- X[kk, , drop = FALSE]
+    probe.types <- as.character(annot[kk, "Type"])
+    names(probe.types) <- rownames(X)
+    probe.types <- ifelse(probe.types == "I", 1, ifelse(probe.types == "II", 2, NA))
+
+    msg("wateRmelon::BMIQ: sample-specific BMIQ normalization")
+    X[which(X <= 0)] <- 0.0001
+    X[which(X >= 1)] <- 0.9999
+    for (i in 1:ncol(X)) {
+      bmiq <- wateRmelon::BMIQ(X[, i], design.v = probe.types, nfit = nfit, plots = FALSE, pri = FALSE)
+      X[, i] <- bmiq$nbeta
+    }
+
+    rm(annot, probe.types, bmiq)
+
+  } else if (m == "quantile") {
+    msg("wateRmelon::betaqn: beta quantile normalization")
+    X <- wateRmelon::betaqn(X)
+  }
+  
+  msg("Normalization completed\n")
+
+  return(X)
+  
+}
+
 #' @title Get prior value for normalization for non-gx data.
 #' For other data types (proteomics, metabolomics, lipidomics) we use min positive.
 #'
@@ -167,14 +266,14 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
 #' @details
 #' Get prior. Conventionally 1 for logCPM (used for RNAseq)
 #' For other data types (proteomics, metabolomics, lipidomics) we use min positive.
-#' 
+#'
 #' @return
 #' prior value
 #'
 #' @export
 getPrior <- function(counts) {
   prior <- 0
-  if (min(counts, na.rm = TRUE) == 0 || any(is.na(counts)))  {
+  if (min(counts, na.rm = TRUE) == 0 || any(is.na(counts))) {
     prior <- min(counts[counts > 0], na.rm = TRUE)
   }
   return(prior)
@@ -191,7 +290,7 @@ getPrior <- function(counts) {
 #'
 #' @details
 #' This function normalizes each datatype independently.
-#' Default normalization methods are logCPM for gx and maxMedian for non-gx data. 
+#' Default normalization methods are logCPM for gx and maxMedian for non-gx data.
 #'
 #' @return
 #' Normalized multi-omics data matrix
@@ -201,30 +300,30 @@ normalizeMultiOmics <- function(X,
                                 prior = NULL,
                                 gx.method = "CPM",
                                 non.gx.method = "maxMedian") {
-
   dtypes <- unique(sub(":.*", "", rownames(X)))
 
-  if (is.null(gx.method)) gx.method = "CPM"
-  if (is.null(non.gx.method)) non.gx.method = "maxMedian"
-  
-  for(i in 1:length(dtypes)) {
+  if (is.null(gx.method)) gx.method <- "CPM"
+  if (is.null(non.gx.method)) non.gx.method <- "maxMedian"
+
+  for (i in 1:length(dtypes)) {
     ii <- grep(paste0("^", dtypes[i], ":"), rownames(X))
     if (any(ii)) {
       if (dtypes[i] == "gx") {
         m <- gx.method
         prior <- 1
       } else {
-        prior <- getPrior(X[ii,])
+        prior <- getPrior(X[ii, ])
         m <- non.gx.method
       }
-      message("[playbase::normalizeMultiOmics] normalizing ", dtypes[i],
-        " data using ", m, ". Prior = ", prior)
+      message(
+        "[playbase::normalizeMultiOmics] normalizing ", dtypes[i],
+        " data using ", m, ". Prior = ", prior
+      )
       X[ii, ] <- normalizeExpression(X[ii, ], method = m, prior = prior)
     }
   }
 
   return(X)
-
 }
 
 
@@ -266,7 +365,9 @@ logCPM <- function(counts, total = 1e6, prior = 1, log = TRUE) {
   if (any(class(counts) == "dgCMatrix")) {
     ## fast/sparse calculate CPM
     cpm <- counts
-    cpm[is.na(cpm)] <- 0 ## OK??
+    ## NAs can only appear in @x (stored non-zero values); replace them via the slot
+    ## directly to avoid cpm[lgCMatrix] <- 0 which uses undefined S4 [<- dispatch.
+    cpm@x[is.na(cpm@x)] <- 0
     cpm@x <- total * cpm@x / rep.int(Matrix::colSums(cpm), diff(cpm@p)) ## fast divide by columns sum
     if (log) cpm@x <- log2(prior + cpm@x)
     return(cpm)
@@ -340,12 +441,12 @@ normalizeTMM <- function(counts, log = FALSE, prior = 1,
 #' norm_counts <- normalizeRLE(counts)
 #' }
 #' @export
-normalizeRLE <- function(counts, log = FALSE, use = "deseq2") {
+normalizeRLE <- function(counts, log = FALSE, use = "deseq2", prior = 1) {
   outx <- NULL
   if (use == "edger") {
     dge <- edgeR::DGEList(as.matrix(counts), group = NULL)
     dge <- edgeR::calcNormFactors(dge, method = "RLE")
-    outx <- edgeR::cpm(dge, log = log)
+    outx <- edgeR::cpm(dge, log = log, prior.count = prior)
   } else if (use == "deseq2") {
     cts <- round(counts)
     dds <- DESeq2::DESeqDataSetFromMatrix(
@@ -355,6 +456,7 @@ normalizeRLE <- function(counts, log = FALSE, use = "deseq2") {
     )
     disp <- DESeq2::estimateSizeFactors(dds)
     outx <- DESeq2::counts(disp, normalized = TRUE)
+    if (log) outx <- log2(outx + prior)
   } else {
     stop("unknown method")
   }

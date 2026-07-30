@@ -1,29 +1,24 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 #' Create a pgx object
-#'
 #' This function creates a pgx object from files, which is the core object in the
 #' OmicsPlayground. It then runs the specified differential expression methods.
-#'
 #' @param counts.file Path to counts data file. Rows are genes, columns are samples.
 #' @param samples.file Path to samples data file. Rows are samples, columns are sample info.
 #' @param contrasts.file (optional) Path to contrasts file. Rows and columns define contrasts.
 #' @param gxmethods a string with the gene-level methods to use. The default value is \code{"trend.limma,edger.qlf,deseq2.wald"}
 #' @param gsetmethods a string with the gene-set methods to use. The default value is \code{"fisher,gsva,fgsea"}
 #' @param extra a string with the extra modules to use. The default value is \code{"meta.go,deconv,infer,drugs,wordcloud"}
-#'
 #' @return list. represents a pgx object. It contains the data and analysis results.
 #' @examples
 #' \dontrun{
-#'
 #' library(playbase)
 #' counts <- system.file("extdata", "counts.csv", package = "playbase")
 #' contrasts <- system.file("extdata", "contrasts.csv", package = "playbase")
 #' samples <- system.file("extdata", "samples.csv", package = "playbase")
-#'
 #' mypgx <- pgx.createFromFiles(counts, samples, contrasts)
 #' }
 #' @export
@@ -76,6 +71,7 @@ pgx.createFromFiles <- function(counts.file,
     dotimeseries = FALSE,
     batch.correct.method = "no_batch_correct",
     batch.pars = "<autodetect>",
+    covariates = NULL,
     auto.scale = TRUE,
     filter.genes = TRUE,
     prune.samples = FALSE,
@@ -122,6 +118,10 @@ pgx.createFromFiles <- function(counts.file,
 #' @param dotimeseries Logical indicating if timeseries analysis has been activated by the user at upload
 #' @param batch.correct.method BC method. Default is "no_batch_correct" (meaning no batch correction).
 #' @param batch.pars BC variable. Default "autodetect" as per QC/BC tab in upload.
+#' @param covariates variables to regress out. Valid only for linear model-based tests.
+#' @param dma Differential methylation analysis. If datatype=="methylomics", can be DMP (default) vs. DMR. Else NULL.
+#' @param remove.xy.probes Logical. Only activated when datatype=="methylomics". Remove X- and Y-linked CpG probes.
+#' @param meth_type Type of array: 450K array or EPIC array
 #' @param auto.scale Logical indicating whether to automatically scale/center genes. Default is TRUE.
 #' @param filter.genes Logical indicating whether to filter lowly expressed genes. Default is TRUE.
 #' @param prune.samples Logical indicating whether to remove samples without contrasts. Default is FALSE.
@@ -143,6 +143,7 @@ pgx.createFromFiles <- function(counts.file,
 #' - `creator`: Creator of the dataset
 #' - `datatype`: Type of data (e.g. RNA-seq, microarray)
 #' - `description`: Description of the dataset
+#' - `metadata`: User-defined metadata (list with study_type, tissue_type, etc.)
 #' - `samples`: Sample metadata
 #' - `counts`: Raw count matrix
 #' - `contrasts`: Contrast matrix
@@ -155,7 +156,6 @@ pgx.createFromFiles <- function(counts.file,
 #' - `GMT`: Gene set matrix
 #' @import data.table
 #' @return List. PGX object containing input data and parameters.
-#'
 #' @export
 pgx.createPGX <- function(counts,
                           samples,
@@ -166,16 +166,22 @@ pgx.createPGX <- function(counts,
                           max.genesets = 5000,
                           name = "Data set",
                           datatype = "RNA-seq",
+                          datatype_subtype = NULL,
                           azimuth_ref = "pbmcref",
                           probe_type = NULL,
                           creator = "unknown",
                           description = "No description provided.",
+                          metadata = NULL,
                           X = NULL,
                           norm_method = "CPM",
                           is.logx = NULL,
                           dotimeseries = FALSE,
-                          batch.correct.method = "no_batch_correct", ## new
-                          batch.pars = "<autodetect>", ## new
+                          batch.correct.method = "no_batch_correct",
+                          batch.pars = "<autodetect>",
+                          covariates = NULL,
+                          dma = NULL, ## new
+                          remove.xy.probes = FALSE, ## new
+                          meth_type = NULL, ## new
                           auto.scale = TRUE,
                           filter.genes = TRUE,
                           exclude.genes = NULL,
@@ -190,12 +196,14 @@ pgx.createPGX <- function(counts,
                           add.gmt = TRUE,
                           settings = list(),
                           sc_compute_settings = list()) {
-
   message("[pgx.createPGX]===========================================")
   message("[pgx.createPGX]=========== pgx.createPGX =================")
   message("[pgx.createPGX]===========================================")
   message("\n")
   message("[pgx.createPGX] datatype = ", datatype, "\n")
+  if (!is.null(datatype_subtype)) {
+    message("[pgx.createPGX] datatype_subtype = ", datatype_subtype, "\n")
+  }
 
   if (is.null(counts)) stop("[pgx.createPGX] FATAL: counts must be provided")
   if (is.null(samples)) stop("[pgx.createPGX] FATAL: samples must be provided")
@@ -280,7 +288,7 @@ pgx.createPGX <- function(counts,
 
   ## Time series 
   if (dotimeseries) contrasts <- contrasts.addTimeInteraction(contrasts, samples)
-  
+
   ## -------------------------------------------------------------------
   ## Auto-scaling (scale down huge values, often in proteomics)
   ## -------------------------------------------------------------------
@@ -367,6 +375,21 @@ pgx.createPGX <- function(counts,
   versions$playbase_version <- packageVersion("playbase")
   versions$playdata_version <- packageVersion("playdata")
 
+  ## Reorder uniprots
+  if (datatype == "proteomics") {
+    message("[pgx.createPGX] Reordering uniprots in counts, X, annot_table")
+    feature.lengths <- NULL
+    if (!is.null(annot_table)) {
+      kk <- grep("length|size", tolower(colnames(annot_table)))
+      if (length(kk) > 0) feature.lengths <- annot_table[, kk[1]]
+    }
+    for (i in 1:nrow(counts)) {
+      rownames(counts)[i] <- reorder_uniprots(rownames(counts)[i], feature.lengths[i])$feature
+    }
+    rownames(X) <- rownames(counts)
+  }
+  if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
+
   pgx <- list(
     name = name,
     organism = organism,
@@ -374,7 +397,9 @@ pgx.createPGX <- function(counts,
     date = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
     creator = creator,
     datatype = datatype,
+    datatype_subtype = datatype_subtype,
     description = description,
+    metadata = metadata,
     samples = data.frame(samples, check.names = FALSE),
     counts = as.matrix(counts),
     contrasts = contrasts,
@@ -382,14 +407,14 @@ pgx.createPGX <- function(counts,
     norm_method = norm_method,
     total_counts = Matrix::colSums(counts, na.rm = TRUE),
     counts_multiplier = counts_multiplier,
+    covariates = covariates,
+    dma = dma,
     settings = settings,
     versions = versions,
     sc_compute_settings = sc_compute_settings
   )
 
-  ## -------------------------------------------------------------------
-  ## create gene annotation table
-  ## -------------------------------------------------------------------
+  ## Create gene annotation table
   pgx$genes <- NULL
   pgx$probe_type <- probe_type
     
@@ -398,14 +423,23 @@ pgx.createPGX <- function(counts,
     organism = pgx$organism,
     probes = rownames(pgx$counts),
     datatype = pgx$datatype,
+    meth_type = meth_type,
     probetype = pgx$probe_type,
     annot_table = annot_table
   )
-  message("[createPGX] Annotating genes: process completed")
 
-  ## Conform feature names
-  rownames(pgx$counts) <- rownames(pgx$X) <- rownames(pgx$genes)
-  
+  ## Reorder uniprots in pgx$genes. Valid for all datatypes.
+  message("[pgx.createPGX] Reordering uniprot column in pgx$genes")
+  hh <- grep("uniprot", tolower(colnames(pgx$genes)))
+  if (length(hh) > 0) {
+    feature.lengths <- NULL
+    kk <- grep("length|size", tolower(colnames(pgx$genes)))
+    if (length(kk) > 0) feature.lengths <- as.character(pgx$genes[, kk[1]])
+    for (i in 1:nrow(pgx$genes)) {
+      pgx$genes[i, hh[1]] <- reorder_uniprots(pgx$genes[i, hh[1]], feature.lengths[i])$feature
+    }
+  }
+
   if (is.null(pgx$genes)) stop("[pgx.createPGX] FATAL: Could not build gene annotation")
 
   if (!"symbol" %in% colnames(pgx$genes) && "gene_name" %in% colnames(pgx$genes)) {
@@ -428,7 +462,7 @@ pgx.createPGX <- function(counts,
     ii <- match(rownames(pgx$counts), rownames(pgx$genes))
     pgx$genes <- pgx$genes[ii, , drop = FALSE]
   }
-
+  
   ## -------------------------------------------------------------------
   ## Filter genes
   ## -------------------------------------------------------------------
@@ -437,14 +471,14 @@ pgx.createPGX <- function(counts,
     if (only.known) {
       message("[pgx.createPGX] Removing genes without symbol...")
       no.symbol <- (is.na(pgx$genes$symbol) | pgx$genes$symbol %in% c("", "-"))
-      pgx$genes <- pgx$genes[which(!no.symbol), ]
+      pgx$genes <- pgx$genes[which(!no.symbol), , drop = FALSE]
     }
 
     if (only.proteincoding) {
       message("[pgx.createPGX] Removing Rik/ORF/LOC genes...")
       is.unknown <- grepl("^rik|^loc|^orf", tolower(pgx$genes$symbol))
       is.unknown <- is.unknown & !is.na(pgx$genes$symbol)
-      pgx$genes <- pgx$genes[which(!is.unknown), ]
+      pgx$genes <- pgx$genes[which(!is.unknown), , drop = FALSE]
     }
 
     if (!is.null(exclude.genes)) {
@@ -452,14 +486,25 @@ pgx.createPGX <- function(counts,
       exstr <- strsplit(tolower(exclude.genes), split = "[ ,]")[[1]]
       exexpr <- paste(c(paste0("^", exstr), paste0(exstr, "$")), collapse = "|")
       exgene <- grepl(exexpr, tolower(pgx$genes$symbol))
-      if (sum(exgene)) {
-        pgx$genes <- pgx$genes[which(!exgene), ]
-      }
+      if (sum(exgene)) pgx$genes <- pgx$genes[which(!exgene), , drop = FALSE]
     }
 
-    ## conform
     pgx$counts <- pgx$counts[rownames(pgx$genes), , drop = FALSE]
     pgx$X <- pgx$X[rownames(pgx$genes), , drop = FALSE]
+  }
+
+  ## Methylomics arrays: if user-specified, remove X- & Y-linked CpG probes.
+  if (pgx$datatype == "methylomics" & remove.xy.probes) {
+    kk <- intersect(c("chr", "map"), colnames(pgx$genes))[1]
+    if (length(kk) > 0) {
+      jj <- grep("chrX|chrY|^X|^Y", pgx$genes[,kk], ignore.case = TRUE)
+      if (length(jj) > 0) {
+        message("[pgx.createPGX] Methylomics: removing ", length(jj), " X- & Y-linked CpG probes...")
+        pgx$counts <- pgx$counts[-jj, , drop = FALSE]
+        pgx$X <- pgx$X[-jj, , drop = FALSE]
+        pgx$genes <- pgx$genes[-jj, , drop = FALSE]
+      }
+    }
   }
 
   ## -------------------------------------------------------------------
@@ -589,7 +634,12 @@ pgx.createPGX <- function(counts,
       xlist <- playbase::runBatchCorrectionMethods(X, batch, pheno, methods = mm, ntop = Inf)
       cX <- xlist[[mm]]
     } else {
-      impX <- playbase::imputeMissing(X, method = "SVD2")
+      is.mox <- is.multiomics(rownames(X))
+      if (is.mox) {
+        impX <- imputeMissing.mox(X, method = "SVD2")
+      } else {
+        impX <- imputeMissing(X, method = "SVD2")
+      }
       xlist <- playbase::runBatchCorrectionMethods(impX, batch, pheno, methods = mm, ntop = Inf)
       cX <- xlist[[mm]]
       jj <- which(is.na(X), arr.ind = TRUE)
@@ -695,7 +745,7 @@ pgx.computePGX <- function(pgx,
                            libx.dir = NULL,
                            progress = NULL,
                            user_input_dir = getwd()) {
-
+  
   message("[pgx.computePGX]===========================================")
   message("[pgx.computePGX]========== pgx.computePGX =================")
   message("[pgx.computePGX]===========================================")
@@ -790,11 +840,6 @@ pgx.computePGX <- function(pgx,
     pgx <- pgx.clusterGenes(pgx, methods = mm, level = "gene")
   }
 
-  ## -----------------------------------------------------------------------------
-  ## Filter genes (previously in compute_testGenesSingleOmics). NEED
-  ## RETHINK?? MOVE TO PGXCREATE??
-  ## -----------------------------------------------------------------------------
-
   ## Shrink number of genes (highest SD/var)
   if (max.genes > 0 && nrow(pgx$counts) > max.genes) {
     message("shrinking data matrices: n= ", max.genes)
@@ -810,10 +855,6 @@ pgx.computePGX <- function(pgx,
   pgx$counts <- pgx$counts[gg, ]
   pgx$X <- pgx$X[gg, ]
 
-  ## ======================================================================
-  ## ================= Run tests ==========================================
-  ## ======================================================================
-
   pgx$timings <- c()
   GENETEST.METHODS <- c(
     "ttest", "ttest.welch", "ttest.rank",
@@ -828,7 +869,7 @@ pgx.computePGX <- function(pgx,
   ## ------------------ gene level tests ---------------------
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
 
-  timeseries <- any(grepl("IA:*", colnames(pgx$contrasts)))
+  timeseries <- any(grepl("^IA:*", colnames(pgx$contrasts)))
 
   message("[pgx.computePGX] testing genes...")
   pgx <- compute_testGenes(
@@ -837,7 +878,7 @@ pgx.computePGX <- function(pgx,
     max.features = max.genes,
     test.methods = gx.methods,
     custom_fc = custom_fc,
-    use.design = use.design,
+    ## use.design = use.design,
     prune.samples = prune.samples,
     timeseries = timeseries,
     remove.outputs = TRUE
@@ -878,6 +919,9 @@ pgx.computePGX <- function(pgx,
     user_input_dir = user_input_dir
   )
 
+  ## methylomics: ensure all OPG graphics & tables use beta.
+  if (pgx$datatype == "methylomics") pgx$X <- playbase::mToBeta(pgx$X)
+  
   info("[pgx.computePGX] DONE")
   return(pgx)
 }
@@ -920,7 +964,12 @@ counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
 counts.imputeMissing <- function(counts, method = "SVD2") {
   epsx <- min(counts[counts > 0], na.rm = TRUE)
   X <- log2(epsx + counts)
-  impX <- imputeMissing(X, method = method)
+  is.mox <- is.multiomics(rownames(X))
+  if (is.mox) {
+    impX <- imputeMissing.mox(X, method = method)
+  } else {
+    impX <- imputeMissing(X, method = method)
+  }
   pmax(2**impX - epsx, 0)
 }
 
@@ -1018,21 +1067,20 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
 
 
 #' Internal use: append gmt (list) to a sparse gene set matrix
-#' 
+#'
 .append_gmt_to_matrix <- function(gmt, G, all_genes, minsize, maxsize) {
-
-  if(is.null(all_genes)) {
+  if (is.null(all_genes)) {
     all_genes <- unique(unlist(gmt))
-    if(!is.null(G)) all_genes <- unique(c(rownames(G),all_genes))
+    if (!is.null(G)) all_genes <- unique(c(rownames(G), all_genes))
   }
 
   gmt <- lapply(gmt, function(s) intersect(s, all_genes))
   gmt.size <- sapply(gmt, length)
-  if( sum(gmt.size >= minsize & gmt.size <= maxsize) == 0) {
+  if (sum(gmt.size >= minsize & gmt.size <= maxsize) == 0) {
     message("[.append_gmt_to_matrix] warning no valid gmt to add")
     return(G)
   }
-  
+
   add_gmt <- createSparseGenesetMatrix(
     gmt.all = gmt,
     min.geneset.size = minsize,
@@ -1050,17 +1098,13 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
     ##   colnames(custom_gmt), pgx$genes, "symbol",
     ##   fill_na = TRUE
     ## )
-    G <- merge_sparse_matrix(G, Matrix::t(add_gmt) )
+    G <- merge_sparse_matrix(G, Matrix::t(add_gmt))
     remove(add_gmt)
   }
   return(G)
 }
 
-pgx.add_GMT <- function(pgx,
-                        custom.geneset = NULL,
-                        max.genesets = 20000,
-                        normalize_cols = TRUE) {
-    
+pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   if (!"symbol" %in% colnames(pgx$genes)) {
     message(paste(
       "[pgx.add_GMT] ERROR: could not find 'symbol' column.",
@@ -1080,30 +1124,30 @@ pgx.add_GMT <- function(pgx,
   if (length(ortho.col) == 0) {
     symbol <- toupper(pgx$genes$symbol)
   } else {
-    symbol <- pgx$genes[, ortho.col[1]]  ## human symbol!
+    symbol <- pgx$genes[, ortho.col[1]] ## human symbol!
   }
 
   ## check if we have genes/proteins
-  symbol <- sub(".*:","",symbol) ## strip prefix
-  sum.px <- sum(symbol %in% colnames(playdata::GSETxGENE),na.rm=TRUE) 
+  symbol <- sub(".*:", "", symbol) ## strip prefix
+  sum.px <- sum(symbol %in% colnames(playdata::GSETxGENE), na.rm = TRUE)
   has.px <- sum.px >= 10
 
   ## check if we have metabolites/lipids
-  has.mx1 <- grepl("metabolomics|lipidomics",pgx$datatype,ignore.case=TRUE)
-  has.mx2 <- pgx$datatype=="multi-omics" && any(grepl("mx|metabolomics|lipidomics",pgx$genes$data_type))
-  has.mx3 <- pgx$datatype=="multi-omics" && !all(grepl("mx|metabolomics|lipidomics",pgx$genes$data_type))  
+  has.mx1 <- grepl("metabolomics|lipidomics", pgx$datatype, ignore.case = TRUE)
+  has.mx2 <- pgx$datatype == "multi-omics" && any(grepl("mx|metabolomics|lipidomics", pgx$genes$data_type))
+  has.mx3 <- pgx$datatype == "multi-omics" && !all(grepl("mx|metabolomics|lipidomics", pgx$genes$data_type))
 
-  has.mx  <- has.mx1 || has.mx2
+  has.mx <- has.mx1 || has.mx2
   has.px2 <- !has.mx1 || has.mx3
-  
+
   dbg("[pgx.add_GMT] 1: has.px = ", has.px)
-  dbg("[pgx.add_GMT] 1: has.px2 = ", has.px2)  
+  dbg("[pgx.add_GMT] 1: has.px2 = ", has.px2)
   dbg("[pgx.add_GMT] 1: has.mx = ", has.mx)
-  
+
   ## Note!!!: Rownames of G must be in species symbol (not anymore
   ## human ortholog).
   G <- NULL
-  
+
   ## add metabolomic gene sets
   if (has.mx) {
     info("[pgx.add_GMT] Retrieving metabolomics genesets")
@@ -1119,7 +1163,7 @@ pgx.add_GMT <- function(pgx,
   if (has.px) {
     info("[pgx.add_GMT] Retrieving transcriptomics/proteomics genesets")
     G1 <- Matrix::t(playdata::GSETxGENE)
-    G1 <- rename_by2(G1, pgx$genes, new_id="symbol")  ## symbol!
+    G1 <- rename_by2(G1, pgx$genes, new_id = "symbol") ## symbol!
     G <- merge_sparse_matrix(G, G1)
   }
 
@@ -1139,7 +1183,7 @@ pgx.add_GMT <- function(pgx,
     G <- G[, Matrix::colSums(G != 0) > 0, drop = FALSE]
     if (nrow(G) == 0 || ncol(G) == 0) G <- NULL
   }
-  
+
   ## Add organism specific GO gene sets. This is species gene symbol.
   if (has.px2) {
     ## add species GO genesets from AnnotationHub
@@ -1158,11 +1202,11 @@ pgx.add_GMT <- function(pgx,
       dbg("[pgx.add_GMT] got", length(go.genesets), "GO genesets")
       all_genes <- unique(pgx$genes$symbol)
       go_genes <- unique(unlist(go.genesets))
-      go_genes2 <- paste0("SYMBOL:",unique(unlist(go.genesets)))
-      if( sum(go_genes2 %in% all_genes) > sum(go_genes %in% all_genes) ) {
-        go.genesets <- lapply(go.genesets, function(m) paste0("SYMBOL:",m))
+      go_genes2 <- paste0("SYMBOL:", unique(unlist(go.genesets)))
+      if (sum(go_genes2 %in% all_genes) > sum(go_genes %in% all_genes)) {
+        go.genesets <- lapply(go.genesets, function(m) paste0("SYMBOL:", m))
       }
-      G <- .append_gmt_to_matrix(go.genesets, G, all_genes, minsize=15, maxsize=400)
+      G <- .append_gmt_to_matrix(go.genesets, G, all_genes, minsize = 15, maxsize = 400)
     } ## end-if go.genesets
   } ## end-if !metabolics
   
@@ -1173,7 +1217,7 @@ pgx.add_GMT <- function(pgx,
     custom_gmt <- custom.geneset$gmt
     customG <- lapply(custom_gmt, function(s) probe2symbol(s, pgx$genes, "symbol"))
     all_genes <- unique(pgx$genes$symbol)
-    G <- .append_gmt_to_matrix(customG, G, all_genes, minsize=3, maxsize=9999)
+    G <- .append_gmt_to_matrix(customG, G, all_genes, minsize = 3, maxsize = 9999)
   }
   
   ## -----------------------------------------------------------
@@ -1183,7 +1227,7 @@ pgx.add_GMT <- function(pgx,
   ## features. Generally G and X are not aligned anymore.
   ## !!!!!!!!!!!!
   ## NOTE: this can be replace by PLAID??
-  
+
   if (is.null(max.genesets)) max.genesets <- 20000
   if (max.genesets < 0) max.genesets <- 20000
 
@@ -1312,7 +1356,6 @@ pgx.add_GMT <- function(pgx,
       minsize = min.geneset.size,
       maxsize = 400
     )
-
   }
   
   # normalize columns (required for some methods downstream)log2foldchange
@@ -1326,7 +1369,6 @@ pgx.add_GMT <- function(pgx,
   return(pgx)
 
 }
-
 
 ## ----------------------------------------------------------------------
 ## -------------------------- end of file -------------------------------

@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 ## Batch correction methods
@@ -959,8 +959,7 @@ detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
     pheno <- contrasts2pheno(contrasts, samples)
   } else if (length(pheno) == 1 && pheno[1] %in% colnames(samples)) {
     pheno <- samples[, pheno]
-  } else if (length(pheno) == nrow(samples)) {
-  } else {
+  } else if (length(pheno) == nrow(samples)) {} else {
     stop("invalid pheno argument type: need pheno vector or contrast matrix")
   }
 
@@ -974,7 +973,7 @@ detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
   ## determine batch covariates
   dY <- scale(dY)
 
-  res <- gx.limmaF(t(dY), pheno, fdr = 1, lfc = 0, compute.means = FALSE, verbose = 0)
+  res <- gx.limma(t(dY), pheno, fdr = 1, lfc = 0, compute.means = FALSE, f.test = TRUE, verbose = 0)
   param <- sub("=.*", "", rownames(res))
   pv.pheno <- tapply(res$P.Value, param, min)
 
@@ -1134,6 +1133,17 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
     prefix <- ""
     methods <- NULL
     remove.failed <- TRUE
+  }
+
+  if (is.null(y)) {
+    if ("uncorrected" %in% methods) {
+      if (ntop < Inf) {
+        X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], ntop) ## faster
+      }
+      xlist[["uncorrected"]] <- X
+    } else {
+      return(NULL)
+    }
   }
 
   mod <- model.matrix(~ factor(y))
@@ -1732,18 +1742,17 @@ compare_batchcorrection_methods <- function(X,
                                             samples,
                                             pheno,
                                             contrasts,
-                                            methods = c("uncorrected",
-                                              "ComBat", "limma", "RUV", "SVA", "NPM"),
+                                            methods = c(
+                                              "uncorrected",
+                                              "ComBat", "limma", "RUV", "SVA", "NPM"
+                                            ),
                                             batch.pars = "<autodetect>",
                                             clust.method = "tsne",
                                             ntop = 4000,
                                             xlist.init = list(),
                                             ref = NULL,
-                                            evaluate = TRUE) {
-
-  ## methods <- c("uncorrected","ComBat","auto-ComBat","limma","RUV","SVA","NPM")
-  ## ntop = 4000; xlist.init = list(); batch=NULL
-
+                                            evaluate = TRUE,
+                                            npc = 2) {
   if (is.null(pheno) && is.null(contrasts)) {
     stop("must give either pheno vector or contrasts matrix")
   }
@@ -1774,7 +1783,7 @@ compare_batchcorrection_methods <- function(X,
     sc = FALSE,
     remove.failed = TRUE
   )
-  
+
   if (length(xlist.init) > 0) xlist <- c(xlist.init, xlist)
   common_rows <- Reduce(intersect, lapply(xlist, rownames))
   xlist <- c(lapply(xlist, function(x) x[common_rows, , drop = FALSE]))
@@ -1793,15 +1802,18 @@ compare_batchcorrection_methods <- function(X,
     })
   } else {
     message("Computing PCA clustering...")
-    for(i in 1:length(xlist)) {
-      set.seed(1234);
-      pca <- irlba::irlba(t2(xlist[[i]]), nu = 2, nv = 2)
-      pos[[names(xlist)[i]]] <- pca$u[, 1:2]
-      pca.varexp[[names(xlist)[i]]]  <- (pca$d^2 / sum(pca$d^2)) * 100
+    npc_eff <- max(2, min(npc, min(sapply(xlist, function(x) min(dim(x)))) - 1))
+    for (i in 1:length(xlist)) {
+      set.seed(1234)
+      pca <- irlba::irlba(t2(xlist[[i]]), nu = npc_eff, nv = npc_eff)
+      pos[[names(xlist)[i]]] <- pca$u[, seq_len(npc_eff), drop = FALSE]
+      pca.varexp[[names(xlist)[i]]] <- (pca$d^2 / sum(pca$d^2)) * 100
     }
   }
 
-  for (i in 1:length(pos)) { rownames(pos[[i]]) <- colnames(X) }
+  for (i in 1:length(pos)) {
+    rownames(pos[[i]]) <- colnames(X)
+  }
 
   res <- NULL
   best.method <- ref
@@ -2162,7 +2174,10 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
   if (!is.null(y) && length(controls) == 1 && is.numeric(controls[1])) {
     ii <- which(!duplicated(rownames(X)) & sdx > 0)
     jj <- which(!is.na(y))
-    F <- gx.limmaF(X[ii, jj], y[jj], lfc = 0, fdr = 1, method = 1, sort.by = "none", compute.means = FALSE, verbose = 0)
+    F <- gx.limma(X[ii, jj], y[jj],
+      lfc = 0, fdr = 1, method = 1,
+      sort.by = "none", compute.means = FALSE, f.test = TRUE, verbose = 0
+    )
     nc <- pmax(nrow(X) * as.numeric(controls), 1)
     sel <- head(order(-F$P.Value), nc)
     controls <- rownames(F)[sel]
@@ -2219,7 +2234,7 @@ pcaCorrect <- function(X, y, k = 10, p.notsig = 0.20) {
   }))
   rownames(V) <- colnames(X)
   colnames(V) <- paste0("PC", 1:ncol(V))
-  res <- gx.limmaF(t(V), y, lfc = 0, fdr = 1, sort.by = "none", compute.means = FALSE, verbose = 0)
+  res <- gx.limma(t(V), y, lfc = 0, fdr = 1, sort.by = "none", compute.means = FALSE, f.test = TRUE, verbose = 0)
   res <- res[colnames(V), ]
   round(res$P.Value, 4)
 
@@ -2758,7 +2773,6 @@ estimateBatchCorrectionVectors <- function(cX, X, k = NULL, threshold = 0.8) {
 }
 
 
-
 ## ----------------------------------------------------------------------
 ## -------------- EXPERIMENTAL (not exported) ---------------------------
 ## ----------------------------------------------------------------------
@@ -2876,8 +2890,6 @@ mfnCorrect <- function(X, y, nv = 3, nn = 3, return.idx = FALSE) {
 
   cX
 }
-
-
 
 
 ## =================================================================================

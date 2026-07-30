@@ -6,8 +6,8 @@
 \usage{
 pgx.computeDrugEnrichment(
   pgx,
-  X,
-  xdrugs,
+  X = NULL,
+  xdrugs = NULL,
   drug_info = NULL,
   methods = c("GSEA", "cor"),
   nmin = 15,

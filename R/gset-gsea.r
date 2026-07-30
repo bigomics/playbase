@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 #' Convert GMT file to binary matrix
@@ -170,13 +170,6 @@ write.gmt <- function(gmt, file, source = NA) {
   ee <- paste(names(gmt), "\t", source, "\t", gg, sep = "")
   write(ee, file = file)
 }
-
-
-
-
-
-
-
 
 
 #' Run Gene Set Enrichment Analysis (GSEA)
@@ -808,8 +801,6 @@ run.GSEA.LeadingEdge <- function(rpt.path, gmt, xmx = 10, rpt.label = "gsea_lead
 }
 
 
-
-
 #' Run GSEA analysis using pre-ranked or phenotype comparison mode
 #'
 #' This function performs Gene Set Enrichment Analysis (GSEA) using either pre-ranked mode or phenotype comparison mode.
@@ -939,7 +930,6 @@ justGSEA <- function(X, gmt, Y = NULL, fdr = 1, set.min = 15, set.max = 500, top
 }
 
 
-
 ## ========================================================================
 ## ======================== ACCESS FUNCTIONS ==============================
 ## ========================================================================
@@ -1038,9 +1028,6 @@ getGseaOutput <- function(path = "../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut
 }
 
 
-
-
-
 ## ========================================================================
 ## =========================== PLOTTING ===================================
 ## ========================================================================
@@ -1050,9 +1037,6 @@ getGseaOutput <- function(path = "../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut
 .bluered <- function(n = 64) {
   gplots::colorpanel(n, "royalblue3", "grey90", "indianred3")
 }
-
-
-
 
 
 #' GSEA Enrichment Plot
@@ -1080,7 +1064,10 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
                         lab.line = c(0.8, 2), cex.lab = 0.85, main.line = 0.3,
                         multiomics = FALSE,
                         xlab = "Rank in ordered dataset", res = 1200,
-                        ylab = "Rank metric") {
+                        ylab = "Rank metric",
+                        col_line = "green",
+                        col_up = NULL,
+                        col_down = NULL) {
   if (!is.null(names)) names(rnk) <- names
   rnk <- rnk[!is.na(rnk)]
   rnk <- rnk[order(rnk + 1e-8 * stats::rnorm(length(rnk)), decreasing = decreasing)]
@@ -1119,7 +1106,9 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
   kk <- c(seq(1, length(rnk) * 0.99, by.val), length(rnk))
   length(kk)
   i <- 1
-  pal <- grDevices::colorRampPalette(c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")))(32)
+  bar_down <- if (!is.null(col_down)) col_down else omics_colors("brand_blue")
+  bar_up <- if (!is.null(col_up)) col_up else omics_colors("red")
+  pal <- grDevices::colorRampPalette(c(bar_down, omics_colors("grey"), bar_up))(32)
   for (i in 1:(length(kk) - 1)) {
     r <- mean(rnk[kk[c(i, i + 1)]], na.rm = TRUE)
     r1 <- (r / max(abs(rnk), na.rm = TRUE))
@@ -1141,7 +1130,7 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
   if (max(rnk.trace, na.rm = TRUE) >= abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y1)
   if (max(rnk.trace, na.rm = TRUE) < abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y0)
   if (!decreasing) rnk.trace <- -1 * rnk.trace
-  graphics::lines(ii, rnk.trace[ii], col = "green", type = "l", lwd = 2.4)
+  graphics::lines(ii, rnk.trace[ii], col = col_line, type = "l", lwd = 2.4)
 
   if (is.null(main)) main <- "Enrichment plot"
   tt.main <- as.character(main)
@@ -1150,8 +1139,6 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
   }
   graphics::title(main = tt.main, cex.main = cex.main, line = main.line)
 }
-
-
 
 
 #' gsea.ftplot

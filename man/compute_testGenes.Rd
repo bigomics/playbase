@@ -2,7 +2,9 @@
 % Please edit documentation in R/compute2-genes.R
 \name{compute_testGenes}
 \alias{compute_testGenes}
-\title{Compute Test Genes}
+\title{Compute Test Genes
+This function computes gene tests based on the input data and contrast matrix.
+It performs different test methods depending on whether the data is single-omics or multi-omics.}
 \usage{
 compute_testGenes(
   pgx,
@@ -10,7 +12,6 @@ compute_testGenes(
   max.features = 1000,
   test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
   custom_fc = NULL,
-  use.design = FALSE,
   prune.samples = TRUE,
   remove.outputs = TRUE,
   timeseries = FALSE
@@ -25,8 +26,6 @@ compute_testGenes(
 
 \item{test.methods}{The test methods to use for gene testing.}
 
-\item{use.design}{A logical value indicating whether to use the design matrix in the analysis.}
-
 \item{prune.samples}{A logical value indicating whether to prune samples with missing data.}
 
 \item{remove.outputs}{A logical value indicating whether to remove intermediate outputs.}
@@ -35,6 +34,7 @@ compute_testGenes(
 An updated object with gene test results.
 }
 \description{
+Compute Test Genes
 This function computes gene tests based on the input data and contrast matrix.
 It performs different test methods depending on whether the data is single-omics or multi-omics.
 }

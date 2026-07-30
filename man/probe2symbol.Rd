@@ -9,7 +9,8 @@ probe2symbol(
   annot_table,
   query = "symbol",
   key = NULL,
-  fill_na = FALSE
+  fill_na = FALSE,
+  add_datatype = FALSE
 )
 }
 \arguments{

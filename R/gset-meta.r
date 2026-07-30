@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 #' Fit Contrasts with All Gene Set Enrichment Methods
@@ -58,28 +58,16 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     design <- NULL
   }
 
-  ## experiment matrix
   if (!is.null(design)) {
     exp.matrix <- (design %*% contr.matrix)[colnames(X), , drop = FALSE]
   } else {
     exp.matrix <- contr.matrix[colnames(X), , drop = FALSE]
   }
 
-  ## some "normalization" for single-sample methods
-  my.normalize <- function(zx) {
-    if (nrow(zx) <= 10) {
-      return(zx)
-    }
-    zx <- scale(limma::normalizeQuantiles(zx))
-    return(zx)
-  }
-
   all.results <- list()
-  ## pre-compute matrices
   zx.gsva <- zx.ssgsea <- zx.rnkcorr <- NULL
   res.gsva <- res.ssgsea <- res.rnkcorr <- NULL
 
-  ## align. gg are symbols.
   gg <- setdiff(rownames(X), c("", NA))
   gg <- intersect(rownames(G), rownames(X))
   G <- G[gg, names(gmt), drop = FALSE]
@@ -99,15 +87,17 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       zx.rnkcorr <- cor_sparse_matrix(G, xx1)
       rownames(zx.rnkcorr) <- colnames(G)
       colnames(zx.rnkcorr) <- colnames(X)
-      zx.rnkcorr <- my.normalize(zx.rnkcorr)
+      if (nrow(zx.rnkcorr) > 10) {
+        zx.rnkcorr.norm <- try(scale(limma::normalizeQuantiles(zx.rnkcorr)), silent = TRUE)
+        if (!"try-error" %in% class(zx.rnkcorr.norm)) zx.rnkcorr <- zx.rnkcorr.norm
+        rm(zx.rnkcorr.norm)
+      }
       cm1 <- intersect(names(gmt), rownames(zx.rnkcorr))
       cm2 <- intersect(colnames(X), colnames(zx.rnkcorr))
-      zx.rnkcorr <- zx.rnkcorr[cm1, cm2, drop = FALSE] ## make sure..
+      zx.rnkcorr <- zx.rnkcorr[cm1, cm2, drop = FALSE]
       nas <- apply(zx.rnkcorr, 1, function(x) sum(is.na(x)))
       jj <- which(nas < ncol(zx.rnkcorr))
       zx.rnkcorr <- zx.rnkcorr[jj, , drop = FALSE]
-
-      ## compute LIMMA
       all.results[["spearman"]] <- gset.fitContrastsWithLIMMA(
         zx.rnkcorr,
         contr.matrix,
@@ -124,10 +114,11 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
     ## check if we have the new version of GSVA
     tt <- system.time({
-
-      if(use.replaid) {
+      if (use.replaid) {
         dbg("using replaid.gsva...")
-        zx.gsva <- try({  plaid::replaid.gsva(as.matrix(X), G, tau=0)  })
+        zx.gsva <- try({
+          plaid::replaid.gsva(as.matrix(X), G, tau = 0)
+        })
       } else {
         dbg("using GSVA::gsva...")
         new.gsva <- exists("gsvaParam", where = asNamespace("GSVA"), mode = "function")
@@ -148,7 +139,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       }
       dbg("gsva computation done!")
       if (!"try-error" %in% class(zx.gsva)) {
-        zx.gsva <- my.normalize(zx.gsva)
+        if (nrow(zx.gsva) > 10) zx.gsva <- scale(limma::normalizeQuantiles(zx.gsva))
         jj <- match(names(gmt), rownames(zx.gsva))
         zx.gsva <- zx.gsva[jj, colnames(X), drop = FALSE] ## make sure..
         rownames(zx.gsva) <- names(gmt)
@@ -172,9 +163,11 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       if (nmissing > 0) {
         message("Found ", nmissing, " missing values in X. Removing prior to GSVA::ssgsea.")
       }
-      if(use.replaid) {
+      if (use.replaid) {
         dbg("using replaid.ssgsea...")
-        zx.ssgsea <- try({  plaid::replaid.ssgsea(as.matrix(X), G, alpha=0)  })
+        zx.ssgsea <- try({
+          plaid::replaid.ssgsea(as.matrix(X), G, alpha = 0)
+        })
       } else {
         dbg("using GSVA::ssgsea...")
         zx.ssgsea <- try(GSVA::gsva(as.matrix(X),
@@ -185,9 +178,9 @@ gset.fitContrastsWithAllMethods <- function(gmt,
         ))
       }
       dbg("ssgsea computation done!")
-      
+
       if (!"try-error" %in% class(zx.ssgsea)) {
-        zx.ssgsea <- my.normalize(zx.ssgsea)
+        if (nrow(zx.ssgsea) > 10) zx.ssgsea <- scale(limma::normalizeQuantiles(zx.ssgsea))
         kk <- match(names(gmt), rownames(zx.ssgsea))
         zx.ssgsea <- zx.ssgsea[kk, colnames(X), drop = FALSE]
         rownames(zx.ssgsea) <- names(gmt)
@@ -257,11 +250,17 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       }
 
       tt <- system.time({
-        output <- gset.fisher2(genes.up, genes.dn,
-          genesets = gmt, fdr = 1.0,
-          background = rownames(X), check.background = FALSE,
-          min.genes = 0, max.genes = 99999,
-          common.genes = FALSE, verbose = 0
+        output <- gset.fisher2(
+          genes.up, genes.dn,
+          # genesets = G,
+          genesets = gmt,
+          fdr = 1.0,
+          background = rownames(X),
+          check.background = FALSE,
+          min.genes = 0,
+          max.genes = 99999,
+          report.genes = FALSE,
+          verbose = 0
         )
       })
 
@@ -529,21 +528,28 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
     names(tables) <- colnames(contr.matrix)
   } else {
     message("fitting gset.LIMMA contrasts without design.... ")
-    tables <- list()
     i <- 1
+    tables <- list()
     for (i in 1:ncol(contr.matrix)) {
       design0 <- cbind(1, contr.matrix[, i])
       colnames(design0) <- c("ref", colnames(contr.matrix)[i])
-      vfit <- limma::lmFit(gsetX, design0)
-      efit <- limma::eBayes(vfit, trend = trend, robust = TRUE)
-      top <- limma::topTable(efit, coef = 2, sort.by = "none", number = Inf, adjust.method = "BH")
+      vfit <- try(limma::lmFit(gsetX, design0), silent = TRUE)
+      efit <- try(limma::eBayes(vfit, trend = trend, robust = TRUE), silent = TRUE)
+      top <- try(limma::topTable(efit, coef = 2, sort.by = "none", number = Inf, adjust.method = "BH"),
+        silent = TRUE
+      )
       j1 <- which(contr.matrix[, i] > 0)
       j0 <- which(contr.matrix[, i] < 0)
       mean1 <- rowMeans(gsetX[, j1, drop = FALSE], na.rm = TRUE)
       mean0 <- rowMeans(gsetX[, j0, drop = FALSE], na.rm = TRUE)
-      top <- top[rownames(gsetX), ]
+      if (!"try-error" %in% class(top)) {
+        top <- top[rownames(gsetX), , drop = FALSE]
+      } else {
+        top <- data.frame(matrix(NA, nrow = nrow(gsetX), ncol = 6))
+        rownames(top) <- rownames(gsetX)
+        colnames(top) <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val", "B")
+      }
       top <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
-      Matrix::head(top, 10)
       tables[[i]] <- top
     }
     names(tables) <- colnames(contr.matrix)

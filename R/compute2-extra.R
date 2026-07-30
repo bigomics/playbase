@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 #' Compute Extra Analysis
@@ -238,7 +238,7 @@ compute_extra <- function(pgx, extra = c(
         {
           pgx$wgcna <- pgx.wgcna(
             pgx,
-            ai_model = NULL   ## no AI by default (yet)
+            ai_model = NULL ## no AI by default (yet)
           )
         },
         error = function(e) {

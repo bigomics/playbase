@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2020 BigOmics Analytics Sagl. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics Sagl. All rights reserved.
 ##
 
 ## Start from base image, update git code and add data
@@ -26,8 +26,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 #------------------------------------------------------------
 # Install de-novo bigomics stuff (as R packages)
 #------------------------------------------------------------
-RUN Rscript -e "remotes::install_github('lifs-tools/rgoslin')"
-RUN Rscript -e "remotes::install_github('ncats/RAMP-DB')"
+# RUN Rscript -e "remotes::install_github('lifs-tools/rgoslin')"
+# RUN Rscript -e "remotes::install_github('ncats/RAMP-DB')"
 
 # copy bigomics/playbase code from github checkout
 COPY . /playbase

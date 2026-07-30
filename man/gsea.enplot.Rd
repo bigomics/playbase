@@ -19,7 +19,10 @@ gsea.enplot(
   multiomics = FALSE,
   xlab = "Rank in ordered dataset",
   res = 1200,
-  ylab = "Rank metric"
+  ylab = "Rank metric",
+  col_line = "green",
+  col_up = NULL,
+  col_down = NULL
 )
 }
 \arguments{

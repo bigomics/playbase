@@ -20,6 +20,7 @@ gx.limma(
   trend = FALSE,
   robust = FALSE,
   method = 1,
+  f.test = FALSE,
   verbose = 1
 )
 }
@@ -44,6 +45,8 @@ gx.limma(
 
 \item{trend}{Logical for fitting a trend model.}
 
+\item{f.test}{Logical. Run f test is >2 levels phenotype. Replicates previous playbase::gx.limmaF().}
+
 \item{verbose}{Verbosity level.}
 }
 \value{
@@ -56,7 +59,7 @@ Handles single sample case by duplicating sample. Auto-detects reference level.
 \details{
 Differential expression analysis using limma
 
-This function performs differential expression analysis on the gene expression matrix \code{X} using limma.
+Performs differential expression analysis on the gene expression matrix \code{X} using limma.
 It handles filtering, model design matrices, and output formatting.
 The phenotype vector \code{pheno} is used to define the linear model.
 Batch effects can be accounted for by providing a \code{B} matrix.

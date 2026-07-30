@@ -16,7 +16,7 @@ ngs.fitContrastsWithAllMethods(
   counts,
   X = NULL,
   samples,
-  design,
+  covariates = NULL,
   contr.matrix,
   genes = NULL,
   prior.cpm = 1,
@@ -36,18 +36,18 @@ ngs.fitContrastsWithAllMethods(
 ngs.fitContrastsWithTTEST(
   X,
   contr.matrix,
-  design,
   method = "welch",
   conform.output = 0
 )
 
-ngs.fitContrastsWithWILCOXON(X, contr.matrix, design, conform.output = 0)
+ngs.fitContrastsWithWILCOXON(X, contr.matrix, conform.output = 0)
 
 ngs.fitContrastsWithEDGER(
   counts,
   group,
   contr.matrix,
   design,
+  covariates = NULL,
   method = c("qlf", "lrt"),
   prune.samples = FALSE,
   X = NULL,
@@ -75,6 +75,7 @@ ngs.fitContrastsWithEDGER(
 .ngs.fitContrastsWithEDGER.nodesign.pruned(
   counts,
   contr.matrix,
+  covariates = NULL,
   group = NULL,
   method = c("qlf", "lrt"),
   X = NULL,
@@ -91,6 +92,7 @@ ngs.fitContrastsWithDESEQ2(
   group,
   contr.matrix,
   design,
+  covariates = NULL,
   X = NULL,
   genes = NULL,
   test = "Wald",
@@ -103,6 +105,7 @@ ngs.fitContrastsWithDESEQ2(
 .ngs.fitContrastsWithDESEQ2.nodesign(
   counts,
   contr.matrix,
+  covariates = NULL,
   test = "Wald",
   fitType = "mean",
   prune.samples = FALSE,
@@ -127,7 +130,7 @@ ngs.fitContrastsWithDESEQ2(
 
 \item{samples}{A vector of sample names that match the columns in \code{counts}.}
 
-\item{design}{The design matrix, with samples in columns.}
+\item{covariates}{Variables to be regressed out. Only valid for linear model-based DGE tests. Default is NULL.}
 
 \item{contr.matrix}{The contrasts matrix, with contrasts in rows.}
 

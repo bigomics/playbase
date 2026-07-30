@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 
@@ -105,10 +105,6 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
   res <- list(celltype = celltype, probs = P)
   return(res)
 }
-
-
-
-
 
 
 #' @title Simplify cell types names

@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 ## ----------------------------------------------------------------------
@@ -19,8 +19,8 @@
 #' @export
 imputeMissing <- function(X,
                           method = c(
-                            "LLS", "bpca", "msImpute", "SVD", "SVD2", "NMF", "RF",
-                            "knn", "QRILC", "MLE", "MinDet", "MinProb",
+                            "LLS", "bpca", "msImpute", "SVD", "SVD2", "NMF", "NMF2",
+                            "RF", "knn", "QRILC", "MLE", "MinDet", "MinProb",
                             "min", "zero", "nbavg", "rowmeans", "Perseus"
                           )[1:3],
                           rf.ntree = 100, nv = 5, keep.limits = FALSE,
@@ -97,7 +97,13 @@ imputeMissing <- function(X,
   if ("NMF" %in% method) {
     minx <- min(X, na.rm = TRUE)
     X1 <- X - minx
-    impX[["NMF"]] <- log(nmfImpute(exp(X1), k = 3)) + minx
+    impX[["NMF"]] <- log(nmfImpute(exp(X1), k = nv)) + minx
+  }
+
+  if ("NMF2" %in% method) {
+    minx <- min(X, na.rm = TRUE)
+    X1 <- X - minx
+    impX[["NMF2"]] <- log(nmfImpute2(exp(X1), k = nv)) + minx
   }
 
   if ("RF" %in% method) {
@@ -203,10 +209,61 @@ imputeMissing <- function(X,
   metaX
 }
 
+#' @title Impute missing values separately for each omics type in multi-omics data.
+#' @description Generic function to impute missing (NA) value. Input is a matrix.
+#' @description It uses the imputeMissing function.
+#' @param X A multiomics matrix containing the input data.
+#' @return Imputed multi-omics matrix
+#' @export
+imputeMissing.mox <- function(X,
+                              method = c(
+                                "LLS", "bpca", "msImpute", "SVD", "SVD2",
+                                "NMF", "RF", "knn", "QRILC", "MLE", "MinDet", "MinProb",
+                                "min", "zero", "nbavg", "rowmeans", "Perseus"
+                              )[1:3],
+                              rf.ntree = 100,
+                              nv = 5,
+                              keep.limits = FALSE,
+                              infinite.na = TRUE,
+                              plot = FALSE) {
+  impX <- NULL
+  is.mox <- playbase::is.multiomics(rownames(X))
+
+  if (is.mox) {
+    II <- list()
+    dtypes <- unique(sub(":.*", "", rownames(X)))
+
+    for (i in 1:length(dtypes)) {
+      ii <- grep(paste0("^", dtypes[i], ":"), rownames(X))
+      message("[playbase::imputeMissing.mox]: Multi-omics data. Imputing ", dtypes[i])
+      message("[playbase::imputeMissing.mox]: ", length(ii), " features..\n")
+      II[[dtypes[i]]] <- playbase::imputeMissing(
+        X = X[ii, ], method = method,
+        rf.ntree = rf.ntree, nv = nv, keep.limits = keep.limits,
+        infinite.na = infinite.na, plot = plot
+      )
+    }
+
+    impX <- do.call(rbind, II)
+    rm(II)
+    gc()
+  } else {
+    impX <- playbase::imputeMissing(
+      X = X, method = method,
+      rf.ntree = rf.ntree, nv = nv, keep.limits = keep.limits,
+      infinite.na = infinite.na, plot = plot
+    )
+  }
+
+  return(impX)
+}
+
+
 #' @export
 svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
                        maxSteps = 100, fill.empty = "median",
-                       infinite.na = TRUE, randomize.init = FALSE,
+                       infinite.na = TRUE,
+                       ## randomize.init = FALSE,
                        verbose = FALSE) {
   ## nv=3;threshold=0.001;init=NULL;maxSteps=100;fill.empty="median";verbose=FALSE
 
@@ -221,15 +278,20 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
   }
   nv <- min(nv, round(min(dim(X)) / 3))
 
-  if (is.character(init) && grepl("%", init)) {
+  init.methods <- c("MinDet", "MinProb", "QRILC", "min")
+
+  if (!is.null(init) && is.character(init) && grepl("%", init)) {
+    ## initialize missing values with quantile fixed value
     q <- as.numeric(sub("%", "", init))
     init <- quantile(X[!is.na(X)], probs = q * 0.01)[1]
     message(paste0("setting initial values to ", q, "%. init=", round(init, 4)))
-  }
-
-  if (!is.null(init)) {
-    ## initialize missing values with fixed value
     X[ind.missing] <- init
+  } else if (!is.null(init) && is.character(init) &&
+    init %in% init.methods) {
+    ## initialize missing values with other impute method
+    message(paste("setting initial values using", init))
+    initX <- imputeMissing(X, method = init)
+    X[ind.missing] <- initX[ind.missing]
   } else {
     ## initialize missing values with col/row medians
     row.mx <- apply(X, 1, median, na.rm = TRUE)
@@ -242,11 +304,11 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
   }
 
   ## randomize initial values?
-  if (randomize.init) {
-    sdx <- mean(matrixStats::rowSds(X, na.rm = TRUE), na.rm = TRUE)
-    rr <- rnorm(nrow(ind.missing), mean = 0, sd = sdx)
-    X[ind.missing] <- X[ind.missing] + rr
-  }
+  ## if (randomize.init) {
+  ##   sdx <- mean(matrixStats::rowSds(X, na.rm = TRUE), na.rm = TRUE)
+  ##   rr <- rnorm(nrow(ind.missing), mean = 0, sd = sdx)
+  ##   X[ind.missing] <- X[ind.missing] + rr
+  ## }
 
   ## do SVD iterations
   count <- 0
@@ -325,6 +387,43 @@ nmfImpute <- function(x, k = 5) {
 }
 
 
+#' @title Impute missing values with iterative NMF
+#'
+#' @description Imputes missing values in matrix with iterative
+#'    non-negative matrix factorization
+#'
+#' @export
+nmfImpute2 <- function(x, k = 5, niter = 10, init = 0.05) {
+  k <- min(k, dim(x) - 1)
+  ii <- which(is.na(x), arr.ind = TRUE)
+  impx <- NULL
+  if (is.numeric(init) && length(init) == 1) {
+    impx <- x
+    minx <- min(x, na.rm = TRUE)
+    impx[ii] <- quantile(x[x > minx], probs = init, na.rm = TRUE)
+  } else if (is.character(init) && length(init) == 1) {
+    impx <- imputeMissing(x, method = init, nv = k)
+  } else if (is.matrix(init) && all(dim(init) == dim(x))) {
+    impx <- init
+  }
+  if (is.null(impx)) stop("[nmfImpute2] invalid init:", init)
+
+  i <- 1
+  for (i in 1:niter) {
+    m1 <- RcppML::nmf(impx, k = k, verbose = FALSE)
+    if (all(c("w", "d", "h") %in% names(m1))) {
+      wh <- m1$w %*% diag(m1$d) %*% m1$h
+    } else if (all(c("w", "d", "h") %in% slotNames(m1))) {
+      wh <- m1@w %*% diag(m1@d) %*% m1@h
+    } else {
+      stop("[nmfImpute2] Fatal error in RcppML::nmf")
+    }
+    impx[ii] <- wh[ii]
+  }
+  impx
+}
+
+
 #' @title Impute missing values using Bayesian PCA
 #'
 #' @description Imputes missing values using BPCA
@@ -343,7 +442,6 @@ BPCAimpute <- function(X, k = 2) {
 
 ## https://www.biorxiv.org/content/10.1101/2020.08.12.248963v1.full
 ## Perseus, by default, impute for each sample separately.
-
 
 
 #' @title Perseus-style imputation

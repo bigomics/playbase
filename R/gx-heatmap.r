@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 
@@ -244,6 +244,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         scale = "row",
                         softmax = 0,
                         order.groups = "clust",
+                        splitx_order = NULL,
                         symm.scale = FALSE,
                         cluster_rows = TRUE,
                         cluster_columns = TRUE,
@@ -363,7 +364,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   if (!is.null(cmax) && cmax < ncol(gx) && cmax > 0) {
     jj2 <- Matrix::head(order(-apply(gx, 2, stats::sd, na.rm = TRUE)), cmax)
   }
-  gx <- gx[jj1, jj2]
+  gx <- gx[jj1, jj2, drop = FALSE]
   if (!is.null(row.annot)) {
     row.annot <- row.annot[jj1, , drop = FALSE]
   }
@@ -390,6 +391,12 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   }
   if (!is.null(idx2)) {
     grp <- tapply(colnames(gx), idx2, list)
+    ## Apply custom group ordering if provided
+    if (!is.null(splitx_order)) {
+      ordered_names <- intersect(splitx_order, names(grp))
+      remaining <- setdiff(names(grp), ordered_names)
+      grp <- grp[c(ordered_names, remaining)]
+    }
     ngrp <- length(grp)
   } else {
     grp <- list(colnames(gx))
@@ -447,7 +454,10 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   ## --------------------------------------------
   ## column sorting (for what???)
   ## --------------------------------------------
-  if (!cluster_columns && !is.null(sort_columns)) {
+  ## cluster_columns may be a precomputed hclust/dendrogram (to force a
+  ## known column order while keeping the dendrogram); only the logical
+  ## FALSE case triggers annotation-based sorting.
+  if (is.logical(cluster_columns) && !cluster_columns && !is.null(sort_columns)) {
     y <- col.annot[, sort_columns, drop = FALSE]
     y1 <- as.integer(factor(y))
     jj <- fastcluster::hclust(stats::dist(t(gx)), method = "ward.D2")$order
@@ -594,7 +604,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 
   ## ------------- cluster blocks
   grp.order <- 1:ngrp
-  if (!is.null(order.groups) && ngrp > 1 && order.groups[1] == "clust") {
+  if (is.null(splitx_order) && !is.null(order.groups) && ngrp > 1 && order.groups[1] == "clust") {
     ## Reorder cluster indices based on similarity clustering
     mx <- do.call(cbind, lapply(grp, function(i) rowMeans(gx[, i, drop = FALSE], na.rm = TRUE)))
     mx <- t(scale(t(mx)))
@@ -612,9 +622,14 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   ## ------------- draw heatmap
 
   ## global row clustering if no split
-  if (cluster_rows && !do.split) {
+  if (cluster_rows && !do.split && nrow(gx) > 1) {
+    is.mox <- is.multiomics(rownames(gx))
     if (any(is.na(gx))) {
-      gx2 <- imputeMissing(gx, method = "SVD2")
+      if (is.mox) {
+        gx2 <- imputeMissing.mox(gx, method = "SVD2")
+      } else {
+        gx2 <- imputeMissing(gx, method = "SVD2")
+      }
       cluster_rows <- as.dendrogram(hclust(dist(gx2)))
       rm(gx2)
     } else {
@@ -810,7 +825,7 @@ gx.heatmap <- function(gx, values = NULL,
   graphics::par(xpd = FALSE)
 
   if (verbose > 1) cat("input.dim.gx=", dim(gx), "\n")
-  if (is.null(symm)) symm <- all(rownames(gx) == colnames(gx))
+  if (is.null(symm)) symm <- nrow(gx) == ncol(gx) && all(rownames(gx) == colnames(gx))
 
   ## -------------------------------------------------------------
   ## scaling options
@@ -1765,7 +1780,7 @@ heatmap.3 <- function(x,
       Matrix::image(rbind(1:nr), col = RowSideColors[rowInd], axes = FALSE)
     } else {
       graphics::par(mar = c(margins[1], 0, 0, 0.5))
-      rsc <- t(RowSideColors[, rowInd, drop = F])
+      rsc <- t(RowSideColors[, rowInd, drop = FALSE])
       rsc.colors <- matrix()
       rsc.names <- names(table(rsc))
       rsc.i <- 1
@@ -1788,7 +1803,7 @@ heatmap.3 <- function(x,
       Matrix::image(cbind(1:nc), col = ColSideColors[colInd], axes = FALSE)
     } else {
       graphics::par(mar = c(0.5, 0, 0, margins[2]))
-      csc <- ColSideColors[colInd, , drop = F]
+      csc <- ColSideColors[colInd, , drop = FALSE]
       csc.colors <- matrix()
       csc.names <- names(table(csc))
       csc.i <- 1
@@ -1892,7 +1907,7 @@ heatmap.3 <- function(x,
   }
   if (!missing(cellnote)) {
     graphics::text(
-      x = c(row(cellnote)), y = c(col(cellnote)), labels = c(cellnote),
+      x = c(base::row(cellnote)), y = c(base::col(cellnote)), labels = c(cellnote),
       col = notecol, cex = notecex
     )
   }

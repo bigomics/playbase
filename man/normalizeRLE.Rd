@@ -4,7 +4,7 @@
 \alias{normalizeRLE}
 \title{Normalize count data using RLE method}
 \usage{
-normalizeRLE(counts, log = FALSE, use = "deseq2")
+normalizeRLE(counts, log = FALSE, use = "deseq2", prior = 1)
 }
 \arguments{
 \item{counts}{A numeric matrix of count data, where rows represent features and columns represent samples.}

@@ -7,10 +7,12 @@
 read_Olink_NPX(NPX_data)
 }
 \arguments{
-\item{NPX_data}{Path to input Olink NPX data file. Must be standard Olink NPX format as per OlinkAnalyze R package.}
+\item{NPX_data}{Path to Olink file. Must be standard format as per OlinkAnalyze R package.}
 }
 \value{
-data matrix (features on rows; samples on columns)
+NPX data matrix (features on rows; samples on columns)
+
+Sample metadata matrix (samples on rows; metadata on columns)
 }
 \description{
 Read Olink NPX data and create a counts matrix

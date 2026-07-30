@@ -16,6 +16,7 @@ gx.splitmap(
   scale = "row",
   softmax = 0,
   order.groups = "clust",
+  splitx_order = NULL,
   symm.scale = FALSE,
   cluster_rows = TRUE,
   cluster_columns = TRUE,

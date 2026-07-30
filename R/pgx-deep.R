@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2024 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 ##
 
@@ -657,7 +657,7 @@ deep.plotBiomarkerHeatmap <- function(net, datatypes = NULL, balanced = TRUE,
   }
   X <- do.call(rbind, mofa.prefix(net$X))
   colnames(X) <- make_unique(colnames(X))
-  X <- X[sel, ]
+  X <- X[sel, , drop = FALSE]
 
   Y <- data.frame(net$Y, check.names = FALSE)
   rownames(Y) <- colnames(X)

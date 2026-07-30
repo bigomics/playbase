@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2025 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 #' Create feature sets (like genesets but collections of
@@ -173,7 +173,7 @@ pgx.featureSetScore.Ftest <- function(pgx) {
         next
       }
 
-      res <- gx.limmaF(X1, y[jj], fdr = 1, lfc = 0)
+      res <- gx.limma(X1, y[jj], fdr = 1, lfc = 0, f.test = TRUE)
       score[j] <- mean(-log10(1e-99 + res$P.Value))
     }
     S[, i] <- score

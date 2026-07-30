@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 ## ================================================================================
@@ -173,8 +173,8 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   ## --------------------------------------------------
   fc.up <- fc[fc > 0]
   fc.dn <- fc[fc < 0]
-  top.up <- head(names(sort(-fc.up)), 3 * nsig) ## RETHINK!
-  top.dn <- head(names(sort(+fc.dn)), 3 * nsig)
+  top.up <- head(names(sort(-fc.up)), nsig)
+  top.dn <- head(names(sort(+fc.dn)), nsig)
   top.fc <- unique(c(top.up, top.dn))
   bg <- intersect(names(fc), rn)
   system.time({
@@ -548,10 +548,10 @@ pgx.computeGeneSetExpression <- function(X, gmt, method = NULL,
 
   S <- list()
   if ("gsva" %in% method) {
-    S[["gsva"]] <- plaid::replaid.gsva(X, G)    
+    S[["gsva"]] <- plaid::replaid.gsva(X, G)
   }
   if ("ssgsea" %in% method) {
-    S[["ssgsea"]] <- plaid::replaid.ssgsea(X, G)        
+    S[["ssgsea"]] <- plaid::replaid.ssgsea(X, G)
   }
   if (any(method %in% c("spearman", "average"))) {
     if ("spearman" %in% method) {

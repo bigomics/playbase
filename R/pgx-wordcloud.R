@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 ## ---------------------------------------------------------------
@@ -162,7 +162,6 @@ pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
 }
 
 
-
 #' @title Plot wordcloud graphic from pgx
 #'
 #' @param pgx A NGStest object containing gene set results.
@@ -214,7 +213,6 @@ pgx.plotWordCloud <- function(pgx, contrast) {
     )
   ))
 }
-
 
 
 word.gsea <- function(terms) {

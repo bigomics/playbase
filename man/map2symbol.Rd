@@ -8,12 +8,10 @@ if M is a sparse geneset matrix with non-standard identifiers as
 rownames and we want to convert to specific symbols as defined by
 the annotation dataframe 'annot'.}
 \usage{
-map2symbol(M, annot, target.symbol = NULL)
+map2symbol(M, annot, new_id = "symbol")
 }
 \description{
-This function maps rownames of matrix M to corresponding symbol as
-given in annotation dataframe 'annot'. This is for example useful
-if M is a sparse geneset matrix with non-standard identifiers as
-rownames and we want to convert to specific symbols as defined by
-the annotation dataframe 'annot'.
+NOTE. This is *not* exactly the same as rename_by2 because it tests
+any row entries in annotation table for match, not just the
+max.matching column.
 }

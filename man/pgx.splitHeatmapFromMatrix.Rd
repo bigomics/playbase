@@ -12,6 +12,7 @@ pgx.splitHeatmapFromMatrix(
   xtips = NULL,
   ytips = NULL,
   row_clust = TRUE,
+  col_clust = TRUE,
   row_annot_width = 0.03,
   scale = "row.center",
   colors = NULL,
@@ -22,7 +23,9 @@ pgx.splitHeatmapFromMatrix(
   show_legend = TRUE,
   zlim = NULL,
   symm = NULL,
-  return_x_matrix = FALSE
+  return_x_matrix = FALSE,
+  splitx_order = NULL,
+  heatmap_colors = NULL
 )
 }
 \arguments{
@@ -39,6 +42,10 @@ pgx.splitHeatmapFromMatrix(
 \item{ytips}{Custom row tooltips}
 
 \item{row_clust}{Cluster rows? Default is TRUE.}
+
+\item{col_clust}{Cluster columns within each split group? Default is TRUE.
+Set to FALSE to keep columns in the supplied matrix order (e.g. for a
+user-defined sample ordering).}
 
 \item{row_annot_width}{Width for row annotations. Default is 0.03.}
 

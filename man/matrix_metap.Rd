@@ -5,7 +5,7 @@
 \title{Matrix version for combining p-values using fisher or stouffer
 method. Much faster than doing metap::sumlog() and metap::sumz()}
 \usage{
-matrix_metap(plist, method = "stouffer")
+matrix_metap(plist, method = c("stouffer", "fisher", "maxp")[1])
 }
 \description{
 Matrix version for combining p-values using fisher or stouffer

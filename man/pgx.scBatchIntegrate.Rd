@@ -26,7 +26,6 @@ Integrate single-cell RNA-seq data from multiple batches using various batch cor
 \details{
 This function takes a single-cell expression matrix \code{X} and a batch vector \code{batch} as input.
 It applies different batch correction methods to integrate the data across batches.
-
 The following methods can be selected via the \code{method} parameter:
 \itemize{
 \item ComBat: Apply ComBat batch correction from sva package
@@ -36,6 +35,5 @@ The following methods can be selected via the \code{method} parameter:
 \item Harmony: Apply Harmony integration using Harmony package
 \item liger: Apply integration via liger package
 }
-
 The batch-integrated expression matrices are returned as a list by method name.
 }

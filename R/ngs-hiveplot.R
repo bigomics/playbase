@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 
@@ -207,7 +207,6 @@ omx.makeHivePlotData_ <- function(res, rho.min = 0.15, cxi = 0.11, use.alpha = T
 #'     anNode.gpar = grid::gpar(cex = 0.7 * cex, col = axlab.col, lwd = 0.50)
 #'   )
 #' }
-
 
 
 #' @title Create Hive Plot for mixed network

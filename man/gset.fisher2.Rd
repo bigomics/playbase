@@ -11,14 +11,14 @@ gset.fisher2(
   background = NULL,
   fdr = 0.05,
   mc = TRUE,
-  sort.by = "zratio",
+  sort.by = "p.value",
   nmin = 3,
   verbose = 1,
   min.genes = 15,
   max.genes = 500,
   method = "fast.fisher",
   check.background = TRUE,
-  common.genes = TRUE
+  report.genes = FALSE
 )
 }
 \arguments{
@@ -53,8 +53,7 @@ using Monte Carlo simulation. Defaults to `TRUE`.}
 \item{check.background}{A logical value indicating whether to check the presence of genes in
 the background set. Defaults to `TRUE`.}
 
-\item{common.genes}{A logical value indicating whether to use only genes common to both the
-input gene sets and the background set. Defaults to `TRUE`.}
+\item{report.genes}{A logical value indicating whether to report genes in genesets. Defaults to `FALSE`.}
 }
 \value{
 A data frame containing the results of the Fisher's exact test. The data frame

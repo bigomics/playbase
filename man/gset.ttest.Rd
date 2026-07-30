@@ -2,9 +2,16 @@
 % Please edit documentation in R/gset-rankcor.r
 \name{gset.ttest}
 \alias{gset.ttest}
-\title{Statistical testing of differentially enrichment}
+\title{Statistical testing of differentially enrichment on foldchange fc
+using one-sample t-test or z-test.}
 \usage{
-gset.ttest(fc, G, sort.by = "pvalue")
+gset.ttest(
+  fc,
+  G,
+  sort.by = "pvalue",
+  nprior = 0,
+  method = c("ttest", "ztest")[1]
+)
 }
 \arguments{
 \item{fc}{Vector of logFC values}

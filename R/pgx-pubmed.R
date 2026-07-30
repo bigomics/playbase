@@ -1,13 +1,11 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 NCORE <- function() {
   parallel::detectCores(all.tests = FALSE, logical = TRUE) / 2
 }
-
-
 
 
 #' @title Get PubMed context for a gene
@@ -72,9 +70,6 @@ pmid.getPubMedContext <- function(gene, context) {
 }
 
 
-
-
-
 #' @title Annotate edges with shared genes in a Pubmed network graph
 #'
 #' @description Annotates edges in a Pubmed citation network graph with the genes shared between connected articles.
@@ -100,8 +95,6 @@ pmid.annotateEdges <- function(gr) {
   igraph::E(gr)$weight <- nshared
   return(gr)
 }
-
-
 
 
 #' Link to PubMed article

@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 
@@ -44,6 +44,15 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
   }
   y <- y[!is.na(y)]
 
+  if (length(unique(y)) < 2) {
+    message("[pgx.compute_importance] Less than 2 phenotype levels after sample filtering. Returning NULL.")
+    return(NULL)
+  }
+  if (length(y) < 4) {
+    message("[pgx.compute_importance] Not enough samples after filtering (n=", length(y), "). Returning NULL.")
+    return(NULL)
+  }
+
   ## -------------------------------------------
   ## select features
   ## -------------------------------------------
@@ -54,7 +63,14 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     }
   } else {
     X <- pgx$X ## NB: this will augment
-    if (any(is.na(X))) X <- playbase::imputeMissing(X, method = "SVD2")
+    is.mox <- is.multiomics(rownames(X))
+    if (any(is.na(X))) {
+      if (is.mox) {
+        X <- imputeMissing.mox(X, method = "SVD2")
+      } else {
+        X <- imputeMissing(X, method = "SVD2")
+      }
+    }
   }
 
   ## ----------- filter with selected features
@@ -83,6 +99,11 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     X <- X[pp, , drop = FALSE]
   }
 
+  if (nrow(X) == 0) {
+    message("[pgx.compute_importance] No features remaining after filtering. Returning NULL.")
+    return(NULL)
+  }
+
   ## ----------- restrict to top SD -----------
   is.multiomics <- (pgx$datatype == "multi-omics")
   if (is.multiomics) {
@@ -100,7 +121,7 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     sample(c(ii, ii), size = 100, replace = TRUE)
   })
   y <- y[unlist(ii)]
-  X <- X[, names(y)]
+  X <- X[, names(y), drop = FALSE]
 
   ## -------------------------------------------
   ## compute importance values
@@ -358,9 +379,9 @@ pgx.variableImportance <- function(X, y,
   ## variables
   imp <- list()
   runtime <- list()
-  xnames <- rownames(X)
 
   if (nrow(X) == 1) X <- rbind(X, X)
+  xnames <- rownames(X)
 
   ## drop missing??
   sel <- which(!is.na(y) & y != "")
@@ -414,7 +435,7 @@ pgx.variableImportance <- function(X, y,
 
   if ("ftest" %in% methods) {
     runtime[["ftest"]] <- system.time({
-      res <- gx.limmaF(X, y, lfc = 0, fdr = 1)
+      res <- gx.limma(X, y, lfc = 0, fdr = 1, f.test = TRUE)
     })
     imp1 <- -log10(res[rownames(X), "P.Value"])
     names(imp1) <- rownames(X)
@@ -470,13 +491,15 @@ pgx.variableImportance <- function(X, y,
 
   if ("xgboost" %in% methods) {
     ny <- length(table(y))
-    yy <- as.integer(factor(y)) - 1
+    yy <- as.character(y)
+    obj <- "binary:logistic"
+    if (length(unique(yy)) > 2) obj <- "multi:softprob"
+
     runtime[["xgboost"]] <- system.time({
       bst <- xgboost::xgboost(
-        data = t(X), label = yy, booster = "gbtree",
-        max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
-        num_class = ny,
-        verbose = 0, objective = "multi:softmax"
+        x = t(X), y = yy, booster = "gbtree",
+        max_depth = 2, nthread = 2,
+        nrounds = 2, objective = obj
       )
     })
 
@@ -486,15 +509,14 @@ pgx.variableImportance <- function(X, y,
     names(imp5) <- rownames(X)
     imp[["xgboost"]] <- imp5
 
-    ## linear model
     runtime[["xgboost.lin"]] <- system.time({
       bst2 <- xgboost::xgboost(
-        data = t(X), label = yy, booster = "gblinear",
-        max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
-        num_class = ny,
-        verbose = 0, objective = "multi:softmax"
+        x = t(X), y = yy, booster = "gblinear",
+        max_depth = 2, nthread = 2,
+        nrounds = 2, objective = obj
       )
     })
+
     xgmat <- xgboost::xgb.importance(model = bst2)
     imp6 <- xgmat$Weight
     names(imp6) <- xgmat$Feature
@@ -505,6 +527,7 @@ pgx.variableImportance <- function(X, y,
   if ("splsda" %in% methods) {
     n <- min(25, nrow(X))
     colnames(X) <- names(y) <- paste0("sample", 1:length(y))
+    rownames(X) <- make.unique(rownames(X))
     runtime[["splsda"]] <- system.time({
       res <- mixOmics::splsda(t(X), y, keepX = c(n, n))
     })
@@ -682,7 +705,6 @@ plotDecisionTreeFromImportance <- function(imp, add.splits = 0, rf = NULL,
     }
   }
 }
-
 
 
 ## ===============================================================================

@@ -1,6 +1,6 @@
 ##
 ## This file is part of the Omics Playground project.
-## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
 
@@ -370,8 +370,6 @@ pgx.reduceOmicsGraph <- function(ngs) {
   gr1$foldchange <- rF
   gr1$members <- grp.members
   gr1$scaled.data <- rX
-
-
 
 
   return(gr1)
@@ -1135,7 +1133,6 @@ go.heatmap <- function(pgx) {
     scale = "row", dist.method = "euclidean", cexRow = 1.8, cexCol = 1.8
   )
 }
-
 
 
 ## ===============================================================================

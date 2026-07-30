@@ -14,6 +14,7 @@ heatmapWithAnnot(
   inset = c(-0.025, -0.1),
   mar = c(0, 0, 0, 0),
   legend = TRUE,
+  heatmap_colors = NULL,
   ...
 )
 }
