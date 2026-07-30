@@ -4,7 +4,7 @@
 \alias{getExampleFeatures}
 \title{Return n example features (symbols) for given organism}
 \usage{
-getExampleFeatures(organism, n, protein.coding = TRUE, type = "SYMBOL")
+getExampleFeatures(organism, n = 20, db = c("gprofiler", "orgdb"))
 }
 \description{
 Return n example features (symbols) for given organism

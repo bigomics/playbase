@@ -2,17 +2,20 @@
 % Please edit documentation in R/pgx-annot.R
 \name{getHumanOrtholog}
 \alias{getHumanOrtholog}
-\title{Get human ortholog from given symbols of organism by using
-  orthogene package. This package needs internet connection.}
+\title{Get human ortholog from given symbols of organism by
+  aggregation of multiple methods. This package needs internet
+  connection.}
 \usage{
 getHumanOrtholog(
   organism,
   symbols,
-  ortho.methods = c("homologene", "gprofiler", "babelgene", "gprofiler2"),
+  ortho.methods = c("homologene", "gprofiler", "babelgene", "gprofiler2", "uppercase"),
+  bridge_species = BRIDGE_SPECIES,
   verbose = 1
 )
 }
 \description{
-Get human ortholog from given symbols of organism by using
-  orthogene package. This package needs internet connection.
+Get human ortholog from given symbols of organism by
+  aggregation of multiple methods. This package needs internet
+  connection.
 }
