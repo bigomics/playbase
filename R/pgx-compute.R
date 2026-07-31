@@ -341,7 +341,7 @@ pgx.createPGX <- function(counts,
     rownames(X) <- newnames
     if (!is.null(annot_table)) {
       rownames(annot_table) <- newnames
-      pos.col <- grep("site|position|phosho", colnames(annot_table), ignore.case = TRUE)
+      pos.col <- grep("site|position|phospho", colnames(annot_table), ignore.case = TRUE)
       phosphosite <- sub(".*_|[.].*", "", newnames)
       if (length(pos.col)) {
         i <- pos.col[1]
@@ -564,8 +564,8 @@ pgx.createPGX <- function(counts,
     ## Add GMT
     ## -------------------------------------------------------------------
     ## create empty GMT if: no organism & no custom annot table & no custom geneset.
-    unknown.organism <- (species[i] %in% c("No organism", "custom", "unkown"))
-    unknown.datatype <- (pgx0$datatype %in% c("custom", "unkown"))
+    unknown.organism <- (species[i] %in% c("No organism", "custom", "unknown"))
+    unknown.datatype <- (pgx0$datatype %in% c("custom", "unknown"))
     no3 <- unknown.organism && is.null(annot_table) && is.null(custom.geneset)
     if (no3 || unknown.datatype || !add.gmt) {
       message("[pgx.createPGX] WARNING: empty GMT matrix. No gene sets for ", species[i])
@@ -978,7 +978,7 @@ counts.autoScaling <- function(counts) {
   counts_multiplier <- 1
 
   ## If the difference in total counts is too large, we need to
-  ## euqalize them because the thresholds can become strange. Here
+  ## equalize them because the thresholds can become strange. Here
   ## we decide if normalizing is necessary (WARNING changes total
   ## counts!!!)
   totcounts <- Matrix::colSums(counts, na.rm = TRUE)
@@ -1057,7 +1057,7 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   pgx$counts <- pgx$counts[keep, , drop = FALSE]
   message("filtering out ", sum(!keep), " low-expressed genes")
   message("keeping ", sum(keep), " expressed genes")
-  if (!is.null(pgx$gX)) {
+  if (!is.null(pgx$X)) {
     ## WARNING: counts and X should match dimensions.
     pgx$X <- pgx$X[which(keep), , drop = FALSE]
   }
@@ -1090,7 +1090,7 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
     filter_genes = FALSE
   )
 
-  # G and custom_gmt have to be SYMBOL alligned
+  # G and custom_gmt have to be SYMBOL aligned
   if (!is.null(add_gmt) && ncol(add_gmt) > 0) {
     # only run this code if custom_gmt has columns (genes)
     ## colnames(custom_gmt) <- probe2symbol(
@@ -1357,7 +1357,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000, normal
     )
   }
   
-  # normalize columns (required for some methods downstream)log2foldchange
   if (normalize_cols) G <- normalize_cols(G)
 
   pgx$GMT <- G
