@@ -3,6 +3,105 @@
 ## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
+#' Convert GMT to Binary Matrix
+#'
+#' @description Convert a GMT file (Gene Matrix Transposed) to a binary matrix,
+#' where rows represent genes and columns represent gene sets.
+#' The binary matrix indicates presence or absence of genes in a gene set.
+#'
+#' @param gmt List representing the GMT file: each element is a character vector representing a gene set.
+#' @param max.genes Max number of genes to include in the binary matrix. Default = -1 to include all genes.
+#' @param ntop Number of top genes to consider for each gene set. Default = -1 to include all genes.
+#' @param sparse Logical: create a sparse matrix. Default `TRUE`. If `FALSE` creates a dense matrix.
+#' @param bg Character vector of background gene set. Default `NULL` to consider all unique genes.
+#' @param use.multicore Deprecated.
+#'
+#' @export
+#'
+#' @return A binary matrix representing the presence or absence of genes in each gene set.
+#'         Rows correspond to genes, and columns correspond to gene sets.
+#'
+#' @examples
+#' # Create example GMT data
+#' gmt <- list(
+#'   "Pathway1" = c("GENE1", "GENE2", "GENE3"),
+#'   "Pathway2" = c("GENE2", "GENE4", "GENE5"),
+#'   "Pathway3" = c("GENE1", "GENE5", "GENE6")
+#' )
+#' 
+#' # Convert to binary matrix
+#' mat <- gmt2mat(gmt)
+#' print(mat)
+#' 
+#' # Create dense matrix instead of sparse
+#' mat_dense <- gmt2mat(gmt, sparse = FALSE)
+#' print(mat_dense)
+gmt2mat <- function(gmt,
+                    max.genes = -1,
+                    ntop = -1,
+                    sparse = TRUE,
+                    bg = NULL,
+                    use.multicore = FALSE) {
+
+  if (use.multicore) {
+    warning(
+      "`use.multicore` is deprecated and will be removed in a future version."
+    )
+  }
+  
+  # Remove duplicates (necessary for accurate qtable and use.last.ij = FALSE)
+  gmt <- lapply(gmt, function(x) funique(x, method = "hash"))
+  gmt <- gmt[order(vlengths(gmt), decreasing = TRUE)]
+  gmt <- gmt[!duplicated(names(gmt))]
+  if (ntop > 0) gmt <- lapply(gmt, utils::head, n = ntop)
+  if (is.null(names(gmt))) names(gmt) <- paste0("gmt.", seq_along(gmt))
+
+  genes <- vec(gmt)
+  # This prevents having to reorder matrix rows by their sums at the end
+  temp_bg <- names(sort(qtable(genes), decreasing = TRUE))
+  if (is.null(bg)) {
+    bg <- temp_bg
+  } else {
+    bg <- funique(c(intersect(temp_bg, bg), bg))
+  }
+  
+  if (max.genes >= 0L) {
+    bg <- utils::head(bg, n = max.genes)
+  }
+
+  NR <- length(bg)
+  NC <- length(gmt)
+  idx_row <- fmatch(genes, bg)
+  idx_col <- rep.int(seq_len(NC), vlengths(gmt))
+
+  idx_not_NA <- whichNA(idx_row, invert = TRUE)
+  if (length(idx_not_NA) != length(idx_row)) {
+    idx_row <- fsubset(idx_row, idx_not_NA)
+    idx_col <- fsubset(idx_col, idx_not_NA)
+  }
+
+  if (sparse) {
+    D <- Matrix::sparseMatrix(
+      i = idx_row,
+      j = idx_col,
+      x = 1,
+      dims = c(NR, NC),
+      check = FALSE,
+      use.last.ij = FALSE
+    )
+  } else {
+    D <- matrix(0, nrow = NR, ncol = NC)
+    # Matrices are in column-major order
+    idx <- NR * (idx_col - 1L) + idx_row
+    D[idx] <- 1
+  }
+  rownames(D) <- bg
+  colnames(D) <- names(gmt)
+
+  return(D)
+
+}
+
 #' Convert GMT file to binary matrix
 #'
 #' This function converts a GMT file (Gene Matrix Transposed) to a binary matrix,
@@ -27,8 +126,8 @@
 #' @return A binary matrix representing the presence or absence of genes in each gene set.
 #'         Rows correspond to genes, and columns correspond to gene sets.
 #'
-gmt2mat <- function(gmt, max.genes = -1, ntop = -1, sparse = TRUE,
-                    bg = NULL, use.multicore = TRUE) {
+gmt2mat_old <- function(gmt, max.genes = -1, ntop = -1, sparse = TRUE,
+                        bg = NULL, use.multicore = TRUE) {
   gmt <- gmt[order(-sapply(gmt, length))]
   gmt <- gmt[!duplicated(names(gmt))]
   if (ntop > 0) {
