@@ -14,7 +14,7 @@
 #' @param ntop Number of top genes to consider for each gene set. Default = -1 to include all genes.
 #' @param sparse Logical: create a sparse matrix. Default `TRUE`. If `FALSE` creates a dense matrix.
 #' @param bg Character vector of background gene set. Default `NULL` to consider all unique genes.
-#' @param use.multicore Logical: use parallel processing ('parallel' R package). Default `FALSE`. Deprecated.
+#' @param use.multicore Deprecated.
 #'
 #' @export
 #'
