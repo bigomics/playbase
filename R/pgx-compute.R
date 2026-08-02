@@ -546,7 +546,10 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   info("[createPGX] infer cell cycle and gender")
   pgx <- compute_cellcycle_gender(pgx, pgx$counts)
-  
+
+  ## -------------------------------------------------------------------
+  ## Add GMT
+  ## -------------------------------------------------------------------
   species <- unique(pgx$organism)
   norm_cols <- length(species) == 1
   i=1; LL=list()
@@ -560,9 +563,6 @@ pgx.createPGX <- function(counts,
     pgx0$X <- pgx0$X[jj, , drop = FALSE]
     pgx0$genes <- pgx0$genes[jj, , drop = FALSE]
     
-    ## -------------------------------------------------------------------
-    ## Add GMT
-    ## -------------------------------------------------------------------
     ## create empty GMT if: no organism & no custom annot table & no custom geneset.
     unknown.organism <- (species[i] %in% c("No organism", "custom", "unknown"))
     unknown.datatype <- (pgx0$datatype %in% c("custom", "unknown"))
@@ -572,34 +572,34 @@ pgx.createPGX <- function(counts,
       pgx0$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
     } else {
       message("[pgx.createPGX] Adding GMT for ", species[i])
-      pgx0 <- pgx.add_GMT(pgx = pgx0, custom.geneset = custom.geneset, max.genesets = max.genesets, normalize_cols = norm_cols)
+      pgx0 <- pgx.add_GMT(pgx = pgx0, custom.geneset = custom.geneset,
+        max.genesets = max.genesets, normalize_cols = norm_cols)
     }
 
     LL[[species[i]]] <- list(GMT = pgx0$GMT, custom.geneset = pgx0$custom.geneset)
-    rm(pgx0); gc()
+    rm(pgx0)
 
   }
 
   GMT <- LL[[1]]$GMT
   custom.geneset <- LL[[1]]$custom.geneset
   if (length(LL) > 1) {
-    nfeatures  <- unname(unlist(lapply(LL, function(x) rownames(x$GMT))))
-    ngsets <- unname(unlist(lapply(LL, function(x) colnames(x$GMT))))
-    GMT <- matrix(0, nrow = length(nfeatures), ncol = length(ngsets))
+    nfeatures  <- unique(unname(unlist(lapply(LL, function(x) rownames(x$GMT)))))
+    ngsets <- unique(unname(unlist(lapply(LL, function(x) colnames(x$GMT)))))
+    GMT <- Matrix::Matrix(0, nrow = length(nfeatures), ncol = length(ngsets), sparse = TRUE)
     rownames(GMT) <- nfeatures
     colnames(GMT) <- ngsets
-    i=1
     for(i in 1:length(LL)) {
       ii <- match(rownames(LL[[i]]$GMT), nfeatures)
       kk <- match(colnames(LL[[i]]$GMT), ngsets)
-      GMT[ii, kk] <- as.matrix(LL[[i]]$GMT)
+      GMT[ii, kk] <- LL[[i]]$GMT
     }
-    GMT <- normalize_cols(as(GMT, "sparseMatrix"))
+    GMT <- normalize_cols(GMT)
   }
   pgx$GMT <- GMT
   pgx$custom.geneset <- custom.geneset
-  rm(LL); gc()
-    
+  rm(LL)
+
   ## --------------------------------
   ## rm NA contrasts
   ## --------------------------------
