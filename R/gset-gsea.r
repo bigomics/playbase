@@ -3,6 +3,7 @@
 ## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
+
 #' Convert GMT to Binary Matrix
 #'
 #' @description Convert a GMT file (Gene Matrix Transposed) to a binary matrix,
@@ -14,7 +15,7 @@
 #' @param ntop Number of top genes to consider for each gene set. Default = -1 to include all genes.
 #' @param sparse Logical: create a sparse matrix. Default `TRUE`. If `FALSE` creates a dense matrix.
 #' @param bg Character vector of background gene set. Default `NULL` to consider all unique genes.
-#' @param use.multicore Deprecated.
+#' @param use.multicore Logical: use parallel processing ('parallel' R package). Default `FALSE`. Deprecated.
 #'
 #' @export
 #'
@@ -50,19 +51,19 @@ gmt2mat <- function(gmt,
   }
   
   # Remove duplicates (necessary for accurate qtable and use.last.ij = FALSE)
-  gmt <- lapply(gmt, function(x) funique(x, method = "hash"))
-  gmt <- gmt[order(vlengths(gmt), decreasing = TRUE)]
+  gmt <- lapply(gmt, function(x) collapse::funique(x, method = "hash"))
+  gmt <- gmt[order(collapse::vlengths(gmt), decreasing = TRUE)]
   gmt <- gmt[!duplicated(names(gmt))]
   if (ntop > 0) gmt <- lapply(gmt, utils::head, n = ntop)
   if (is.null(names(gmt))) names(gmt) <- paste0("gmt.", seq_along(gmt))
 
-  genes <- vec(gmt)
+  genes <- collapse::vec(gmt)
   # This prevents having to reorder matrix rows by their sums at the end
-  temp_bg <- names(sort(qtable(genes), decreasing = TRUE))
+  temp_bg <- names(sort(collapse::qtable(genes), decreasing = TRUE))
   if (is.null(bg)) {
     bg <- temp_bg
   } else {
-    bg <- funique(c(intersect(temp_bg, bg), bg))
+    bg <- collapse::funique(c(intersect(temp_bg, bg), bg))
   }
   
   if (max.genes >= 0L) {
@@ -71,13 +72,13 @@ gmt2mat <- function(gmt,
 
   NR <- length(bg)
   NC <- length(gmt)
-  idx_row <- fmatch(genes, bg)
-  idx_col <- rep.int(seq_len(NC), vlengths(gmt))
+  idx_row <- collapse::fmatch(genes, bg)
+  idx_col <- rep.int(seq_len(NC), collapse::vlengths(gmt))
 
-  idx_not_NA <- whichNA(idx_row, invert = TRUE)
+  idx_not_NA <- collapse::whichNA(idx_row, invert = TRUE)
   if (length(idx_not_NA) != length(idx_row)) {
-    idx_row <- fsubset(idx_row, idx_not_NA)
-    idx_col <- fsubset(idx_col, idx_not_NA)
+    idx_row <- collapse::fsubset(idx_row, idx_not_NA)
+    idx_col <- collapse::fsubset(idx_col, idx_not_NA)
   }
 
   if (sparse) {
