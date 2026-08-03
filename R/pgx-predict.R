@@ -421,7 +421,7 @@ pgx.variableImportance <- function(X, y,
 
   if ("ftest" %in% methods) {
     runtime[["ftest"]] <- system.time({
-      res <- gx.limma(X, y, lfc = 0, fdr = 1, f.test = TRUE)
+      res <- gx.limmaF(X, y, lfc = 0, fdr = 1)
     })
     imp1 <- -log10(res[rownames(X), "P.Value"])
     names(imp1) <- rownames(X)
