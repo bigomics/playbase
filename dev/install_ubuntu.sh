@@ -4,7 +4,7 @@ export LANGUAGE=en_US:en
 export LC_ALL=en_US.UTF-8 
 
 apt update && apt install -y \
-    locales apt-utils software-properties-common \
+    locales apt-utils  \
     libcurl4-gnutls-dev libnode-dev libv8-dev \
     libssl-dev libxml2-dev libjpeg-dev \
     libgl-dev libglu-dev tk-dev libhdf5-dev \
@@ -12,8 +12,8 @@ apt update && apt install -y \
     libudunits2-dev libgdal-dev libproj-dev libbz2-dev \
     jags cmake git procps htop \
     python3 python3-pip python-is-python3 \
-    pdftk vim-tiny less wget gdebi-core \
-    pandoc imagemagick libfftw3-dev libglpk-dev \
+    pdftk vim-tiny less wget gdebi-core pandoc \
+    imagemagick libmagick++-dev libfftw3-dev libglpk-dev \
     libgsl-dev librsvg2-dev libgsl-dev curl \
     libsodium-dev libnlopt-dev \
     libharfbuzz-dev libfribidi-dev \
