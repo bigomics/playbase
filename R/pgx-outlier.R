@@ -7,7 +7,7 @@
 detectOutlierSamples <- function(X,
                                  methods = c("z.correlation", "z.distance",
                                    "z.features", "z.isoforest")[1:3],
-                                 col=col, plot = TRUE, par = TRUE) {
+                                 col = "grey70", plot = TRUE, par = TRUE) {
 
   if(is.null(methods)) {
     methods = c("z.correlation", "z.distance", "z.features", "z.isoforest")
@@ -38,12 +38,15 @@ detectOutlierSamples <- function(X,
   xz <- colMeans(xz, na.rm = TRUE)
   z3 <- abs(xz - median(xz, na.rm = TRUE)) / mad(xz, na.rm = TRUE)
 
-  ## isoforest z-score
-  z4 <- outlier.isoforest_zscore(X, scale=TRUE, ndim=2, ntrees=10000) 
-  
-  Z <- cbind(z1, z2, z3, z4)
-  colnames(Z) <- c("z.correlation", "z.distance", "z.features", "z.isoforest")
-  Z <- Z[,which(colnames(Z) %in% methods)]
+  ## isoforest z-score. only on request: fitting 10k trees is expensive
+  if ("z.isoforest" %in% methods) {
+    z4 <- outlier.isoforest_zscore(X, scale=TRUE, ndim=2, ntrees=10000)
+  }
+
+  ## NULL columns are dropped by cbind(), so unrequested methods vanish here
+  Z <- cbind(z.correlation = z1, z.distance = z2, z.features = z3,
+    z.isoforest = z4)
+  Z <- Z[, which(colnames(Z) %in% methods), drop = FALSE]
 
   zz <- rowMeans(Z, na.rm = TRUE)
   z0 <- 0.1 * mean(Z, na.rm = TRUE)
