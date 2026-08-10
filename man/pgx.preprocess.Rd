@@ -35,6 +35,9 @@ pgx.preprocess(
   \item{impute_method}{Imputation method passed to `imputeMissing`. Default "SVD2".}
   \item{remove_outliers}{Drop outlier samples. Default FALSE.}
   \item{outlier_threshold}{z-score cutoff for `detectOutlierSamples`. Default 3.}
+  \item{outlier_methods}{z-score methods for `detectOutlierSamples`: any of
+    "z.correlation", "z.distance", "z.features", "z.isoforest". Default the
+    first three; "z.isoforest" is opt-in as it fits an isolation forest.}
   \item{meth_type}{Methylation array type for `normalizeMethylation`. Default NULL.}
 }}
 }
