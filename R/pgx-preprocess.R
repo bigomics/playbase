@@ -201,7 +201,9 @@ pgx.preprocess <- function(counts,
       }
     }
     res <- playbase::detectOutlierSamples(X, methods = opt$outlier_methods, plot = FALSE)
-    is.outlier <- (res$z.outlier > opt$outlier_threshold)
+    ## NA-safe: a non-finite score must not be read as an outlier, and must not
+    ## reach the if() below as NA ("missing value where TRUE/FALSE needed").
+    is.outlier <- !is.na(res$z.outlier) & (res$z.outlier > opt$outlier_threshold)
     if (any(is.outlier) && !all(is.outlier)) {
       X <- X[, which(!is.outlier), drop = FALSE]
       counts <- counts[, colnames(X), drop = FALSE]

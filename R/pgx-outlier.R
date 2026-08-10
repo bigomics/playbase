@@ -23,22 +23,35 @@ detectOutlierSamples <- function(X,
   distX <- as.matrix(dist(t(X)))
 
   z1=z2=z3=z4=NULL
-  
+
+  ## robust z-score. mad() is 0 as soon as over half the values tie (e.g. a
+  ## sample uploaded twice), which used to give 0/0 = NaN for every sample and
+  ## crash the caller. Fall back to the mean absolute deviation, and to zeros
+  ## when every value really is identical (nothing deviates, so nothing is an
+  ## outlier). Unchanged whenever mad() > 0.
+  zscore <- function(x) {
+    dx <- abs(x - median(x, na.rm = TRUE))
+    s <- mad(x, na.rm = TRUE)
+    if (s == 0) s <- mean(dx, na.rm = TRUE) / 0.7979 ## consistency constant
+    if (s == 0) return(dx * 0)
+    dx / s
+  }
+
   ## z-score based on correlation
   cor.median <- apply(abs(corX), 1, median, na.rm = TRUE)
   x1 <- (cor.median - mean(cor.median, na.rm = TRUE))
-  z1 <- abs(x1 - median(x1, na.rm = TRUE)) / mad(x1, na.rm = TRUE)
+  z1 <- zscore(x1)
 
   ## z-score based on euclidean distance
   dist.max <- apply(distX, 1, max, na.rm = TRUE)
   dist.q10 <- apply(distX, 1, quantile, probs = 0.1, na.rm = TRUE)
   dist.r <- dist.q10 / dist.max
-  z2 <- abs(dist.r - median(dist.r, na.rm = TRUE)) / mad(dist.r, na.rm = TRUE)
+  z2 <- zscore(dist.r)
 
   ## gene-wise z-score
   xz <- abs(X - rowMeans(X, na.rm = TRUE)) / matrixStats::rowSds(X, na.rm = TRUE)
   xz <- colMeans(xz, na.rm = TRUE)
-  z3 <- abs(xz - median(xz, na.rm = TRUE)) / mad(xz, na.rm = TRUE)
+  z3 <- zscore(xz)
 
   ## isoforest z-score. only on request: fitting 10k trees is expensive
   if ("z.isoforest" %in% methods) {
@@ -62,13 +75,19 @@ detectOutlierSamples <- function(X,
 #' @export
 plotOutlierScores <- function(res.outliers, z.threshold = c(3, 6, 9),
                               col = "grey70", par = TRUE) {
-  if (par) par(mfrow = c(2, 3), mar = c(8, 4, 2, 2))
+  if (par) {
+    ## restore the caller's layout, we are a guest in their device
+    opar <- graphics::par(mfrow = c(2, 3), mar = c(8, 4, 2, 2))
+    on.exit(graphics::par(opar))
+  }
   Z <- res.outliers$Z
   zz <- res.outliers$z.outlier
   zz2 <- res.outliers$z.outlier2
   barplot2 <- function(x, ...) {
     barplot(x, col = col, las = 3,
-      ylim = c(0, max(10, max(Z))),
+      ## finite only: an all-NA/Inf column gave "need finite 'ylim' values".
+      ## max(10, numeric(0)) is 10, so a fully non-finite Z still plots.
+      ylim = c(0, max(10, Z[is.finite(Z)])),
       ylab = "z-score", ...)
     abline(h = z.threshold, lty = 3, col = "red")
   }
