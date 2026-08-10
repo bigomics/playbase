@@ -1295,9 +1295,10 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
       error = function(e) {
         return(NULL)
       }
-      )
+    )
+    if (!is.null(gp.out)) {
+      key_matches["GPROFILER"] <- length(unique(gp.out$input)) / length(probesx)
     }
-    if (!is.null(gp.out)) { key_matches["GPROFILER"] <- length(unique(gp.out$input)) / length(probesx) }
   }
 
   if (max(key_matches, na.rm = TRUE) < 0.01) {
