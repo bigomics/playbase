@@ -33,6 +33,9 @@
 #'     \item{impute_method}{Imputation method passed to `imputeMissing`. Default "SVD2".}
 #'     \item{remove_outliers}{Drop outlier samples. Default FALSE.}
 #'     \item{outlier_threshold}{z-score cutoff for `detectOutlierSamples`. Default 3.}
+#'     \item{outlier_methods}{z-score methods for `detectOutlierSamples`: any of
+#'       "z.correlation", "z.distance", "z.features", "z.isoforest". Default the
+#'       first three; "z.isoforest" is opt-in as it fits an isolation forest.}
 #'     \item{meth_type}{Methylation array type for `normalizeMethylation`. Default NULL.}
 #'   }
 #'
@@ -59,6 +62,9 @@ pgx.preprocess <- function(counts,
       impute_method = "SVD2",
       remove_outliers = FALSE,
       outlier_threshold = 3,
+      ## NB: not NULL. detectOutlierSamples() reads NULL as "all methods",
+      ## which would switch on the isoforest behind the caller's back.
+      outlier_methods = c("z.correlation", "z.distance", "z.features"),
       meth_type = NULL
     ),
     options
@@ -194,7 +200,7 @@ pgx.preprocess <- function(counts,
         X <- playbase::imputeMissing(X, method = "SVD2")
       }
     }
-    res <- playbase::detectOutlierSamples(X, plot = FALSE)
+    res <- playbase::detectOutlierSamples(X, methods = opt$outlier_methods, plot = FALSE)
     is.outlier <- (res$z.outlier > opt$outlier_threshold)
     if (any(is.outlier) && !all(is.outlier)) {
       X <- X[, which(!is.outlier), drop = FALSE]

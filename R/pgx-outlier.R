@@ -9,9 +9,11 @@ detectOutlierSamples <- function(X,
                                    "z.features", "z.isoforest")[1:3],
                                  col = "grey70", plot = TRUE, par = TRUE) {
 
-  if(is.null(methods)) {
-    methods = c("z.correlation", "z.distance", "z.features", "z.isoforest")
-  }
+  all.methods <- c("z.correlation", "z.distance", "z.features", "z.isoforest")
+  if (is.null(methods)) methods <- all.methods
+  ## errors on a typo. without this an unmatched name silently yields a
+  ## zero-column Z and NaN z-scores, which read as "no outliers".
+  methods <- match.arg(methods, all.methods, several.ok = TRUE)
 
   ## correlation and distance
   X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], 1000)
@@ -40,7 +42,7 @@ detectOutlierSamples <- function(X,
 
   ## isoforest z-score. only on request: fitting 10k trees is expensive
   if ("z.isoforest" %in% methods) {
-    z4 <- outlier.isoforest_zscore(X, scale=TRUE, ndim=2, ntrees=10000)
+    z4 <- outlier.isoforest_zscore(X, ndim=2, ntrees=10000)
   }
 
   ## NULL columns are dropped by cbind(), so unrequested methods vanish here
@@ -72,19 +74,20 @@ plotOutlierScores <- function(res.outliers, z.threshold = c(3, 6, 9),
   }
   barplot2(zz, main = "z.outlier (mean)")
   barplot2(zz2, main = "z.outlier (geom.mean)")
-  for (i in 1:ncol(Z)) {
+  for (i in seq_len(ncol(Z))) {
     z1 <- Z[, i]
     barplot2(z1, main = colnames(Z)[i])
   }
 }
 
 #' 
-outlier.isoforest_zscore <- function(X, scale=TRUE, ndim=2, ntrees=10000) {
+outlier.isoforest_zscore <- function(X, ndim=2, ntrees=10000) {
   cX <- X - rowMeans(X, na.rm=TRUE)
   cX <- cX[complete.cases(cX),,drop=FALSE]
-  res <- irlba::irlba(cX, nv=3)
-  V <- res$v
-  ndim <- min(ndim, min(dim(cX)))
+  ## ponytail: plain svd. callers cap cX at 1000 rows so a truncated
+  ## solver buys nothing, and irlba(nv=3) aborted below 4 samples.
+  V <- svd(cX, nu = 0, nv = min(3, ncol(cX)))$v
+  ndim <- min(ndim, ncol(V))
   model <- isotree::isolation.forest(V, ndim=ndim, ntrees=ntrees, nthreads=8)
   scores <- predict(model, V)
   scores <- abs(scores - mean(scores, na.rm=TRUE))
