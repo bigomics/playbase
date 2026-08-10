@@ -6,8 +6,9 @@ getPathwayImage <- function(wp, val, sbgn.dir = NULL, as.img = FALSE) {
   img <- NULL
   if (grepl("WP", wp)) img <- wikipathview(wp, val = val)
   if (grepl("SMP", wp)) img <- pathbankview(wp, val = val)
-  if (grepl("R-HSA", wp)) img <- getReactomeSVG(wp, val = val)
-  ##  if(grepl("R-HSA",wp)) img <- getReactomeSVG.SBGN(wp, val=val, sbgn.dir=sbgn.dir)
+  ## reactome.org's live exporter is Cloudflare-blocked for server-side requests;
+  ## fetch the native diagram SVG from our own mirror instead (see getReactomeSVG).
+  if (grepl("R-HSA", wp)) img <- getReactomeSVG(wp)
 
   if (is.null(img)) {
     return(NULL)
@@ -25,32 +26,108 @@ getPathwayImage <- function(wp, val, sbgn.dir = NULL, as.img = FALSE) {
 }
 
 
-#' @export
-getReactomeSVG <- function(wp, val = NULL, as.img = FALSE) {
-  require(xml2)
-
-  ## wp="R-HSA-449147"
-  url <- paste0("https://reactome.org/ContentService/exporter/diagram/", wp, ".svg")
-  destfile <- tempfile(fileext = ".svg")
-  down <- tryCatch(
-    {
-      download.file(url, destfile)
-    },
-    error = function(w) {
-      return(NULL)
-    }
+#' Read the offline pathway -> diagram lookup table.
+#'
+#' Precomputed map (inst/extdata/reactome_diagram_map.tsv) from every human
+#' Reactome pathway to the id of the diagram that depicts it -- diagram-owning
+#' pathways map to themselves, sub-pathways to their nearest such ancestor. Built
+#' offline from ReactomePathwaysRelation.txt + humanPathwaysWithDiagrams.txt so
+#' no reactome.org call is needed at runtime.
+#'
+#' @return Named character vector: names are pathway ids, values are diagram ids.
+reactomeDiagramMap <- function() {
+  f <- system.file("extdata", "reactome_diagram_map.tsv", package = "playdata")
+  if (!nzchar(f) || !file.exists(f)) {
+    return(stats::setNames(character(0), character(0)))
+  }
+  m <- utils::read.delim(
+    f,
+    header = FALSE, colClasses = "character",
+    col.names = c("id", "diagram")
   )
+  stats::setNames(m$diagram, m$id)
+}
 
-  if (as.img) {
-    destfile <- list(
-      src = normalizePath(destfile),
-      contentType = "image/svg+xml",
-      width = "100%", height = "100%", ## actual size: 1040x800
-      alt = paste("Reactome pathway downloaded from", url)
-    )
+#' Resolve a Reactome pathway id to the diagram that depicts it.
+#'
+#' @param wp Reactome pathway stable id (e.g. "R-HSA-192823").
+#' @return Diagram-owning pathway id, or NULL when none is known.
+#' @export
+reactomeDiagramId <- function(wp) {
+  id <- reactomeDiagramMap()[wp]
+  if (length(id) == 0 || is.na(id)) NULL else unname(id)
+}
+
+#' Pathway ids for which a native Reactome diagram can be shown.
+#'
+#' Includes sub-pathways that resolve to an ancestor's diagram.
+#'
+#' @export
+reactomeDiagrams <- function() {
+  names(reactomeDiagramMap())
+}
+
+## Decompress a .gz file to a plain file using raw byte streaming. This is as
+## fast as reading a plain file -- it avoids the character-decoding cost that
+## readChar()/readLines() incur on a gz connection.
+.gunzipToFile <- function(gzpath, destfile) {
+  con <- gzfile(gzpath, "rb")
+  on.exit(close(con), add = TRUE)
+  out <- file(destfile, "wb")
+  on.exit(close(out), add = TRUE)
+  repeat {
+    b <- readBin(con, "raw", n = 1e6L)
+    if (length(b) == 0L) break
+    writeBin(b, out)
+  }
+  invisible(destfile)
+}
+
+#' Fetch a native Reactome diagram SVG.
+#'
+#' reactome.org's live exporter is Cloudflare-blocked for server-side requests,
+#' so the native diagram SVGs are shipped gzipped in playdata
+#' (inst/extdata/reactome-svg). The pathway is resolved to the diagram that
+#' depicts it (sub-pathways -> nearest ancestor diagram), decompressed once from
+#' playdata, and cached on disk as a plain SVG.
+#'
+#' @param wp Reactome pathway stable id.
+#' @param val Ignored (kept for call compatibility); native SVGs are not colored.
+#' @param as.img Return a shiny image list instead of a plain file path.
+#' @param cache.dir Directory for the on-disk cache.
+#' @return SVG file path (or image list when as.img), or NULL when unavailable.
+#' @export
+getReactomeSVG <- function(wp, val = NULL, as.img = FALSE,
+                           cache.dir = file.path(tempdir(), "reactome-svg")) {
+  diagram.id <- reactomeDiagramId(wp)
+  if (is.null(diagram.id)) {
+    return(NULL)
   }
 
-  return(destfile)
+  gz <- system.file(
+    "extdata", "reactome-svg", paste0(diagram.id, ".svg.gz"),
+    package = "playdata"
+  )
+  if (!nzchar(gz)) {
+    return(NULL)
+  }
+
+  ## decompress once, then serve from the on-disk cache
+  dir.create(cache.dir, showWarnings = FALSE, recursive = TRUE)
+  destfile <- file.path(cache.dir, paste0(diagram.id, ".svg"))
+  if (!file.exists(destfile) || file.info(destfile)$size == 0) {
+    .gunzipToFile(gz, destfile)
+  }
+
+  if (as.img) {
+    return(list(
+      src = destfile,
+      contentType = "image/svg+xml",
+      width = "100%", height = "100%",
+      alt = paste("Reactome diagram", diagram.id)
+    ))
+  }
+  destfile
 }
 
 

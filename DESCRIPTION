@@ -30,6 +30,7 @@ Imports:
     caret,
     circlize,
     cluster,
+    collapse,
     colorspace,
     ComICS,
     ComplexHeatmap,
