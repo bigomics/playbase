@@ -550,9 +550,9 @@ checkConfounders <- function(pheno, model.par, max.rho = 0.3) {
 #'
 #' @export
 pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
-                               expand = FALSE, collapse = TRUE,
-                               plot = TRUE, horiz = FALSE,
-                               main = NULL, text.cex = 1) {
+                               expand = FALSE, collapse = TRUE,                                                            plot = TRUE, plotby = "phenotype", horiz = FALSE,
+                               legend.pos = c(0.016, 1),
+                               srt = 0, main = NULL, text.cex = 1) {
   getF <- function(x, y) {
     x <- t(scale(t(x))) ## rowscale
     ii <- which(!is.na(y))
@@ -634,7 +634,6 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
     params <- gsub("[=:].*", "", rownames(R))
     #    params <- sub("^[.]","_",params)
     #    params <- sub("[.].*","",params)
-
     rr <- tapply(1:nrow(R), params, function(i) colMeans(R[i, , drop = FALSE]))
     R <- do.call(rbind, rr)
     ##    pp <- tapply(1:nrow(P), params, function(i) apply(P[i,,drop=FALSE],2,min))
@@ -646,12 +645,15 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
     stat0 <- c("correlation", "F-statistic")[1 + 1 * (stat == "F")]
     tt0 <- c("PC correlation", "PC variation")[1 + 1 * (stat == "F")]
     if (is.null(main)) main <- tt0
+    R1 <- R
+    if(plotby == "component") R1 <- t(R)
     if (horiz) {
-      plt <- plot_ggbarplot((R),
+      plt <- plot_ggbarplot(t(R1),
         ylab = "", srt = 0, horiz = TRUE,
         legend.cex = 1.0 * text.cex,
         label.cex = 1.15 * text.cex,
         axis.cex = 1.05 * text.cex,
+        legend.pos = legend.pos,
         group.name = ""
       )
       plt <- plt + ggplot2::theme(
@@ -660,11 +662,12 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
       ) +
         ggplot2::xlab(stat0) + ggplot2::ggtitle(main)
     } else {
-      plt <- plot_ggbarplot(t(R),
-        ylab = stat0, srt = 45, horiz = FALSE,
+      plt <- plot_ggbarplot(t(R1),
+        ylab = stat0, srt = srt, horiz = FALSE,
         legend.cex = 1.0 * text.cex,
         label.cex = 1.15 * text.cex,
         axis.cex = 1.05 * text.cex,
+        legend.pos = legend.pos,        
         group.name = ""
       ) +
         ggplot2::theme(
@@ -677,6 +680,36 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
     return(plt)
   }
   list(R = R, P = P, V = V)
+}
+
+
+#' @export
+pgx.PC_correlation_grid <- function(X, xlist, samples = NULL,
+                                    ncol = NULL, nv = 3, stat = "F",
+                                    expand = FALSE, collapse = TRUE,
+                                    plot = TRUE, plotby = "phenotype", horiz = FALSE,
+                                    legend.pos = c(0.016, 1),
+                                    srt = 0, main = NULL, text.cex = 1) {
+  
+  B <- pgx.computeTechnicalEffects(X, nv = 1)
+  bcat <- sub("[.].*", "", colnames(B))
+  colnames(B) <- paste0(bcat, ":", colnames(B)) ## for collapsing
+  if (!is.null(samples)) B <- cbind(B, samples)
+  
+  plist <- list()
+  i <- 1
+  for (m in names(xlist)) {
+    xx <- xlist[[m]]
+    plist[[m]] <- pgx.PC_correlation(
+      X = xx, Y = B, plotby = plotby,
+      nv = nv, stat = stat, plot = plot, main = m,
+      expand = expand, collapse = collapse,
+      horiz = horiz, text.cex = text.cex, srt = srt,
+      legend.pos = legend.pos
+    )
+  }
+  if(is.null(ncol)) ncol <- ceiling(sqrt(length(plist)))
+  gridExtra::grid.arrange(grobs = plist, ncol = ncol, padding = unit(0.0, "line"))
 }
 
 
@@ -962,10 +995,6 @@ detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
 
 #' @export
 bc.plotCovariateHeatmap <- function(bc.res) {
-  ## bc <- detectBatchEffects(X, samples, pheno, contrasts = NULL,
-  ##                          params = c("statistical", "technical", "pca"),
-  ##                          p.pca = 0.5, p.pheno = 0.05,
-  ##                          k.pca = 10, nv = 1, xrank = NULL)
   B <- bc.res$covariates_plus
   rho <- cor(apply(B, 2, rank))
   colnames(rho) <- rep("", ncol(rho))
@@ -1479,7 +1508,7 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
         horiz = horiz, text.cex = text.cex
       )
     }
-
+    
     gridExtra::grid.arrange(grobs = plist, ncol = ncol, padding = unit(0.0, "line"))
   }
 
@@ -1552,19 +1581,19 @@ bc.CovariateAnalysisPlot <- function(bc.results, k = 1:3, par = TRUE, col = 1) {
       ##      axis(side=2, tick='n', cex.axis=0.001)
       text(
         x = 0.2, y = 0.80, adj = 0.5,
-        labels = "strong batch-effects\nor\nstratification factors"
+        labels = "strong batch-effect"
       )
       text(
         x = 0.75, y = 0.80, adj = 0.5,
-        labels = "well designed model-parameters\nor\nstrong confouders"
+        labels = "strong model-parameter"
       )
       text(
         x = 0.2, y = 0.20, adj = 0.5,
-        labels = 'nuisance parameters\nor\n"noise"'
+        labels = 'nuisance parameter'
       )
       text(
         x = 0.75, y = 0.20, adj = 0.5,
-        labels = "weak model-parameters\nor\nweak confouders"
+        labels = "weak model-parameter"
       )
     } else {
       y1 <- -log10(1e-04 + pxx[, i])

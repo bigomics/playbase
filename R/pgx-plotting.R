@@ -3266,7 +3266,7 @@ plot_ggbarplot <- function(mat, xlab = "x", ylab = "y", srt = 0, main = NULL,
   if (horiz) {
     p <- ggplot2::ggplot(df, ggplot2::aes(x = value, y = x, fill = y)) +
       ggplot2::geom_bar(
-        stat = "identity", color = "black", size = 0.3,
+        stat = "identity", color = "black", ## size = 0.3,
         width = bar_width, position = posmode
       )
     p <- p + ggplot2::xlab(xlab) +
@@ -3285,7 +3285,7 @@ plot_ggbarplot <- function(mat, xlab = "x", ylab = "y", srt = 0, main = NULL,
   } else {
     p <- ggplot2::ggplot(df, ggplot2::aes(x = x, y = value, fill = y)) +
       ggplot2::geom_bar(
-        stat = "identity", color = "black", size = 0.3,
+        stat = "identity", color = "black", ## size = 0.3,
         width = bar_width, position = posmode
       )
     p <- p + ggplot2::xlab(xlab) +

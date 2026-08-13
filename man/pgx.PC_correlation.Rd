@@ -12,7 +12,9 @@ pgx.PC_correlation(
   expand = FALSE,
   collapse = TRUE,
   plot = TRUE,
+  plotby = "phenotype",
   horiz = FALSE,
+  srt = 0,
   main = NULL,
   text.cex = 1
 )
