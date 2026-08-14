@@ -3,7 +3,7 @@
 ## Copyright (c) 2018-2026 BigOmics Analytics Sagl. All rights reserved.
 ##
 
-FROM ubuntu:24.04 AS playbase-os
+FROM debian:trixie AS playbase-os
 
 MAINTAINER BigOmics "support@bigomics.ch"
 
@@ -25,11 +25,6 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 WORKDIR /
 COPY dev/install_ubuntu.sh install_ubuntu.sh
 RUN sh install_ubuntu.sh
-
-# disable c++ version warning (msa package)
-RUN mv /usr/include/c++/13/bits/c++0x_warning.h \
-    /usr/include/c++/13/bits/c++0x_warning.h.DISABLED && \
-    touch /usr/include/c++/13/bits/c++0x_warning.h 
 
 #------------------------------------------------------------
 # Clean up when done.

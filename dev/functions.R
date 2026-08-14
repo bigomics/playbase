@@ -51,17 +51,15 @@ scan_packages <- function(path='R') {
     pkg.name <- gsub(".*[/]|@.*","",repo)
     remotes.url[pkg.name] <<- github_url(repo)
   }
+  ## See dev/PINS.md before touching these. They are not just version pins:
+  ## none of these packages is in DESCRIPTION Imports, so the entry here is the
+  ## only thing that installs them at all. Removing one removes the package.
   remotes.url <- c(
     "KEGG.db" = "url::https://bioconductor.org/packages/3.11/data/annotation/src/contrib/KEGG.db_3.2.4.tar.gz",
     "org.Pf.plasmo.db" = "url::https://bioconductor.org/packages/3.14/data/annotation/src/contrib/org.Pf.plasmo.db_3.14.0.tar.gz",
     "Azimuth" = "url::https://github.com/satijalab/azimuth/archive/refs/heads/master.zip"
   )
 
-  force.remotes.url <- c(
-    "rjson" = "url::https://cran.r-project.org/src/contrib/Archive/rjson/rjson_0.2.21.tar.gz",
-    "rms" = "url::https://cran.r-project.org/src/contrib/Archive/rms/rms_6.8-0.tar.gz"    
-  )
-  
   ## commented out entries are now in standard CRAN/cBio repo
   add_github("bigomics/PCSF")
   add_github("bigomics/playdata")
@@ -90,7 +88,6 @@ scan_packages <- function(path='R') {
   pkg.missing <- setdiff( c(pkg.imports,names(pkg.remotes)), pkg.installed)
   missing.imports <- setdiff(pkg.imports, pkg.installed)
   missing.remotes <- pkg.remotes[!(names(pkg.remotes) %in% pkg.installed)]
-  missing.remotes <- c(missing.remotes, force.remotes.url)
   
   list(
     used = pkg.used,
@@ -120,9 +117,20 @@ install_dependencies <- function(use.remotes=FALSE) {
 
   if(!require("remotes")) install.packages('remotes')
   if(!require("BiocManager")) {
-    remotes::install_version('BiocManager', version='1.30.23')
-    if(!BiocManager::version()=="3.18") BiocManager::install(version='3.18')
+    install.packages('BiocManager')
+    if(!BiocManager::version()=="3.22") BiocManager::install(version='3.22')
   }
+
+  ## remotes resolves dependencies from getOption("repos"), and rspm.R sets
+  ## that to CRAN only -- so every Bioconductor dependency of a Remotes entry
+  ## is "not available" (PCSF -> org.Hs.eg.db, topGO). Add the BioC repos;
+  ## repositories() keeps the CRAN entry rspm.R configured.
+  options(repos = BiocManager::repositories())
+
+  ## DeconRNASeq was dropped from Bioconductor after 3.18, so DESCRIPTION pins
+  ## it to a 3.18 tarball. remotes does not resolve dependencies for url::
+  ## remotes, so limSolve would never be installed and DeconRNASeq fails.
+  if(!require("limSolve")) install.packages("limSolve")
 
   if(use.remotes) {
     # install dependencies using remotes
