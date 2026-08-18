@@ -903,6 +903,25 @@ pgx.computePGX <- function(pgx,
   if (pgx$datatype == "methylomics") {
     require_epigenetics()
     pgx$X <- playbase.epigenetics::mToBeta(pgx$X)
+
+    ## Epigenetic clocks, fitted here rather than in the app: they are a pure
+    ## function of the beta matrix, so once it exists there is nothing left to
+    ## wait for, and this is the first line at which it does. Ten clocks take
+    ## ~40s, which is a fine one-off at dataset creation and a bad thing to
+    ## make every session pay. Fitted with no coverage floor and no clock
+    ## selection - both are display choices the app applies to `cov`, not
+    ## inputs that change any age.
+    ##
+    ## A failure here must not lose the dataset: the app still has its live
+    ## path and simply falls back to it.
+    message("[pgx.computePGX] fitting epigenetic clocks...")
+    pgx$meth$clocks <- tryCatch(
+      playbase.epigenetics::compute_clocks(pgx$X),
+      error = function(e) {
+        warning("[pgx.computePGX] epigenetic clocks failed: ", conditionMessage(e))
+        NULL
+      }
+    )
   }
 
   if (!is.null(ai_features)) {
