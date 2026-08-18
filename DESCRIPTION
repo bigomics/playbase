@@ -10,6 +10,7 @@ License: Dual Commercial and Non-Commercial
 Encoding: UTF-8
 LazyData: true
 Suggests: 
+    playbase.epigenetics,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Depends: 
@@ -79,7 +80,6 @@ Imports:
     isotree,
     isva,
     jsonlite,
-    karyoploteR,
     lazyeval,
     limma,
     magrittr,
@@ -90,7 +90,6 @@ Imports:
     metap,
     methods,
     microbenchmark,
-    minfi,
     missForest,
     mixOmics,
     MOFA2,
@@ -130,7 +129,6 @@ Imports:
     RcppML,
     recount,
     RefMet,
-    regioneR,
     reshape2,
     reticulate,
     Rfast,
@@ -173,7 +171,6 @@ Imports:
     vioplot,
     viridis,
     visNetwork,
-    wateRmelon,
     webshot2,
     WGCNA,
     WGCNAplus,
@@ -181,6 +178,7 @@ Imports:
     xgboost,
     xml2,
 Remotes:
+    playbase.epigenetics=url::https://github.com/bigomics/playbase-epigenetics/archive/HEAD.zip,
     KEGG.db=url::https://bioconductor.org/packages/3.11/data/annotation/src/contrib/KEGG.db_3.2.4.tar.gz,
     org.Pf.plasmo.db=url::https://bioconductor.org/packages/3.14/data/annotation/src/contrib/org.Pf.plasmo.db_3.14.0.tar.gz,
     PCSF=url::https://github.com/bigomics/PCSF/archive/HEAD.zip,

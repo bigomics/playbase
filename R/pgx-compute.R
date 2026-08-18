@@ -900,7 +900,10 @@ pgx.computePGX <- function(pgx,
   )
 
   ## methylomics: ensure all OPG graphics & tables use beta.
-  if (pgx$datatype == "methylomics") pgx$X <- playbase::mToBeta(pgx$X)
+  if (pgx$datatype == "methylomics") {
+    require_epigenetics()
+    pgx$X <- playbase.epigenetics::mToBeta(pgx$X)
+  }
 
   if (!is.null(ai_features)) {
     if (!is.list(ai_features)) {

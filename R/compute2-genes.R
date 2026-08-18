@@ -98,24 +98,26 @@ compute_testGenes <- function(pgx,
 
   if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {
 
+    require_epigenetics()
+
     if ("Differentially methylated regions" %in% pgx$dma) {
 
       message("[playbase::compute_testGenes] Methylomics: DMRs...")
 
       vv <- range(counts, na.rm = TRUE)
       is.beta <- (vv[1] >= 0 & vv[2] <= 1) ## original counts
-      MG <- mergeCpG(data = counts, genes = pgx$genes)
-      counts <- betaToM(MG$data)
+      MG <- playbase.epigenetics::mergeCpG(data = counts, genes = pgx$genes)
+      counts <- playbase.epigenetics::betaToM(MG$data)
       if (is.beta) pgx$counts=MG$data else pgx$counts=counts ## restore as original (beta or m)
       rm(MG); gc()
 
-      MG <- mergeCpG(data = X, genes = pgx$genes)
-      X <- betaToM(MG$data)
+      MG <- playbase.epigenetics::mergeCpG(data = X, genes = pgx$genes)
+      X <- playbase.epigenetics::betaToM(MG$data)
       pgx$genes <- MG$genes
       rm(MG); gc()
       
     } else {
-      counts <- X <- betaToM(counts)
+      counts <- X <- playbase.epigenetics::betaToM(counts)
     }
   }
 

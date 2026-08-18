@@ -98,7 +98,8 @@ pgx.preprocess <- function(counts,
       X[ii, ] <- log2(counts[ii, ] + prior)
     }
   } else if (opt$datatype == "methylomics") {
-    X <- playbase::mToBeta(counts)
+    require_epigenetics()
+    X <- playbase.epigenetics::mToBeta(counts)
     prior <- 0
   } else {
     prior0 <- playbase::getPrior(counts)
@@ -153,7 +154,7 @@ pgx.preprocess <- function(counts,
     if (opt$datatype == "multi-omics") {
       X <- playbase::normalizeMultiOmics(X)
     } else if (opt$datatype == "methylomics") {
-      nX <- try(playbase::normalizeMethylation(X, opt$norm_method, opt$meth_type), silent = TRUE)
+      nX <- try(playbase.epigenetics::normalizeMethylation(X, opt$norm_method, opt$meth_type), silent = TRUE)
       if (!inherits(nX, "try-error") && !is.null(nX)) X <- nX
     } else {
       if (identical(opt$norm_method, "reference") &&
