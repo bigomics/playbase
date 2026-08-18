@@ -83,6 +83,12 @@ scan_packages <- function(path='R') {
   add_github('cran/riverplot')
   add_github('Ironholds/rgeolocate')
 
+  ## Not add_github(): that derives the package name from the repo name, and
+  ## here the two differ deliberately - R package names cannot contain '-'.
+  ## Without this the scanner sees playbase.epigenetics:: in R/ and tries to
+  ## BiocManager::install() a package that exists on neither CRAN nor Bioc.
+  remotes.url["playbase.epigenetics"] <- github_url("bigomics/playbase-epigenetics")
+
   pkg.remotes <- remotes.url[names(remotes.url) %in% pkg.used]
   pkg.imports <- setdiff(pkg.used, names(pkg.remotes))
 
