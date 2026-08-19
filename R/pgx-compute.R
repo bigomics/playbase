@@ -331,6 +331,9 @@ pgx.createPGX <- function(counts,
   ## prune unused samples
   contrasts[contrasts %in% c("", " ", "NA")] <- NA
   used.samples <- names(which(rowSums(!is.na(contrasts)) > 0))
+  ## contrasts still describes every uploaded sample, but counts may already be
+  ## shorter - pgx.preprocess() drops the ones the user removed at QC.
+  used.samples <- intersect(used.samples, colnames(counts))
   if (prune.samples && length(used.samples) < ncol(counts)) {
     counts <- counts[, used.samples, drop = FALSE]
     samples <- samples[used.samples, , drop = FALSE]
@@ -386,6 +389,15 @@ pgx.createPGX <- function(counts,
   description <- gsub("[\"\']", " ", description) ## remove quotes (important!!)
   description <- gsub("[\n]", ". ", description) ## replace newline
   description <- trimws(gsub("[ ]+", " ", description)) ## remove ws
+
+  ## Appending the symbol rewrites cg00000029 -> cg00000029_RBL2, and every
+  ## methylation lookup keys on the bare probe ID: the epigenetic clocks come
+  ## back with zero coverage and no ages at all. Off for methylomics whatever
+  ## the caller asked for, and corrected here so settings record what happened.
+  if (identical(datatype, "methylomics") && isTRUE(convert.hugo)) {
+    message("[pgx.createPGX] methylomics: not appending symbols to probe IDs")
+    convert.hugo <- FALSE
+  }
 
   ## add to setting info
   settings$filter.genes <- filter.genes
