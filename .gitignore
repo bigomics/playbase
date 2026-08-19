@@ -51,11 +51,9 @@ USER_INPUT/
 user_input/
 
 # Sensitive files #
-firebase.rds
 chirp_data.db
 chirp_data.csv
 gmail_creds
-test-firestore.R
 .httr-oauth
 bigomics-extra.js
 .Rproj.user
