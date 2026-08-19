@@ -81,9 +81,10 @@ getProbeAnnotation <- function(organism,
 
   if (datatype == "methylomics") {
     require_epigenetics()
-    c1 <- is.null(meth_type)
-    c2 <- !meth_type %in% c("450K array", "EPIC array")
-    if (c1 | c2) meth_type = "450K array"
+    ## NB: || not |. `!NULL %in% x` is logical(0), which makes `if` throw.
+    if (is.null(meth_type) || !meth_type %in% c("450K array", "EPIC array")) {
+      meth_type <- "450K array"
+    }
     genes <- playbase.epigenetics::annotate_methylomics(organism, probes, meth_type = meth_type)
     return(genes)
   }
