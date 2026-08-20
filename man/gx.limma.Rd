@@ -15,12 +15,11 @@ gx.limma(
   max.na = 0.2,
   sort.by = "FC",
   ref = c("ctrl", "ctr", "control", "ct", "dmso", "nt", "0", "0h", "0hr", "non", "no",
-    "not", "neg", "negative", "ref", "veh", "vehicle", "wt", "wildtype", "untreated",
-    "normal", "false", "healthy"),
+    "not", "neg", "negative", "n", "ref", "veh", "vehicle", "wt", "wildtype",
+    "untreated", "normal", "false", "healthy"),
   trend = FALSE,
   robust = FALSE,
   method = 1,
-  f.test = FALSE,
   verbose = 1
 )
 }
@@ -45,9 +44,9 @@ gx.limma(
 
 \item{trend}{Logical for fitting a trend model.}
 
-\item{f.test}{Logical. Run f-test when phenotype has >2 levels.}
-
 \item{verbose}{Verbosity level.}
+
+\item{f.test}{Logical. Run f-test when phenotype has >2 levels.}
 }
 \value{
 Data frame with limma results.
