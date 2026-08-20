@@ -914,7 +914,12 @@ pgx.computePGX <- function(pgx,
   ## methylomics: ensure all OPG graphics & tables use beta.
   if (pgx$datatype == "methylomics") {
     require_epigenetics()
-    pgx$X <- playbase.epigenetics::mToBeta(pgx$X)
+    ## Only when it is actually on the M scale. compute_testGenes used to always
+    ## hand back M-values; it now returns beta untouched when it skips the fit,
+    ## and mToBeta() of a beta matrix silently corrupts every value.
+    if (max(pgx$X, na.rm = TRUE) > 1 || min(pgx$X, na.rm = TRUE) < 0) {
+      pgx$X <- playbase.epigenetics::mToBeta(pgx$X)
+    }
 
     ## Epigenetic clocks, fitted here rather than in the app: they are a pure
     ## function of the beta matrix, so once it exists there is nothing left to

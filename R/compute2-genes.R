@@ -96,6 +96,51 @@ compute_testGenes <- function(pgx,
   message("Testing differential expression methods: ", paste(methods, collapse = ", "))
   PRIOR.CPM <- 1
 
+  ## Methylomics: fill gx.meta rather than fit it.
+  ##
+  ## The slot is required - pgx.checkObject() lists it, pgxinfo.updateDatasetFolder()
+  ## skips any pgx failing that check, and opg_server.R reads gx.meta$meta[[1]]$fc
+  ## unguarded - but nothing renders it. Methylomics opens the standalone Methylome
+  ## app, which refits limma itself from pgx$X with the user's own covariates,
+  ## masking and SVA. Fitting here computes a model no screen displays, and the
+  ## expensive part is not limma: it is betaToM() over the whole probe matrix,
+  ## which on an 850K EPIC array is two more copies of the data.
+  ##
+  ## The fill is neutral, not random: zero effect, q = 1. This dataset therefore
+  ## contributes no fold changes to the cross-dataset FC index, which is honest -
+  ## no differential test was run - where invented values would not be.
+  if (!is.null(pgx$datatype) && pgx$datatype == "methylomics") {
+    message("[compute_testGenes] methylomics: filling gx.meta, not fitting")
+    ctd <- colnames(contr.matrix)
+    n <- nrow(X)
+    one_col <- function(v) {
+      m <- matrix(v, nrow = n, ncol = 1,
+                  dimnames = list(rownames(X), "not.fitted"))
+      I(m)
+    }
+    stub <- lapply(ctd, function(k) {
+      data.frame(
+        meta.fx = rep(0, n), meta.p = rep(1, n), meta.q = rep(1, n),
+        avg.0 = rep(0, n), avg.1 = rep(0, n),
+        fc = one_col(0), p = one_col(1), q = one_col(1),
+        row.names = rownames(X), check.names = FALSE
+      )
+    })
+    names(stub) <- ctd
+    pgx$model.parameters <- model.parameters
+    ## X stays on the beta scale here. compute_testGenes normally hands back
+    ## M-values and pgx.computePGX converts them; that conversion now checks the
+    ## range, so leaving beta is safe.
+    pgx$X <- X
+    pgx$gx.meta <- list(
+      meta = stub,
+      meta.covs = NULL,
+      sig.counts = NULL
+    )
+    message("[compute_testGenes] done (methylomics, not fitted)")
+    return(pgx)
+  }
+
   if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {
 
     require_epigenetics()
