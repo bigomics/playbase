@@ -141,30 +141,10 @@ compute_testGenes <- function(pgx,
     return(pgx)
   }
 
-  if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {
-
-    require_epigenetics()
-
-    if ("Differentially methylated regions" %in% pgx$dma) {
-
-      message("[playbase::compute_testGenes] Methylomics: DMRs...")
-
-      vv <- range(counts, na.rm = TRUE)
-      is.beta <- (vv[1] >= 0 & vv[2] <= 1) ## original counts
-      MG <- playbase.epigenetics::mergeCpG(data = counts, genes = pgx$genes)
-      counts <- playbase.epigenetics::betaToM(MG$data)
-      if (is.beta) pgx$counts=MG$data else pgx$counts=counts ## restore as original (beta or m)
-      rm(MG); gc()
-
-      MG <- playbase.epigenetics::mergeCpG(data = X, genes = pgx$genes)
-      X <- playbase.epigenetics::betaToM(MG$data)
-      pgx$genes <- MG$genes
-      rm(MG); gc()
-      
-    } else {
-      counts <- X <- playbase.epigenetics::betaToM(counts)
-    }
-  }
+  ## (The DMR-collapsing branch that used to live here is gone with the block
+  ## above: it tested the same condition, so it had become unreachable, and the
+  ## upload option that set pgx$dma to "Differentially methylated regions" was
+  ## removed for overwriting pgx$counts/X/genes with a gene-level matrix.)
 
   ## Run methods
   message("[compute_testGenes] start fitting... ")

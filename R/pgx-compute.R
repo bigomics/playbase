@@ -914,12 +914,19 @@ pgx.computePGX <- function(pgx,
   ## methylomics: ensure all OPG graphics & tables use beta.
   if (pgx$datatype == "methylomics") {
     require_epigenetics()
-    ## Only when it is actually on the M scale. compute_testGenes used to always
-    ## hand back M-values; it now returns beta untouched when it skips the fit,
-    ## and mToBeta() of a beta matrix silently corrupts every value.
-    if (max(pgx$X, na.rm = TRUE) > 1 || min(pgx$X, na.rm = TRUE) < 0) {
-      pgx$X <- playbase.epigenetics::mToBeta(pgx$X)
-    }
+    ## No conversion here any more. compute_testGenes used to hand back
+    ## M-values, so this called mToBeta(); it now returns beta untouched for
+    ## methylomics, on every path.
+    ##
+    ## The range check that briefly stood in for that was worse than the bug it
+    ## guarded. "Outside [0,1] therefore M-values" is false after two ordinary
+    ## user options: limma::removeBatchEffect on bimodal beta pushes ~10% of
+    ## probes to -0.24..1.28, and imputeMissing(method = "SVD2") does the same.
+    ## Either one made the guard fire on a beta matrix and run 2^b/(1+2^b) over
+    ## the whole thing - sd 0.353 collapses to 0.059, every value lands in
+    ## [0.42, 0.71], and nothing downstream can tell, because the wreckage is
+    ## back inside [0,1]. The clocks fitted sixteen lines below would have been
+    ## fitted on it.
 
     ## Epigenetic clocks, fitted here rather than in the app: they are a pure
     ## function of the beta matrix, so once it exists there is nothing left to
