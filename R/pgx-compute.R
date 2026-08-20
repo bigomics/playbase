@@ -797,6 +797,24 @@ pgx.computePGX <- function(pgx,
     pgx <- pgx.clusterSamples(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
   }
 
+  ## pgx.initialize() lists tsne2d in obj.needed and returns NULL when it is
+  ## absent, so a dataset computed with do.cluster = FALSE - which is how
+  ## methylomics is computed now - passes pgx.checkObject(), reaches the
+  ## Library, and then fails to open with "ERROR in object initialization".
+  ## GMT already had this problem and solves it two hundred lines up by
+  ## storing an explicitly empty matrix; tsne2d had no such fallback.
+  ##
+  ## NA coordinates rather than an empty matrix, and rownames kept, so that a
+  ## consumer indexing by sample name gets NA instead of a subscript error.
+  ## Every reader is a Dashboard board, and no datatype computed without
+  ## clustering opens one.
+  if (is.null(pgx$tsne2d)) {
+    pgx$tsne2d <- matrix(
+      NA_real_, nrow = ncol(pgx$X), ncol = 2,
+      dimnames = list(colnames(pgx$X), c("tsne2d.1", "tsne2d.2"))
+    )
+  }
+
   ## Make contrasts by cluster
   if (cluster.contrasts) {
     ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
