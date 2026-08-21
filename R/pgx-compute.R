@@ -608,6 +608,27 @@ pgx.createPGX <- function(counts,
     samples <- pgx$samples
     contrasts <- pgx$contrasts
 
+    ## Methylomics corrects on M, not on beta. Every method here is an additive
+    ## linear correction (limma::removeBatchEffect, ComBat, ...) and beta is a
+    ## bounded ratio, so the correction walks off the end of it: on GSE43976
+    ## (23471 probes x 95 samples, batch = slide) limma on beta lands 0.12% of
+    ## the values - 2.2% of the probes - outside [0,1], spanning -0.155..1.204,
+    ## and it is the probes that carry the signal that get moved furthest, mean
+    ## |delta| 0.0021 for beta<0.05 and 0.0033 for beta>0.95 against 0.0016 /
+    ## 0.0023 via M. Both scales remove the batch equally well - median
+    ## per-probe slide variance 0.074 -> 0.0015 on beta, 0.074 -> 0.0016 on M,
+    ## each measured on its own scale - so the round trip costs nothing and
+    ## buys a matrix that is still beta. The same applies to the SVD2
+    ## imputation below, which is why the transform wraps both.
+    ## betaToM() returns its input untouched when it is not in [0,1], so the
+    ## flag mirrors that test: back-transform only what was transformed.
+    beta.scale <- isTRUE(pgx$datatype == "methylomics") &&
+      min(X, na.rm = TRUE) >= 0 && max(X, na.rm = TRUE) <= 1
+    if (beta.scale) {
+      require_epigenetics()
+      X <- playbase.epigenetics::betaToM(X)
+    }
+
     message("[pgx.createPGX] batch.correct.method=", batch.correct.method)
     message("[pgx.createPGX] batch.pars=", batch.pars)
 
@@ -637,34 +658,53 @@ pgx.createPGX <- function(counts,
       cX[jj] <- NA ## Batch corrected X; original NAs restored
     }
 
-    ## Compute correctedCounts from corrected X.
-    counts <- pgx$counts ## same as the one originally uploaded by user.
-    jj <- which(rownames(counts) %in% rownames(cX))
-    kk <- which(colnames(counts) %in% colnames(cX))
-    counts <- counts[jj, kk]
-    tc.counts <- colSums(counts, na.rm = TRUE)
-
-    prior <- 0
-    if (min(counts, na.rm = TRUE) == 0 || any(is.na(counts))) {
-      prior <- min(counts[counts > 0], na.rm = TRUE)
+    if (beta.scale) {
+      ## Written out rather than mToBeta(): mToBeta returns its input untouched
+      ## when the input already lies in [0,1], and a corrected M matrix can sit
+      ## there on a small or degenerate dataset - the back-transform would then
+      ## no-op and M would be stored as beta. The scale is known here, so it is
+      ## not re-guessed. 2^m/(1+2^m) cannot leave (0,1), which is the point.
+      cX <- 2**cX / (1 + 2**cX)
     }
-    if (grepl("CPM|TMM", norm_method)) prior <- 1
-    rc.counts <- pmax(2**cX - prior, 0) # recomputed counts
-    tc.rc.counts <- colSums(rc.counts, na.rm = TRUE)
 
-    ## Put back to original total counts.
-    corrected.counts <- t(t(rc.counts) / tc.rc.counts * tc.counts)
+    ## Compute correctedCounts from corrected X.
+    ##
+    ## Not for methylomics: there counts IS the beta matrix, the same object as
+    ## X, so the 2**cX below - which exists to undo a log2 - would turn beta
+    ## into 2^beta and the column rescaling would spread that over the sheet.
+    ## The corrected beta is the corrected "counts"; nothing needs
+    ## reconstructing. The methylome app reads X only, but board.dataview and
+    ## board.connectivity do read counts.
+    corrected.counts <- NULL
+    if (!beta.scale) {
+      counts <- pgx$counts ## same as the one originally uploaded by user.
+      jj <- which(rownames(counts) %in% rownames(cX))
+      kk <- which(colnames(counts) %in% colnames(cX))
+      counts <- counts[jj, kk]
+      tc.counts <- colSums(counts, na.rm = TRUE)
 
-    ## Restore original NAs in correctedCounts.
-    jj <- which(is.na(counts), arr.ind = TRUE)
-    if (any(jj)) corrected.counts[jj] <- NA
+      prior <- 0
+      if (min(counts, na.rm = TRUE) == 0 || any(is.na(counts))) {
+        prior <- min(counts[counts > 0], na.rm = TRUE)
+      }
+      if (grepl("CPM|TMM", norm_method)) prior <- 1
+      rc.counts <- pmax(2**cX - prior, 0) # recomputed counts
+      tc.rc.counts <- colSums(rc.counts, na.rm = TRUE)
+
+      ## Put back to original total counts.
+      corrected.counts <- t(t(rc.counts) / tc.rc.counts * tc.counts)
+
+      ## Restore original NAs in correctedCounts.
+      jj <- which(is.na(counts), arr.ind = TRUE)
+      if (any(jj)) corrected.counts[jj] <- NA
+    }
 
     message("[pgx.createPGX] Batch correction completed\n")
 
     pgx$X <- cX
-    pgx$counts <- corrected.counts
+    pgx$counts <- if (beta.scale) cX else corrected.counts
 
-    rm(xlist, cX, counts, corrected.counts)
+    rm(list = intersect(c("xlist", "cX", "counts", "corrected.counts"), ls()))
   }
 
   rm(counts, X, samples, contrasts)
@@ -794,7 +834,21 @@ pgx.computePGX <- function(pgx,
   if (do.cluster || cluster.contrasts) {
     message("[pgx.computePGX] clustering samples...")
     mm <- c("pca", "tsne", "umap")
-    pgx <- pgx.clusterSamples(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
+    ## Methylomics clusters on M, not on beta. Beta is a bounded ratio and is
+    ## heteroscedastic at both ends, so the top-SD feature selection inside
+    ## pgx.clusterBigMatrix is dominated by probes sitting near 0.5 whatever
+    ## their behaviour, while a probe moving 0.02 -> 0.10 - a fourfold change
+    ## in methylation - barely registers. M is the convention for every
+    ## distance-based method on arrays (Du 2010), and it is the scale the EWAS
+    ## is fitted on, so the embedding and the model see the same data.
+    ## betaToM returns its input untouched when the matrix is not in [0,1],
+    ## so a pgx already stored as M is not transformed twice.
+    Xclust <- NULL
+    if (isTRUE(pgx$datatype == "methylomics")) {
+      require_epigenetics()
+      Xclust <- playbase.epigenetics::betaToM(pgx$X)
+    }
+    pgx <- pgx.clusterSamples(pgx, dims = c(2, 3), perplexity = NULL, X = Xclust, methods = mm)
   }
 
   ## pgx.initialize() lists tsne2d in obj.needed and returns NULL when it is
@@ -938,8 +992,17 @@ pgx.computePGX <- function(pgx,
     ##
     ## The range check that briefly stood in for that was worse than the bug it
     ## guarded. "Outside [0,1] therefore M-values" is false after two ordinary
-    ## user options: limma::removeBatchEffect on bimodal beta pushes ~10% of
-    ## probes to -0.24..1.28, and imputeMissing(method = "SVD2") does the same.
+    ## user options: limma::removeBatchEffect on bimodal beta walks probes off
+    ## the end of it, and imputeMissing(method = "SVD2") does the same. Measured
+    ## on GSE43976 (23471 x 95, batch = slide): 2.2% of probes, spanning
+    ## -0.155..1.204. An earlier note here said ~10% and -0.24..1.28; that
+    ## figure came from a different dataset or batch variable and does not
+    ## reproduce on this one. The magnitude moves with the data - the mechanism
+    ## does not, and one spilled probe is enough to fire the guard.
+    ##
+    ## Batch correction no longer produces such a matrix - it runs on M and
+    ## comes back through 2^m/(1+2^m), which cannot leave (0,1) - but SVD2
+    ## imputation on a pgx built before that change still can.
     ## Either one made the guard fire on a beta matrix and run 2^b/(1+2^b) over
     ## the whole thing - sd 0.353 collapses to 0.059, every value lands in
     ## [0.42, 0.71], and nothing downstream can tell, because the wreckage is
