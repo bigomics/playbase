@@ -272,7 +272,7 @@ pgx.FindClusters <- function(X,
 
   ## reduce dimensions
   ## X <- Matrix::head(X[order(apply(X, 1, stats::sd, na.rm = TRUE)), ], top.sd)
-  X <- Matrix::head(X[order(matrixStats::rowSds(X, na.rm = TRUE)), ], top.sd)
+  X <- Matrix::head(X[order(matrixStats::rowSds(X, na.rm = TRUE), decreasing = TRUE), ], top.sd)
   if (scale) {
     X <- t(scale(t(X))) ## scale features??
   }
@@ -282,7 +282,9 @@ pgx.FindClusters <- function(X,
     suppressMessages(suppressWarnings(
       out <- irlba::irlba(X, nv = npca)
     ))
-    X <- t(out$v)
+    ## weight by singular values: out$v alone is unit-norm (whitened), which
+    ## gives noise components the same weight as the dominant ones
+    X <- t(sweep(out$v, 2, out$d, "*"))
   }
 
   ## km.sizes <- c(2, 3, 4, 5, 7, 10, 15, 20, 25, 50, 100)
@@ -293,7 +295,7 @@ pgx.FindClusters <- function(X,
   ## perform K-means
   if ("kmeans" %in% method) {
     message("perform K-means...")
-    km <- lapply(km.sizes, function(k) stats::kmeans(t(X), k, iter.max = 10))
+    km <- lapply(km.sizes, function(k) stats::kmeans(t(X), k, iter.max = 10, nstart = 20))
     km.idx <- do.call(cbind, lapply(km, function(r) r$cluster))
     colnames(km.idx) <- paste0("kmeans.", km.sizes)
     index[["kmeans"]] <- km.idx
