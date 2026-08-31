@@ -1027,6 +1027,23 @@ pgx.computePGX <- function(pgx,
         NULL
       }
     )
+
+    ## Cell composition, for the same reason and on the same terms: the
+    ## proportions are a pure function of the beta matrix and a panel name, so
+    ## nothing about them needs a session. All nine reference panels are fitted
+    ## rather than just the blood default - the panel follows the tissue, not
+    ## the user, and at ~56 KB on a 150-sample cohort storing the lot costs
+    ## about a tenth of a percent of the pgx while making every panel switch in
+    ## the app instant. ~93s at that size; the app keeps its live path for a
+    ## dataset that predates this slot.
+    message("[pgx.computePGX] estimating cell composition...")
+    pgx$meth$cells <- tryCatch(
+      playbase.epigenetics::compute_cell_counts(pgx$X),
+      error = function(e) {
+        warning("[pgx.computePGX] cell composition failed: ", conditionMessage(e))
+        NULL
+      }
+    )
   }
 
   if (!is.null(ai_features)) {
