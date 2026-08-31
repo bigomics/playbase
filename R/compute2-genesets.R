@@ -89,9 +89,16 @@ compute_testGenesets <- function(pgx,
     }
   }
 
-  if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {
+  if (!is.null(pgx$datatype) && pgx$datatype == "methylomics") {
     require_epigenetics()
-    X1 <- playbase.epigenetics::betaToM(X1)
+    ## Clamp before converting. betaToM() decides whether its input is beta by
+    ## sniffing the range and silently returns it unchanged when the range
+    ## escapes [0,1] - and SVD2 imputation of a beta matrix overshoots both
+    ## ends routinely (a 2000x20 beta matrix with 1% NAs imputes to
+    ## -0.08..1.00), which left the geneset test running on beta while every
+    ## other test ran on M. The sniffing itself is a wider hazard shared by the
+    ## other betaToM/mToBeta call sites; this only makes this one correct.
+    X1 <- playbase.epigenetics::betaToM(pmin(pmax(X1, 0), 1))
   }
   
   gset.meta <- gset.fitContrastsWithAllMethods(
@@ -117,13 +124,20 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------------------------
   ## Recompute geneset meta.fx as average fold-change of genes
   ## -----------------------------------------------------------------------------
-  message("[compute_testGenesets] Recomputing geneset fold-changes")
-  nc <- length(pgx$gset.meta$meta)
-  F <- pgx.getMetaMatrix(pgx)$fc
-  F <- rename_by2(F, pgx$genes, "symbol")
-  avgFC <- gset.averageFC(F, pgx$GMT)
-  for (i in 1:nc) {
-    pgx$gset.meta$meta[[i]]$meta.fx <- avgFC[, i]
+  ## Only when gx.meta was actually fitted. compute_testGenes() stubs it for
+  ## methylomics and marks the stub with a single "not.fitted" column; for that
+  ## stub pgx.getMetaMatrix() falls through to meta.fx, which the stub fills
+  ## with zeros, so averaging it would overwrite every geneset's effect size
+  ## with exactly 0 while leaving meta.p/meta.q real.
+  if (!identical(colnames(unclass(pgx$gx.meta$meta[[1]]$fc)), "not.fitted")) {
+    message("[compute_testGenesets] Recomputing geneset fold-changes")
+    nc <- length(pgx$gset.meta$meta)
+    F <- pgx.getMetaMatrix(pgx)$fc
+    F <- rename_by2(F, pgx$genes, "symbol")
+    avgFC <- gset.averageFC(F, pgx$GMT)
+    for (i in 1:nc) {
+      pgx$gset.meta$meta[[i]]$meta.fx <- avgFC[, i]
+    }
   }
 
   ## -------------------------------------------------------
