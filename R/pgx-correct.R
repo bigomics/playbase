@@ -1654,6 +1654,7 @@ compare_batchcorrection_methods <- function(X,
                                             samples,
                                             pheno,
                                             contrasts,
+                                            beta.scale = FALSE,
                                             methods = c(
                                               "uncorrected",
                                               "ComBat", "limma", "RUV", "SVA", "NPM"
@@ -1679,6 +1680,19 @@ compare_batchcorrection_methods <- function(X,
     B <- samples[, batch.pars, drop = FALSE]
   } else {
     B <- NULL
+  }
+
+  ## Methylation beta is a bounded ratio, and every method compared here is an
+  ## additive linear correction, so on beta they are ranked on a scale none of
+  ## them is valid on - the same reason pgx.createPGX() corrects methylomics on
+  ## M. Nothing is converted back: this function returns a clustering and a
+  ## ranking, never a matrix that is stored, and M is the right scale for both.
+  if (isTRUE(beta.scale) && min(X, na.rm = TRUE) >= 0 && max(X, na.rm = TRUE) <= 1) {
+    require_epigenetics()
+    X <- playbase.epigenetics::betaToM(X)
+    if (length(xlist.init)) {
+      xlist.init <- lapply(xlist.init, playbase.epigenetics::betaToM)
+    }
   }
 
   nmissing <- sum(is.na(X))

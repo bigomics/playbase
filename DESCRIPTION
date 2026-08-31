@@ -10,6 +10,7 @@ License: Dual Commercial and Non-Commercial
 Encoding: UTF-8
 LazyData: true
 Suggests: 
+    playbase.epigenetics,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Depends: 
@@ -74,12 +75,10 @@ Imports:
     igraph,
     iheatmapr,
     IntNMF,
-    IRanges,
     irlba,
     isotree,
     isva,
     jsonlite,
-    karyoploteR,
     lazyeval,
     limma,
     magrittr,
@@ -90,7 +89,6 @@ Imports:
     metap,
     methods,
     microbenchmark,
-    minfi,
     missForest,
     mixOmics,
     MOFA2,
@@ -108,7 +106,6 @@ Imports:
     orthogene,
     parallel,
     partykit,
-    patchwork,
     pcaMethods,
     plaid,
     plotly,
@@ -130,7 +127,6 @@ Imports:
     RcppML,
     recount,
     RefMet,
-    regioneR,
     reshape2,
     reticulate,
     Rfast,
@@ -173,7 +169,6 @@ Imports:
     vioplot,
     viridis,
     visNetwork,
-    wateRmelon,
     webshot2,
     WGCNA,
     WGCNAplus,

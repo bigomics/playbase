@@ -36,6 +36,9 @@
 #'     \item{outlier_methods}{z-score methods for `detectOutlierSamples`: any of
 #'       "z.correlation", "z.distance", "z.features", "z.isoforest". Default the
 #'       first three; "z.isoforest" is opt-in as it fits an isolation forest.}
+#'     \item{drop_samples}{Sample names to remove before anything else runs, so
+#'       normalization sees only the retained columns. Names absent from `counts`
+#'       are ignored. Default NULL.}
 #'     \item{meth_type}{Methylation array type for `normalizeMethylation`. Default NULL.}
 #'   }
 #'
@@ -65,12 +68,35 @@ pgx.preprocess <- function(counts,
       ## NB: not NULL. detectOutlierSamples() reads NULL as "all methods",
       ## which would switch on the isoforest behind the caller's back.
       outlier_methods = c("z.correlation", "z.distance", "z.features"),
+      drop_samples = NULL,
       meth_type = NULL
     ),
     options
   )
 
   counts <- as.matrix(counts)
+
+  ## Samples the user removed at QC. Dropped first, so normalization is
+  ## computed on the retained columns only. createPGX re-aligns samples and
+  ## contrasts to colnames(counts), so we only need to keep this function's
+  ## own copies consistent for the group-wise NA filter below.
+  drop <- intersect(colnames(counts), as.character(opt$drop_samples))
+  if (length(drop)) {
+    if (ncol(counts) - length(drop) < 2) {
+      stop("[pgx.preprocess] drop_samples would leave fewer than 2 samples")
+    }
+    counts <- counts[, setdiff(colnames(counts), drop), drop = FALSE]
+    ## contrasts may be sample-based or group-based; only touch it if it
+    ## actually carries the dropped samples as rows.
+    if (!is.null(samples)) {
+      samples <- samples[setdiff(rownames(samples), drop), , drop = FALSE]
+    }
+    if (!is.null(contrasts) && any(rownames(contrasts) %in% drop)) {
+      contrasts <- contrasts[setdiff(rownames(contrasts), drop), , drop = FALSE]
+    }
+    info("[pgx.preprocess] dropped ", length(drop), " sample(s) at user request")
+  }
+
   info("[pgx.preprocess] input: ", nrow(counts), " features x ", ncol(counts),
     " samples (datatype=", opt$datatype, ")")
 
@@ -98,7 +124,8 @@ pgx.preprocess <- function(counts,
       X[ii, ] <- log2(counts[ii, ] + prior)
     }
   } else if (opt$datatype == "methylomics") {
-    X <- playbase::mToBeta(counts)
+    require_epigenetics()
+    X <- playbase.epigenetics::mToBeta(counts)
     prior <- 0
   } else {
     prior0 <- playbase::getPrior(counts)
@@ -153,7 +180,7 @@ pgx.preprocess <- function(counts,
     if (opt$datatype == "multi-omics") {
       X <- playbase::normalizeMultiOmics(X)
     } else if (opt$datatype == "methylomics") {
-      nX <- try(playbase::normalizeMethylation(X, opt$norm_method, opt$meth_type), silent = TRUE)
+      nX <- try(playbase.epigenetics::normalizeMethylation(X, opt$norm_method, opt$meth_type), silent = TRUE)
       if (!inherits(nX, "try-error") && !is.null(nX)) X <- nX
     } else {
       if (identical(opt$norm_method, "reference") &&

@@ -80,10 +80,12 @@ getProbeAnnotation <- function(organism,
   organism <- normalizeOrganism(organism)
 
   if (datatype == "methylomics") {
-    c1 <- is.null(meth_type)
-    c2 <- !meth_type %in% c("450K array", "EPIC array")
-    if (c1 | c2) meth_type = "450K array"
-    genes <- annotate_methylomics(organism, probes, meth_type = meth_type)
+    require_epigenetics()
+    ## NB: || not |. `!NULL %in% x` is logical(0), which makes `if` throw.
+    if (is.null(meth_type) || !meth_type %in% c("450K array", "EPIC array")) {
+      meth_type <- "450K array"
+    }
+    genes <- playbase.epigenetics::annotate_methylomics(organism, probes, meth_type = meth_type)
     return(genes)
   }
   
@@ -978,6 +980,29 @@ getHumanOrtholog <- function(organism, symbols,
                                "gprofiler2"), verbose = 1) {
   orthogenes <- rep(NA, length(symbols))
   orthosource <- rep(NA, length(symbols))
+
+  ## A human gene's human ortholog is itself. Without this the whole
+  ## orthogene/gprofiler machinery runs hsapiens -> hsapiens, which is slow
+  ## (tens of seconds on an array-sized feature set) and lossy: symbols that
+  ## fail the round-trip come back NA even though the answer was the input.
+  ## Methylomics always lands here - the upload form only offers Human.
+  ##
+  ## Uppercased to match the convention the rest of the pipeline assumes for
+  ## this column (see pgx-init.R). Not filtered against playdata::GENE_SYMBOL:
+  ## that would turn ~7.6k features NA that previously carried a value, and an
+  ## unrecognised symbol simply fails to join downstream anyway.
+  if (identical(normalizeOrganism(organism), "Homo sapiens")) {
+    if (verbose > 0) {
+      message("[getHumanOrtholog] organism is human; orthologs are the symbols themselves")
+    }
+    up <- toupper(symbols)
+    return(data.frame(
+      input = symbols,
+      symbol = symbols,
+      human = up,
+      source = ifelse(is.na(up), NA_character_, "identity")
+    ))
+  }
 
   ## clean symbols
   orig.symbols <- symbols

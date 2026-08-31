@@ -331,6 +331,9 @@ pgx.createPGX <- function(counts,
   ## prune unused samples
   contrasts[contrasts %in% c("", " ", "NA")] <- NA
   used.samples <- names(which(rowSums(!is.na(contrasts)) > 0))
+  ## contrasts still describes every uploaded sample, but counts may already be
+  ## shorter - pgx.preprocess() drops the ones the user removed at QC.
+  used.samples <- intersect(used.samples, colnames(counts))
   if (prune.samples && length(used.samples) < ncol(counts)) {
     counts <- counts[, used.samples, drop = FALSE]
     samples <- samples[used.samples, , drop = FALSE]
@@ -386,6 +389,15 @@ pgx.createPGX <- function(counts,
   description <- gsub("[\"\']", " ", description) ## remove quotes (important!!)
   description <- gsub("[\n]", ". ", description) ## replace newline
   description <- trimws(gsub("[ ]+", " ", description)) ## remove ws
+
+  ## Appending the symbol rewrites cg00000029 -> cg00000029_RBL2, and every
+  ## methylation lookup keys on the bare probe ID: the epigenetic clocks come
+  ## back with zero coverage and no ages at all. Off for methylomics whatever
+  ## the caller asked for, and corrected here so settings record what happened.
+  if (identical(datatype, "methylomics") && isTRUE(convert.hugo)) {
+    message("[pgx.createPGX] methylomics: not appending symbols to probe IDs")
+    convert.hugo <- FALSE
+  }
 
   ## add to setting info
   settings$filter.genes <- filter.genes
@@ -596,6 +608,27 @@ pgx.createPGX <- function(counts,
     samples <- pgx$samples
     contrasts <- pgx$contrasts
 
+    ## Methylomics corrects on M, not on beta. Every method here is an additive
+    ## linear correction (limma::removeBatchEffect, ComBat, ...) and beta is a
+    ## bounded ratio, so the correction walks off the end of it: on GSE43976
+    ## (23471 probes x 95 samples, batch = slide) limma on beta lands 0.12% of
+    ## the values - 2.2% of the probes - outside [0,1], spanning -0.155..1.204,
+    ## and it is the probes that carry the signal that get moved furthest, mean
+    ## |delta| 0.0021 for beta<0.05 and 0.0033 for beta>0.95 against 0.0016 /
+    ## 0.0023 via M. Both scales remove the batch equally well - median
+    ## per-probe slide variance 0.074 -> 0.0015 on beta, 0.074 -> 0.0016 on M,
+    ## each measured on its own scale - so the round trip costs nothing and
+    ## buys a matrix that is still beta. The same applies to the SVD2
+    ## imputation below, which is why the transform wraps both.
+    ## betaToM() returns its input untouched when it is not in [0,1], so the
+    ## flag mirrors that test: back-transform only what was transformed.
+    beta.scale <- isTRUE(pgx$datatype == "methylomics") &&
+      min(X, na.rm = TRUE) >= 0 && max(X, na.rm = TRUE) <= 1
+    if (beta.scale) {
+      require_epigenetics()
+      X <- playbase.epigenetics::betaToM(X)
+    }
+
     message("[pgx.createPGX] batch.correct.method=", batch.correct.method)
     message("[pgx.createPGX] batch.pars=", batch.pars)
 
@@ -625,34 +658,53 @@ pgx.createPGX <- function(counts,
       cX[jj] <- NA ## Batch corrected X; original NAs restored
     }
 
-    ## Compute correctedCounts from corrected X.
-    counts <- pgx$counts ## same as the one originally uploaded by user.
-    jj <- which(rownames(counts) %in% rownames(cX))
-    kk <- which(colnames(counts) %in% colnames(cX))
-    counts <- counts[jj, kk]
-    tc.counts <- colSums(counts, na.rm = TRUE)
-
-    prior <- 0
-    if (min(counts, na.rm = TRUE) == 0 || any(is.na(counts))) {
-      prior <- min(counts[counts > 0], na.rm = TRUE)
+    if (beta.scale) {
+      ## Written out rather than mToBeta(): mToBeta returns its input untouched
+      ## when the input already lies in [0,1], and a corrected M matrix can sit
+      ## there on a small or degenerate dataset - the back-transform would then
+      ## no-op and M would be stored as beta. The scale is known here, so it is
+      ## not re-guessed. 2^m/(1+2^m) cannot leave (0,1), which is the point.
+      cX <- 2**cX / (1 + 2**cX)
     }
-    if (grepl("CPM|TMM", norm_method)) prior <- 1
-    rc.counts <- pmax(2**cX - prior, 0) # recomputed counts
-    tc.rc.counts <- colSums(rc.counts, na.rm = TRUE)
 
-    ## Put back to original total counts.
-    corrected.counts <- t(t(rc.counts) / tc.rc.counts * tc.counts)
+    ## Compute correctedCounts from corrected X.
+    ##
+    ## Not for methylomics: there counts IS the beta matrix, the same object as
+    ## X, so the 2**cX below - which exists to undo a log2 - would turn beta
+    ## into 2^beta and the column rescaling would spread that over the sheet.
+    ## The corrected beta is the corrected "counts"; nothing needs
+    ## reconstructing. The methylome app reads X only, but board.dataview and
+    ## board.connectivity do read counts.
+    corrected.counts <- NULL
+    if (!beta.scale) {
+      counts <- pgx$counts ## same as the one originally uploaded by user.
+      jj <- which(rownames(counts) %in% rownames(cX))
+      kk <- which(colnames(counts) %in% colnames(cX))
+      counts <- counts[jj, kk]
+      tc.counts <- colSums(counts, na.rm = TRUE)
 
-    ## Restore original NAs in correctedCounts.
-    jj <- which(is.na(counts), arr.ind = TRUE)
-    if (any(jj)) corrected.counts[jj] <- NA
+      prior <- 0
+      if (min(counts, na.rm = TRUE) == 0 || any(is.na(counts))) {
+        prior <- min(counts[counts > 0], na.rm = TRUE)
+      }
+      if (grepl("CPM|TMM", norm_method)) prior <- 1
+      rc.counts <- pmax(2**cX - prior, 0) # recomputed counts
+      tc.rc.counts <- colSums(rc.counts, na.rm = TRUE)
+
+      ## Put back to original total counts.
+      corrected.counts <- t(t(rc.counts) / tc.rc.counts * tc.counts)
+
+      ## Restore original NAs in correctedCounts.
+      jj <- which(is.na(counts), arr.ind = TRUE)
+      if (any(jj)) corrected.counts[jj] <- NA
+    }
 
     message("[pgx.createPGX] Batch correction completed\n")
 
     pgx$X <- cX
-    pgx$counts <- corrected.counts
+    pgx$counts <- if (beta.scale) cX else corrected.counts
 
-    rm(xlist, cX, counts, corrected.counts)
+    rm(list = intersect(c("xlist", "cX", "counts", "corrected.counts"), ls()))
   }
 
   rm(counts, X, samples, contrasts)
@@ -782,7 +834,39 @@ pgx.computePGX <- function(pgx,
   if (do.cluster || cluster.contrasts) {
     message("[pgx.computePGX] clustering samples...")
     mm <- c("pca", "tsne", "umap")
-    pgx <- pgx.clusterSamples(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
+    ## Methylomics clusters on M, not on beta. Beta is a bounded ratio and is
+    ## heteroscedastic at both ends, so the top-SD feature selection inside
+    ## pgx.clusterBigMatrix is dominated by probes sitting near 0.5 whatever
+    ## their behaviour, while a probe moving 0.02 -> 0.10 - a fourfold change
+    ## in methylation - barely registers. M is the convention for every
+    ## distance-based method on arrays (Du 2010), and it is the scale the EWAS
+    ## is fitted on, so the embedding and the model see the same data.
+    ## betaToM returns its input untouched when the matrix is not in [0,1],
+    ## so a pgx already stored as M is not transformed twice.
+    Xclust <- NULL
+    if (isTRUE(pgx$datatype == "methylomics")) {
+      require_epigenetics()
+      Xclust <- playbase.epigenetics::betaToM(pgx$X)
+    }
+    pgx <- pgx.clusterSamples(pgx, dims = c(2, 3), perplexity = NULL, X = Xclust, methods = mm)
+  }
+
+  ## pgx.initialize() lists tsne2d in obj.needed and returns NULL when it is
+  ## absent, so a dataset computed with do.cluster = FALSE - which is how
+  ## methylomics is computed now - passes pgx.checkObject(), reaches the
+  ## Library, and then fails to open with "ERROR in object initialization".
+  ## GMT already had this problem and solves it two hundred lines up by
+  ## storing an explicitly empty matrix; tsne2d had no such fallback.
+  ##
+  ## NA coordinates rather than an empty matrix, and rownames kept, so that a
+  ## consumer indexing by sample name gets NA instead of a subscript error.
+  ## Every reader is a Dashboard board, and no datatype computed without
+  ## clustering opens one.
+  if (is.null(pgx$tsne2d)) {
+    pgx$tsne2d <- matrix(
+      NA_real_, nrow = ncol(pgx$X), ncol = 2,
+      dimnames = list(colnames(pgx$X), c("tsne2d.1", "tsne2d.2"))
+    )
   }
 
   ## Make contrasts by cluster
@@ -900,7 +984,67 @@ pgx.computePGX <- function(pgx,
   )
 
   ## methylomics: ensure all OPG graphics & tables use beta.
-  if (pgx$datatype == "methylomics") pgx$X <- playbase::mToBeta(pgx$X)
+  if (pgx$datatype == "methylomics") {
+    require_epigenetics()
+    ## No conversion here any more. compute_testGenes used to hand back
+    ## M-values, so this called mToBeta(); it now returns beta untouched for
+    ## methylomics, on every path.
+    ##
+    ## The range check that briefly stood in for that was worse than the bug it
+    ## guarded. "Outside [0,1] therefore M-values" is false after two ordinary
+    ## user options: limma::removeBatchEffect on bimodal beta walks probes off
+    ## the end of it, and imputeMissing(method = "SVD2") does the same. Measured
+    ## on GSE43976 (23471 x 95, batch = slide): 2.2% of probes, spanning
+    ## -0.155..1.204. An earlier note here said ~10% and -0.24..1.28; that
+    ## figure came from a different dataset or batch variable and does not
+    ## reproduce on this one. The magnitude moves with the data - the mechanism
+    ## does not, and one spilled probe is enough to fire the guard.
+    ##
+    ## Batch correction no longer produces such a matrix - it runs on M and
+    ## comes back through 2^m/(1+2^m), which cannot leave (0,1) - but SVD2
+    ## imputation on a pgx built before that change still can.
+    ## Either one made the guard fire on a beta matrix and run 2^b/(1+2^b) over
+    ## the whole thing - sd 0.353 collapses to 0.059, every value lands in
+    ## [0.42, 0.71], and nothing downstream can tell, because the wreckage is
+    ## back inside [0,1]. The clocks fitted sixteen lines below would have been
+    ## fitted on it.
+
+    ## Epigenetic clocks, fitted here rather than in the app: they are a pure
+    ## function of the beta matrix, so once it exists there is nothing left to
+    ## wait for, and this is the first line at which it does. Ten clocks take
+    ## ~40s, which is a fine one-off at dataset creation and a bad thing to
+    ## make every session pay. Fitted with no coverage floor and no clock
+    ## selection - both are display choices the app applies to `cov`, not
+    ## inputs that change any age.
+    ##
+    ## A failure here must not lose the dataset: the app still has its live
+    ## path and simply falls back to it.
+    message("[pgx.computePGX] fitting epigenetic clocks...")
+    pgx$meth$clocks <- tryCatch(
+      playbase.epigenetics::compute_clocks(pgx$X),
+      error = function(e) {
+        warning("[pgx.computePGX] epigenetic clocks failed: ", conditionMessage(e))
+        NULL
+      }
+    )
+
+    ## Cell composition, for the same reason and on the same terms: the
+    ## proportions are a pure function of the beta matrix and a panel name, so
+    ## nothing about them needs a session. All nine reference panels are fitted
+    ## rather than just the blood default - the panel follows the tissue, not
+    ## the user, and at ~56 KB on a 150-sample cohort storing the lot costs
+    ## about a tenth of a percent of the pgx while making every panel switch in
+    ## the app instant. ~93s at that size; the app keeps its live path for a
+    ## dataset that predates this slot.
+    message("[pgx.computePGX] estimating cell composition...")
+    pgx$meth$cells <- tryCatch(
+      playbase.epigenetics::compute_cell_counts(pgx$X),
+      error = function(e) {
+        warning("[pgx.computePGX] cell composition failed: ", conditionMessage(e))
+        NULL
+      }
+    )
+  }
 
   if (!is.null(ai_features)) {
     if (!is.list(ai_features)) {
