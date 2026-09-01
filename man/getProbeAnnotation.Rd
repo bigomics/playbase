@@ -11,6 +11,8 @@ getProbeAnnotation(
   datatype,
   meth_type = NULL,
   probetype = "",
+  bridge = NULL,
+  bridge_species = NULL,
   annot_table = NULL
 )
 }

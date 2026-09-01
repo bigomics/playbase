@@ -9,6 +9,8 @@ getGeneAnnotation(
   organism,
   probes,
   is.phospho = FALSE,
+  bridge = NULL,
+  bridge_species = NULL,
   use.ah = NULL,
   verbose = TRUE,
   methods = c("annothub", "gprofiler")

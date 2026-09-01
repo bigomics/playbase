@@ -68,6 +68,8 @@ getProbeAnnotation <- function(organism,
                                datatype,
                                meth_type = NULL, 
                                probetype = "",
+                               bridge = NULL,
+                               bridge_species = NULL,
                                annot_table = NULL) {
 
   if (is.null(datatype)) datatype <- "unknown"
@@ -131,9 +133,14 @@ getProbeAnnotation <- function(organism,
   } else {
     if (datatype == "proteomics") {
       is.phospho <- annotate_phospho_residue(probes, detect.only = TRUE)
-      genes <- getGeneAnnotation(organism = organism, probes = probes, is.phospho = is.phospho)
+      genes <- getGeneAnnotation(organism = organism, probes = probes,
+        bridge = bridge, bridge_species = bridge_species,
+        is.phospho = is.phospho)
     } else {
-      genes <- getGeneAnnotation(organism = organism, probes = probes)
+      genes <- getGeneAnnotation(
+        organism = organism, probes = probes,
+        bridge = bridge, bridge_species = bridge_species
+      )
     }
   }
 
@@ -175,6 +182,8 @@ getGeneAnnotation <- function(
   organism,
   probes,
   is.phospho = FALSE,
+  bridge = NULL,
+  bridge_species = NULL,
   use.ah = NULL,
   verbose = TRUE,
   methods = c("annothub", "gprofiler")
@@ -213,11 +222,15 @@ getGeneAnnotation <- function(
           organism = organism,
           probes = missing_probes,
           use.ah = use.ah,
+          bridge = bridge,
+          bridge_species = bridge_species,
           verbose = verbose
         ),
         "gprofiler" = getGeneAnnotation.GPROFILER(
           organism = organism,
           probes = missing_probes,
+          bridge = bridge,
+          bridge_species = bridge_species,
           verbose = verbose
         ),
         stop("Unknown method: ", method)
@@ -309,6 +322,8 @@ getGeneAnnotation.ANNOTHUB <- function(
   use.ah = NULL,
   probe_type = NULL,
   second.pass = TRUE,
+  bridge = NULL,  ## NULL -> auto
+  bridge_species = NULL,
   verbose = TRUE
 ) {
   if (is.null(organism)) {
@@ -509,7 +524,12 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   ## get human ortholog using 'orthogene'
   message("[getGeneAnnotation.ANNOTHUB] getting human orthologs...")
-  ortho <- getHumanOrtholog(organism, annot$SYMBOL, verbose=0)
+  ortho <- getHumanOrtholog(
+    organism, annot$SYMBOL,
+    bridge = bridge,
+    bridge_species = bridge_species,
+    verbose = 0)
+
   annot$ORTHOGENE <- ortho$human    ## single-valued
   annot$ORTHOGENES <- ortho$humans  ## all candidates, ";"-joined
 
@@ -565,6 +585,8 @@ getGeneAnnotation.ANNOTHUB <- function(
 getGeneAnnotation.GPROFILER <- function(
   organism,
   probes,
+  bridge = NULL,
+  bridge_species = NULL,  
   verbose = TRUE
 ) {
   ## correct organism names different from OrgDb
@@ -641,7 +663,12 @@ getGeneAnnotation.GPROFILER <- function(
 
     df$symbol <- out$name
     df$gene_title <- sub(" \\[.*", "", out$description)
-    ortho <- getHumanOrtholog(organism, out$name, verbose=0)
+    ortho <- getHumanOrtholog(
+      organism, out$name,
+      bridge = bridge,
+      bridge_species = bridge_species,
+      verbose = 0
+    )
     df$human_ortholog <- ortho$human    ## single-valued
     df$human_orthologs <- ortho$humans  ## all candidates, ";"-joined
     df$uniprot <- uniprot
@@ -1033,6 +1060,7 @@ getHumanOrtholog <- function(organism, symbols,
   clean.symbols <- .clean_symbols(symbols)   ## NEED RETHINK!
   names(clean.symbols) <- symbols
   names(symbols) <- symbols
+  if(is.null(bridge_species)) bridge_species <- BRIDGE_SPECIES
   
   ## Try mapping with orthogene's databases
   species_id <- .getGprofilerSpecies(organism, "id")
