@@ -10,6 +10,7 @@ getHumanOrtholog(
   organism,
   symbols,
   ortho.methods = c("homologene", "gprofiler", "babelgene", "gprofiler2", "uppercase"),
+  bridge = NULL,
   bridge_species = BRIDGE_SPECIES,
   verbose = 1
 )

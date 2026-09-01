@@ -606,9 +606,25 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     }
   }
 
+  ## A precomputed hclust/dendrogram spans ALL columns, so it cannot be passed
+  ## to the per-group Heatmap() calls below: each of those only sees a column
+  ## subset and ComplexHeatmap errors on the length mismatch. Use it to fix the
+  ## column order within each group instead. Without splitting the object is
+  ## still handed to the single Heatmap() unchanged.
+  col.order <- NULL
+  if (ngrp > 1 && !is.logical(cluster_columns)) {
+    col.order <- tryCatch(
+      labels(stats::as.dendrogram(cluster_columns)),
+      error = function(e) NULL
+    )
+    if (!all(colnames(gx) %in% col.order)) col.order <- NULL
+    cluster_columns <- FALSE
+  }
+
   hmap <- NULL
   for (i in grp.order) {
     jj <- grp[[i]]
+    if (!is.null(col.order)) jj <- jj[order(match(jj, col.order))]
 
     coldistfun1 <- function(x) stats::dist(x)
     rowdistfun1 <- function(x, y) 1 - stats::cor(x, y)

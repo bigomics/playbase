@@ -509,7 +509,9 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   ## get human ortholog using 'orthogene'
   message("[getGeneAnnotation.ANNOTHUB] getting human orthologs...")
-  annot$ORTHOGENE <- getHumanOrtholog(organism, annot$SYMBOL, verbose=0)$human
+  ortho <- getHumanOrtholog(organism, annot$SYMBOL, verbose=0)
+  annot$ORTHOGENE <- ortho$human    ## single-valued
+  annot$ORTHOGENES <- ortho$humans  ## all candidates, ";"-joined
 
   ## Return as standardized data.frame and in the same order as input
   ## probes.
@@ -518,7 +520,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   annot$SOURCE <- pkgname[1]
 
   annot.cols <- c(
-    "PROBE", "SYMBOL", "ORTHOGENE", "UNIPROT", "GENENAME",
+    "PROBE", "SYMBOL", "ORTHOGENE", "ORTHOGENES", "UNIPROT", "GENENAME",
     ## "GENETYPE", "MAP", "CHR", "POS", "TXLEN", "SOURCE"
     "MAP", "SOURCE"
   )
@@ -530,7 +532,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   for (a in missing.cols) genes[[a]] <- NA
   genes <- genes[, annot.cols]
   new.names <- c(
-    "feature", "symbol", "human_ortholog", "uniprot", "gene_title",
+    "feature", "symbol", "human_ortholog", "human_orthologs", "uniprot", "gene_title",
     ## "gene_biotype", "map", "chr", "pos", "tx_len", "source"
     "chr", "source"
   )
@@ -615,6 +617,7 @@ getGeneAnnotation.GPROFILER <- function(
     feature = probes,
     symbol = NA,
     human_ortholog = "",
+    human_orthologs = "",
     uniprot = "",
     gene_title = "",
     chr = NA,
@@ -638,7 +641,9 @@ getGeneAnnotation.GPROFILER <- function(
 
     df$symbol <- out$name
     df$gene_title <- sub(" \\[.*", "", out$description)
-    df$human_ortholog <- getHumanOrtholog(organism, out$name, verbose=0)$human
+    ortho <- getHumanOrtholog(organism, out$name, verbose=0)
+    df$human_ortholog <- ortho$human    ## single-valued
+    df$human_orthologs <- ortho$humans  ## all candidates, ";"-joined
     df$uniprot <- uniprot
     df$source <- "gprofiler2"
   }
@@ -670,7 +675,7 @@ cleanupAnnotation <- function(genes) {
 
   ## add missing columns if needed, then reorder
   columns <- c(
-    "feature", "symbol", "human_ortholog", "gene_title", ## "gene_biotype",
+    "feature", "symbol", "human_ortholog", "human_orthologs", "gene_title", ## "gene_biotype",
     ## "map", "pos", "tx_len",
     "chr", "source", "gene_name"
   )
@@ -961,6 +966,30 @@ getCustomAnnotation2 <- function(probes, custom_annot, feature.col = "feature",
 ##BRIDGE_SPECIES = c("dmelanogaster","drerio","celegans","scerevisiae","athaliana","ecoli")
 BRIDGE_SPECIES = c("dmelanogaster","drerio","celegans","scerevisiae","athaliana")
 
+## Auto-trigger the bridge search below this direct orthology ratio. The
+## poorly annotated species the bridge is meant for sit well above the old
+## 0.10 gate (trout ~0.16, hamster ~0.33) and so never bridged at all.
+BRIDGE_THRESHOLD = 0.5
+
+## Number of features probed to decide whether to bridge (see getHumanOrtholog)
+BRIDGE_PROBE_SIZE = 500
+
+#' Collapse a one-to-many (input, ortholog) table to one row per input,
+#' with a single deterministic ortholog (first alphabetically) and the
+#' full ";"-joined candidate set.
+#'
+#' @noRd
+.collapse_orthologs <- function(df) {
+  x <- tapply(df$ortholog, df$input, .clean_ortholog_set, simplify = FALSE)
+  data.frame(
+    input = names(x),
+    ortholog = sapply(x, function(s) if (length(s)) s[1] else NA),
+    orthologs = sapply(x, function(s) if (length(s)) paste(s, collapse = ";") else NA),
+    row.names = NULL,
+    stringsAsFactors = FALSE
+  )
+}
+
 #' @title Get human ortholog from given symbols of organism by
 #'   aggregation of multiple methods. This package needs internet
 #'   connection.
@@ -969,6 +998,7 @@ BRIDGE_SPECIES = c("dmelanogaster","drerio","celegans","scerevisiae","athaliana"
 getHumanOrtholog <- function(organism, symbols,
                              ortho.methods = c("homologene","gprofiler","babelgene",
                                "gprofiler2","uppercase"),
+                             bridge = NULL,
                              bridge_species = BRIDGE_SPECIES,
                              verbose = 1) {
   
@@ -989,7 +1019,39 @@ getHumanOrtholog <- function(organism, symbols,
   ##genes <- c("---", unique(symbols[!is.na(symbols)]))
   genes <- c("---", unique(c(symbols,clean.symbols)))
   genes[is.na(genes)] <- "NA"
-  
+
+  ## Decide ONCE whether to bridge, before the batching loop below. The
+  ## threshold used to be evaluated inside each convert_orthologs() call,
+  ## so the same dataset could bridge on one batch and not on the next
+  ## depending purely on feature order. The probe is an evenly spaced
+  ## (deterministic) sample, so the decision is reproducible across runs.
+  ## NOTE: only needed when batching. A single batch is one convert_orthologs()
+  ## call that decides on the same threshold itself, so probing there would
+  ## just do the whole lookup twice.
+  if (is.null(bridge) && length(genes) > batch_size) {
+    probe <- genes
+    if (length(probe) > BRIDGE_PROBE_SIZE) {
+      probe <- probe[unique(round(seq(1, length(probe), length.out = BRIDGE_PROBE_SIZE)))]
+    }
+    probe.out <- try(convert_orthologs(
+      genes = probe,
+      species = species_id,
+      method = ortho.methods,
+      bridge = FALSE,
+      verbose = 0
+    ), silent = TRUE)
+    if (inherits(probe.out, "data.frame") && nrow(probe.out) > 0) {
+      probe.ratio <- mean(!probe.out$ortholog %in% c(NA, "", "NA", "N/A"))
+      bridge <- (probe.ratio < BRIDGE_THRESHOLD)
+      if (verbose > 0) {
+        message("[getHumanOrtholog] probe ratio mapped = ", round(probe.ratio, 4),
+          " -> bridge = ", bridge)
+      }
+    } else {
+      bridge <- FALSE
+    }
+  }
+
   ## Batch processing for large gene lists
   if (length(genes) > batch_size) {      
     
@@ -1009,6 +1071,7 @@ getHumanOrtholog <- function(organism, symbols,
         genes = genes_batch,
         species = species_id,
         method = ortho.methods,
+        bridge = bridge,
         bridge_species = bridge_species,
         verbose = verbose
       )
@@ -1033,6 +1096,7 @@ getHumanOrtholog <- function(organism, symbols,
       genes = genes,
       species = species_id,
       method = ortho.methods,
+      bridge = bridge,
       bridge_species = bridge_species,
       verbose = verbose
     )
@@ -1059,15 +1123,26 @@ getHumanOrtholog <- function(organism, symbols,
     symbol = ortho.out$symbol,
     input = ortho.out$input,
     human = ortho.out$ortholog,
+    humans = ortho.out$orthologs,
     source = ortho.out$method)
 
   ## collapse duplicates
   df.concat <- function(x) tapply(x, df$symbol,
     function(s) paste(unique(setdiff(s,c("",NA,"NA","N/A"))), collapse=";"))
-  df2 <- apply(df, 2, df.concat)
+  ## NOTE: keep simplify=FALSE, otherwise a single unique symbol collapses
+  ## the result to a plain vector and df2$human becomes NULL
+  df2 <- do.call(cbind, apply(df, 2, df.concat, simplify = FALSE))
   df2[which(df2=="")] <- NA
   df2 <- data.frame(df2)
   df2 <- df2[match(symbols, df2$symbol),,drop=FALSE]
+
+  ## A symbol and its cleaned form can map to different orthologs, so the
+  ## collapse above may have produced a ";"-joined 'human' as well. Keep
+  ## 'human' strictly single-valued (first alphabetically) and carry the
+  ## full candidate set in 'humans'.
+  hh <- lapply(paste(df2$human, df2$humans, sep=";"), .clean_ortholog_set)
+  df2$human <- sapply(hh, function(s) if(length(s)) s[1] else NA)
+  df2$humans <- sapply(hh, function(s) if(length(s)) paste(s, collapse=";") else NA)
 
   ## compute mapping ratio
   mean.mapped <- round(100 * mean(!is.na(df2$human)), digits = 4)
@@ -1086,9 +1161,9 @@ convert_orthologs <- function(genes, species, methods = c("homologene",
   bridge_species = BRIDGE_SPECIES, target_species = "hsapiens", verbose = 1)
 {
 
-  res <- data.frame( input = genes, ortholog = NA, method=NA)
+  res <- data.frame( input = genes, ortholog = NA, orthologs = NA, method=NA)
   ##species = .getGprofilerSpecies(species, "id")
-  
+
   ## try all methods
   for(m in methods) {
     ii <- which( is.na(res$ortholog))
@@ -1099,10 +1174,15 @@ convert_orthologs <- function(genes, species, methods = c("homologene",
     )
     if(!is.null(out) && any(!is.na(out$ortholog)) ) {
       out <- out[!is.na(out$ortholog),,drop=FALSE]
+      ## gorth() is one-to-many, so an input can occur on several rows.
+      ## Collapse to one row per input: a single deterministic ortholog
+      ## plus the full candidate set. Assigning the long table directly
+      ## would silently keep whichever candidate came last.
+      out <- .collapse_orthologs(out)
       out$method <- m
       if(nrow(out)>0) {
         jj <- match( out$input, res$input)
-        res[jj,] <- out[,]
+        res[jj,] <- out[,colnames(res)]
       }
     }
   }
@@ -1112,8 +1192,11 @@ convert_orthologs <- function(genes, species, methods = c("homologene",
     message("[convert_orthologs] pass 1: orth.ratio = ", orth.ratio)
   }
   if(is.null(bridge)) {
-    ## auto enable bridge lookup if less than 10% orthology found
-    bridge <- (orth.ratio < 0.10)
+    ## Auto enable bridge lookup if poorly mapped. NOTE: when called from
+    ## getHumanOrtholog() the decision is taken once, above the batching
+    ## loop, and passed in explicitly: deciding here per batch makes the
+    ## same dataset bridge inconsistently depending on feature order.
+    bridge <- (orth.ratio < BRIDGE_THRESHOLD)
   }
   
   ## try with bridge species
@@ -1129,7 +1212,7 @@ convert_orthologs <- function(genes, species, methods = c("homologene",
           verbose = verbose
         )
         B$method <- paste0("bridged:",b)
-        B <- B[,c("input","ortholog","method")]
+        B <- B[,c("input","ortholog","orthologs","method")]
         jj <- which(!is.na(B$ortholog))
         if(length(jj)) {
           res[ii[jj],] <- B[jj,]
@@ -1253,7 +1336,7 @@ convert_orthologs <- function(genes, species, methods = c("homologene",
 
   if(is.null(out1) || is.null(out2)) {
     message("WARNING: bridge conversion with ",bridge_species," failed")
-    out <- data.frame(input = genes, bridge = NA, ortholog = NA )
+    out <- data.frame(input = genes, bridge = NA, ortholog = NA, orthologs = NA )
     return(out)
   }
   
@@ -1267,15 +1350,30 @@ convert_orthologs <- function(genes, species, methods = c("homologene",
   bridge <- lapply(gene2bridge, function(s) sort(unique(unlist(s))))
   bridge <- sapply(bridge, paste, collapse=";")
   bridge[bridge %in% c("","N/A")] <- NA
-  ortho <- lapply(gene2bridge, function(s) sort(unique(unlist(bridge2human[s]))))
-  ortho <- sapply(ortho, paste, collapse=";")
-  ortho[ortho %in% c("","N/A")] <- NA
+  ## the bridge is one-to-many on both hops: report a single deterministic
+  ## ortholog (first alphabetically) plus the full candidate set. Keeping
+  ## only the ";"-joined value breaks every exact-match consumer downstream.
+  ortho <- lapply(gene2bridge, function(s) {
+    .clean_ortholog_set(unlist(bridge2human[s]))
+  })
+  ortholog  <- sapply(ortho, function(s) if(length(s)) s[1] else NA)
+  orthologs <- sapply(ortho, function(s) if(length(s)) paste(s, collapse=";") else NA)
 
   table(!is.na(bridge))
-  table(!is.na(ortho))
-  
-  out <- data.frame(input = genes, bridge = bridge, ortholog = ortho )
+  table(!is.na(ortholog))
+
+  out <- data.frame(input = genes, bridge = bridge,
+    ortholog = ortholog, orthologs = orthologs )
   out
+}
+
+#' Sort/dedupe a set of candidate ortholog symbols, dropping empty and
+#' N/A placeholders. Returns a sorted character vector (possibly empty).
+#'
+#' @noRd
+.clean_ortholog_set <- function(x) {
+  x <- unlist(strsplit(as.character(x), ";"))
+  sort(unique(setdiff(x, c("", NA, "NA", "N/A"))))
 }
   
 
