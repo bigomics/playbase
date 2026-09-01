@@ -974,6 +974,32 @@ BRIDGE_THRESHOLD = 0.5
 ## Number of features probed to decide whether to bridge (see getHumanOrtholog)
 BRIDGE_PROBE_SIZE = 500
 
+## Below this fraction of resolvable identifiers we consider the input
+## namespace unsupported for the organism and skip the bridge fan-out:
+## bridging cannot work on IDs that cannot be resolved in the first place.
+ID_RECOGNITION_MIN = 0.02
+
+#' Fraction of input identifiers that g:Profiler can resolve for this
+#' organism at all, independent of orthology. This separates the two
+#' reasons a lookup comes back near-empty: an unsupported or obsolete
+#' identifier namespace (nothing resolves) versus genuine absence of
+#' orthologs (IDs resolve, but have no human counterpart).
+#'
+#' @noRd
+.id_recognition_ratio <- function(genes, species, nprobe = 200) {
+  genes <- unique(setdiff(genes, c("", NA, "NA", "N/A", "---")))
+  if (!length(genes)) return(NA)
+  if (length(genes) > nprobe) {
+    genes <- genes[unique(round(seq(1, length(genes), length.out = nprobe)))]
+  }
+  cv <- try(gprofiler2::gconvert(query = genes, organism = species,
+    target = "ENSG", numeric_ns = "ENTREZGENE_ACC", filter_na = FALSE),
+    silent = TRUE)
+  if (inherits(cv, "try-error") || is.null(cv) || !nrow(cv)) return(NA)
+  cv$target[cv$target %in% c("N/A", "NA", "")] <- NA
+  mean(genes %in% cv$input[!is.na(cv$target)])
+}
+
 #' Collapse a one-to-many (input, ortholog) table to one row per input,
 #' with a single deterministic ortholog (first alphabetically) and the
 #' full ";"-joined candidate set.
@@ -1148,6 +1174,29 @@ getHumanOrtholog <- function(organism, symbols,
   mean.mapped <- round(100 * mean(!is.na(df2$human)), digits = 4)
   if (verbose > 0) message("[getHumanOrtholog] total ratio mapped  = ", mean.mapped, "%")
   if (mean.mapped==0) message("[getHumanOrtholog] WARNING: no orthologs found!")
+
+  ## A poor result has two very different causes, and reporting only the
+  ## mapping ratio hides which one it is: identifiers that cannot be
+  ## resolved for this organism at all (unsupported namespace, or an
+  ## obsolete annotation release) versus resolvable identifiers that
+  ## simply have no human counterpart. Only checked when the result is
+  ## poor, so well-mapped organisms pay nothing.
+  if (mean.mapped < 100 * BRIDGE_THRESHOLD) {
+    recog <- .id_recognition_ratio(genes, species_id)
+    if (!is.na(recog)) {
+      message("[getHumanOrtholog] recognised identifiers = ",
+        round(100 * recog, 2), "%")
+      if (recog < ID_RECOGNITION_MIN) {
+        message("[getHumanOrtholog] WARNING: these identifiers are not ",
+          "recognised for ", organism, ". Check the feature ID type.")
+      } else if (recog < BRIDGE_THRESHOLD) {
+        message("[getHumanOrtholog] NOTE: most features could not be resolved ",
+          "for ", organism, ". They may come from an obsolete annotation ",
+          "release; re-annotating against a current release should improve this.")
+      }
+    }
+  }
+
   df2$input <- NULL
   return(df2)
 }
@@ -1199,6 +1248,20 @@ convert_orthologs <- function(genes, species, methods = c("homologene",
     bridge <- (orth.ratio < BRIDGE_THRESHOLD)
   }
   
+  ## Bridging requires the input identifiers to be resolvable for this
+  ## organism at all. If (almost) none are recognised, every bridge species
+  ## fails in turn -- five round-trips guaranteed to return nothing. Skip
+  ## the fan-out and report what is actually wrong instead.
+  if(bridge && !is.null(bridge_species)) {
+    recog <- .id_recognition_ratio(genes, species)
+    if(!is.na(recog) && recog < ID_RECOGNITION_MIN) {
+      message("WARNING: none of the features are recognised identifiers for ",
+        "this organism (", species, "). Skipping bridge search: the input ",
+        "looks like an unsupported namespace or an obsolete annotation release.")
+      bridge <- FALSE
+    }
+  }
+
   ## try with bridge species
   if(bridge && !is.null(bridge_species)) {
     for(b in bridge_species) {
