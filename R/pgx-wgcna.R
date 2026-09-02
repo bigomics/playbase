@@ -663,6 +663,18 @@ wgcna.computeModuleEnrichment <- function(wgcna,
                                           min.genes = 3,
                                           min.rho = 0.8,
                                           filter = NULL) {
+  ## Exempt dataset-specific sets from the reference-geneset name filter,
+  ## which would otherwise leave wgcna$gsea empty. CUSTOM/TEST always: for
+  ## custom organisms those are the only applicable sets. METABOLITE only as
+  ## a fallback: METABOLITE_PATHWAY already matches the filter, so keeping
+  ## METABOLITE_ONTOLOGY/CHEMCLASS unconditionally would drown real pathway
+  ## hits. Mirrors the CUSTOM exemption in pgx.compute(). Testing colnames(GMT)
+  ## matches WGCNAplus, which greps the same colnames after row-subsetting.
+  if (!is.null(filter)) {
+    if (!any(grepl(filter, colnames(GMT)))) filter <- paste0(filter, "|^METABOLITE")
+    filter <- paste0(filter, "|^CUSTOM|^TEST:")
+  }
+
   ## add.wgcna=FALSE keeps the WGCNAplus return shape identical to this
   ## function's historical contract (a plain gsea list, not the wgcna
   ## object with $gsea attached, which is WGCNAplus's default).
