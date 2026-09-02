@@ -2,8 +2,7 @@
 % Please edit documentation in R/pgx-annot.R
 \name{detect_probetype}
 \alias{detect_probetype}
-\title{Get human ortholog from given symbols of organism by using
-  gprofiler2 package. This package needs internet connection.}
+\title{Detect probe type from probe set}
 \usage{
 detect_probetype(
   organism,
@@ -16,8 +15,5 @@ detect_probetype(
 )
 }
 \description{
-Get human ortholog from given symbols of organism by using
-  gprofiler2 package. This package needs internet connection.
-
 Detect probe type from probe set
 }

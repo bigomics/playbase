@@ -1061,7 +1061,7 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
 }
 
 pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000,
-                        include_iea = TRUE) {
+                        include_iea = TRUE, species_go=NULL) {
   if (!"symbol" %in% colnames(pgx$genes)) {
     message(paste(
       "[pgx.add_GMT] ERROR: could not find 'symbol' column.",
@@ -1140,12 +1140,14 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000,
     if (nrow(G) == 0 || ncol(G) == 0) G <- NULL
   }
 
-
   ## Add organism specific GO gene sets. This is species gene
   ## symbol. Skip if the GMT has enough (>1000) terms.
   num_goterms <- sum(grepl("^GO",colnames(G)))
   info("[pgx.add_GMT] number of GO gene sets in GMT =",num_goterms)
-  if (has.px2 && num_goterms < 1000) {
+  if(is.null(species_go)) {
+    species_go <- (num_goterms < 1000)
+  }
+  if (has.px2 && species_go) {
     ## add species GO genesets from AnnotationHub
     go.genesets <- NULL
     info("[pgx.add_GMT] Retrieving species GO for organism", pgx$organism,"...")

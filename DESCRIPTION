@@ -199,4 +199,4 @@ Remotes:
     plaid=url::https://github.com/bigomics/plaid/archive/HEAD.zip,
     grr=url::https://cran.r-project.org/src/contrib/Archive/grr/grr_0.9.1.tar.gz,
     metaLINCS=url::https://github.com/bigomics/metaLINCS/archive/HEAD.zip
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.0
