@@ -435,6 +435,19 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     col.annot <- col.annot[jj, ]
   }
 
+  ## reorder grp here, not in the plotting loop: col.ha below is built from
+  ## it, and ComplexHeatmap attaches top_annotation positionally, so the
+  ## per-group matrix and its annotation must share one column order
+  if (ngrp > 1 && inherits(cluster_columns, c("hclust", "dendrogram"))) {
+    col.order <- labels(stats::as.dendrogram(cluster_columns))
+    if (all(colnames(gx) %in% col.order)) {
+      grp[] <- lapply(grp, function(jj) jj[order(match(jj, col.order))])
+    } else {
+      warning("gx.splitmap: cluster_columns does not cover all columns; ignoring")
+    }
+    cluster_columns <- FALSE
+  }
+
   ## -------------------------------------------------------------------------------
   ## column  HeatmapAnnotation objects
   ## -------------------------------------------------------------------------------
@@ -606,25 +619,9 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     }
   }
 
-  ## A precomputed hclust/dendrogram spans ALL columns, so it cannot be passed
-  ## to the per-group Heatmap() calls below: each of those only sees a column
-  ## subset and ComplexHeatmap errors on the length mismatch. Use it to fix the
-  ## column order within each group instead. Without splitting the object is
-  ## still handed to the single Heatmap() unchanged.
-  col.order <- NULL
-  if (ngrp > 1 && !is.logical(cluster_columns)) {
-    col.order <- tryCatch(
-      labels(stats::as.dendrogram(cluster_columns)),
-      error = function(e) NULL
-    )
-    if (!all(colnames(gx) %in% col.order)) col.order <- NULL
-    cluster_columns <- FALSE
-  }
-
   hmap <- NULL
   for (i in grp.order) {
     jj <- grp[[i]]
-    if (!is.null(col.order)) jj <- jj[order(match(jj, col.order))]
 
     coldistfun1 <- function(x) stats::dist(x)
     rowdistfun1 <- function(x, y) 1 - stats::cor(x, y)
