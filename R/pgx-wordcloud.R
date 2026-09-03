@@ -103,7 +103,6 @@ pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
   ## compute for average contrast
   rms.FC <- Matrix::rowMeans(S**2)**0.5
   rms.FC <- rms.FC + 0.01 * stats::rnorm(length(rms.FC))
-  ## ponytail: simplify=FALSE, else a single-column W returns a matrix and fgsea rejects it
   gmt <- apply(W, 2, function(x) names(which(x != 0)), simplify = FALSE)
   suppressWarnings(res <- fgsea::fgseaSimple(gmt, rms.FC, nperm = 1000))
   res$leadingEdge <- sapply(res$leadingEdge, paste, collapse = "//")
