@@ -32,7 +32,7 @@ getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
     message(paste("Got",length(gmt2),"GO terms from Gprofiler"))
   }
 
-  ## order by largest.
+  ## merge
   gmt <- c(gmt1, gmt2)
   if(length(gmt)==0) {
     message("WARNING: empty gene sets")
@@ -40,20 +40,11 @@ getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
   }
   
   ## check duplicated GO termsyes
-  gmt.id <- gsub(".*\\(GO_|\\)$","",names(gmt))
-  gmt.names <- names(gmt)
-  names(gmt.names) <- gmt.id
-  ndup <- sum(duplicated(gmt.id))
-  message(paste("merging",ndup,"duplicated GO terms"))
+  gmt <- go.merge_duplicates(gmt)
 
-  ## colllapse duplicates by set union
-  gmt <- tapply(gmt, gmt.id, function(g) unique(unlist(g)))
-  names(gmt) <- gmt.names[names(gmt)]
-
+  ## convert all id to species symbol
   if(!is.null(symbol.annot)) {
-      ## convert all id to species symbol
-    gmt <- lapply( gmt, function(gg)
-      map2symbol( symbol.annot, gg, "symbol", na.rm=TRUE))
+    gmt <- gmt.map2symbol(gmt, annot=symbol.annot, target="symbol") 
   }
   
   ## sort on largest
@@ -85,7 +76,8 @@ getOrganismGO.ANNOTHUB <- function(organism, use.ah = NULL, orgdb = NULL) {
   }
   
   ## create GO annotets
-  message(paste0("Creating GO annotation for '",organism,"'using AnnotationHub..."))
+  message(paste0("[getOrganismGO.ANNOTHUB] Creating GO for '",organism,
+    "' using AnnotationHub..."))
   ont_classes <- c("BP", "CC", "MF")
   k <- "BP"
   for (k in ont_classes) {
@@ -132,7 +124,7 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
     message("[getOrganismGO.GPROFILER] WARNING: organism not found")
     return(NULL)
   }
-  message(paste0("Getting GO gene sets using Gprofiler for id '", id,"'"))
+  message(paste0("Getting GO using Gprofiler for id '", id,"'"))
   res <- NULL
   if(length(features) <= batch_size) {
     gost.out <- try(gprofiler2::gost(
