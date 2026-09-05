@@ -1038,9 +1038,9 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
     return(G)
   }
   
-  ## check if we have the new prefixed GMT format. Maybe
-  ## .append_gmt_to_matrix should do this.
-  if( mean(grep("[:]",rownames(G))) > 0.5) {
+  ## check if we have the new prefixed GMT format. If so we need to
+  ## match to stripped names and prepend matching datatype prefix
+  if( !is.null(G) && mean(grepl("[:]",rownames(G))) > 0.5) {
     gmt_genes <- unique(unlist(gmt))
     names(gmt_genes) <- gmt_genes
     stripped_G_names <- sub("^[a-zA-Z]+:","",rownames(G))

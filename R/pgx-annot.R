@@ -526,7 +526,6 @@ getGeneAnnotation.ANNOTHUB <- function(
     bridge = bridge,
     bridge_species = bridge_species,
     verbose = 0)
-
   annot$ORTHOGENE <- ortho$human    ## single-valued
   annot$ORTHOGENES <- ortho$humans  ## all candidates, ";"-joined
 
@@ -662,6 +661,7 @@ getGeneAnnotation.GPROFILER <- function(
 
     df$symbol <- out$name
     df$gene_title <- sub(" \\[.*", "", out$description)
+
     ortho <- getHumanOrtholog(
       organism, out$name,
       bridge = bridge,
@@ -670,6 +670,7 @@ getGeneAnnotation.GPROFILER <- function(
     )
     df$human_ortholog <- ortho$human    ## single-valued
     df$human_orthologs <- ortho$humans  ## all candidates, ";"-joined
+
     df$uniprot <- uniprot
     df$source <- "gprofiler2"
   }
