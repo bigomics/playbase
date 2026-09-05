@@ -165,6 +165,7 @@ pgx.createPGX <- function(counts,
                           samples,
                           contrasts,
                           organism,
+                          ortholog_species = "hsapiens",
                           custom.geneset = NULL,
                           annot_table = NULL,
                           max.genesets = 5000,
@@ -199,6 +200,7 @@ pgx.createPGX <- function(counts,
                           remove.xxl = TRUE, ## DEPRECATED
                           remove.outliers = TRUE, ## DEPRECATED
                           add.gmt = TRUE,
+                          species_go = NULL,
                           settings = list(),
                           sc_compute_settings = list()) {
   message("[pgx.createPGX]===========================================")
@@ -425,6 +427,7 @@ pgx.createPGX <- function(counts,
     datatype_subtype = datatype_subtype,
     description = description,
     metadata = metadata,
+    ortholog_species = ortholog_species,
     samples = data.frame(samples, check.names = FALSE),
     counts = as.matrix(counts),
     contrasts = contrasts,
@@ -450,6 +453,7 @@ pgx.createPGX <- function(counts,
     datatype = pgx$datatype,
     meth_type = meth_type,
     probetype = pgx$probe_type,
+    ortholog_species = pgx$ortholog_species,    
     annot_table = annot_table
   )
 
@@ -575,7 +579,8 @@ pgx.createPGX <- function(counts,
     message("[pgx.createPGX] WARNING: empty GMT matrix. No gene sets. ")
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
   } else {
-    pgx <- pgx.add_GMT(pgx = pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
+    pgx <- pgx.add_GMT(pgx = pgx, custom.geneset = custom.geneset,
+      max.genesets = max.genesets, species_go = species_go)
   }
 
   ## --------------------------------
@@ -1136,12 +1141,9 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000,
   }
 
   # create a feature list that will be used to filter and reduce dimensions of G
-  full_feature_list <- c(
-    pgx$genes$human_ortholog, pgx$genes$symbol,
-    rownames(pgx$genes)
-  )
-  full_feature_list <- full_feature_list[!is.na(full_feature_list)]
-  full_feature_list <- full_feature_list[full_feature_list != ""]
+  ##full_feature_list <- c(pgx$genes$symbol, pgx$genes$human_ortholog, rownames(pgx$genes)) ## why ?? 
+  full_feature_list <- c(pgx$genes$symbol)
+  full_feature_list <- setdiff(full_feature_list, c(NA,""))
   full_feature_list <- unique(full_feature_list)
 
   if (!is.null(G)) {
@@ -1155,7 +1157,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000,
   num_goterms <- sum(grepl("^GO",colnames(G)))
   info("[pgx.add_GMT] number of GO gene sets in GMT =",num_goterms)
   if(is.null(species_go)) {
-    species_go <- (num_goterms < 1000)
+    ##species_go <- (num_goterms < 1000)
+    species_go <- !(pgx$organism %in% c("Human","Mouse","Rat"))
   }
   if (has.px2 && species_go) {
     ## add species GO genesets from AnnotationHub
@@ -1182,15 +1185,18 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000,
 
   ## Add custom gene sets if provided
   if (!is.null(custom.geneset$gmt)) {
-    message("[pgx.add_GMT] Adding custom genesets...")
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in columns.
     custom_gmt <- custom.geneset$gmt
+    custom_gmt <- custom_gmt[sapply(custom_gmt,length)>1]
+    names(custom_gmt) <- sub("^[A-Z_]+:", "", names(custom_gmt))
+    names(custom_gmt) <- paste0("CUSTOM:", names(custom_gmt))    
 
-    ## Map feature id always to species specific symbols
-    ##custom_gmt <- lapply(custom_gmt, function(s) probe2symbol(s, pgx$genes, "symbol"))
-    custom_gmt <- lapply(custom_gmt, function(gg)
-      map2symbol(pgx$genes, gg, "symbol", na.rm=TRUE))
+    message(paste("[pgx.add_GMT] Adding",length(custom_gmt),"custom genesets"))
     
+    ## Map feature id always to species specific symbols. This uses
+    ## the feature annotation table pgx$genes so it also uses the
+    ## ortholog columns for matching.
+    custom_gmt <- gmt.map2symbol(custom_gmt, annot=pgx$genes, target="symbol") 
     all_genes <- unique(pgx$genes$symbol)
     G <- .append_gmt_to_matrix(custom_gmt, G, all_genes, minsize = 3, maxsize = 9999)
   }
