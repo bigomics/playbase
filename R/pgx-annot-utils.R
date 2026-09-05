@@ -19,7 +19,7 @@ getSpeciesAliases <- function(species) {
 }
 
 #' Merges any missing annotation in df with non-missing annotation of
-#' annot_table.
+#' df2.
 #'
 merge_annot_table <- function(df, df2, priority = 1) {
   #  df2 <- df2[match(rownames(df), rownames(df2)), ]
@@ -505,4 +505,16 @@ AnnotationDbi_select_2pass <- function(orgdb, keys, columns, keytype,
   annot <- annot[match(keys, annot[,keytype]),,drop=FALSE]
   
   return(annot)
+}
+
+#' Maps a gmt list to symbol using annotation table. We go via
+#' sparsematrix because it is much faster than list filtering.
+#' 
+gmt.map2symbol <- function(gmt, annot, target="symbol") {
+  G1 <- gmt2mat(gmt)
+  as.symbol <- map2symbol(annot=annot, genes=rownames(G1), target=target, na.rm=FALSE)
+  jj <- which(!is.na(as.symbol))
+  G1 <- G1[jj,]
+  rownames(G1) <- as.symbol[jj]
+  mat2gmt(G1)
 }
