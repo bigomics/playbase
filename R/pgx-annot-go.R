@@ -38,7 +38,7 @@ getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
     return(NULL)
   }
   
-  ## take out duplicated GO terms
+  ## take out duplicated GO termsyes
   gmt.id <- gsub(".*\\(GO_|\\)$","",names(gmt))
   gmt.names <- names(gmt)
   names(gmt.names) <- gmt.id
@@ -185,6 +185,11 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
     }
   }
 
+  if(inherits( res, "try-error")) {
+    warning("[getOrganismGO.GPROFILER] Error.")
+    return(NULL)
+  }
+  
   ## create gmt list
   gmt <- strsplit(res$intersection, split=",")
 
