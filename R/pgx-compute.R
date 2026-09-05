@@ -1030,11 +1030,26 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
     if (!is.null(G)) all_genes <- unique(c(rownames(G), all_genes))
   }
 
+  ## Only admmitted if valid symbol
   gmt <- lapply(gmt, function(s) intersect(s, all_genes))
   gmt.size <- sapply(gmt, length)
   if (sum(gmt.size >= minsize & gmt.size <= maxsize) == 0) {
     message("[.append_gmt_to_matrix] warning no valid gmt to add")
     return(G)
+  }
+  
+  ## check if we have the new prefixed GMT format. Maybe
+  ## .append_gmt_to_matrix should do this.
+  if( mean(grep("[:]",rownames(G))) > 0.5) {
+    gmt_genes <- unique(unlist(gmt))
+    names(gmt_genes) <- gmt_genes
+    stripped_G_names <- sub("^[a-zA-Z]+:","",rownames(G))
+    jj <- match(gmt_genes, stripped_G_names) 
+    ii <- which(!is.na(jj))
+    if(length(ii)) {
+      gmt_genes[ii] <- rownames(G)[jj[ii]]
+      gmt <- lapply(gmt, function(m) unname(gmt_genes[m]))
+    }
   }
 
   add_gmt <- createSparseGenesetMatrix(
@@ -1049,11 +1064,6 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
 
   # G and custom_gmt have to be SYMBOL alligned
   if (!is.null(add_gmt) && ncol(add_gmt) > 0) {
-    # only run this code if custom_gmt has columns (genes)
-    ## colnames(custom_gmt) <- probe2symbol(
-    ##   colnames(custom_gmt), pgx$genes, "symbol",
-    ##   fill_na = TRUE
-    ## )
     G <- merge_sparse_matrix(G, Matrix::t(add_gmt))
     remove(add_gmt)
   }
@@ -1153,7 +1163,9 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000,
     info("[pgx.add_GMT] Retrieving species GO for organism", pgx$organism,"...")
     go.genesets <- tryCatch(
       {
-        getOrganismGO( pgx$organism, features = full_feature_list,
+        getOrganismGO( pgx$organism,
+          symbol.annot = pgx$genes,
+          features = full_feature_list,
           include_iea = include_iea)
       },
       error = function(e) {
@@ -1163,12 +1175,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000,
 
     if (!is.null(go.genesets)) {
       dbg("[pgx.add_GMT] Adding", length(go.genesets), "species GO genesets")
-      all_genes <- unique(pgx$genes$symbol)
-      go_genes <- unique(unlist(go.genesets))
-      go_genes2 <- paste0("SYMBOL:", unique(unlist(go.genesets)))
-      if (sum(go_genes2 %in% all_genes) > sum(go_genes %in% all_genes)) {
-        go.genesets <- lapply(go.genesets, function(m) paste0("SYMBOL:", m))
-      }
+      all_genes <- unique(pgx$genes$symbol)      
       G <- .append_gmt_to_matrix(go.genesets, G, all_genes, minsize = 15, maxsize = 400)
     } ## end-if go.genesets
   } ## end-if !metabolics
@@ -1178,9 +1185,14 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000,
     message("[pgx.add_GMT] Adding custom genesets...")
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in columns.
     custom_gmt <- custom.geneset$gmt
-    customG <- lapply(custom_gmt, function(s) probe2symbol(s, pgx$genes, "symbol"))
+
+    ## Map feature id always to species specific symbols
+    ##custom_gmt <- lapply(custom_gmt, function(s) probe2symbol(s, pgx$genes, "symbol"))
+    custom_gmt <- lapply(custom_gmt, function(gg)
+      map2symbol(pgx$genes, gg, "symbol", na.rm=TRUE))
+    
     all_genes <- unique(pgx$genes$symbol)
-    G <- .append_gmt_to_matrix(customG, G, all_genes, minsize = 3, maxsize = 9999)
+    G <- .append_gmt_to_matrix(custom_gmt, G, all_genes, minsize = 3, maxsize = 9999)
   }
 
   num_goterms <- sum(grepl("^GO",colnames(G)))

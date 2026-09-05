@@ -368,6 +368,8 @@ getGeneAnnotation.ANNOTHUB <- function(
       message("WARNING. returning empty annotation.")
       annot <- data.frame(feature = probes, symbol = "")
       annot <- cleanupAnnotation(annot)
+      annot$symbol <- NA
+      annot$gene_title <- NA      
       return(annot)
     }
   }
@@ -476,13 +478,6 @@ getGeneAnnotation.ANNOTHUB <- function(
       missing.probe_type %in% AnnotationDbi::keytypes(orgdb)
     ) {
       missing.probes1 <- match_probe_names(missing.probes, orgdb, missing.probe_type)
-      ## suppressMessages(suppressWarnings(
-      ##   missing.annot <- AnnotationDbi::select(orgdb,
-      ##     keys = missing.probes1,
-      ##     columns = cols,
-      ##     keytype = missing.probe_type
-      ##   )
-      ## ))
       suppressMessages(suppressWarnings(
         missing.annot <- AnnotationDbi_select_2pass(
           orgdb,
@@ -622,17 +617,19 @@ getGeneAnnotation.GPROFILER <- function(
   length(ii)
   if(length(ii)) {
     clean.probes <- .clean_probe_names(probes[ii], sep='.-') 
+    names(clean.probes) <- probes[ii]
     out2 <- try(orthogene::map_genes(
       genes = clean.probes,
       species = species,
       run_map_species = FALSE,  ## disable map and check
       verbose = FALSE
     ), silent = TRUE)
-    out2$input <- probes[ii]
+
+    out2$input <- names(clean.probes)[match(out2$input,clean.probes)]
     jj <- which(!is.na(out2$name))
-    length(jj)
     if(length(jj)) {
-      out[ii[jj],] <- out2[jj,,drop=FALSE]
+      ii <- match(out2$input[jj], out$input)
+      out[ii,] <- out2[jj,,drop=FALSE]
     }
     message("Round 2: mapped ratio: ", round(100*mean(!is.na(out$name)),2),"%")
   }
@@ -1515,17 +1512,6 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     return(NULL)
   }
 
-  ## get probe types for organism
-  keytypes <- c(
-    "SYMBOL", "ENSEMBL", "ACCNUM", "UNIPROT", "GENENAME",
-    "ALIAS", "MGI", "TAIR", ## organism specific
-    "ENSEMBLTRANS", "ENSEMBLPROT",
-    "REFSEQ", "ENTREZID"
-  )
-  keytypes <- intersect(keytypes, AnnotationDbi::keytypes(orgdb))
-  key_matches <- rep(0L, length(keytypes))
-  names(key_matches) <- keytypes
-
   ## clean up probes
   probes <- probes[!is.na(probes) & probes != ""]
   probes <- sapply(strsplit(probes, split = ";"), head, 1) ## take first
@@ -1543,6 +1529,17 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   probes0 <- probes
   probes1 <- .clean_probe_names(probes)
   probesx <- unique(c(probes0, probes1))
+
+  ## get probe types for organism
+  keytypes <- c(
+    "SYMBOL", "ENSEMBL", "ACCNUM", "UNIPROT", "GENENAME",
+    "ALIAS", "MGI", "TAIR", ## organism specific
+    "ENSEMBLTRANS", "ENSEMBLPROT",
+    "REFSEQ", "ENTREZID"
+  )
+  keytypes <- intersect(keytypes, AnnotationDbi::keytypes(orgdb))
+  key_matches <- rep(0L, length(keytypes))
+  names(key_matches) <- keytypes
 
   ## Get all organism symbols
   org_annot <- AnnotationDbi::select(

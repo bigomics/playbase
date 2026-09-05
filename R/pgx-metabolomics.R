@@ -1178,48 +1178,6 @@ ramp.annotate_metabolites <- function(id) {
 }
 
 
-#' This function maps rownames of matrix M to corresponding symbol as
-#' given in annotation dataframe 'annot'. This is for example useful
-#' if M is a sparse geneset matrix with non-standard identifiers as
-#' rownames and we want to convert to specific symbols as defined by
-#' the annotation dataframe 'annot'.
-#'
-#' NOTE. This is *not* exactly the same as rename_by2 because it tests
-#' any row entries in annotation table for match, not just the
-#' max.matching column.
-#'
-map2symbol <- function(M, annot, new_id = "symbol") {
-  if (!new_id %in% colnames(annot)) stop("new_id not in annot")
-  id.cols <- c("feature", "symbol", "gene_name", grep("_ID$", colnames(annot), value = TRUE))
-  id.cols
-  idmat <- as.matrix(annot[, id.cols])
-  symbol.gmt <- apply(idmat, 1, function(m) unique(m), simplify = FALSE)
-  symbol.gmt <- lapply(symbol.gmt, function(m) setdiff(m, c("-", "", NA)))
-  symbol.gmt <- lapply(symbol.gmt, function(m) sub("^[A-Za-z]+:", "", m))
-  symbol.gmt <- lapply(symbol.gmt, function(m) unique(m))
-  names(symbol.gmt) <- annot[, new_id]
-
-  symbol.map <- lapply(names(symbol.gmt), function(i) cbind(symbol.gmt[[i]], i))
-  symbol.map <- symbol.map[sapply(symbol.map, ncol) == 2]
-  symbol.map <- do.call(rbind, symbol.map)
-
-  id <- rownames(M)
-  idx <- sub("^[A-Za-z]+:", "", id)
-  names(idx) <- id
-  jj <- match(idx, symbol.map[, 1])
-  ii <- which(!is.na(jj))
-  if (length(ii) == 0) {
-    message("WARNING: no synonyms match input probes")
-    return(NULL)
-  }
-  M1 <- M[ii, , drop = FALSE]
-  matched.symbol <- symbol.map[jj[ii], 2]
-  rownames(M1) <- matched.symbol
-  # M1 <- M1[, Matrix::colSums(M1!=0)>0, drop=FALSE]
-  return(M1)
-}
-
-
 #' This adds some 'gene sets' based on the species class of the lipids
 #' according to the annotation table.
 #'
@@ -1244,7 +1202,7 @@ mx.create_metabolite_sets <- function(annot, gmin = 0, metmin = 5,
   if (TRUE) {
     M <- Matrix::t(playdata::MSETxMETABOLITE)
     annot2 <- cbind(annot, annot.symbol = ANNOT_SYMBOL)
-    M1 <- map2symbol(M, annot2, new_id = "annot.symbol")
+    M1 <- mat.map2symbol(M, annot2, new_id = "annot.symbol")
     if (!is.null(M1) && nrow(M1) && ncol(M1)) {
       gmt1 <- mat2gmt(M1)
       names(gmt1) <- sub("^METABOLITE:", "METABOLITE_PATHWAY:", names(gmt1))

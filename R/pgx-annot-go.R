@@ -12,7 +12,8 @@
 #'
 #' @export
 getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
-                          db = c("annothub","gprofiler"), include_iea=TRUE ) {
+                          db = c("annothub","gprofiler"), include_iea=TRUE,
+                          symbol.annot = NULL) {
 
   gmt1=gmt2=NULL
   if(is.null(db) || "annothub" %in% db) {
@@ -38,7 +39,7 @@ getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
     return(NULL)
   }
   
-  ## take out duplicated GO termsyes
+  ## check duplicated GO termsyes
   gmt.id <- gsub(".*\\(GO_|\\)$","",names(gmt))
   gmt.names <- names(gmt)
   names(gmt.names) <- gmt.id
@@ -48,6 +49,12 @@ getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
   ## colllapse duplicates by set union
   gmt <- tapply(gmt, gmt.id, function(g) unique(unlist(g)))
   names(gmt) <- gmt.names[names(gmt)]
+
+  if(!is.null(symbol.annot)) {
+      ## convert all id to species symbol
+    gmt <- lapply( gmt, function(gg)
+      map2symbol( symbol.annot, gg, "symbol", na.rm=TRUE))
+  }
   
   ## sort on largest
   gmt <- gmt[order(-sapply(gmt,length))]
@@ -58,7 +65,7 @@ getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
   return(gmt)
 }
  
-getOrganismGO.ANNOTHUB <- function(organism, features = NULL, use.ah = NULL, orgdb = NULL) {
+getOrganismGO.ANNOTHUB <- function(organism, use.ah = NULL, orgdb = NULL) {
   organism <- normalizeOrganism(organism) 
 
   ## Load the annotation resource.
@@ -193,7 +200,7 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
   ## create gmt list
   gmt <- strsplit(res$intersection, split=",")
 
-  ## give names
+  ## standardize names (like "GO_BP:uridine kinase activity (GO_0004849)")
   ss <- sub(":","_",res$source)
   nn <- res$term_name
   gg <- sub(":","_",res$term_id)
@@ -201,10 +208,11 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
   head(gmt.name)
   names(gmt) <- gmt.name
 
-  ## sum up batches
+  ## sum up duplicated batches
   sum(duplicated(gmt.name))
-  if(  sum(duplicated(gmt.name)) ) {
-    gmt <- tapply( 1:length(gmt), gmt.name, function(i) unlist(gmt[i]))
+  if(sum(duplicated(gmt.name))) {
+    gmt <- tapply( 1:length(gmt), gmt.name,
+      function(i) unname(unlist(gmt[i])))
   }
   
   gmt <- gmt[order(-sapply(gmt,length))]
