@@ -155,12 +155,14 @@ strip_prefix <- function(s) {
 #' prefix needed for multi-omics.
 #'
 .clean_probe_names <- function(probes, sep = ".-") {
-  probes0 <- trimws(probes)
+  probes0 <- probes
+  probes <- trimws(probes)  
   probes[is.na(probes)] <- ""
   ## strip multiple probes
   probes <- sub("[;].*", "", probes)
   ## strip away anything postfix after a 'dot' or 'underscore'
   probes <- sub(paste0("[", sep, "].*"), "", probes)
+  names(probes) <- probes0
   return(probes)
 }
 
