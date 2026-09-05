@@ -130,7 +130,6 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
   if(length(features) <= batch_size) {
     gost.out <- try(gprofiler2::gost(
       query = features,
-      #query = features[1:1000],    
       organism = id,
       evcodes = TRUE,   ## get gene sets
       exclude_iea = !include_iea,
@@ -186,6 +185,11 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
     }
   }
 
+  if(inherits( res, "try-error")) {
+    warning("[getOrganismGO.GPROFILER] Error.")
+    return(NULL)
+  }
+  
   ## create gmt list
   gmt <- strsplit(res$intersection, split=",")
 

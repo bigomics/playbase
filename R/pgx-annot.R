@@ -88,7 +88,7 @@ getProbeAnnotation <- function(organism,
     genes <- annotate_methylomics(organism, probes, meth_type = meth_type)
     return(genes)
   }
-  
+
   ## clean probe names
   probes <- trimws(probes)
   probes[probes == "" | is.na(probes)] <- "NA"
@@ -97,8 +97,10 @@ getProbeAnnotation <- function(organism,
     rownames(annot_table) <- make_unique(rownames(annot_table))
   }    
 
-  ## only first feature
+  ## only first feature (warning: can make probe not unique). This
+  ## assumes semicolumn is NEVER used for single feature names. 
   probes <- sub("[;].*","",probes) ## only first probe
+  probes <- make_unique(probes)
   
   genes <- NULL
   if (annot.unknown) {
@@ -191,11 +193,11 @@ getGeneAnnotation <- function(
   organism <- normalizeOrganism(organism)
 
   ## clean up probes name. be careful not to 'overclean'.
-  probes0 <- probes
+  probes0 <- make_unique(trimws(probes))
   probes <- trimws(probes)
   probes[probes == "" | is.na(probes)] <- "NA"
 
-  ## only first feature!
+  ## only first feature! (warning: can make probes non-unique)
   probes <- sub("[;].*","",probes) ## only first probe
 
   if (mean(grepl("[:]", probes)) > 0.98) {
@@ -210,7 +212,7 @@ getGeneAnnotation <- function(
 
   # init empty (all missings)
   annot <- data.frame(feature = probes, stringsAsFactors = FALSE)
-  rownames(annot) <- probes0
+  rownames(annot) <- make_unique(probes0)
   missing <- rep(TRUE, length(probes))
   
   for (method in methods) {
@@ -351,7 +353,7 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   ## Backup probes as probes0, give names of probes the original name.
   probes[is.na(probes) | probes == ""] <- "NA"
-  probes0 <- make.unique(probes)
+  probes0 <- make_unique(probes)
   names(probes) <- probes0
 
   ## clean up probe names from suffixes
@@ -447,7 +449,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   })
   annot <- data.frame(dfA, check.names = FALSE)
   annot <- annot[match(probes, rownames(annot)), ]
-  rownames(annot) <- names(probes)
+  rownames(annot) <- make_unique(names(probes))
   annot$PROBE <- names(probes) ## original probe names
 
   ## -----------------------------------------------------------------------------
@@ -899,7 +901,7 @@ getCustomAnnotation2 <- function(probes, custom_annot, feature.col = "feature",
     ## chr = NA,
     source = "custom"
   )
-  rownames(annot) <- probes
+  rownames(annot) <- make_unique(probes)
   required.columns <- colnames(annot)
 
   # If the user has provided a custom gene table, check it and use it
