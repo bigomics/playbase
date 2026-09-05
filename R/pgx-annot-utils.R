@@ -518,3 +518,25 @@ gmt.map2symbol <- function(gmt, annot, target="symbol") {
   rownames(G1) <- as.symbol[jj]
   mat2gmt(G1)
 }
+
+
+#' Merge duplicated GO sets in a gmt collection by merging the
+#' terms. This is often needed after merging to GO collections if
+#' retrieved by different methods.
+#' 
+go.merge_duplicates <- function(gmt) {
+  gmt.id <- gsub(".*\\(GO_|\\)$","",names(gmt))
+  gmt.names <- names(gmt)
+  names(gmt.names) <- gmt.id
+  ndup <- sum(duplicated(gmt.id))
+  message(paste("merging",ndup,"duplicated GO terms"))
+  id.dup <- gmt.id[duplicated(gmt.id)]
+  id.one <- setdiff(gmt.id, id.dup)
+  ## colllapse duplicates by set union  
+  gmt1 <- gmt[id.one]
+  jj <- which(gmt.id %in% id.dup)
+  gmt2 <- tapply(gmt[jj], gmt.id[jj], function(g) unique(unlist(g)))
+  gmt <- c(gmt1, gmt2)
+  names(gmt) <- gmt.names[names(gmt)]
+  return(gmt)
+}
