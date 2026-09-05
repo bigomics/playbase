@@ -38,7 +38,7 @@ getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
     return(NULL)
   }
   
-  ## take out duplicated GO termsyes
+  ## take out duplicated GO terms
   gmt.id <- gsub(".*\\(GO_|\\)$","",names(gmt))
   gmt.names <- names(gmt)
   names(gmt.names) <- gmt.id
