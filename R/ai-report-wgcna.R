@@ -46,16 +46,94 @@
 # Extraction primitives
 # -----------------------------------------------------------------------------
 
+# Reduce a feature identifier to a comparison key: protein-group braces removed
+# ({I1JLC8.16}) and any short omics-layer prefix stripped (gx:GLYMA_01G012700),
+# case-folded. Used only to recognise "this value is just the id again"; the
+# case-preserving sibling used for annotation lookup is `.moxwgcna_norm_id()`.
+.feature_id_key <- function(x) {
+  x <- gsub("^\\{|\\}$", "", as.character(x))
+  tolower(sub("^[A-Za-z]{2,4}:", "", x))
+}
+
+# Placeholder annotation values that carry no functional information. Kept
+# strict (whole-string matches only) so a real annotation such as
+# "Uncharacterized protein family (UPF0497)" survives.
+.uninformative_desc <- function(x) {
+  x <- tolower(trimws(as.character(x)))
+  na <- is.na(x)
+  x[na] <- ""
+  na | !nzchar(x) |
+    x %in% c("na", "n/a", "-", "--", "none", "null", "unnamed protein product") |
+    grepl("^(hypothetical|predicted|putative|uncharacterized) protein$", x) |
+    grepl("^un?known( (protein|feature|function))?$", x) |
+    grepl("^protein of unknown function$", x)
+}
+
 #' Look up function descriptions for features (NULL-safe)
+#'
+#' Resolved per feature through a fallback chain rather than from one fixed
+#' column: `gene_title`, then `ortholog_description`, `gene_name`,
+#' `description`. Placeholder values ("hypothetical protein", "Uknown
+#' feature", ...) and values that merely repeat the feature id or its symbol
+#' are skipped, so the next column gets a turn. This matters for non-model
+#' organisms, where `gene_title` is a placeholder for nearly every feature
+#' (7 of 2000 informative on the soybean multi-omics demo) while a real
+#' description sits unused in `ortholog_description`.
+#'
+#' A known `human_ortholog` that differs from the feature's own symbol is
+#' appended as `[ortholog: XXX]` -- for a non-model organism it is often the
+#' only recognizable handle in the row, and it is what the enrichment gene
+#' sets are keyed on. The tag sits outside the `max_chars` budget so it cannot
+#' be truncated away. Human datasets, where the ortholog equals the symbol,
+#' are unaffected.
 resolve_functions <- function(features, annot, max_chars = 60L) {
   funcs <- rep("", length(features))
   if (is.null(annot)) return(funcs)
-  func_col <- intersect(c("gene_title", "gene_name", "description"), colnames(annot))
-  if (length(func_col) == 0) return(funcs)
   idx <- match(features, rownames(annot))
   valid <- !is.na(idx)
-  funcs[valid] <- as.character(annot[idx[valid], func_col[1]])
-  substr(funcs, 1, max_chars)
+  if (!any(valid)) return(funcs)
+
+  col <- function(nm) {
+    if (!nm %in% colnames(annot)) return(NULL)
+    trimws(as.character(annot[idx[valid], nm]))
+  }
+
+  ## An "identifier repeated back" is not a description; `gene_name` mirrors
+  ## `symbol` in several annotation sources, and in a multi-omics annotation it
+  ## mirrors the layer-prefixed id while the feature itself is bare -- hence the
+  ## comparison runs on normalised keys, not raw strings.
+  keys <- list(.feature_id_key(features[valid]))
+  for (nm in c("symbol", "feature")) {
+    v <- col(nm)
+    if (!is.null(v)) keys[[length(keys) + 1L]] <- .feature_id_key(v)
+  }
+  is_self <- function(v) {
+    k <- .feature_id_key(v)
+    Reduce(`|`, lapply(keys, function(kk) !is.na(k) & !is.na(kk) & k == kk))
+  }
+
+  desc <- rep("", sum(valid))
+  for (nm in c("gene_title", "ortholog_description", "gene_name", "description")) {
+    v <- col(nm)
+    if (is.null(v)) next
+    take <- !nzchar(desc) & !.uninformative_desc(v) & !is_self(v)
+    desc[take] <- v[take]
+    if (all(nzchar(desc))) break
+  }
+  desc <- substr(desc, 1, max_chars)
+
+  ortho <- col("human_ortholog")
+  if (!is.null(ortho)) {
+    tag <- !.uninformative_desc(ortho) & !is_self(ortho)
+    desc[tag] <- ifelse(
+      nzchar(desc[tag]),
+      sprintf("%s [ortholog: %s]", desc[tag], ortho[tag]),
+      sprintf("ortholog: %s", ortho[tag])
+    )
+  }
+
+  funcs[valid] <- desc
+  funcs
 }
 
 #' Render module identifiers in canonical MEcolor form.
