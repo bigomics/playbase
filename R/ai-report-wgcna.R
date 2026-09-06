@@ -793,15 +793,5 @@ ai.wgcna.create_report <- function(pgx, slice, ai) {
 }
 
 
-#' Generate a multi-omics WGCNA AI report.
-#'
-#' The multi-omics WGCNA slot uses the same extracted report contract as WGCNA;
-#' shape-specific handling stays inside the shared WGCNA builders.
-#'
-#' @param pgx full pgx object.
-#' @param slice WGCNA multi-omics result slot.
-#' @param ai resolved `ai` list.
-#' @return `list(report = <markdown>, prompt = <markdown>)`.
-ai.wgcna_mox.create_report <- function(pgx, slice, ai) {
-  ai.wgcna.create_report(pgx, slice, ai)
-}
+## The multi-omics slot (`pgx$wgcna_mox`) has its own builders and entry point
+## `ai.wgcna_mox.create_report()`; see ai-report-moxwgcna.R.
