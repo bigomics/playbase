@@ -39,8 +39,8 @@ compute_extra <- function(pgx, extra = c(
   rna.counts <- pgx$counts
 
   # If working on non-human species, use homologs
-  if (!all(is.na(pgx$genes$human_ortholog))) {
-    rownames(rna.counts) <- probe2symbol(rownames(rna.counts), pgx$genes, query = "human_ortholog")
+  if (!all(is.na(pgx$genes$ortholog))) {
+    rownames(rna.counts) <- probe2symbol(rownames(rna.counts), pgx$genes, query = "ortholog")
   }
 
   if ("meta.go" %in% extra) {
@@ -497,8 +497,8 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
     message("[compute_drugActivityEnrichment] computing activity CMAP for ", f)
     X <- ref.db[[i]]
     if (!pgx$organism %in% c("Human", "human")) {
-      rowid <- data.table::chmatch(rownames(X), pgx$genes$human_ortholog, nomatch = NA)
-      rownames(X) <- pgx$genes$human_ortholog[rowid]
+      rowid <- data.table::chmatch(rownames(X), pgx$genes$ortholog, nomatch = NA)
+      rownames(X) <- pgx$genes$ortholog[rowid]
       X <- X[!is.na(rowid), , drop = FALSE]
     }
 

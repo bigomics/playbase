@@ -59,11 +59,11 @@ pgx.initialize <- function(pgx, progress=NULL) {
     # between old and new pgx
     pgx$genes$gene_name <- as.character(pgx$genes$gene_name)
     pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
-    pgx$genes$human_ortholog <- toupper(as.character(pgx$genes$gene_name))
+    pgx$genes$ortholog <- toupper(as.character(pgx$genes$gene_name))
     pgx$genes$feature <- as.character(rownames(pgx$genes))
     pgx$genes$symbol <- pgx$genes$gene_name
     col_order <- c(
-      "feature", "symbol", "human_ortholog",
+      "feature", "symbol", "ortholog",
       "gene_title", "gene_name", colnames(pgx$genes)
     )
     col_order <- col_order[!duplicated(col_order)]
@@ -190,8 +190,8 @@ pgx.initialize <- function(pgx, progress=NULL) {
   ## intersect and filter gene families (convert species to human gene sets)
   ## -----------------------------------------------------------------------------
   # Here we use the homologs when available, instead of gene_name
-  genes <- ifelse(!is.na(pgx$genes$human_ortholog),
-    pgx$genes$human_ortholog,
+  genes <- ifelse(!is.na(pgx$genes$ortholog),
+    pgx$genes$ortholog,
     pgx$genes$gene_name
   )
 
@@ -202,14 +202,14 @@ pgx.initialize <- function(pgx, progress=NULL) {
   # Check if human ortholog is empty, if it is
   # 1) run getHumanOrtholog (maybe it failed on pgx.compute bc server was unreachable)
   # 2) if still empty, grag the symbols toUpper
-  if (all(is.na(pgx$genes$human_ortholog)) || all(pgx$genes$human_ortholog == "")) {
+  if (all(is.na(pgx$genes$ortholog)) || all(pgx$genes$ortholog == "")) {
     ortho <- getHumanOrtholog(pgx$organism, pgx$genes$symbol)
     genes_ho <- ortho$human
     if (all(is.na(genes_ho))) {
-      pgx$genes$human_ortholog <- toupper(pgx$genes$symbol)
+      pgx$genes$ortholog <- toupper(pgx$genes$symbol)
     } else {
-      pgx$genes$human_ortholog <- genes_ho
-      pgx$genes$human_orthologs <- ortho$humans
+      pgx$genes$ortholog <- genes_ho
+      pgx$genes$orthologs <- ortho$humans
       pgx$genes <- cleanupAnnotation(pgx$genes)
     }
   }
@@ -221,7 +221,7 @@ pgx.initialize <- function(pgx, progress=NULL) {
   } else {
     pgx$families <- lapply(playdata::FAMILIES, function(x, genes, annot_table) {
       x <- intersect(x, genes)
-      x <- annot_table$symbol[match(x, annot_table$human_ortholog)]
+      x <- annot_table$symbol[match(x, annot_table$ortholog)]
       return(x)
     }, genes = genes, annot_table = pgx$genes)
   }
@@ -231,6 +231,10 @@ pgx.initialize <- function(pgx, progress=NULL) {
   all.genes <- sort(unique(pgx$genes$symbol))
   pgx$families[["<all>"]] <- all.genes
 
+  ## Rename 'ortholog' to 'ortholog'. We now allow ortholog to
+  ## any species.
+  colnames(pgx$genes) <- gsub("^human_orth","orth",colnames(pgx$genes))
+  
   ## -----------------------------------------------------------------------------
   ## Recompute geneset meta.fx as average fold-change of genes
   ## -----------------------------------------------------------------------------

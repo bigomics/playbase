@@ -12,7 +12,7 @@
 pgx.getFeatureSets <- function(pgx, min.size = 1) {
   ## Get default classification from gene families
   ftclass <- lapply(playdata::FAMILIES, function(x) {
-    map_probes(pgx$genes, x, column = "human_ortholog", target = "rownames")
+    map_probes(pgx$genes, x, column = "ortholog", target = "rownames")
   })
 
   ## Update 'all' group with all symbols

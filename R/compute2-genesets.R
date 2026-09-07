@@ -26,10 +26,10 @@ compute_testGenesets <- function(pgx,
     stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
   }
 
-  if (is.null(pgx$genes$human_ortholog)) {
+  if (is.null(pgx$genes$ortholog)) {
     # this is needed in case the species is human, and we dont have the homolog column or if we have an old pgx
     # which will ensure consistency between old and new pgx
-    pgx$genes$human_ortholog <- NA
+    pgx$genes$ortholog <- NA
   }
 
   ## -----------------------------------------------------------

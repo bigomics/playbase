@@ -11,7 +11,7 @@
 #' AnnotationHub/OrgDB. Restrict to genes as background.
 #'
 #' @export
-getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
+getOrganismGO <- function(organism, features=NULL, minsize=3L, batch_size=2000L,
                           db = c("annothub","gprofiler"), include_iea=TRUE,
                           symbol.annot = NULL) {
 
@@ -25,13 +25,15 @@ getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
   if(is.null(features) && !is.null(gmt1)) {
     features <- unique(unlist(gmt1))
   }
-  
-  if(!is.null(features) && "gprofiler" %in% db) {    
+
+  ## fallback if annotHub didn't work. Skip if annothub has done it
+  ## because gprofiler is quite slow
+  if(!is.null(features) && "gprofiler" %in% db && is.null(gmt1)) {    
     gmt2 <- getOrganismGO.GPROFILER(organism, features,
       batch_size=batch_size, include_iea=include_iea)
     message(paste("Got",length(gmt2),"GO terms from Gprofiler"))
   }
-
+  
   ## merge
   gmt <- c(gmt1, gmt2)
   if(length(gmt)==0) {
@@ -53,6 +55,8 @@ getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
   ## filter on minimum size
   gmt <- gmt[sapply(gmt,length) >= minsize]
 
+  dbg("[getOrganismGO] done!")
+  
   return(gmt)
 }
  
@@ -68,7 +72,7 @@ getOrganismGO.ANNOTHUB <- function(organism, use.ah = NULL, orgdb = NULL) {
     return(NULL)
   }
 
-  go.gmt <- list()
+  gmt <- list()
   ont_classes <- c("BP", "CC", "MF")
   if (!"GOALL" %in% AnnotationDbi::keytypes(orgdb)) {
     message("WARNING:: missing GO annotation in database!\n")
@@ -109,10 +113,12 @@ getOrganismGO.ANNOTHUB <- function(organism, use.ah = NULL, orgdb = NULL) {
       names(sets) <- new_names
       
       ## append to list
-      go.gmt <- c(go.gmt, sets)
+      gmt <- c(gmt, sets)
     }
   }
-  go.gmt
+
+  dbg("[getOrganismGO.ANNOTHUB] done!")
+  gmt
 }
 
 getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,

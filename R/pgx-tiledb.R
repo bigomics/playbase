@@ -33,7 +33,7 @@
 ##       BRCA1    | TCGA_BRCA::TCGA-A1-A0SB  | 234.1   | 0.78
 ##       ...      | ...                      | ...     | ...
 ##
-##   - Genes are human orthologs (converted via pgx$genes$human_ortholog)
+##   - Genes are human orthologs (converted via pgx$genes$ortholog)
 ##   - Samples are prefixed with dataset name: "dataset::original_sample_id"
 ##   - Zeros ARE stored (distinguish from missing data which is NA)
 ##   - Z-scores are computed per-dataset from log-scaled X: (X - gene_mean) / gene_sd
@@ -149,7 +149,7 @@ buildTileDB <- function(pgx_folder, tiledb_path, overwrite = FALSE, verbose = TR
       }
 
       counts <- pgx$counts
-      counts <- rename_by2(counts, pgx$genes, new_id = "human_ortholog", keep.prefix = FALSE)
+      counts <- rename_by2(counts, pgx$genes, new_id = "ortholog", keep.prefix = FALSE)
 
       file_prefix <- tools::file_path_sans_ext(basename(pgx_file))
       unique_samples <- paste0(file_prefix, "::", colnames(counts))
@@ -730,11 +730,11 @@ tiledb.prepareData <- function(pgx) {
 
   ## Extract and transform counts
   counts <- as.matrix(pgx$counts)
-  counts <- rename_by2(counts, pgx$genes, new_id = "human_ortholog", keep.prefix = FALSE)
+  counts <- rename_by2(counts, pgx$genes, new_id = "ortholog", keep.prefix = FALSE)
 
   ## Compute z-scores from log-scaled X matrix
   X <- as.matrix(pgx$X)
-  X <- rename_by2(X, pgx$genes, new_id = "human_ortholog", keep.prefix = FALSE)
+  X <- rename_by2(X, pgx$genes, new_id = "ortholog", keep.prefix = FALSE)
   gene_means <- rowMeans(X, na.rm = TRUE)
   gene_sds <- apply(X, 1, sd, na.rm = TRUE)
   gene_sds[gene_sds == 0] <- NA  ## Avoid division by zero

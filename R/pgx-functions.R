@@ -1596,7 +1596,7 @@ rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
   # Guard against NA
   if (is.null(symbol) || all(is.na(symbol))) {
     gene.col <- head(intersect(
-      c("symbol", "gene_name", "human_ortholog"),
+      c("symbol", "gene_name", "ortholog"),
       colnames(annot_table)
     ), 1)
     if (length(gene.col) == 0) gene.col <- 1
