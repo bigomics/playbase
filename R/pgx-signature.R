@@ -76,8 +76,8 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
 
     ## collapse duplicates by average or max absFC
     ## fc <- tapply( fc, names(fc), mean, na.rm = TRUE)
-    fc <- tapply(fc, names(fc), function(x) x[which.max(abs(x))])
     fc[is.na(fc)] <- 0
+    fc <- tapply(fc, names(fc), function(x) x[which.max(abs(x))])
 
     res <- pgx.correlateSignatureH5(
       fc,

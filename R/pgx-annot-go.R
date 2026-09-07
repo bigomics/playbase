@@ -39,13 +39,16 @@ getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
     return(NULL)
   }
   
-  ## check duplicated GO termsyes
-  gmt <- go.merge_duplicates(gmt)
+  ## take out duplicated GO terms
+  gmt.id <- gsub(".*\\(GO_|\\)$","",names(gmt))
+  gmt.names <- names(gmt)
+  names(gmt.names) <- gmt.id
+  ndup <- sum(duplicated(gmt.id))
+  message(paste("merging",ndup,"duplicated GO terms"))
 
-  ## convert all id to species symbol
-  if(!is.null(symbol.annot)) {
-    gmt <- gmt.map2symbol(gmt, annot=symbol.annot, target="symbol") 
-  }
+  ## colllapse duplicates by set union
+  gmt <- tapply(gmt, gmt.id, function(g) unique(unlist(g)))
+  names(gmt) <- gmt.names[names(gmt)]
   
   ## sort on largest
   gmt <- gmt[order(-sapply(gmt,length))]
