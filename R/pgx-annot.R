@@ -66,12 +66,11 @@ ngs.getGeneAnnotation <- function(...) {
 getProbeAnnotation <- function(organism,
                                probes,
                                datatype,
-                               meth_type = NULL, 
+                               meth_type = NULL,
                                probetype = "",
                                bridge = NULL,
                                bridge_species = NULL,
                                annot_table = NULL) {
-
   if (is.null(datatype)) datatype <- "unknown"
   if (is.null(probetype)) probetype <- "unknown"
 
@@ -84,7 +83,7 @@ getProbeAnnotation <- function(organism,
   if (datatype == "methylomics") {
     c1 <- is.null(meth_type)
     c2 <- !meth_type %in% c("450K array", "EPIC array")
-    if (c1 | c2) meth_type = "450K array"
+    if (c1 | c2) meth_type <- "450K array"
     genes <- annotate_methylomics(organism, probes, meth_type = meth_type)
     return(genes)
   }
@@ -95,7 +94,7 @@ getProbeAnnotation <- function(organism,
   probes0 <- make_unique(probes) ## make unique but do not clean
   if (!is.null(annot_table)) {
     rownames(annot_table) <- make_unique(rownames(annot_table))
-  }    
+  }
 
   ## only first feature (warning: can make probe not unique). This
   ## assumes semicolumn is NEVER used for single feature names. 
@@ -172,7 +171,6 @@ getProbeAnnotation <- function(organism,
   genes <- cleanupAnnotation(genes)
 
   return(genes)
-
 }
 
 
@@ -278,7 +276,6 @@ getGeneAnnotation <- function(
 
   return(annot)
 }
-
 
 
 #' Get gene annotation data using AnnotationHub

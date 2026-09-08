@@ -90,9 +90,9 @@ compute_testGenesets <- function(pgx,
   }
 
   if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {
-    X1 <- playbase::betaToM(X1) 
+    X1 <- playbase::betaToM(X1)
   }
-  
+
   gset.meta <- gset.fitContrastsWithAllMethods(
     gmt = gmt,
     X = X1,
