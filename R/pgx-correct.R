@@ -2476,7 +2476,8 @@ bbknn <- function(data_matrix, batch, pca = TRUE, compute_pca = "python", nPcs =
 #'
 #'
 #' @seealso
-#' \code{\link[limma]{removeBatchEffect}} for the batch correction method used.
+#' \code{\link[NPM]{NPmatch}} for the underlying, actively maintained implementation.
+#' \code{\link[limma]{removeBatchEffect}} for the batch correction method used internally.
 #'
 #' @examples
 #' # TODO
@@ -2485,111 +2486,23 @@ bbknn <- function(data_matrix, batch, pca = TRUE, compute_pca = "python", nPcs =
 nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TRUE,
                        knn = 2, sdtop = 2000, return.B = FALSE,
                        use.design = TRUE, use.covariates = FALSE) {
-  ## Nearest-neighbour matching for batch correction. This
-  ## implementation creates a fully paired dataset with nearest
-  ## matching neighbours when pairs are missing.
-
-  ## use.design=TRUE;dist.method="cor";center.x=TRUE;center.m=TRUE;sdtop=1000;knn=2
-
-  knn <- ifelse(ncol(X) <= 3, 1, knn)
-
-  ## compute distance matrix for NNM-pairing
-  y1 <- paste0("y=", y)
-  dX <- X
-
-  ## reduce for speed
-  sdx <- matrixStats::rowSds(dX, na.rm = TRUE)
-  ii <- Matrix::head(order(-sdx), sdtop)
-  dX <- dX[ii, ]
-
-  if (center.x) {
-    dX <- dX - rowMeans(dX, na.rm = TRUE)
-  }
-  if (center.m) {
-    ## center per condition group (takes out batch differences)
-    mX <- tapply(1:ncol(dX), y1, function(i) rowMeans(dX[, i, drop = FALSE], na.rm = TRUE))
-    mX <- do.call(cbind, mX)
-    dX <- dX - mX[, y1]
-  }
-
-  if (dist.method == "cor") {
-    ## D <- 1 - crossprod(scale(dX)) / (nrow(dX) - 1) ## faster
-    D <- 1 - cor(dX)
-  } else {
-    D <- as.matrix(stats::dist(t(dX)))
-  }
-  ## remove(dX)
-  D[is.na(D)] <- 0 ## might have NA
-
-  ## find neighbours
-  B <- matrix(0, 0, 0)
-  if (knn > 1) {
-    message(paste0("[nnmCorrect] finding ", knn, "-nearest neighbours..."))
-    bb <- apply(D, 1, function(r) tapply(r, y1, function(s) head(names(sort(s)), knn)))
-    B <- do.call(rbind, lapply(bb, function(x) unlist(x)))
-    colnames(B) <- unlist(mapply(rep, names(bb[[1]]), sapply(bb[[1]], length)), use.names = FALSE)
-  }
-  if (knn == 1 || nrow(B) != ncol(X)) {
-    message("[nnmCorrect] finding nearest neighbours...")
-    B <- t(apply(D, 1, function(r) tapply(r, y1, function(s) names(which.min(s)))))
-  }
-
-  ## sanity check. bail out
-  if (nrow(B) != ncol(X)) {
-    message("[nnmCorrect] WARNING. FATAL ERROR. returning uncorrected X.")
-    return(X)
-  }
-
-  ## ensure sample is always present in own group
-  rownames(B) <- colnames(X)
-  idx <- cbind(1:nrow(B), match(y1, colnames(B)))
-  B[idx] <- rownames(B)
-  ##  B <- cbind(rownames(B), B)
-
-  ## imputing full paired data set
-  kk <- match(as.vector(B), rownames(B))
-  full.y <- y1[kk]
-  full.pairs <- rep(rownames(B), ncol(B))
-  full.X <- X[, kk]
-  dim(full.X)
-
-  ## remove pairing effect
-  message("[nnmCorrect] correcting for pairing effects...")
-  if (use.covariates) {
-    V <- model.matrix(~ 0 + full.pairs)
-    design <- stats::model.matrix(~full.y)
-    if (!use.design) design <- matrix(1, ncol(full.X), 1)
-    full.X <- limma::removeBatchEffect(
-      full.X,
-      covariates = scale(V),
-      design = design
-    )
-  } else {
-    design <- stats::model.matrix(~full.y)
-    if (!use.design) design <- matrix(1, ncol(full.X), 1)
-    full.X <- limma::removeBatchEffect(
-      full.X,
-      batch = full.pairs,
-      design = design
-    )
-  }
-
-  ## now contract to original samples
-  message("[nnmCorrect] matching result...")
-  full.idx <- rownames(B)[kk]
-  cX <- do.call(cbind, tapply(
-    1:ncol(full.X), full.idx,
-    function(i) rowMeans(full.X[, i, drop = FALSE], na.rm = TRUE)
-  ))
-  cX <- cX[, colnames(X)]
-
-  ## retain original row means
-  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
-  res <- cX
-  if (return.B) {
-    res <- list(X = cX, pairings = B)
-  }
-  return(res)
+  ## Thin wrapper around NPM::NPmatch(), the standalone package this
+  ## algorithm was extracted into (https://github.com/bigomics/NPM). Kept
+  ## here under the original name/argument names so existing playbase
+  ## callers don't need to change. NPmatch's `use.cov` is this function's
+  ## `use.covariates`; every other argument name matches directly.
+  NPM::NPmatch(
+    X = X,
+    y = y,
+    dist.method = dist.method,
+    center.x = center.x,
+    center.m = center.m,
+    knn = knn,
+    sdtop = sdtop,
+    return.B = return.B,
+    use.design = use.design,
+    use.cov = use.covariates
+  )
 }
 
 
