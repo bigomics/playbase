@@ -1034,14 +1034,6 @@ mofa.prefix <- function(xx) {
 }
 
 #' @export
-mofa.get_prefix <- function(x) {
-  if (class(x) %in% c("matrix", "data.frame") || !is.null(dim(x))) {
-    x <- rownames(x)
-  }
-  ifelse(grepl(":", x), sub(":.*", "", x), "")
-}
-
-#' @export
 mofa.strip_prefix <- function(xx) {
   if (class(xx) == "character") {
     xx <- sub("^[A-Za-z0-9]+:", "", xx)
@@ -1903,16 +1895,6 @@ normalize_multifc <- function(fc, by = c("sd", "mad")[1]) {
 ## ======================================================================
 ## ======================== MULTI-GSEA ==================================
 ## ======================================================================
-
-#' Test if probes are multi-omics. All probe names should have a
-#' 'colon' (:) and prefixes are alpha-numeric without any spaces or
-#' other characters. This is to avoid colons in unprefixed names (like
-#' sometimes in metabolomics).
-#'
-#' @export
-is.multiomics <- function(probes) {
-  all(grepl("^[a-zA-Z0-9]+:", probes))
-}
 
 #' Compute multi-enrichment for contrasts
 #'

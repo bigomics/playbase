@@ -226,6 +226,9 @@ pgx.createPGX <- function(counts,
   ## matching the Shiny upload flow (normalization module -> createPGX).
   if (is.null(X) && !is.null(preprocess) && datatype != "scRNA-seq") {
     message("[pgx.createPGX] building X via pgx.preprocess()")
+    ## `contrasts` is never validated above and is legitimately NULL for an
+    ## upload with no comparisons defined yet; pgx.preprocess() tolerates that
+    ## and treats the samples as one single group.
     pp <- pgx.preprocess(counts,
       samples = samples, contrasts = contrasts,
       annot = annot_table, options = preprocess

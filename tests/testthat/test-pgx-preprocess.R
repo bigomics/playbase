@@ -173,3 +173,83 @@ test_that("pgx.preprocess default output is a plausible log-expression matrix", 
   expect_true(all(is.finite(res$X)))
   expect_true(max(res$X) < 40) ## log2 scale, not raw counts
 })
+
+## ---- degenerate designs: no app reference exists, so assert directly ----
+## The app always had a contrast design to reduce; pgx.createPGX() does not, so
+## a missing or unusable design is a path the golden reference cannot cover.
+## What the grouping itself does to the missingness filter is covered by
+## playbase.preprocess; what matters here is that the shim reduces a design the
+## same way the app did, and degrades to "one single group" rather than erroring
+## when it cannot.
+
+## 8 samples, non-NA counts per feature: r1=8, r2=3, r3=4, r4=2, r5=0, r6=3.
+mk_missing <- function() {
+  counts <- matrix(100, 6, 8,
+    dimnames = list(paste0("r", 1:6), paste0("s", 1:8)))
+  counts["r2", 4:8] <- NA
+  counts["r3", c(3, 4, 7, 8)] <- NA
+  counts["r4", 3:8] <- NA
+  counts["r5", ] <- NA
+  counts["r6", c(3, 4, 6, 7, 8)] <- NA
+  counts
+}
+
+filter_opts <- function(threshold) {
+  list(filter_missing = TRUE, filter_threshold = threshold, normalize = FALSE)
+}
+
+## Two arms over the 8 samples, expressed the way playbase callers hold a
+## design: a samples table plus a sample-wise label matrix.
+mk_design <- function() {
+  ids <- paste0("s", 1:8)
+  groups <- rep(c("a", "b"), each = 4)
+  list(
+    groups = groups,
+    samples = data.frame(group = groups, row.names = ids),
+    contrasts = matrix(groups, ncol = 1, dimnames = list(ids, "b_vs_a"))
+  )
+}
+
+## Assert the shim reduces (samples, contrasts) to `groups` under every filter
+## rule: >=1 group count, <0 group ratio, and the overall NA ratio in between.
+expect_reduces_to <- function(samples, contrasts, groups) {
+  counts <- mk_missing()
+  for (f in c(3, -1, 0.2)) {
+    got <- pgx.preprocess(counts, samples, contrasts, options = filter_opts(f))
+    ref <- playbase.preprocess::pgx.preprocess(counts, groups, options = filter_opts(f))
+    testthat::expect_equal(got$X, ref$X)
+  }
+}
+
+test_that("pgx.preprocess reduces a contrast design to sample groups", {
+  d <- mk_design()
+  expect_reduces_to(d$samples, d$contrasts, d$groups)
+  ## and that design really is stricter than none: r3/r6 clear 3 non-NA samples
+  ## overall, but not within either arm
+  expect_equal(
+    rownames(pgx.preprocess(mk_missing(), d$samples, d$contrasts, options = filter_opts(3))$X),
+    c("r1", "r2")
+  )
+})
+
+test_that("pgx.preprocess treats a missing design as one single group", {
+  d <- mk_design()
+  expect_reduces_to(NULL, NULL, NULL)
+  expect_reduces_to(d$samples, NULL, NULL)
+  suppressMessages(expect_reduces_to(NULL, d$contrasts, NULL))
+  expect_equal(
+    rownames(pgx.preprocess(mk_missing(), options = filter_opts(3))$X),
+    c("r1", "r2", "r3", "r6")
+  )
+})
+
+test_that("pgx.preprocess degrades on an unusable contrast matrix", {
+  d <- mk_design()
+  ## contrasts.convertToLabelMatrix() stop()s on a matrix without column names
+  bad <- matrix(d$groups, ncol = 1, dimnames = list(rownames(d$samples), NULL))
+  expect_message(
+    got <- pgx.preprocess(mk_missing(), d$samples, bad, options = filter_opts(3)),
+    "cannot derive sample groups"
+  )
+  expect_equal(got$X, pgx.preprocess(mk_missing(), options = filter_opts(3))$X)
+})
