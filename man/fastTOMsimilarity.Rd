@@ -11,3 +11,6 @@ fastTOMsimilarity(A, tomtype = "signed", lowrank = 20)
 Faster implementation of TOM computation using low-rank SVD
 approximation.
 }
+\seealso{
+WGCNAplus::fastTOMsimilarity
+}

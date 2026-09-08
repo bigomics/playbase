@@ -543,14 +543,6 @@ getMetaboliteAnnotation <- function(probes,
   return(df)
 }
 
-mx.formula2chebi <- function(f, prefix = TRUE) {
-  meta <- playdata::METABOLITE_METADATA
-  ii <- match(f, meta[, "formula"])
-  chebi <- meta[ii, "ID"]
-  if (prefix) chebi <- paste("CHEBI:", chebi) ## chebi
-  chebi
-}
-
 #' This uses different databases to create a ID mapping table for
 #' given 'id' to other ID types (ChEBI, HMDB, LIPIDMAPS, KEGG,
 #' REFMET).
@@ -846,25 +838,6 @@ extend_metabolite_sets2 <- function(M, ppi, add = TRUE, postfix = "(extended)", 
 ## ==================== LIPIDOMICS ======================================
 ## ======================================================================
 
-
-## detectLipidID <- function(id, min.match=0.5) {
-##   if(mean(grepl("^HMDB",id,ignore.case=TRUE)) > min.match) return("HMDB")
-##   if(mean(grepl("^CHEBI",id,ignore.case=TRUE)) > min.match) return("CHEBI")
-##   if(mean(grepl("^RM",id,ignore.case=TRUE)) > min.match) return("RefMet")
-##   if(mean(grepl("^LM",id,ignore.case=TRUE)) > min.match) return("LIPID_MAPS")
-##   if(mean(grepl("^C[0-9]+",id,ignore.case=TRUE)) > min.match) return("KEGG")
-##   if(mean(grepl("^[A-Z].*[0-9]+[:][0-9]+", id)) > min.match) return("LION")
-##   ## try with
-##   MX <- apply(playdata::METABOLITE_ID, 2, function(s) sub("[A-Za-z]+","",s))
-##   idx <- gsub("^[A-Za-z]+[:]*","",id)
-##   nmatch <- apply(MX[,-1], 2, function(x) mean(idx %in% x))
-##   if(max(nmatch,na.rm=TRUE) > min.match) {
-##     max.id <- names(which.max(nmatch))
-##     message("matched METABOLITE_ID column: ", max.id)
-##     return(max.id)
-##   }
-##   return("unknown")
-## }
 
 #' Two-pass annotation of lipids using RefMet and rgoslin. This is a
 #' two-pass approach where missing annotations are retried using

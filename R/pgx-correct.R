@@ -87,7 +87,7 @@ pgx.superBatchCorrect <- function(X, pheno,
   model.par
 
   ## get technical/biological effects
-  Y <- pgx.computeBiologicalEffects.DEPRECATED(X)
+  Y <- pgx.computeTechnicalEffects(X)
   colnames(Y) <- paste0(".", colnames(Y))
 
   ## add to phenotype matrix
@@ -318,7 +318,7 @@ pgx.superBatchCorrect <- function(X, pheno,
       dbg("[pgx.superBatchCorrect] model.par = ", model.par)
       y1 <- pheno[, model.par, drop = FALSE]
       y1 <- apply(y1, 1, paste, collapse = ":")
-      cX <- gx.nnmcorrect(cX, y1, center.x = TRUE, center.m = TRUE)$X
+      cX <- nnmCorrect(cX, y1, center.x = TRUE, center.m = TRUE, return.B = TRUE)$X
     }
 
     if (bc == "sva") {
@@ -680,94 +680,6 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
 }
 
 
-#' @title Estimate biological variation
-#'
-#' @param X Gene expression matrix, with genes in rows and samples in columns
-#' @param is.count Logical indicating if X contains counts (TRUE) or log-expression values (FALSE)
-#'
-#' @return List containing:
-#' \itemize{
-#'  \item{pct.mito}{Percent mitochondrial genes}
-#'  \item{pct.ribo}{Percent ribosomal genes}
-#'  \item{biological}{Biological coefficient of variation}
-#' }
-#'
-#' @description
-#' Estimates the biological variation and fraction of mitochondrial and ribosomal genes from a gene expression matrix.
-#'
-#' @details
-#' This function calculates the biological variation (BCV) for each gene as the coefficient of variation of expression across samples.
-#'
-#' It also calculates the percentage of mitochondrial and ribosomal genes based on gene symbols.
-#'
-#' If the input matrix X contains counts, it will be transformed to log2-CPM.
-#' If X contains log-expression values, it will be shifted to start at the 1% quantile.
-#' @examples
-#' \dontrun{
-#' data(sample.ExpressionSet)
-#' results <- pgx.computeBiologicalEffects(sample.ExpressionSet)
-#' head(results$biological)
-#' }
-#' @export
-pgx.computeBiologicalEffects.DEPRECATED <- function(X, is.count = FALSE) {
-  message("[pgx.computeBiologicalEffects] estimating biological effects...")
-
-  ## shift zero to 1% percentile
-  if (!is.count) {
-    q0 <- quantile(X[X > 0], probs = 0.01, na.rm = TRUE)
-    q0
-    tx <- pmax(X - q0, 0) ## log expression
-    cx <- pmax(2**tx - 1, 0) ## counts
-  } else {
-    cx <- X
-    tx <- log2(cx + 1)
-  }
-  nfeature <- Matrix::colSums(cx > 0) + 1
-  libsize <- Matrix::colSums(cx)
-
-  mt.genes <- grep("^MT-", rownames(X), ignore.case = TRUE, value = TRUE)
-  rb.genes <- grep("^RP[SL]", rownames(X), ignore.case = TRUE, value = TRUE)
-  mito <- ribo <- NA
-  pct.mito <- pct.ribo <- NA
-  mt.genes
-  rb.genes
-  if (length(mt.genes) >= 10) {
-    mito <- Matrix::colMeans(tx[mt.genes, , drop = FALSE])
-    pct.mito <- Matrix::colSums(cx[mt.genes, , drop = FALSE], na.rm = TRUE) / libsize
-  }
-  if (length(rb.genes) >= 10) {
-    ii <- rb.genes[order(-apply(tx[rb.genes, , drop = FALSE], 1, sd, na.rm = TRUE))]
-    sel20 <- Matrix::head(ii, 20)
-    ribo <- Matrix::colMeans(tx[rb.genes, , drop = FALSE])
-    ribo20 <- Matrix::colMeans(tx[sel20, , drop = FALSE])
-    pct.ribo <- Matrix::colSums(cx[rb.genes, , drop = FALSE], na.rm = TRUE) / libsize
-  }
-  pheno <- data.frame(
-    mito = mito,
-    ribo = ribo,
-    ## ribo20 = ribo20,
-    ## pct.mito = pct.mito,
-    ## pct.ribo = pct.ribo,
-    libsize = log2(libsize + 1),
-    ## nfeature = log2(nfeature+1),
-    check.names = FALSE
-  )
-
-  cc.score <- try(pgx.scoreCellCycle(cx))
-  Matrix::head(cc.score)
-  if (!any(class(cc.score) == "try-error")) {
-    ## cc.score <- cc.score[,c("s_score","g2m_score","diff_score")]
-    cc.score <- cc.score[, c("s_score", "g2m_score")]
-    colnames(cc.score) <- paste0("cc.", colnames(cc.score))
-    pheno <- cbind(pheno, cc.score)
-  }
-  pheno$gender <- pgx.inferGender(cx)
-
-  Matrix::head(pheno)
-  return(pheno)
-}
-
-
 #' @title Estimate technical effects variation
 #'
 #' @param X Gene expression matrix, with genes in rows and samples in columns
@@ -973,7 +885,7 @@ detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
   ## determine batch covariates
   dY <- scale(dY)
 
-  res <- gx.limma(t(dY), pheno, fdr = 1, lfc = 0, compute.means = FALSE, f.test = TRUE, verbose = 0)
+  res <- gx.limmaF(t(dY), pheno, fdr = 1, lfc = 0, compute.means = FALSE, verbose = 0)
   param <- sub("=.*", "", rownames(res))
   pv.pheno <- tapply(res$P.Value, param, min)
 
@@ -1245,7 +1157,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   }
 
   if ("NPM" %in% methods) {
-    ## xlist[["NNM"]] <- gx.nnmcorrect(X, y)$X
+    ## xlist[["NNM"]] <- nnmCorrect(X, y, return.B = TRUE)$X
     xlist[["NPM"]] <- nnmCorrect(X, y, use.design = TRUE)
     ## xlist[["NNM2"]] <- nnmCorrect2(X, y, use.design = TRUE)
     ##    xlist[["NNM.no_mod"]] <- nnmCorrect2(X, y, use.design = FALSE)
@@ -1792,6 +1704,8 @@ compare_batchcorrection_methods <- function(X,
   ## PCA is faster than UMAP
   pos <- NULL
   pca.varexp <- NULL
+  loadings <- NULL
+  pheno.cor <- NULL
   t2 <- double_center_scale_fast
   if (clust.method == "tsne" && nmissing == 0) {
     message("Computing t-SNE clustering...")
@@ -1803,11 +1717,63 @@ compare_batchcorrection_methods <- function(X,
   } else {
     message("Computing PCA clustering...")
     npc_eff <- max(2, min(npc, min(sapply(xlist, function(x) min(dim(x)))) - 1))
+    ## numeric-code sample annotations once (factors -> level codes, as
+    ## PCAtools::eigencorplot does); drop constant columns that cannot correlate
+    meta_num <- NULL
+    if (!is.null(samples) && ncol(samples)) {
+      ## Build the numeric annotation matrix to correlate against the PCs.
+      ## Numeric columns are kept as-is; categorical columns are one-hot encoded
+      ## (one binary indicator per level) so each level gets its own point-
+      ## biserial correlation / arrow, rather than arbitrary integer level codes
+      ## that would impose a fake ordering on unordered categories. Indexing
+      ## columns by name (not sapply over the whole object) also keeps this
+      ## correct when samples is a character matrix rather than a data.frame.
+      onehot_or_num <- function(cn) {
+        v <- samples[, cn]
+        ## numeric if it already is, or if every non-missing value coerces
+        ## cleanly -- covers numeric columns stored as strings when samples is a
+        ## character matrix rather than a data.frame
+        vn <- suppressWarnings(as.numeric(as.character(v)))
+        if (is.numeric(v) || !any(is.na(vn) & !is.na(v))) {
+          return(matrix(vn, ncol = 1, dimnames = list(NULL, cn)))
+        }
+        v <- as.factor(v)
+        ## skip pure-identifier columns (every sample is its own level)
+        if (nlevels(v) >= sum(!is.na(v))) {
+          return(NULL)
+        }
+        m <- vapply(levels(v), function(l) as.numeric(v == l), numeric(length(v)))
+        colnames(m) <- paste0(cn, "=", levels(v))
+        m
+      }
+      meta_num <- do.call(cbind, lapply(colnames(samples), onehot_or_num))
+      if (!is.null(meta_num)) {
+        rownames(meta_num) <- rownames(samples)
+        keep <- apply(meta_num, 2, function(x) length(unique(x[!is.na(x)])) > 1)
+        meta_num <- meta_num[, keep, drop = FALSE]
+      }
+    }
     for (i in 1:length(xlist)) {
       set.seed(1234)
-      pca <- irlba::irlba(t2(xlist[[i]]), nu = npc_eff, nv = npc_eff)
-      pos[[names(xlist)[i]]] <- pca$u[, seq_len(npc_eff), drop = FALSE]
-      pca.varexp[[names(xlist)[i]]] <- (pca$d^2 / sum(pca$d^2)) * 100
+      M <- t2(xlist[[i]])
+      pca <- irlba::irlba(M, nu = npc_eff, nv = npc_eff)
+      U <- pca$u[, seq_len(npc_eff), drop = FALSE]
+      rownames(U) <- colnames(xlist[[i]])
+      pos[[names(xlist)[i]]] <- U
+      ## % variance explained relative to TOTAL variance (sum(M^2) == sum of all
+      ## eigenvalues), not just the top npc_eff PCs irlba returns, so the values
+      ## and their cumulative sum are honest (else they inflate and cum hits 100)
+      pca.varexp[[names(xlist)[i]]] <- (pca$d^2 / sum(M^2)) * 100
+      v <- pca$v[, seq_len(npc_eff), drop = FALSE]
+      rownames(v) <- rownames(xlist[[i]])
+      loadings[[names(xlist)[i]]] <- v
+      ## correlation of each numeric-coded annotation with each PC, for the
+      ## phenotype-projection biplot in the UI (annotations x npc)
+      if (!is.null(meta_num) && ncol(meta_num)) {
+        mm <- meta_num[rownames(U), , drop = FALSE]
+        pheno.cor[[names(xlist)[i]]] <-
+          t(suppressWarnings(stats::cor(U, mm, use = "pairwise.complete.obs")))
+      }
     }
   }
 
@@ -1845,6 +1811,8 @@ compare_batchcorrection_methods <- function(X,
     xlist = xlist,
     pos = pos,
     pca.varexp = pca.varexp,
+    loadings = loadings,
+    pheno.cor = pheno.cor,
     scores = res$scores,
     pheno = pars$pheno,
     pars = pars,
@@ -1856,89 +1824,6 @@ compare_batchcorrection_methods <- function(X,
 ## Single batch-correction methods wrappers
 ## =============================================================================
 
-
-#' @export
-superBC2 <- function(X, samples, y, batch = NULL,
-                     ## methods = c("technical","batch","statistical","pca","sva","npm"),
-                     methods = c("batch", "technical", "statistical", "sva", "npm"),
-                     p.pca = 0.5, p.pheno = 0.05, k.pca = 10, nv = 1,
-                     xrank = NULL, use.design = TRUE) {
-  if (y[1] %in% colnames(samples)) {
-    y <- samples[, y[1]]
-  }
-  if (!is.null(batch) && grepl("batch", colnames(samples), ignore.case = TRUE)) {
-    batch.col <- grep("batch", colnames(samples), ignore.case = TRUE)[1]
-    message("[superBC2] found batch column in sample info: ", colnames(samples)[batch.col])
-    batch <- samples[, batch.col]
-  }
-  if (!is.null(batch) && batch[1] %in% colnames(samples)) {
-    message("[superBC2] using batch column in sample info: ", batch[1])
-    batch <- samples[, batch[1]]
-  }
-
-  cX <- X
-  methods <- intersect(methods, c(
-    "technical", "batch", "statistical", "pca", "sva",
-    "ruv", "npm", "npm2"
-  ))
-
-  for (m in methods) {
-    ## correct explicit batch effect
-    if (!is.null(batch) && m == "batch") {
-      message("[superBC2] correcting for: batch")
-      if (use.design) {
-        cX <- limma::removeBatchEffect(cX, batch = batch, design = mod)
-      } else {
-        cX <- limma::removeBatchEffect(cX, batch = batch)
-      }
-    }
-
-    ## this removes typical batch effects
-    if (m %in% c("statistical", "technical", "pca")) {
-      bc <- detectBatchEffects(
-        ## cX,
-        X, ## on original matrix??
-        samples, y,
-        params = m,
-        p.pca = p.pca, p.pheno = p.pheno, k.pca = k.pca,
-        nv = nv, xrank = xrank
-      )
-      if (!is.null(bc$covariates)) {
-        message("[superBC2] correcting for: ", m)
-        B <- scale(bc$covariates)
-        B[is.nan(B) | is.na(B)] <- 0
-        B[is.infinite(B)] <- 0
-        if (use.design) {
-          mod1 <- model.matrix(~ bc$pheno)
-          cX <- limma::removeBatchEffect(cX, covariates = B, design = mod1)
-        } else {
-          cX <- limma::removeBatchEffect(cX, covariates = B)
-        }
-      }
-    }
-
-    ## 5. additional unsupervised correction
-    if (m == "sva") {
-      message("[superBC2] correcting for: SVA")
-      cX <- svaCorrect(cX, y)
-    }
-    if (m == "ruv") {
-      message("[superBC2] correcting for: RUV")
-      cX <- ruvCorrect(cX, y)
-    }
-    if (m == "npm") {
-      message("[superBC2] correcting for: NPM")
-      cX <- gx.nnmcorrect(cX, y, use.design = use.design)$X
-    }
-    if (m == "npm2") {
-      message("[superBC2] correcting for: NPM2")
-      cX <- gx.nnmcorrect2(cX, y, r = 0.35, use.design = use.design)$X
-    }
-  }
-
-  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
-  cX
-}
 
 #' @export
 limmaCorrect <- function(X, B, y = NULL, use.covariates = FALSE,
@@ -2078,91 +1963,6 @@ svaCorrect <- function(X, y, n.sv = NULL, nsd = 1000, return.sv = FALSE) {
   X
 }
 
-fsvaCorrect <- function(X, y) {
-  ## Frozen SVA
-
-  if (any(is.na(X))) {
-    stop("[svaCorrect] cannot handle missing values in X")
-  }
-  dimx <- ncol(X)
-  xnames <- colnames(X)
-
-  ## sva doesn't like if the dimension is too small
-  if (ncol(X) < 10) {
-    X <- cbind(X, X, X)
-    y <- rep(y, 3)
-  }
-
-  ## get not-missing
-  ii <- which(!is.na(y))
-  has.na <- any(is.na(y))
-  y1 <- y[ii]
-  X1 <- X[, ii]
-  y0 <- y[-ii]
-  X0 <- X[, -ii]
-  names(y0) <- colnames(X0)
-  names(y1) <- colnames(X1)
-
-  ##
-  mod1x <- model.matrix(~ 1 + y1)
-  mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
-
-  ## fast method using SmartSVA
-  #  pp <- paste0(model.par, collapse = "+")
-  #  lm.expr <- paste0("lm(t(X) ~ ", pp, ", data=pheno)")
-  X.r <- t(stats::resid(lm(t(X1) ~ y1)))
-  n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
-  ## top 1000 genes only (faster)
-  X1a <- Matrix::head(X1[order(-matrixStats::rowSds(X1, na.rm = TRUE)), ], 1000)
-  ## add a little bit of noise to avoid singular error
-  ## a <- 0.01 * mean(apply(X1a, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
-  a <- 0.01 * mean(matrixStats::rowSds(X1a, na.rm = TRUE), na.rm = TRUE)
-  X1a <- X1a + a * matrix(stats::rnorm(length(X1a)), nrow(X1a), ncol(X1a))
-  sv <- try(sva::sva(X1a, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1)))
-
-  cX <- NULL
-  if (!any(class(sv) == "try-error")) {
-    message("[svaCorrect] Performing SVA correction...")
-    cX <- limma::removeBatchEffect(X1, covariates = sv$sv, design = mod1x)
-  } else {
-    message("[svaCorrect] WARNING could not get covariates. no correction.")
-  }
-
-  if (has.na) {
-    dim(X0)
-    fsvaobj <- fsva(X1, mod1x, sv, X0)
-    data1 <- list(x = X1, y = y1)
-    model <- pamr::pamr.train(data1)
-    pred_y0 <- pamr::pamr.predict(model, fsvaobj$new, threshold = 1)
-    pred_y0 <- as.character(pred_y0)
-    table(pred_y0)
-
-    ## redo SVA with predicted labels
-    XX <- cbind(X0, X1)
-    yy <- c(pred_y0, y1)
-    names(yy) <- colnames(XX)
-    mod1x <- model.matrix(~ 1 + yy)
-    mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
-
-    XXa <- Matrix::head(XX[order(-matrixStats::rowSds(XX, na.rm = TRUE)), ], 1000)
-    ## a <- 0.01 * mean(apply(XXa, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
-    a <- 0.01 * mean(matrixStats::rowSds(XXa, na.rm = TRUE), na.rm = TRUE)
-    XXa <- XXa + a * matrix(stats::rnorm(length(XXa)), nrow(XXa), ncol(XXa))
-    sv <- try(sva::sva(XXa, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
-    cX <- limma::removeBatchEffect(XX, covariates = sv, design = mod1x)
-    cX <- cX[, colnames(X)]
-    y0 <- yy[colnames(X0)]
-  }
-
-  if (is.null(cX)) {
-    return(NULL)
-  }
-  cX <- cX[, match(xnames, colnames(cX))] ## reduce to original size
-  predy <- c(y0, y1)
-  predy <- predy[match(xnames, names(predy))]
-  list(X = cX, y = predy)
-}
-
 #' @export
 ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
   if (any(is.na(X))) {
@@ -2174,9 +1974,9 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
   if (!is.null(y) && length(controls) == 1 && is.numeric(controls[1])) {
     ii <- which(!duplicated(rownames(X)) & sdx > 0)
     jj <- which(!is.na(y))
-    F <- gx.limma(X[ii, jj], y[jj],
+    F <- gx.limmaF(X[ii, jj], y[jj],
       lfc = 0, fdr = 1, method = 1,
-      sort.by = "none", compute.means = FALSE, f.test = TRUE, verbose = 0
+      sort.by = "none", compute.means = FALSE, verbose = 0
     )
     nc <- pmax(nrow(X) * as.numeric(controls), 1)
     sel <- head(order(-F$P.Value), nc)
@@ -2234,7 +2034,7 @@ pcaCorrect <- function(X, y, k = 10, p.notsig = 0.20) {
   }))
   rownames(V) <- colnames(X)
   colnames(V) <- paste0("PC", 1:ncol(V))
-  res <- gx.limma(t(V), y, lfc = 0, fdr = 1, sort.by = "none", compute.means = FALSE, f.test = TRUE, verbose = 0)
+  res <- gx.limmaF(t(V), y, lfc = 0, fdr = 1, sort.by = "none", compute.means = FALSE, verbose = 0)
   res <- res[colnames(V), ]
   round(res$P.Value, 4)
 
@@ -2748,15 +2548,6 @@ nnmCorrect.SIMPLE <- function(x, y, k = 3) {
 }
 
 
-## compatibility
-
-#' @export
-gx.nnmcorrect <- function(...) nnmCorrect(..., return.B = TRUE)
-
-#' @export
-gx.nnmcorrect2 <- function(...) nnmCorrect2(..., return.B = TRUE)
-
-
 #' Estimate batch correction vectors from corrected cX and uncorrected
 #' matrix X.
 #'
@@ -2770,125 +2561,6 @@ estimateBatchCorrectionVectors <- function(cX, X, k = NULL, threshold = 0.8) {
   }
   ## return batch vectors
   res$V[, 1:k, drop = FALSE]
-}
-
-
-## ----------------------------------------------------------------------
-## -------------- EXPERIMENTAL (not exported) ---------------------------
-## ----------------------------------------------------------------------
-
-#' Supervised MNN correction. Finds mutual neighbours with same label
-#' between two datasets and returns corresponding correction vectors.
-#'
-sMNN <- function(X, batch, y, nv = 0.33, nn = 3, return.idx = FALSE) {
-  getMNN <- function(x1, x2) {
-    res <- batchelor::findMutualNN(t(x1), t(x2), k1 = nn)
-    cbind(colnames(x1)[res$first], colnames(x2)[res$second])
-  }
-
-  ## if no phenotype is given, just do one group
-  if (is.null(y)) {
-    y <- rep("y", ncol(X))
-  }
-
-  ## For all combinations of batches, get correction vector
-  nbatch <- length(unique(batch))
-  comb <- combn(unique(batch), 2)
-  i <- 1
-  y0 <- y[1]
-  B <- c()
-  all.idx <- c()
-  message("[sMNN] searching in ", ncol(comb), " batch pairs...")
-  for (i in 1:ncol(comb)) {
-    for (y0 in unique(y)) {
-      x1 <- X[, which(batch == comb[1, i] & y == y0), drop = FALSE]
-      x2 <- X[, which(batch == comb[2, i] & y == y0), drop = FALSE]
-      if (ncol(x1) > 0 && ncol(x2) > 0) {
-        idx <- getMNN(x1, x2)
-        dx <- x2[, idx[, 2]] - x1[, idx[, 1]]
-        B <- cbind(B, dx)
-        all.idx <- rbind(all.idx, idx)
-      }
-    }
-  }
-  dim(B)
-  message("[sMNN] dim(B) = ", paste(dim(B), collapse = "x"))
-  message("[sMNN] Found total ", ncol(B), " MNN pairs")
-
-  ## remove batch effects in transposed gene space
-  if (nv < 1) nv <- floor(nv * min(dim(B), na.rm = TRUE))
-  nv <- max(1, min(nv, dim(B) - 1))
-  message("[sMNN] nv = ", nv)
-  B <- scale(B)
-  set.seed(1234)
-  dU <- irlba::irlba(B, nu = nv, nv = nv)$u
-  ##  dU <- scale(dU) ## no???
-  cX <- t(limma::removeBatchEffect(t(X), covariates = dU))
-
-  ## restore original mean
-  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
-
-  if (return.idx) {
-    res <- list(X = cX, idx = all.idx)
-    return(res)
-  }
-
-  cX
-}
-
-
-#' Mutual Farthest Neighbour correction
-#'
-mfnCorrect <- function(X, y, nv = 3, nn = 3, return.idx = FALSE) {
-  ## nv=0.33;nn=10
-  B <- NULL
-  all.idx <- c()
-  a <- y[2]
-  for (a in unique(y)) {
-    X1 <- X[, which(y == a)]
-    ## X1 <- X1 - rowMeans(X1)
-    R1 <- cor(X1)
-    mfn <- c()
-    ## determine mutual farthest neighbors
-    idx <- apply(R1, 1, function(x) head(order(x), nn))
-    if (nn == 1) idx <- cbind(idx)
-    if (nn > 1) idx <- t(idx)
-
-    mfn.match <- sapply(1:nrow(idx), function(j) j %in% as.vector(idx[idx[j, ], ]))
-    table(mfn.match)
-    mfn <- which(mfn.match)
-    message("Found ", length(mfn), " farthest neighbors for y= ", a)
-
-    ## get correction vectors
-    if (length(mfn) > 0) {
-      idx <- idx[mfn, , drop = FALSE]
-      X2 <- apply(idx, 1, function(i) rowMeans(X1[, i, drop = FALSE], na.rm = TRUE))
-      dX <- X1[, rownames(idx)] - X2
-      B <- cbind(B, dX)
-      idx1 <- apply(idx, 2, function(i) colnames(X1)[i])
-      idx1 <- cbind(rownames(idx), as.vector(idx1))
-      all.idx <- rbind(all.idx, idx1)
-    }
-  }
-  dim(B)
-
-  if (NCOL(B) > 0) {
-    ## apply correction
-    if (nv < 1) nv <- max(1, floor(nv * min(dim(B))))
-  }
-  dU <- svd(B, nu = nv, nv = nv)$u
-  message("Correcting with ", ncol(dU), " MFN components")
-  cX <- t(limma::removeBatchEffect(t(X), covariates = dU))
-
-  ## restore original mean
-  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
-
-  if (return.idx) {
-    res <- list(X = cX, idx = all.idx)
-    return(res)
-  }
-
-  cX
 }
 
 

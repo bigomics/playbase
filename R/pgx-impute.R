@@ -424,21 +424,6 @@ nmfImpute2 <- function(x, k = 5, niter = 10, init = 0.05) {
 }
 
 
-#' @title Impute missing values using Bayesian PCA
-#'
-#' @description Imputes missing values using BPCA
-#'
-#' @export
-BPCAimpute <- function(X, k = 2) {
-  k <- min(k, dim(X) - 1)
-  ii <- which(rowMeans(is.na(X)) < 1)
-  pc <- pcaMethods::pca(t(X[ii, ]), method = "bpca", nPcs = k)
-  obsX <- t(pcaMethods::completeObs(pc))
-  impX <- X
-  impX[ii, ] <- obsX
-  impX
-}
-
 
 ## https://www.biorxiv.org/content/10.1101/2020.08.12.248963v1.full
 ## Perseus, by default, impute for each sample separately.

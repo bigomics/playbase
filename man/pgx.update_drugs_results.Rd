@@ -2,10 +2,10 @@
 % Please edit documentation in R/pgx-drugs.R
 \name{pgx.update_drugs_results}
 \alias{pgx.update_drugs_results}
-\title{Update older versions of pgx$drugs with MOA, report and infographic}
+\title{Update older versions of pgx$drugs with cluster and MOA results}
 \usage{
-pgx.update_drugs_results(pgx, model, img_model)
+pgx.update_drugs_results(pgx)
 }
 \description{
-Update older versions of pgx$drugs with MOA, report and infographic
+Update older versions of pgx$drugs with cluster and MOA results
 }

@@ -171,7 +171,8 @@ betaToM <- function(beta, offset = 1e-6, verbose = FALSE) {
     beta <- pmin(pmax(beta, offset), 1 - offset)
     m <- log2(beta / (1 - beta))
     if (verbose) message("[playbase::betaToM] Methylomics: Beta to M values conversion completed.\n")
-    rm(beta); return(m)
+    rm(beta)
+    return(m)
   }
 }
 
@@ -190,7 +191,8 @@ mToBeta <- function(m, verbose = FALSE) {
   } else {
     beta <- (2^m / (1 + 2^m))
     if (verbose) message("[playbase::mToBeta] Methylomics: M to Beta values conversion completed.\n")
-    rm(m); return(beta)
+    rm(m)
+    return(beta)
   }
 }
 
@@ -202,9 +204,8 @@ mToBeta <- function(m, verbose = FALSE) {
 #' @return Normalized Beta values matrix.
 #' @export
 normalizeMethylation <- function(X, method = "BMIQ", meth_type = "450K array", nfit = 2000) {
-
   msg <- function(...) message("[playbase::normalizeMethylation] ", ...)
-  
+
   m <- method
   methods <- c("BMIQ", "quantile")
   if (!m %in% methods) {
@@ -215,11 +216,11 @@ normalizeMethylation <- function(X, method = "BMIQ", meth_type = "450K array", n
   msg("Input data: ", nrow(X), " probes; ", ncol(X), " samples.")
 
   X <- mToBeta(X)
-  
+
   if (m == "BMIQ") {
     c1 <- is.null(meth_type)
     c2 <- !meth_type %in% c("450K array", "EPIC array")
-    if (c1 | c2) meth_type = "450K array"
+    if (c1 | c2) meth_type <- "450K array"
     pkg <- "IlluminaHumanMethylation450kanno.ilmn12.hg19"
     if (meth_type == "EPIC array") pkg <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
     require(pkg, character.only = TRUE)
@@ -243,16 +244,14 @@ normalizeMethylation <- function(X, method = "BMIQ", meth_type = "450K array", n
     }
 
     rm(annot, probe.types, bmiq)
-
   } else if (m == "quantile") {
     msg("wateRmelon::betaqn: beta quantile normalization")
     X <- wateRmelon::betaqn(X)
   }
-  
+
   msg("Normalization completed\n")
 
   return(X)
-  
 }
 
 #' @title Get prior value for normalization for non-gx data.
@@ -379,15 +378,6 @@ logCPM <- function(counts, total = 1e6, prior = 1, log = TRUE) {
     return(cpm)
   }
 }
-
-## #' @export
-## edgeR.normalizeCounts.DEPRECATED <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperquartile", "none")) {
-##   method <- method[1]
-##   dge <- edgeR::DGEList(M)
-##   dge <- edgeR::calcNormFactors(dge, method = method)
-##   edgeR::cpm(dge, log = TRUE)
-## }
-
 
 #' @title Normalize counts with TMM method
 #'
@@ -517,76 +507,6 @@ slog <- function(x, s = 1, q = NULL) {
   }
   log2(s + x) - log2(s)
 }
-
-## #' @export
-## safe.logCPM <- function(x, t = 0.05, prior = 1, q = NULL) {
-##   qq <- apply(x, 2, quantile, probs = c(t, 1 - t), na.rm = TRUE)
-##   jj <- which(t(t(x) < qq[1, ] | t(x) > qq[2, ]))
-##   ax <- x
-##   ax[jj] <- NA
-##   colSums(x, na.rm = TRUE)
-##   totx <- colSums(ax, na.rm = TRUE)
-##   meanx <- colMeans(ax, na.rm = TRUE)
-##   nnax <- colSums(!is.na(ax))
-##   cpm <- sweep(x, 2, totx, FUN = "/") * 1e6
-##   colSums(cpm, na.rm = TRUE)
-##   ## slog(cx, s=prior, q=q)
-##   log2(prior + cpm)
-## }
-
-## #' @export
-## global_scaling <- function(X, method, shift = "clip") {
-##   X[is.infinite(X)] <- NA
-
-##   ## ---logMM & logMS created for MPoC
-##   ## ---logCPM conformed to existing deployed master
-##   if (method == "maxMedian") {
-##     X <- maxMedianNormalization(counts = 2**X - 1)
-##   } else if (method == "maxSum") {
-##     X <- maxSumNormalization(counts = 2**X - 1)
-##   } else if (method == "cpm") {
-##     X <- logCPM(counts = 2**X - 1, log = TRUE)
-##     ## median.tc <- median(colSums(2**X, na.rm = TRUE), na.rm = TRUE)
-##     ## a <- log2(median.tc) - log2(1e6)
-##     ## zero.point <- a
-##   } else {
-##     zero.point <- 0
-##     which.zero <- which(X == 0)
-##     if (grepl("^m[0-9]", method)) {
-##       ## median centering
-##       mval <- as.numeric(substring(method, 2, 99))
-##       a <- median(X, na.rm = TRUE) - mval
-##       zero.point <- a
-##     } else if (grepl("^z[0-9]+", method)) {
-##       ## zero at z-distance from median
-##       zdist <- as.numeric(substring(method, 2, 99))
-##       m0 <- mean(apply(X, 2, median, na.rm = TRUE))
-##       s0 <- mean(apply(X, 2, sd, na.rm = TRUE))
-##       zero.point <- m0 - zdist * s0
-##     } else if (grepl("^q[0.][.0-9]+", method)) {
-##       ## direct quantile
-##       probs <- as.numeric(substring(method, 2, 99))
-##       zero.point <- quantile(X, probs = probs, na.rm = TRUE)
-##     } else {
-##       stop("unknown method = ", method)
-##     }
-
-##     message("[normalizeCounts] shifting values to zero: z = ", round(zero.point, 4))
-##     if (shift == "slog") {
-##       ## smooth log-transform. not real zeros
-##       X <- slog(2**X, s = 2**zero.point)
-##     } else if (shift == "clip") {
-##       ## linear shift and clip. Induces real zeros
-##       X <- pmax(X - zero.point, 0)
-##     } else {
-##       stop("unknown shift method")
-##     }
-##     ## put back zeros
-##     X[which.zero] <- 0
-##   }
-
-##   return(X)
-## }
 
 #' @export
 is.xxl <- function(X, z = 10) {

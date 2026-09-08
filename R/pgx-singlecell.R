@@ -479,27 +479,6 @@ pgx.supercell2 <- function(counts, meta, group, target_n = 20) {
   list(counts = sc.counts, meta = sc.meta, membership = sc.membership)
 }
 
-## pgx.sc_anchors <- function(counts,
-##                            sc.counts, sc.membership,
-##                            sc.group = colnames(sc.counts)) {
-
-##   ## determine closest sample to metacell reference (aka anchor)
-##   sc.ref <- rep(NA, ncol(sc.counts))
-##   X1 <- logCPM(counts, 1e4)
-##   X2 <- as.matrix(logCPM(sc.counts, 1e4))
-##   for (i in 1:ncol(sc.counts)) {
-##     mc <- sc.group[i]
-##     sel <- which(sc.membership == mc)
-##     x1 <- as.matrix(X1[, sel, drop = FALSE])
-##     colnames(x1) <- colnames(X1)[sel]
-##     rmax <- which.max(cor(x1, X2[, i])[, 1])
-##     sc.ref[i] <- colnames(x1)[rmax]
-##   }
-
-##   return(sc.ref)
-
-## }
-
 #' @export
 pgx.justSeuratObject <- function(counts, samples) {
   options(Seurat.object.assay.calcn = TRUE)

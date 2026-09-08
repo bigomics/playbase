@@ -4,7 +4,7 @@
 \alias{allSpecies}
 \title{Get all species in AnnotationHub/OrgDB}
 \usage{
-allSpecies(col = c("species", "ortho_species", "species_name")[1])
+allSpecies(col = "species_name")
 }
 \description{
 Get all species in AnnotationHub/OrgDB

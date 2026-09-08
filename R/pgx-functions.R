@@ -3,14 +3,6 @@
 ## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
-#' @export
-is.multiomics <- function(pgx) {
-  t1 <- t2 <- TRUE
-  if (!is.null(pgx$datatype)) t1 <- (pgx$datatype %in% c("multiomics", "multi-omics"))
-  t2 <- all(grepl("[:]", rownames(pgx$X)))
-  t1 || t2
-}
-
 #' Default merge by columns (cbind) with shared features on
 #' rows. Features are union of input matrices.
 #'
@@ -1106,29 +1098,6 @@ pgx.getOrganism <- function(pgx, capitalise = FALSE) {
 }
 
 
-## #' @title Get Levels of Group Variables
-## #' @description This function retrieves the levels of group variables in a data frame.
-## #' @param Y A data frame containing the data to be analyzed.
-## #' @details The function takes a data frame `Y` as input and searches for
-## #' columns that represent group variables. Group variables are identified as
-## #' columns that have a name that does not contain "title", "name", "sample", or
-## #' "patient" and have a majority of non-unique values.
-## #' Numeric columns are excluded from the search.
-## #' The levels of the identified group variables are then extracted and returned as a character vector.
-## #' @return A character vector representing the levels of the group variables in the input data frame.
-## #' @export
-## getLevels <- function(Y) {
-##   yy <- Y[, grep("title|name|sample|patient", colnames(Y), invert = TRUE), drop = FALSE] ## NEED RETHINK!!!!
-##   is.grpvar <- apply(yy, 2, function(y) max(table(y)) > 1,na.rm=TRUE)
-##   is.numeric <- apply(yy, 2, function(y) (length(table(y)) / length(y)) > 0.5)
-##   is.grpvar <- is.grpvar & !is.numeric
-##   yy <- yy[, is.grpvar, drop = FALSE]
-##   levels <- lapply(1:ncol(yy), function(i) unique(paste0(colnames(yy)[i], "=", yy[, i])))
-##   levels <- sort(unlist(levels))
-##   return(levels)
-## }
-
-
 #' @title Select samples from selected levels
 #'
 #' @description Selects rows from a data frame corresponding to selected factor levels.
@@ -2176,7 +2145,7 @@ psort <- function(x, p.col = NULL) {
 #' @return A data frame representing the tidied input data.
 #'
 #' @export
-tidy.dataframe <- function(Y) {
+tidy_dataframe <- function(Y) {
   Y <- Y[, which(colMeans(is.na(Y)) < 1), drop = FALSE]
   Y <- apply(Y, 2, function(x) sub("^NA$", NA, x)) ## all characters
   Y <- Y[, which(colMeans(is.na(Y)) < 1), drop = FALSE]
@@ -2215,7 +2184,7 @@ tidy.dataframe <- function(Y) {
 #' param.class(A)
 #' }
 #' @export
-param.class <- function(A) sapply(tidy.dataframe(A), class)
+param.class <- function(A) sapply(tidy_dataframe(A), class)
 
 
 #' @describeIn isanumber The function tests if the input \code{x} is of numeric type.
@@ -2295,7 +2264,7 @@ expandAnnotationMatrix <- function(A) {
 #' @export
 expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = TRUE) {
   ## get expanded annotation matrix
-  a1 <- tidy.dataframe(M)
+  a1 <- tidy_dataframe(M)
   nlevel <- apply(a1, 2, function(x) length(setdiff(unique(x), NA)))
   nterms <- colSums(!is.na(a1))
   nratio <- nlevel / nterms

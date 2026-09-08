@@ -114,6 +114,10 @@ pgx.createFromFiles <- function(counts.file,
 #' for the gene annotation table and the probe to symbol conversion.
 #' @param contrasts Data frame defining sample contrasts.
 #' @param X (Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.
+#' @param preprocess (Optional) Named list of preprocessing options. If provided and
+#'   `X` is NULL, `X` is built from `counts` via [pgx.preprocess()] (normalization,
+#'   imputation, missingness filter, outlier removal) instead of a plain log2 transform.
+#'   This is how the Shiny upload flow and the compute endpoint obtain identical `X`.
 #' @param is.logx Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.
 #' @param dotimeseries Logical indicating if timeseries analysis has been activated by the user at upload
 #' @param batch.correct.method BC method. Default is "no_batch_correct" (meaning no batch correction).
@@ -173,6 +177,7 @@ pgx.createPGX <- function(counts,
                           description = "No description provided.",
                           metadata = NULL,
                           X = NULL,
+                          preprocess = NULL,
                           norm_method = "CPM",
                           is.logx = NULL,
                           dotimeseries = FALSE,
@@ -212,6 +217,20 @@ pgx.createPGX <- function(counts,
   message("[pgx.createPGX] dim.counts: ", dim(counts)[1], " x ", dim(counts)[2])
   message("[pgx.createPGX] class.counts: ", class(counts))
   message("[pgx.createPGX] counts has ", sum(is.na(counts)), " missing values")
+
+  ## Opt-in: build X from raw counts via the shared preprocessing pipeline.
+  ## Runs before de-duplication so counts and X are averaged/uniquified together,
+  ## matching the Shiny upload flow (normalization module -> createPGX).
+  if (is.null(X) && !is.null(preprocess) && datatype != "scRNA-seq") {
+    message("[pgx.createPGX] building X via pgx.preprocess()")
+    pp <- pgx.preprocess(counts,
+      samples = samples, contrasts = contrasts,
+      annot = annot_table, options = preprocess
+    )
+    counts <- pp$counts
+    X <- pp$X
+    if (!is.null(annot_table)) annot_table <- pp$annot
+  }
 
   ndup <- sum(duplicated(rownames(counts)))
   if (ndup > 0) {
@@ -468,7 +487,7 @@ pgx.createPGX <- function(counts,
     ii <- match(rownames(pgx$counts), rownames(pgx$genes))
     pgx$genes <- pgx$genes[ii, , drop = FALSE]
   }
-  
+
   ## -------------------------------------------------------------------
   ## Filter genes
   ## -------------------------------------------------------------------
@@ -503,7 +522,7 @@ pgx.createPGX <- function(counts,
   if (pgx$datatype == "methylomics" & remove.xy.probes) {
     kk <- intersect(c("chr", "map"), colnames(pgx$genes))[1]
     if (length(kk) > 0) {
-      jj <- grep("chrX|chrY|^X|^Y", pgx$genes[,kk], ignore.case = TRUE)
+      jj <- grep("chrX|chrY|^X|^Y", pgx$genes[, kk], ignore.case = TRUE)
       if (length(jj) > 0) {
         message("[pgx.createPGX] Methylomics: removing ", length(jj), " X- & Y-linked CpG probes...")
         pgx$counts <- pgx$counts[-jj, , drop = FALSE]
@@ -592,11 +611,13 @@ pgx.createPGX <- function(counts,
       xlist <- playbase::runBatchCorrectionMethods(X, batch, pheno, methods = mm, ntop = Inf)
       cX <- xlist[[mm]]
     } else {
+      impute_method <- "SVD2"
+      pgx$impute_method <- impute_method ## recorded for the AI-report methods block
       is.mox <- is.multiomics(rownames(X))
       if (is.mox) {
-        impX <- imputeMissing.mox(X, method = "SVD2")
+        impX <- imputeMissing.mox(X, method = impute_method)
       } else {
-        impX <- imputeMissing(X, method = "SVD2")
+        impX <- imputeMissing(X, method = impute_method)
       }
       xlist <- playbase::runBatchCorrectionMethods(impX, batch, pheno, methods = mm, ntop = Inf)
       cX <- xlist[[mm]]
@@ -643,7 +664,6 @@ pgx.createPGX <- function(counts,
   message("\n\n")
 
   return(pgx)
-
 }
 
 
@@ -663,6 +683,7 @@ pgx.createPGX <- function(counts,
 #' @param extra.methods Additional analysis methods to run. Default is c("meta.go", "infer", "deconv", "drugs", "wordcloud", "wgcna")[c(1, 2)].
 #' @param libx.dir Directory containing custom analysis modules.
 #' @param progress A progress object for tracking status.
+#' @param ai_features Optional list of AI features to run after core compute.
 #'
 #' @details
 #' The slots created by pgx.computePGX are the following:
@@ -702,8 +723,8 @@ pgx.computePGX <- function(pgx,
                            pgx.dir = NULL,
                            libx.dir = NULL,
                            progress = NULL,
+                           ai_features = NULL,
                            user_input_dir = getwd()) {
-  
   message("[pgx.computePGX]===========================================")
   message("[pgx.computePGX]========== pgx.computePGX =================")
   message("[pgx.computePGX]===========================================")
@@ -878,7 +899,25 @@ pgx.computePGX <- function(pgx,
 
   ## methylomics: ensure all OPG graphics & tables use beta.
   if (pgx$datatype == "methylomics") pgx$X <- playbase::mToBeta(pgx$X)
-  
+
+  if (!is.null(ai_features)) {
+    if (!is.list(ai_features)) {
+      stop("[pgx.computePGX] ai_features must be a list", call. = FALSE)
+    }
+    if (!is.null(ai_features$reports)) {
+      message("[pgx.computePGX] generating AI reports...")
+      pgx <- pgx.update_reports(pgx, ai = ai_features$reports)
+    }
+    if (!is.null(ai_features$wgcna_summaries)) {
+      info("[pgx.computePGX] generating WGCNA module summaries...")
+      pgx <- pgx.update_wgcna_summaries(pgx, ai = ai_features$wgcna_summaries)
+    }
+    if (!is.null(ai_features$infographics)) {
+      info("[pgx.computePGX] generating AI infographics...")
+      pgx <- pgx.update_infographics(pgx, ai = ai_features$infographics)
+    }
+  }
+
   info("[pgx.computePGX] DONE")
   return(pgx)
 }
@@ -887,48 +926,6 @@ pgx.computePGX <- function(pgx,
 ## ===================================================================
 ## =================== UTILITY FUNCTIONS =============================
 ## ===================================================================
-
-counts.removeSampleOutliers <- function(counts) {
-  ## remove samples with 1000x more or 1000x less total counts (than median)
-  totcounts <- colSums(counts, na.rm = TRUE)
-  mx <- median(log10(totcounts))
-  ex <- (log10(totcounts) - mx)
-  sel <- which(abs(ex) > 3 | totcounts < 1) ## allowed: 0.001x - 1000x
-  sel
-  if (length(sel)) {
-    message("[createPGX] WARNING: bad samples. Removing samples: ", paste(sel, collapse = " "))
-    counts <- counts[, -sel, drop = FALSE]
-  }
-  counts
-}
-
-
-counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
-  ## remove extra-large and infinite values
-  ## X <- log2(1 + counts)
-  X <- logCPM(counts)
-  which.xxl <- which(is.xxl(X), arr.ind = TRUE)
-  nxxl <- nrow(which.xxl)
-  if (nxxl > 0) {
-    message("[createPGX] WARNING: setting ", nxxl, " XXL values to NA")
-    counts[which.xxl] <- xxl.val
-  } else {
-    message("[createPGX] no XXL values detected")
-  }
-  counts
-}
-
-counts.imputeMissing <- function(counts, method = "SVD2") {
-  epsx <- min(counts[counts > 0], na.rm = TRUE)
-  X <- log2(epsx + counts)
-  is.mox <- is.multiomics(rownames(X))
-  if (is.mox) {
-    impX <- imputeMissing.mox(X, method = method)
-  } else {
-    impX <- imputeMissing(X, method = method)
-  }
-  pmax(2**impX - epsx, 0)
-}
 
 #' @export
 counts.autoScaling <- function(counts) {
@@ -1061,7 +1058,8 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   return(G)
 }
 
-pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
+pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000,
+                        include_iea = TRUE, species_go=NULL) {
   if (!"symbol" %in% colnames(pgx$genes)) {
     message(paste(
       "[pgx.add_GMT] ERROR: could not find 'symbol' column.",
@@ -1140,15 +1138,21 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     if (nrow(G) == 0 || ncol(G) == 0) G <- NULL
   }
 
-
-  ## Add organism specific GO gene sets. This is species gene symbol.
-  if (has.px2) {
+  ## Add organism specific GO gene sets. This is species gene
+  ## symbol. Skip if the GMT has enough (>1000) terms.
+  num_goterms <- sum(grepl("^GO",colnames(G)))
+  info("[pgx.add_GMT] number of GO gene sets in GMT =",num_goterms)
+  if(is.null(species_go)) {
+    species_go <- (num_goterms < 1000)
+  }
+  if (has.px2 && species_go) {
     ## add species GO genesets from AnnotationHub
     go.genesets <- NULL
-    info("[pgx.add_GMT] Adding species GO for organism", pgx$organism)
+    info("[pgx.add_GMT] Retrieving species GO for organism", pgx$organism,"...")
     go.genesets <- tryCatch(
       {
-        getOrganismGO(pgx$organism)
+        getOrganismGO( pgx$organism, features = full_feature_list,
+          include_iea = include_iea)
       },
       error = function(e) {
         message("Error in getOrganismsGO:", e)
@@ -1156,7 +1160,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     )
 
     if (!is.null(go.genesets)) {
-      dbg("[pgx.add_GMT] got", length(go.genesets), "GO genesets")
+      dbg("[pgx.add_GMT] Adding", length(go.genesets), "species GO genesets")
       all_genes <- unique(pgx$genes$symbol)
       go_genes <- unique(unlist(go.genesets))
       go_genes2 <- paste0("SYMBOL:", unique(unlist(go.genesets)))
@@ -1177,6 +1181,9 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     G <- .append_gmt_to_matrix(customG, G, all_genes, minsize = 3, maxsize = 9999)
   }
 
+  num_goterms <- sum(grepl("^GO",colnames(G)))
+  info("[pgx.add_GMT] total number of GO terms = ",num_goterms)
+  
   ## -----------------------------------------------------------
   ##  Prioritize gene sets by fast rank-correlation
   ## -----------------------------------------------------------
