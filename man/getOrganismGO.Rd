@@ -11,7 +11,8 @@ getOrganismGO(
   minsize = 3,
   batch_size = 2000,
   db = c("annothub", "gprofiler"),
-  include_iea = TRUE
+  include_iea = TRUE,
+  symbol.annot = NULL
 )
 }
 \description{
