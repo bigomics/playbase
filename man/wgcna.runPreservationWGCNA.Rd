@@ -24,7 +24,7 @@ wgcna.runPreservationWGCNA(
 \description{
 WGCNAplus::runPreservationWGCNA() only computes enrichment when GMT is
 explicitly supplied; this function auto-loads the default playdata GMT
-(renamed via the annotation's "human_ortholog" column, matching the
+(renamed via the annotation's "ortholog" column, matching the
 original cross-species convention) when enrichment is requested.
 }
 \seealso{

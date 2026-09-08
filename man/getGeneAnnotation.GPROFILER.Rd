@@ -9,13 +9,7 @@ gprofiler for ortholog matching. The advantage is that probe type
 detection is not needed because orthogene seems to detect is
 automatically.}
 \usage{
-getGeneAnnotation.GPROFILER(
-  organism,
-  probes,
-  bridge = NULL,
-  bridge_species = NULL,
-  verbose = TRUE
-)
+getGeneAnnotation.GPROFILER(organism, probes, verbose = TRUE)
 }
 \description{
 Annotate using gprofiler. This seems much faster than
