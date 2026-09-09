@@ -384,7 +384,7 @@ getOrgDb <- function(organism, use.ah = NULL) {
 #' @export
 collapse_by_humansymbol <- function(obj, annot) {
   annot <- cbind(annot, rownames = rownames(annot))
-  target <- c("ortholog", "symbol", "gene_name", "rownames")
+  target <- c("human_ortholog", "ortholog", "symbol", "gene_name", "rownames")
   target <- intersect(target, colnames(annot))
   if (length(target) == 0) {
     message("[collapse_by_humansymbol] WARNING: could not find symbol mapping column.")

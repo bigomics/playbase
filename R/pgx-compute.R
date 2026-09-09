@@ -1104,8 +1104,10 @@ pgx.add_GMT <- function(pgx,
   message("[pgx.add_GMT] Creating GMT matrix... ")
 
   # Load geneset matrix from playdata. add metabolomics if data.type
-  # is metabolomics
-  target <- c("ortholog", "symbol", "gene_name", "rownames")
+  # is metabolomics. GSETxGENE is keyed on human gene symbols, so
+  # prefer the guaranteed-human ortholog column over the
+  # species-configurable one.
+  target <- c("human_ortholog", "ortholog", "symbol", "gene_name", "rownames")
   ortho.col <- intersect(target, colnames(pgx$genes))
   if (length(ortho.col) == 0) {
     symbol <- toupper(pgx$genes$symbol)

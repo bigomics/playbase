@@ -277,7 +277,26 @@ getGeneAnnotation <- function(
     )
     annot$ortholog <- ortho$ortholog    ## single-valued
     ##annot$orthologs <- ortho$orthologs  ## all candidates, ";"-joined
-    annot$ortholog_description <- ortho$description  
+    annot$ortholog_description <- ortho$description
+
+    ## A number of downstream resources (default genesets, TileDB,
+    ## CMAP, GENE_SUMMARY, Reactome/WikiPathways, GTEx tissue,
+    ## cross-dataset compare, ...) are keyed on human gene symbols
+    ## regardless of the user-selected ortholog_species. Keep a
+    ## guaranteed-human mapping alongside the species-specific one.
+    ## Skip the extra remote lookup when the two targets are the same.
+    if (tolower(ortholog_species) %in% c("human","hsapiens")) {
+      annot$human_ortholog <- annot$ortholog
+    } else {
+      if (verbose > 0) message("[getGeneAnnotation] getting Human orthologs...")
+      ortho.human <- getOrtholog(
+        symbols = annot$symbol,
+        organism = organism,
+        target_species = "Human",
+        verbose = 0
+      )
+      annot$human_ortholog <- ortho.human$ortholog
+    }
   }
 
   if (verbose > 0) {
@@ -735,6 +754,7 @@ cleanupAnnotation <- function(genes) {
   # replace NA in gene_ortholog by "" to conform with old
   # pgx objects. For collapsing to symbol this is important.
   genes$ortholog[is.na(genes$ortholog)] <- ""
+  if (!is.null(genes$human_ortholog)) genes$human_ortholog[is.na(genes$human_ortholog)] <- ""
 
   # replace NA or empty symbol by "{feature}" so there is always a readable name
   ii <- which(genes$symbol %in% c(NA, "", "-"))
@@ -1424,6 +1444,10 @@ getMultiOmicsProbeAnnotation <- function(organism, probes, ortholog_species) {
   annot$feature <- ifelse(is.na(annot$feature), probes, annot$feature)
   annot$symbol <- ifelse(is.na(annot$symbol), symbolx, annot$symbol)
   annot$ortholog <- ifelse(is.na(annot$ortholog), symbol, annot$ortholog)
+  if (!is.null(annot$human_ortholog)) {
+    annot$human_ortholog[which(annot$human_ortholog == "")] <- NA
+    annot$human_ortholog <- ifelse(is.na(annot$human_ortholog), symbol, annot$human_ortholog)
+  }
   annot$gene_name <- ifelse(is.na(annot$gene_name), probes, annot$gene_name)
   annot$data_type <- ifelse(is.na(annot$data_type), dtype, annot$data_type)
 

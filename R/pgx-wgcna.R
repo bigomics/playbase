@@ -924,8 +924,8 @@ wgcna.computeConsensusModuleEnrichment <- function(cons,
 #'
 #' WGCNAplus::runPreservationWGCNA() only computes enrichment when GMT is
 #' explicitly supplied; this function auto-loads the default playdata GMT
-#' (renamed via the annotation's "ortholog" column, matching the
-#' original cross-species convention) when enrichment is requested.
+#' (renamed via the annotation's "human_ortholog" column, since the
+#' default genesets are human-keyed) when enrichment is requested.
 #' @seealso WGCNAplus::runPreservationWGCNA
 #' @export
 wgcna.runPreservationWGCNA <- function(exprList,
@@ -944,7 +944,7 @@ wgcna.runPreservationWGCNA <- function(exprList,
                                        gset.methods = c("fisher", "gsetcor", "xcor")) {
   if (compute.enrichment) {
     GMT0 <- getPlaydataGMT()
-    if (!is.null(annot)) GMT0 <- rename_by2(GMT0, annot, "ortholog")
+    if (!is.null(annot)) GMT0 <- rename_by2(GMT0, annot, "human_ortholog")
     GMT <- if (!is.null(GMT)) merge_sparse_matrix(GMT, GMT0) else GMT0
   }
 

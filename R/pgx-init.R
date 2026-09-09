@@ -53,20 +53,25 @@ pgx.initialize <- function(pgx, progress=NULL) {
     return(NULL)
   }
 
-  ## Rename legacy 'human_ortholog[s]' columns to 'ortholog[s]'. We now
-  ## allow ortholog to be any species, not just human. This must run
-  ## before anything below reads pgx$genes$ortholog, otherwise legacy
-  ## objects look like they have no ortholog column at all (empty
-  ## families, spurious re-lookup). If a stray 'ortholog' column is
-  ## already present alongside the legacy one, drop it first so the
-  ## rename can't produce a duplicate column name.
-  if ("human_ortholog" %in% colnames(pgx$genes) && "ortholog" %in% colnames(pgx$genes)) {
-    pgx$genes$ortholog <- NULL
+  ## Backward compatibility: legacy objects (created before ortholog
+  ## became species-configurable) only have a 'human_ortholog[s]'
+  ## column, always mapped against human. Populate the new
+  ## 'ortholog[s]' column from it -- target species was implicitly
+  ## always Human for those objects -- WITHOUT discarding
+  ## human_ortholog[s]: the two columns now coexist by design.
+  ## 'ortholog' tracks whatever species the user picked at compute
+  ## time; 'human_ortholog' stays a guaranteed-human bridge for
+  ## resources that are themselves human-keyed (default genesets,
+  ## TileDB, GO/pathway lookups, etc). This must run before anything
+  ## below reads pgx$genes$ortholog, otherwise legacy objects look
+  ## like they have no ortholog column at all (empty families,
+  ## spurious re-lookup).
+  if ("human_ortholog" %in% colnames(pgx$genes) && !"ortholog" %in% colnames(pgx$genes)) {
+    pgx$genes$ortholog <- pgx$genes$human_ortholog
   }
-  if ("human_orthologs" %in% colnames(pgx$genes) && "orthologs" %in% colnames(pgx$genes)) {
-    pgx$genes$orthologs <- NULL
+  if ("human_orthologs" %in% colnames(pgx$genes) && !"orthologs" %in% colnames(pgx$genes)) {
+    pgx$genes$orthologs <- pgx$genes$human_orthologs
   }
-  colnames(pgx$genes) <- gsub("^human_orth", "orth", colnames(pgx$genes))
 
   if (is.null(pgx$version)) {
     # this is needed in case the species is human, and we dont have the
@@ -75,10 +80,11 @@ pgx.initialize <- function(pgx, progress=NULL) {
     pgx$genes$gene_name <- as.character(pgx$genes$gene_name)
     pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
     pgx$genes$ortholog <- toupper(as.character(pgx$genes$gene_name))
+    pgx$genes$human_ortholog <- pgx$genes$ortholog
     pgx$genes$feature <- as.character(rownames(pgx$genes))
     pgx$genes$symbol <- pgx$genes$gene_name
     col_order <- c(
-      "feature", "symbol", "ortholog",
+      "feature", "symbol", "ortholog", "human_ortholog",
       "gene_title", "gene_name", colnames(pgx$genes)
     )
     col_order <- col_order[!duplicated(col_order)]
@@ -204,12 +210,6 @@ pgx.initialize <- function(pgx, progress=NULL) {
   ## -----------------------------------------------------------------------------
   ## intersect and filter gene families (convert species to human gene sets)
   ## -----------------------------------------------------------------------------
-  # Here we use the homologs when available, instead of gene_name
-  genes <- ifelse(!is.na(pgx$genes$ortholog),
-    pgx$genes$ortholog,
-    pgx$genes$gene_name
-  )
-
   if (is.null(pgx$organism)) {
     pgx$organism <- pgx.getOrganism(pgx)
   }
@@ -221,20 +221,41 @@ pgx.initialize <- function(pgx, progress=NULL) {
     pgx$ortholog_species <- "Human"
   }
 
-  # Check if human ortholog is empty, if it is
+  # Check if human_ortholog is empty, if it is
   # 1) run getHumanOrtholog (maybe it failed on pgx.compute bc server was unreachable)
-  # 2) if still empty, grag the symbols toUpper
-  if (all(is.na(pgx$genes$ortholog)) || all(pgx$genes$ortholog == "")) {
+  # 2) if still empty, grab the symbols toUpper
+  # playdata::FAMILIES (and other human-keyed resources) are matched
+  # against human_ortholog specifically, not the species-configurable
+  # ortholog column.
+  if (is.null(pgx$genes$human_ortholog) ||
+        all(is.na(pgx$genes$human_ortholog)) || all(pgx$genes$human_ortholog == "")) {
     ortho <- getHumanOrtholog(pgx$organism, pgx$genes$symbol)
     genes_ho <- ortho$ortholog
     if (all(is.na(genes_ho))) {
-      pgx$genes$ortholog <- toupper(pgx$genes$symbol)
+      pgx$genes$human_ortholog <- toupper(pgx$genes$symbol)
     } else {
-      pgx$genes$ortholog <- genes_ho
-      pgx$genes$orthologs <- ortho$orthologs
+      pgx$genes$human_ortholog <- genes_ho
+      pgx$genes$human_orthologs <- ortho$orthologs
       pgx$genes <- cleanupAnnotation(pgx$genes)
     }
   }
+
+  ## 'ortholog' (the user-chosen ortholog_species target) should
+  ## already be populated at compute time. If it's still missing or
+  ## empty (very old objects, or datatypes without ortholog lookup),
+  ## fall back to human_ortholog -- target species was implicitly
+  ## Human for those.
+  if (is.null(pgx$genes$ortholog) ||
+        all(is.na(pgx$genes$ortholog)) || all(pgx$genes$ortholog == "")) {
+    pgx$genes$ortholog <- pgx$genes$human_ortholog
+  }
+
+  # Here we use the human ortholog when available, instead of
+  # gene_name -- playdata::FAMILIES is human-keyed.
+  genes <- ifelse(!is.na(pgx$genes$human_ortholog),
+    pgx$genes$human_ortholog,
+    pgx$genes$gene_name
+  )
 
   if (pgx$organism %in% c("Human", "human") | !is.null(pgx$version)) {
     pgx$families <- lapply(playdata::FAMILIES, function(x) {
@@ -243,7 +264,7 @@ pgx.initialize <- function(pgx, progress=NULL) {
   } else {
     pgx$families <- lapply(playdata::FAMILIES, function(x, genes, annot_table) {
       x <- intersect(x, genes)
-      x <- annot_table$symbol[match(x, annot_table$ortholog)]
+      x <- annot_table$symbol[match(x, annot_table$human_ortholog)]
       return(x)
     }, genes = genes, annot_table = pgx$genes)
   }

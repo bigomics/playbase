@@ -31,6 +31,9 @@ compute_testGenesets <- function(pgx,
     # which will ensure consistency between old and new pgx
     pgx$genes$ortholog <- NA
   }
+  if (is.null(pgx$genes$human_ortholog)) {
+    pgx$genes$human_ortholog <- NA
+  }
 
   ## -----------------------------------------------------------
   ## get design and contrast matrix, and get gene list
