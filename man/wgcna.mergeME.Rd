@@ -7,5 +7,9 @@
 wgcna.mergeME(mlist, me2 = NULL, prefix = FALSE)
 }
 \description{
-Merge multiple ME matrices into one. Allow different dimensions.
+WGCNAplus::mergeME() has no explicit handling for \code{mlist = NULL,
+me2 = <matrix>}; that edge case is preserved here as an early return.
+}
+\seealso{
+WGCNAplus::mergeME
 }

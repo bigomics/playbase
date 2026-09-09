@@ -18,8 +18,7 @@ pgx.wgcna(
   maxBlockSize = 9999,
   gset.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]",
   compute.enrichment = TRUE,
-  summary = TRUE,
-  ai_model = DEFAULT_LLM,
+  summary = NULL,
   verbose = 1,
   progress = NULL
 )

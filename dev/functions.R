@@ -75,7 +75,6 @@ scan_packages <- function(path='R') {
   add_github("linxihui/NNLM")
   add_github("Coolgenome/iTALK")
   add_github("wt2015-github/FastGGM")
-  add_github("JohnCoene/firebase@omics")
   add_github("JohnCoene/bsutils")
   add_github("Bioconductor/BiocFileCache")
   add_github('cole-trapnell-lab/monocle3')

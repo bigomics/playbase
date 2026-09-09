@@ -17,3 +17,6 @@ wgcna.pickSoftThreshold(
 \description{
 Better (?) method to pick soft threshold (aka power).
 }
+\seealso{
+WGCNAplus::pickSoftThreshold
+}

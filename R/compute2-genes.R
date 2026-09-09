@@ -73,7 +73,10 @@ compute_testGenes <- function(pgx,
     design = design,
     contr.matrix = contr.matrix,
     exp.matrix = exp.matrix,
-    group = stat.group
+    group = stat.group,
+    ## imputation method recorded upstream (createPGX), surfaced for the
+    ## deterministic AI-report methods block; NULL when no imputation ran.
+    impute_method = pgx$impute_method %||% "none (no imputation applied)"
   )
   pgx$model.parameters <- model.parameters
 

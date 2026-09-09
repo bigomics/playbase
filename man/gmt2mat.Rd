@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-gsea.r
 \name{gmt2mat}
 \alias{gmt2mat}
-\title{Convert GMT file to binary matrix}
+\title{Convert GMT to Binary Matrix}
 \usage{
 gmt2mat(
   gmt,
@@ -10,34 +10,44 @@ gmt2mat(
   ntop = -1,
   sparse = TRUE,
   bg = NULL,
-  use.multicore = TRUE
+  use.multicore = FALSE
 )
 }
 \arguments{
-\item{gmt}{A list representing the GMT file, where each element is a character
-vector representing a gene set.}
+\item{gmt}{List representing the GMT file: each element is a character vector representing a gene set.}
 
-\item{max.genes}{The maximum number of genes to include in the binary matrix.
-Defaults to -1, which includes all genes.}
+\item{max.genes}{Max number of genes to include in the binary matrix. Default = -1 to include all genes.}
 
-\item{ntop}{The number of top genes to consider for each gene set. Defaults to -1,
-which includes all genes.}
+\item{ntop}{Number of top genes to consider for each gene set. Default = -1 to include all genes.}
 
-\item{sparse}{A logical value indicating whether to create a sparse matrix
-(from the 'Matrix' package) or a dense matrix. Defaults to `TRUE`.}
+\item{sparse}{Logical: create a sparse matrix. Default `TRUE`. If `FALSE` creates a dense matrix.}
 
-\item{bg}{A character vector representing the background set of genes. Defaults to `NULL`,
-which considers all unique genes from the gene sets.}
+\item{bg}{Character vector of background gene set. Default `NULL` to consider all unique genes.}
 
-\item{use.multicore}{A logical value indicating whether to use parallel processing
-(via the 'parallel' package) for faster execution. Defaults to `TRUE`.}
+\item{use.multicore}{Logical: use parallel processing ('parallel' R package). Default `FALSE`. Deprecated.}
 }
 \value{
 A binary matrix representing the presence or absence of genes in each gene set.
         Rows correspond to genes, and columns correspond to gene sets.
 }
 \description{
-This function converts a GMT file (Gene Matrix Transposed) to a binary matrix,
-where rows represent genes and columns represent gene sets. The binary matrix
-indicates the presence or absence of genes in each gene set.
+Convert a GMT file (Gene Matrix Transposed) to a binary matrix,
+where rows represent genes and columns represent gene sets.
+The binary matrix indicates presence or absence of genes in a gene set.
+}
+\examples{
+# Create example GMT data
+gmt <- list(
+  "Pathway1" = c("GENE1", "GENE2", "GENE3"),
+  "Pathway2" = c("GENE2", "GENE4", "GENE5"),
+  "Pathway3" = c("GENE1", "GENE5", "GENE6")
+)
+
+# Convert to binary matrix
+mat <- gmt2mat(gmt)
+print(mat)
+
+# Create dense matrix instead of sparse
+mat_dense <- gmt2mat(gmt, sparse = FALSE)
+print(mat_dense)
 }

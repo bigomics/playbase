@@ -287,67 +287,159 @@ pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
   return(sort(names(gsets)[jj])) ## sort alphabetically
 }
 
+#' @export
+pgx.getTopDrugs <- function(pgx, ct, n=100, na.rm=TRUE, db=1) {
+  drugs <- pgx$drugs[[db]]
+  if(is.null(ct)) ct <- colnames(drugs$X)
+  x <- drugs$X[, ct, drop=FALSE]
+  q <- drugs$Q[, ct, drop=FALSE]
+  annot <- drugs$annot[, ]
+  annot <- annot[match(rownames(x), rownames(annot)), ]
+  colnames(x) <- paste0("NES.",colnames(x))
+  colnames(q) <- paste0("padj.",colnames(q))
+  if(length(ct)==1) {
+    colnames(x)[1] <- "NES"
+    colnames(q)[1] <- "padj"  
+  }
+  df <- data.frame(x, q, annot)
+  if (na.rm) {
+    df <- df[which(!is.na(df$moa)), ]
+  }
+  x1 <- x[rownames(df),,drop=FALSE]
+  msx <- rowMeans(x1**2)
+  df <- df[order(-msx),]
+  df <- head(df, n)
+  x1 <- x[rownames(df),,drop=FALSE]
+  df <- df[order(rowMeans(-x1)),]
+  colnames(df) <- sub("moa", "mechanism_of_action", colnames(df))
+  df$drug <- NULL
+  return(df)
+}
 
 #' @export
-pgx.getTopDrugs <- function(pgx, ct, n = 10, dir = 1, na.rm = TRUE, db = 1) {
-  if (is.null(pgx$drugs)) {
-    return(NULL)
-  }
-  x <- pgx$drugs[[db]]$X[, ct]
-  q <- pgx$drugs[[db]]$Q[, ct]
-  annot <- pgx$drugs[[db]]$annot[, ]
-  annot <- annot[match(names(x), rownames(annot)), ]
-  df <- data.frame(enrichment = x, q.value = q, annot)
-  if (na.rm) df <- df[which(!is.na(df$moa)), ]
-  df <- df[order(-abs(df$enrichment)), ]
-  if (dir < 0) df <- df[order(df$enrichment), ]
-  if (dir > 0) df <- df[order(-df$enrichment), ]
-  df$drug <- NULL
-  colnames(df) <- sub("moa", "mechanism_of_action", colnames(df))
-  head(df, n)
-}
-
-pgx.getTopMOA <- function(pgx, ct, moa = NULL, n = 10, dir = 1, psig = 0.1,
-                          db = 1, level = c("drugClass", "targetGene")[1]) {
-  if (is.null(moa) && !is.null(pgx)) {
+pgx.getTopMOA <- function(pgx, ct, moa=NULL, n=100, db=1,
+                          level=c("drugClass","targetGene")[1]) {
+  if(is.null(moa) && !is.null(pgx)) {
     moa <- pgx$drugs[[db]]$moa
   }
-  df <- moa[[ct]][[level]]
-  df <- df[, c("pathway", "pval", "padj", "NES")]
-  df <- df[order(-abs(df$NES)), , drop = FALSE]
-  sel <- 1:nrow(df)
-  if (dir > 0) {
-    df <- df[order(-df$NES), , drop = FALSE]
-    sel <- which(df$padj <= psig & df$NES > 0)
+  if(is.null(moa)) {
+    message("ERROR: no MOA results")
+    return(NULL)
   }
-  if (dir < 0) {
-    df <- df[order(df$NES), , drop = FALSE]
-    sel <- which(df$padj <= psig & df$NES < 0)
+  if(is.null(ct)) ct <- names(moa)
+  
+  mm <- lapply(moa[ct], function(m) m[[level]])
+  pw <- mm[[1]]$pathway
+  if(length(pw)==0) {
+    message("[pgx.getTopMOA] warning empty MOA results")
+    return(NULL)
   }
-  df <- df[sel, , drop = FALSE]
-  head(df, n)
+
+  if(length(ct)>1) {    
+    for(i in 1:length(mm)) mm[[i]] <- mm[[i]][match(pw,mm[[i]]$pathway),]
+  }
+  X <- sapply(mm, function(m) m$NES)
+  Q <- sapply(mm, function(m) m$padj)
+  colnames(X) <- paste0("NES.",colnames(X))
+  colnames(Q) <- paste0("padj.",colnames(Q))
+  rownames(X) <- rownames(Q) <- pw
+  if(length(ct)==1) {
+    colnames(X)[1] <- "NES"
+    colnames(Q)[1] <- "padj"
+  }
+  df <- data.frame( pathway=pw, X, Q )
+  msx <- rowMeans(X**2)
+  df <- df[order(-msx),]
+  df <- head(df, n)
+  x1 <- X[rownames(df),,drop=FALSE]
+  df <- df[order(rowMeans(-x1)),]
+  return(df)
 }
 
-pgx.getTopGS <- function(pgx, ct, n = 20, dir = 1, psig = 0.1) {
-  F <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
-  P <- pgx.getMetaMatrix(pgx, level = "geneset")$qv
-  P <- 1 * (P < psig)
-  if (is.null(ct)) ct <- colnames(F)
-  if (is.numeric(ct)) ct <- colnames(F)[ct]
+#' @export
+pgx.getTopGS <- function(pgx, ct, n=100, qsig=0.1) {
+  F <- pgx.getMetaMatrix(pgx, level="geneset")$fc
+  Q <- pgx.getMetaMatrix(pgx, level="geneset")$qv
+  Q <- 1*(Q < qsig)
+  if(is.null(ct)) ct <- colnames(F)
+  if(is.numeric(ct)) ct <- colnames(F)[ct]
   ct <- intersect(ct, colnames(F))
-  xx <- F[, ct, drop = FALSE] * P[, ct, drop = FALSE]
-  ## sum(rowMeans(xx**2)>0)
-  sel <- which(rowMeans(xx**2) > 0)
-  xx <- xx[sel, , drop = FALSE]
-  if (length(ct) > 1) {
-    ord <- order(-rowMeans(xx**2))
-  } else if (dir > 0) {
-    ord <- order(-xx[, 1])
-  } else if (dir < 0) {
-    ord <- order(xx[, 1])
-  } else if (dir == 0) {
-    ord <- order(-abs(xx[, 1]))
+  xx <- F[,ct,drop=FALSE] * Q[,ct,drop=FALSE]
+  ##sum(rowMeans(xx**2)>0)
+  sel <- which(rowMeans(xx**2)>0)
+  xx <- xx[sel,,drop=FALSE]
+  ord <- order(-rowMeans(xx**2))
+  xx <- head(xx[ord,,drop=FALSE],n)
+  mx <- rowMeans(xx,na.rm=TRUE)
+  xx <- xx[order(-mx),,drop=FALSE]
+  return(xx)
+}
+
+#' @export
+pgx.info <- function(pgx, format="list", fields=NULL) {
+  
+  gset.methods <- sort(colnames(pgx$gset.meta$meta[[1]]$fc))
+  gx.methods <- colnames(pgx$gx.meta$meta[[1]]$fc)
+  extra_methods <- c(
+    wgcna = "WGCNA",
+    mofa = "MOFA",
+    deconv = "celltype deconvolution",
+    drugs = "drug connectivity",
+    wordcloud = "wordcloud",
+    connectivity = "experiment similarity"
+  )
+  extra.compute <- unname(extra_methods[names(extra_methods) %in% names(pgx)])
+  
+  methods <- list(
+    "enrichment methods" = gset.methods,
+    "gene tests" = gx.methods,
+    "extra analysis" = extra_methods )
+
+  default.methods <- c("name","description","datatype","organism",
+    "creator", names(methods))
+  
+  sel <- which(sapply(pgx, class) %in% c("character","Date"))
+  sel.tags <- names(pgx)[sel]
+  pgx.sel <- lapply(sel.tags, function(i) pgx[[i]])
+  names(pgx.sel) <- sel.tags  
+  
+  settings <- c(pgx.sel, methods)
+  settings <- settings[!duplicated(names(settings))]
+  
+  if("settings" %in% names(pgx)) {
+    settings <- c(settings, pgx$settings)
   }
-  xx <- xx[ord, , drop = FALSE]
-  head(rownames(xx), n)
+  if("versions" %in% names(pgx)) {
+    settings <- c(settings, pgx$versions)
+  }
+  if(pgx$datatype %in% c("scRNA-seq","scRNAseq")) {
+    settings <- c(settings, pgx$sc_compute_settings)
+  }
+
+  ## add matrix sizes
+  sel.matrix <- c("counts","X","samples","contrasts","GMT","gsetX")
+  mat.sizes <- sapply(sel.matrix, function(m) paste(dim(pgx[[m]]),collapse=" x "))
+  settings <- c(settings, mat.sizes)
+   
+  ## collapse lists
+  settings <- lapply(settings, paste, collapse="; ")    
+  body <- unlist(settings)
+  
+  ## select fields
+  if(!is.null(fields) && any(names(body) %in% fields)) {
+    fields <- unique(c(fields, default.methods))
+    body <- body[intersect(fields, names(body))]
+  } 
+
+  ## remove sensitive
+  sel <- setdiff(names(body), c("filename",""))
+  body <- body[sel]
+  
+  
+  if(format == "html") {
+    body <- paste0("<b>",names(body),":</b>&nbsp; ", body, "<br>")
+    body <- paste(body, collapse="")
+  }
+  
+  body
 }

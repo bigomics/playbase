@@ -32,7 +32,7 @@
 #' # TODO
 #' }
 #' @export
-pgx.initialize <- function(pgx) {
+pgx.initialize <- function(pgx, progress=NULL) {
   ## ---------------------------------------------------------------------
   ## This function must be called after creation of a PGX object
   ## and include some cleaning up and updating some internal
@@ -203,11 +203,13 @@ pgx.initialize <- function(pgx) {
   # 1) run getHumanOrtholog (maybe it failed on pgx.compute bc server was unreachable)
   # 2) if still empty, grag the symbols toUpper
   if (all(is.na(pgx$genes$human_ortholog)) || all(pgx$genes$human_ortholog == "")) {
-    genes_ho <- getHumanOrtholog(pgx$organism, pgx$genes$symbol)$human
+    ortho <- getHumanOrtholog(pgx$organism, pgx$genes$symbol)
+    genes_ho <- ortho$human
     if (all(is.na(genes_ho))) {
       pgx$genes$human_ortholog <- toupper(pgx$genes$symbol)
     } else {
       pgx$genes$human_ortholog <- genes_ho
+      pgx$genes$human_orthologs <- ortho$humans
       pgx$genes <- cleanupAnnotation(pgx$genes)
     }
   }
@@ -301,31 +303,34 @@ pgx.initialize <- function(pgx) {
   }
 
   ## -----------------------------------------------------------------------------
-  ## Keep compatible with OLD formats
+  ## Update other results slots
   ## -----------------------------------------------------------------------------
-  message("[pgx.initialize] Keep compatible OLD formats...")
-  if (any(c("mono", "combo") %in% names(pgx$drugs))) {
-    dd <- pgx$drugs[["mono"]]
-    aa1 <- pgx$drugs[["annot"]]
-    if (is.null(aa1)) {
-      aa1 <- playdata::L1000_REPURPOSING_DRUGS
-      aa1$drug <- aa1$pert_iname
-      rownames(aa1) <- aa1$pert_iname
+  if(!is.null(pgx$drugs)) {
+    message("[pgx.initialize] Updating drug/cmap results...")    
+    if (any(c("mono", "combo") %in% names(pgx$drugs))) {
+      dd <- pgx$drugs[["mono"]]
+      aa1 <- pgx$drugs[["annot"]]
+      if (is.null(aa1)) {
+        aa1 <- playdata::L1000_REPURPOSING_DRUGS
+        aa1$drug <- aa1$pert_iname
+        rownames(aa1) <- aa1$pert_iname
+      }
+      dd[["annot"]] <- aa1
+      pgx$drugs[["activity/L1000"]] <- dd
+      if ("combo" %in% names(pgx$drugs)) {
+        dd2 <- pgx$drugs[["combo"]]
+        combo <- rownames(dd2$X)
+        aa2 <- pgx.createComboDrugAnnot(combo, aa1)
+        dd2[["annot"]] <- aa2
+        pgx$drugs[["activity-combo/L1000"]] <- dd2
+      }
+      pgx$drugs$mono <- NULL
+      pgx$drugs$annot <- NULL
+      pgx$drugs$combo <- NULL
     }
-    dd[["annot"]] <- aa1
-    pgx$drugs[["activity/L1000"]] <- dd
-    if ("combo" %in% names(pgx$drugs)) {
-      dd2 <- pgx$drugs[["combo"]]
-      combo <- rownames(dd2$X)
-      aa2 <- pgx.createComboDrugAnnot(combo, aa1)
-      dd2[["annot"]] <- aa2
-      pgx$drugs[["activity-combo/L1000"]] <- dd2
-    }
-    pgx$drugs$mono <- NULL
-    pgx$drugs$annot <- NULL
-    pgx$drugs$combo <- NULL
+    pgx <- pgx.update_drugs_results(pgx)
   }
-
+  
   ## ----------------------------------------------------------------
   ## Must haves
   ## ----------------------------------------------------------------
