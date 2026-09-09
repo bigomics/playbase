@@ -214,6 +214,13 @@ pgx.initialize <- function(pgx, progress=NULL) {
     pgx$organism <- pgx.getOrganism(pgx)
   }
 
+  ## Legacy objects (created before ortholog_species was configurable)
+  ## don't have this field. Their ortholog column was always computed
+  ## against human, so default it to "Human" rather than leaving it NULL.
+  if (is.null(pgx$ortholog_species)) {
+    pgx$ortholog_species <- "Human"
+  }
+
   # Check if human ortholog is empty, if it is
   # 1) run getHumanOrtholog (maybe it failed on pgx.compute bc server was unreachable)
   # 2) if still empty, grag the symbols toUpper
