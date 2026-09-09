@@ -53,6 +53,21 @@ pgx.initialize <- function(pgx, progress=NULL) {
     return(NULL)
   }
 
+  ## Rename legacy 'human_ortholog[s]' columns to 'ortholog[s]'. We now
+  ## allow ortholog to be any species, not just human. This must run
+  ## before anything below reads pgx$genes$ortholog, otherwise legacy
+  ## objects look like they have no ortholog column at all (empty
+  ## families, spurious re-lookup). If a stray 'ortholog' column is
+  ## already present alongside the legacy one, drop it first so the
+  ## rename can't produce a duplicate column name.
+  if ("human_ortholog" %in% colnames(pgx$genes) && "ortholog" %in% colnames(pgx$genes)) {
+    pgx$genes$ortholog <- NULL
+  }
+  if ("human_orthologs" %in% colnames(pgx$genes) && "orthologs" %in% colnames(pgx$genes)) {
+    pgx$genes$orthologs <- NULL
+  }
+  colnames(pgx$genes) <- gsub("^human_orth", "orth", colnames(pgx$genes))
+
   if (is.null(pgx$version)) {
     # this is needed in case the species is human, and we dont have the
     # homolog column or if we have an old pgx which will ensure consistency
@@ -204,12 +219,12 @@ pgx.initialize <- function(pgx, progress=NULL) {
   # 2) if still empty, grag the symbols toUpper
   if (all(is.na(pgx$genes$ortholog)) || all(pgx$genes$ortholog == "")) {
     ortho <- getHumanOrtholog(pgx$organism, pgx$genes$symbol)
-    genes_ho <- ortho$human
+    genes_ho <- ortho$ortholog
     if (all(is.na(genes_ho))) {
       pgx$genes$ortholog <- toupper(pgx$genes$symbol)
     } else {
       pgx$genes$ortholog <- genes_ho
-      pgx$genes$orthologs <- ortho$humans
+      pgx$genes$orthologs <- ortho$orthologs
       pgx$genes <- cleanupAnnotation(pgx$genes)
     }
   }
@@ -231,10 +246,6 @@ pgx.initialize <- function(pgx, progress=NULL) {
   all.genes <- sort(unique(pgx$genes$symbol))
   pgx$families[["<all>"]] <- all.genes
 
-  ## Rename 'ortholog' to 'ortholog'. We now allow ortholog to
-  ## any species.
-  colnames(pgx$genes) <- gsub("^human_orth","orth",colnames(pgx$genes))
-  
   ## -----------------------------------------------------------------------------
   ## Recompute geneset meta.fx as average fold-change of genes
   ## -----------------------------------------------------------------------------

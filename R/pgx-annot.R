@@ -1079,7 +1079,30 @@ getOrtholog <- function(symbols, organism, target_species,
   
   ## Try mapping with orthogene's databases
   species_id <- .getGprofilerSpecies(organism, "id")
-  target_id <- .getGprofilerSpecies(target_species, "id")  
+  target_id <- .getGprofilerSpecies(target_species, "id")
+
+  ## Degrade gracefully when either species can't be resolved (unknown
+  ## name, typo, organism not covered by g:Profiler) instead of letting
+  ## the NULL propagate into .convert_orthologs()/.map_gprofiler_id() and
+  ## throw, which would abort the whole PGX computation.
+  if (is.null(species_id) || is.null(target_id)) {
+    unresolved <- c(
+      if (is.null(species_id)) organism,
+      if (is.null(target_id)) target_species
+    )
+    if (verbose > 0) {
+      message("[getOrtholog] could not resolve species: ",
+        paste(unresolved, collapse = ", "), " -- returning empty ortholog mapping")
+    }
+    return(data.frame(
+      symbol = symbols,
+      ortholog = NA_character_,
+      orthologs = NA_character_,
+      description = NA_character_,
+      source = NA_character_,
+      row.names = NULL
+    ))
+  }
 
   ##genes <- c("---", unique(symbols[!is.na(symbols)]))
   genes <- c("---", unique(c(symbols,clean.symbols)))

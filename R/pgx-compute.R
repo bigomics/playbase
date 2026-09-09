@@ -1082,8 +1082,14 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
 pgx.add_GMT <- function(pgx,
                         custom.geneset = NULL,
                         max.genesets = 20000,
-                        include_default_gmt = TRUE, 
+                        include_default_gmt = TRUE,
                         include_iea = TRUE, species_go = NULL) {
+  ## An explicit NULL (e.g. params$include_default_gmt from a params.RData
+  ## written before this parameter existed) bypasses the TRUE default
+  ## above, since R only applies argument defaults when the argument is
+  ## missing, not when it's passed as NULL.
+  if (is.null(include_default_gmt)) include_default_gmt <- TRUE
+
   if (!"symbol" %in% colnames(pgx$genes)) {
     message(paste(
       "[pgx.add_GMT] ERROR: could not find 'symbol' column.",

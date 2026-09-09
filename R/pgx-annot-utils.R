@@ -406,13 +406,15 @@ collapse_by_humansymbol <- function(obj, annot) {
 #' 
 .map_gprofiler_id <- function(species) {
 
+  if (is.null(species) || is.na(species) || !nzchar(species)) return(NULL)
+
   orgs <- jsonlite::fromJSON("https://biit.cs.ut.ee/gprofiler/api/util/organisms_list")
 
   ## exact match
   exact.species <- paste0("^",species,"$")
   i <- which(
     grepl( exact.species, orgs$id, ignore.case = TRUE) |
-      grepl(exact.species, orgs$scientific_name, ignore.case = TRUE) |      
+      grepl(exact.species, orgs$scientific_name, ignore.case = TRUE) |
       grepl( exact.species, orgs$display_name, ignore.case = TRUE)
   )
 
@@ -424,7 +426,19 @@ collapse_by_humansymbol <- function(obj, annot) {
 
   if(length(i)==0) return(NULL)
 
-  id <- orgs[i[1],"id"]  
+  ## Several strains/assemblies of the same species can match (e.g.
+  ## "Caenorhabditis elegans" matches both the core "celegans" organism
+  ## and WormBase ParaSite imports like "caelegprjna13758"). g:Profiler's
+  ## core reference organisms use short, digit-free ids; strain/assembly
+  ## imports carry a numeric accession in their id. Prefer the former
+  ## when several exact matches tie, since that's the one gorth()/GO
+  ## lookups actually support.
+  if (length(i) > 1) {
+    core <- i[!grepl("[0-9]", orgs[i,"id"])]
+    if (length(core) > 0) i <- core
+  }
+
+  id <- orgs[i[1],"id"]
   return(id)
 }
 
