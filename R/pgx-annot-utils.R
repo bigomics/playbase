@@ -19,7 +19,7 @@ getSpeciesAliases <- function(species) {
 }
 
 #' Merges any missing annotation in df with non-missing annotation of
-#' annot_table.
+#' df2.
 #'
 merge_annot_table <- function(df, df2, priority = 1) {
   #  df2 <- df2[match(rownames(df), rownames(df2)), ]
@@ -155,12 +155,14 @@ strip_prefix <- function(s) {
 #' prefix needed for multi-omics.
 #'
 .clean_probe_names <- function(probes, sep = ".-") {
-  probes0 <- trimws(probes)
+  probes0 <- probes
+  probes <- trimws(probes)  
   probes[is.na(probes)] <- ""
   ## strip multiple probes
   probes <- sub("[;].*", "", probes)
   ## strip away anything postfix after a 'dot' or 'underscore'
   probes <- sub(paste0("[", sep, "].*"), "", probes)
+  names(probes) <- probes0
   return(probes)
 }
 
@@ -503,4 +505,38 @@ AnnotationDbi_select_2pass <- function(orgdb, keys, columns, keytype,
   annot <- annot[match(keys, annot[,keytype]),,drop=FALSE]
   
   return(annot)
+}
+
+#' Maps a gmt list to symbol using annotation table. We go via
+#' sparsematrix because it is much faster than list filtering.
+#' 
+gmt.map2symbol <- function(gmt, annot, target="symbol") {
+  G1 <- gmt2mat(gmt)
+  as.symbol <- map2symbol(annot=annot, genes=rownames(G1), target=target, na.rm=FALSE)
+  jj <- which(!is.na(as.symbol))
+  G1 <- G1[jj,]
+  rownames(G1) <- as.symbol[jj]
+  mat2gmt(G1)
+}
+
+
+#' Merge duplicated GO sets in a gmt collection by merging the
+#' terms. This is often needed after merging to GO collections if
+#' retrieved by different methods.
+#' 
+go.merge_duplicates <- function(gmt) {
+  gmt.id <- gsub(".*\\(GO_|\\)$","",names(gmt))
+  gmt.names <- names(gmt)
+  names(gmt.names) <- gmt.id
+  ndup <- sum(duplicated(gmt.id))
+  message(paste("merging",ndup,"duplicated GO terms"))
+  id.dup <- gmt.id[duplicated(gmt.id)]
+  id.one <- setdiff(gmt.id, id.dup)
+  ## colllapse duplicates by set union  
+  gmt1 <- gmt[id.one]
+  jj <- which(gmt.id %in% id.dup)
+  gmt2 <- tapply(gmt[jj], gmt.id[jj], function(g) unique(unlist(g)))
+  gmt <- c(gmt1, gmt2)
+  names(gmt) <- gmt.names[names(gmt)]
+  return(gmt)
 }

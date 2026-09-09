@@ -11,6 +11,7 @@ pgx.createPGX(
   samples,
   contrasts,
   organism,
+  ortholog_species = "hsapiens",
   custom.geneset = NULL,
   annot_table = NULL,
   max.genesets = 5000,
@@ -45,6 +46,7 @@ pgx.createPGX(
   remove.xxl = TRUE,
   remove.outliers = TRUE,
   add.gmt = TRUE,
+  species_go = NULL,
   settings = list(),
   sc_compute_settings = list()
 )

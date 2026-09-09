@@ -12,7 +12,8 @@
 #'
 #' @export
 getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
-                          db = c("annothub","gprofiler"), include_iea=TRUE ) {
+                          db = c("annothub","gprofiler"), include_iea=TRUE,
+                          symbol.annot = NULL) {
 
   gmt1=gmt2=NULL
   if(is.null(db) || "annothub" %in% db) {
@@ -31,7 +32,7 @@ getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
     message(paste("Got",length(gmt2),"GO terms from Gprofiler"))
   }
 
-  ## order by largest.
+  ## merge
   gmt <- c(gmt1, gmt2)
   if(length(gmt)==0) {
     message("WARNING: empty gene sets")
@@ -58,7 +59,7 @@ getOrganismGO <- function(organism, features=NULL, minsize=3, batch_size=2000,
   return(gmt)
 }
  
-getOrganismGO.ANNOTHUB <- function(organism, features = NULL, use.ah = NULL, orgdb = NULL) {
+getOrganismGO.ANNOTHUB <- function(organism, use.ah = NULL, orgdb = NULL) {
   organism <- normalizeOrganism(organism) 
 
   ## Load the annotation resource.
@@ -78,7 +79,8 @@ getOrganismGO.ANNOTHUB <- function(organism, features = NULL, use.ah = NULL, org
   }
   
   ## create GO annotets
-  message(paste0("Creating GO annotation for '",organism,"'using AnnotationHub..."))
+  message(paste0("[getOrganismGO.ANNOTHUB] Creating GO for '",organism,
+    "' using AnnotationHub..."))
   ont_classes <- c("BP", "CC", "MF")
   k <- "BP"
   for (k in ont_classes) {
@@ -125,7 +127,7 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
     message("[getOrganismGO.GPROFILER] WARNING: organism not found")
     return(NULL)
   }
-  message(paste0("Getting GO gene sets using Gprofiler for id '", id,"'"))
+  message(paste0("Getting GO using Gprofiler for id '", id,"'"))
   res <- NULL
   if(length(features) <= batch_size) {
     gost.out <- try(gprofiler2::gost(
@@ -193,7 +195,7 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
   ## create gmt list
   gmt <- strsplit(res$intersection, split=",")
 
-  ## give names
+  ## standardize names (like "GO_BP:uridine kinase activity (GO_0004849)")
   ss <- sub(":","_",res$source)
   nn <- res$term_name
   gg <- sub(":","_",res$term_id)
@@ -201,10 +203,11 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
   head(gmt.name)
   names(gmt) <- gmt.name
 
-  ## sum up batches
+  ## sum up duplicated batches
   sum(duplicated(gmt.name))
-  if(  sum(duplicated(gmt.name)) ) {
-    gmt <- tapply( 1:length(gmt), gmt.name, function(i) unlist(gmt[i]))
+  if(sum(duplicated(gmt.name))) {
+    gmt <- tapply( 1:length(gmt), gmt.name,
+      function(i) unname(unlist(gmt[i])))
   }
   
   gmt <- gmt[order(-sapply(gmt,length))]

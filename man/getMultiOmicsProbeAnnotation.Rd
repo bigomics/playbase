@@ -5,7 +5,7 @@
 \title{Annotate multi-omics probetype. Probe names *must  be prefixed with
 data type unless classical transcriptomics/proteomics.}
 \usage{
-getMultiOmicsProbeAnnotation(organism, probes)
+getMultiOmicsProbeAnnotation(organism, probes, ortholog_species)
 }
 \description{
 Annotate multi-omics probetype. Probe names *must  be prefixed with
