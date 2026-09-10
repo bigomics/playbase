@@ -8,10 +8,11 @@ AnnotationHub/OrgDB. Restrict to genes as background.}
 getOrganismGO(
   organism,
   features = NULL,
-  minsize = 3,
-  batch_size = 2000,
+  minsize = 3L,
+  batch_size = 2000L,
   db = c("annothub", "gprofiler"),
-  include_iea = TRUE
+  include_iea = TRUE,
+  symbol.annot = NULL
 )
 }
 \description{

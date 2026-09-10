@@ -63,7 +63,7 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
   for (ct in colnames(F1)) {
     fc <- F1[, ct]
 
-    k <- intersect(c("human_ortholog", "symbol", "gene_name"), colnames(pgx$genes))
+    k <- intersect(c("human_ortholog", "ortholog", "symbol", "gene_name"), colnames(pgx$genes))
     k <- k[which(colMeans(is.na(pgx$genes[, k])) < 1)] ## no all NA columns...
     k
     if (length(k) == 0) {

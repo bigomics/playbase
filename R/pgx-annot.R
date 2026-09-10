@@ -68,18 +68,18 @@ getProbeAnnotation <- function(organism,
                                datatype,
                                meth_type = NULL,
                                probetype = "",
-                               bridge = NULL,
-                               bridge_species = NULL,
+                               ortholog_species = "Human",
                                annot_table = NULL) {
   if (is.null(datatype)) datatype <- "unknown"
   if (is.null(probetype)) probetype <- "unknown"
+  if (is.null(ortholog_species)) ortholog_species <- "Human"  
 
   unknown.organism <- (tolower(organism) %in% c("no organism", "custom", "unkown"))
   unknown.datatype <- (datatype %in% c("custom", "unkown"))
   unknown.probetype <- (probetype %in% c("custom", "unkown"))
   annot.unknown <- unknown.organism || unknown.datatype || unknown.probetype
   organism <- normalizeOrganism(organism)
-
+  
   if (datatype == "methylomics") {
     c1 <- is.null(meth_type)
     c2 <- !meth_type %in% c("450K array", "EPIC array")
@@ -130,19 +130,24 @@ getProbeAnnotation <- function(organism,
       annot_table = annot_table
     )
   } else if (datatype == "multi-omics") {
-    genes <- getMultiOmicsProbeAnnotation(organism, probes)
+    genes <- getMultiOmicsProbeAnnotation(
+      organism = organism,
+      probes = probes,
+      ortholog_species = ortholog_species      
+    )
   } else {
     if (datatype == "proteomics") {
       is.phospho <- annotate_phospho_residue(probes, detect.only = TRUE)
-      genes <- getGeneAnnotation(organism = organism, probes = probes,
-        bridge = bridge, bridge_species = bridge_species,
-        is.phospho = is.phospho)
     } else {
-      genes <- getGeneAnnotation(
-        organism = organism, probes = probes,
-        bridge = bridge, bridge_species = bridge_species
-      )
+      is.phospho <- FALSE
     }
+
+    genes <- getGeneAnnotation(
+      organism = organism,
+      probes = probes,
+      ortholog_species = ortholog_species,
+      is.phospho = is.phospho
+    )
   }
 
   ## final fallback is genes==NULL
@@ -155,14 +160,17 @@ getProbeAnnotation <- function(organism,
   ## and append any extra columns.
   if (!is.null(genes) && !is.null(annot_table)) {
     dbg("[getProbeAnnotation] merging custom annotation table")
-    colnames(annot_table) <- sub("^ortholog$", "human_ortholog",
-      colnames(annot_table),
-      ignore.case = TRUE
-    )
+    ## colnames(annot_table) <- sub("^ortholog$", "ortholog",
+    ##   colnames(annot_table),
+    ##   ignore.case = TRUE
+    ## )
     colnames(annot_table) <- sub("^Symbol$|^gene$|^gene_name$", "symbol",
       colnames(annot_table),
       ignore.case = TRUE
     )
+    kk <- match(rownames(genes), rownames(annot_table))
+    annot_table <- annot_table[kk,]
+    rownames(annot_table) <- rownames(genes)
     genes <- merge_annot_table(genes, annot_table, priority = 2)
   }
 
@@ -182,14 +190,14 @@ getGeneAnnotation <- function(
   organism,
   probes,
   is.phospho = FALSE,
-  bridge = NULL,
-  bridge_species = NULL,
   use.ah = NULL,
-  verbose = TRUE,
-  methods = c("annothub", "gprofiler")
+  methods = c("annothub", "gprofiler"),
+  ortholog_species = "Human",
+  verbose = TRUE
 ) {
-  organism <- normalizeOrganism(organism)
 
+  organism <- normalizeOrganism(organism)
+  
   ## clean up probes name. be careful not to 'overclean'.
   probes0 <- make_unique(trimws(probes))
   probes <- trimws(probes)
@@ -222,15 +230,11 @@ getGeneAnnotation <- function(
           organism = organism,
           probes = missing_probes,
           use.ah = use.ah,
-          bridge = bridge,
-          bridge_species = bridge_species,
           verbose = verbose
         ),
         "gprofiler" = getGeneAnnotation.GPROFILER(
           organism = organism,
           probes = missing_probes,
-          bridge = bridge,
-          bridge_species = bridge_species,
           verbose = verbose
         ),
         stop("Unknown method: ", method)
@@ -256,10 +260,48 @@ getGeneAnnotation <- function(
     message("[getGeneAnnotation] WARNING. all missing??? missing.ratio=", mean(missing))
     annot <- NULL
   }
-  
+
+  ## Ortholog lookup is shared by all backends and done once, here, on
+  ## the merged symbol column. Doing it inside each backend meant one
+  ## remote lookup per backend, each seeing only the probes that backend
+  ## happened to annotate, instead of a single lookup over the final
+  ## symbols.
+  if (!is.null(annot)) {
+    if (verbose > 0) message(paste("[getGeneAnnotation] getting",
+      ortholog_species, "orthologs..."))
+    ortho <- getOrtholog(
+      symbols = annot$symbol,
+      organism = organism,
+      target_species = ortholog_species,
+      verbose = 0
+    )
+    annot$ortholog <- ortho$ortholog    ## single-valued
+    ##annot$orthologs <- ortho$orthologs  ## all candidates, ";"-joined
+    annot$ortholog_description <- ortho$description
+
+    ## A number of downstream resources (default genesets, TileDB,
+    ## CMAP, GENE_SUMMARY, Reactome/WikiPathways, GTEx tissue,
+    ## cross-dataset compare, ...) are keyed on human gene symbols
+    ## regardless of the user-selected ortholog_species. Keep a
+    ## guaranteed-human mapping alongside the species-specific one.
+    ## Skip the extra remote lookup when the two targets are the same.
+    if (tolower(ortholog_species) %in% c("human","hsapiens")) {
+      annot$human_ortholog <- annot$ortholog
+    } else {
+      if (verbose > 0) message("[getGeneAnnotation] getting Human orthologs...")
+      ortho.human <- getOrtholog(
+        symbols = annot$symbol,
+        organism = organism,
+        target_species = "Human",
+        verbose = 0
+      )
+      annot$human_ortholog <- ortho.human$ortholog
+    }
+  }
+
   if (verbose > 0) {
     mean.mapped <- round(100*mean(!is.na(annot$symbol)),2)
-    mean.ortho <- round(100*mean(!is.na(annot$human_ortholog)),2)
+    mean.ortho <- round(100*mean(!is.na(annot$ortholog)),2)
     message("[getGeneAnnotation] mapping ratio SYMBOLS  = ", mean.mapped, "%")
     message("[getGeneAnnotation] mapping ratio ORTHOLOGS  = ", mean.ortho, "%")
   }
@@ -314,15 +356,12 @@ getGeneAnnotation <- function(
 #' result <- getGeneAnnotation(organism, probes)
 #' head(result)
 #' }
-#' @export
 getGeneAnnotation.ANNOTHUB <- function(
   organism,
   probes,
   use.ah = NULL,
   probe_type = NULL,
   second.pass = TRUE,
-  bridge = NULL,  ## NULL -> auto
-  bridge_species = NULL,
   verbose = TRUE
 ) {
   if (is.null(organism)) {
@@ -359,12 +398,18 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## }
   
   if (is.null(probe_type)) {
-    probe_type <- detect_probetype(organism, probes, orgdb = orgdb)
+    probe_type <- detect_probetype(organism, probes)
     if (is.null(probe_type) || is.na(probe_type)) {
       message("ERROR: could not determine probe_type.")
       message("WARNING. returning empty annotation.")
       annot <- data.frame(feature = probes, symbol = "")
       annot <- cleanupAnnotation(annot)
+      annot$symbol <- NA
+      annot$gene_title <- NA      
+      annot$ortholog <- NULL
+      annot$orthologs <- NULL     
+      annot$ortholog <- NULL
+      annot$orthologs <- NULL     
       return(annot)
     }
   }
@@ -460,7 +505,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   length(missing.probes)
   if (second.pass && length(missing.probes)) {
     missing.probe_type <- try(suppressWarnings(suppressMessages(
-      detect_probetype(organism, missing.probes, orgdb = orgdb)
+      detect_probetype.ANNOTHUB(organism, missing.probes, orgdb = orgdb)
     )), silent = TRUE)
     if (inherits(missing.probe_type, "try-error")) {
       missing.probe_type <- NULL
@@ -473,13 +518,6 @@ getGeneAnnotation.ANNOTHUB <- function(
       missing.probe_type %in% AnnotationDbi::keytypes(orgdb)
     ) {
       missing.probes1 <- match_probe_names(missing.probes, orgdb, missing.probe_type)
-      ## suppressMessages(suppressWarnings(
-      ##   missing.annot <- AnnotationDbi::select(orgdb,
-      ##     keys = missing.probes1,
-      ##     columns = cols,
-      ##     keytype = missing.probe_type
-      ##   )
-      ## ))
       suppressMessages(suppressWarnings(
         missing.annot <- AnnotationDbi_select_2pass(
           orgdb,
@@ -521,16 +559,9 @@ getGeneAnnotation.ANNOTHUB <- function(
     }
   }
 
-  ## get human ortholog using 'orthogene'
-  message("[getGeneAnnotation.ANNOTHUB] getting human orthologs...")
-  ortho <- getHumanOrtholog(
-    organism, annot$SYMBOL,
-    bridge = bridge,
-    bridge_species = bridge_species,
-    verbose = 0)
-
-  annot$ORTHOGENE <- ortho$human    ## single-valued
-  annot$ORTHOGENES <- ortho$humans  ## all candidates, ";"-joined
+  ## NOTE: no ortholog lookup here, and no ortholog/orthologs
+  ## columns in the output. getGeneAnnotation() does the lookup once, on
+  ## the merged symbol column, and adds the columns there.
 
   ## Return as standardized data.frame and in the same order as input
   ## probes.
@@ -539,7 +570,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   annot$SOURCE <- pkgname[1]
 
   annot.cols <- c(
-    "PROBE", "SYMBOL", "ORTHOGENE", "ORTHOGENES", "UNIPROT", "GENENAME",
+    "PROBE", "SYMBOL", "UNIPROT", "GENENAME",
     ## "GENETYPE", "MAP", "CHR", "POS", "TXLEN", "SOURCE"
     "MAP", "SOURCE"
   )
@@ -551,7 +582,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   for (a in missing.cols) genes[[a]] <- NA
   genes <- genes[, annot.cols]
   new.names <- c(
-    "feature", "symbol", "human_ortholog", "human_orthologs", "uniprot", "gene_title",
+    "feature", "symbol", "uniprot", "gene_title",
     ## "gene_biotype", "map", "chr", "pos", "tx_len", "source"
     "chr", "source"
   )
@@ -580,12 +611,9 @@ getGeneAnnotation.ANNOTHUB <- function(
 #' detection is not needed because orthogene seems to detect is
 #' automatically.
 #' 
-#' @export
 getGeneAnnotation.GPROFILER <- function(
   organism,
   probes,
-  bridge = NULL,
-  bridge_species = NULL,  
   verbose = TRUE
 ) {
   ## correct organism names different from OrgDb
@@ -602,7 +630,7 @@ getGeneAnnotation.GPROFILER <- function(
     message("ERROR: unknown organism ", organism)
     return(NULL)
   }
-  message("Mapping to species: ", species)
+  message("Mapping to gprofiler species: ", species)
   probes[is.na(probes) | probes == ""] <- "NA"
   
   out <- try(orthogene::map_genes(
@@ -619,17 +647,19 @@ getGeneAnnotation.GPROFILER <- function(
   length(ii)
   if(length(ii)) {
     clean.probes <- .clean_probe_names(probes[ii], sep='.-') 
+    names(clean.probes) <- probes[ii]
     out2 <- try(orthogene::map_genes(
       genes = clean.probes,
       species = species,
       run_map_species = FALSE,  ## disable map and check
       verbose = FALSE
     ), silent = TRUE)
-    out2$input <- probes[ii]
+
+    out2$input <- names(clean.probes)[match(out2$input,clean.probes)]
     jj <- which(!is.na(out2$name))
-    length(jj)
     if(length(jj)) {
-      out[ii[jj],] <- out2[jj,,drop=FALSE]
+      ii <- match(out2$input[jj], out$input)
+      out[ii,] <- out2[jj,,drop=FALSE]
     }
     message("Round 2: mapped ratio: ", round(100*mean(!is.na(out$name)),2),"%")
   }
@@ -637,8 +667,6 @@ getGeneAnnotation.GPROFILER <- function(
   df <- data.frame(
     feature = probes,
     symbol = NA,
-    human_ortholog = "",
-    human_orthologs = "",
     uniprot = "",
     gene_title = "",
     chr = NA,
@@ -662,14 +690,10 @@ getGeneAnnotation.GPROFILER <- function(
 
     df$symbol <- out$name
     df$gene_title <- sub(" \\[.*", "", out$description)
-    ortho <- getHumanOrtholog(
-      organism, out$name,
-      bridge = bridge,
-      bridge_species = bridge_species,
-      verbose = 0
-    )
-    df$human_ortholog <- ortho$human    ## single-valued
-    df$human_orthologs <- ortho$humans  ## all candidates, ";"-joined
+
+    ## NOTE: no ortholog lookup here, and no ortholog/orthologs
+    ## columns: getGeneAnnotation() does the lookup once, on the merged
+    ## symbol column, and adds the columns there.
     df$uniprot <- uniprot
     df$source <- "gprofiler2"
   }
@@ -701,7 +725,7 @@ cleanupAnnotation <- function(genes) {
 
   ## add missing columns if needed, then reorder
   columns <- c(
-    "feature", "symbol", "human_ortholog", "human_orthologs", "gene_title", ## "gene_biotype",
+    "feature", "symbol", "ortholog", "gene_title", ## "gene_biotype",
     ## "map", "pos", "tx_len",
     "chr", "source", "gene_name"
   )
@@ -729,16 +753,17 @@ cleanupAnnotation <- function(genes) {
 
   # replace NA in gene_ortholog by "" to conform with old
   # pgx objects. For collapsing to symbol this is important.
-  genes$human_ortholog[is.na(genes$human_ortholog)] <- ""
+  genes$ortholog[is.na(genes$ortholog)] <- ""
+  if (!is.null(genes$human_ortholog)) genes$human_ortholog[is.na(genes$human_ortholog)] <- ""
 
   # replace NA or empty symbol by "{feature}" so there is always a readable name
   ii <- which(genes$symbol %in% c(NA, "", "-"))
   genes$symbol[ii] <- paste0("{", genes$feature[ii], "}")
   genes$gene_title[ii] <- "Uknown feature"
 
-  # if organism is human, human_ortholog should be NA (matching old
+  # if organism is human, ortholog should be NA (matching old
   # playbase annot). NEED RETHINK (this is not very consistent).
-  if (is.null(genes$human_ortholog)) genes$human_ortholog <- NA
+  if (is.null(genes$ortholog)) genes$ortholog <- NA
 
   ## reorder
   ordered.cols <- c(columns, setdiff(colnames(genes), columns))
@@ -776,7 +801,7 @@ cleanupAnnotation <- function(genes) {
 #'
 #' @return The pgx object with custom gene annotation added/appended. The gene annotation
 #' table has the same format as the one returned by pgx.gene_table(). However, the
-#' columns human_ortholog, gene_title, gene_biotype, chr, pos, tx_len, map, source are filled
+#' columns ortholog, gene_title, gene_biotype, chr, pos, tx_len, map, source are filled
 #' with default values.
 #'
 #' @examples
@@ -800,7 +825,7 @@ getCustomAnnotation <- function(probes, custom_annot) {
   }
 
   annot_map <- list(
-    "human_ortholog" = "",
+    "ortholog" = "",
     "gene_title" = "unknown",
     "chr" = "unknown",
     "source" = "custom"
@@ -861,7 +886,7 @@ getCustomAnnotation <- function(probes, custom_annot) {
       feature = probes,
       symbol = probes,
       gene_name = probes,
-      human_ortholog = "",
+      ortholog = "",
       gene_title = "unknown",
       chr = "unknown",
       source = "custom"
@@ -882,9 +907,9 @@ getCustomAnnotation <- function(probes, custom_annot) {
 #' @export
 getCustomAnnotation2 <- function(probes, custom_annot, feature.col = "feature",
                                  symbol.col = "symbol", gene_title.col = "gene_title",
-                                 ortholog.col = "human_ortholog",
+                                 ortholog.col = "ortholog",
                                  extra.columns = TRUE) {
-  #  feature.col='feature';symbol.col='symbol';gene_title.col='gene_title';ortholog.col='human_ortholog';extra.columns = TRUE
+  #  feature.col='feature';symbol.col='symbol';gene_title.col='gene_title';ortholog.col='ortholog';extra.columns = TRUE
 
   message("[getCustomAnnotation2] Adding custom annotation table...")
   # Create custom gene table from probe names
@@ -893,7 +918,7 @@ getCustomAnnotation2 <- function(probes, custom_annot, feature.col = "feature",
     feature = probes,
     symbol = probes,
     gene_name = probes,
-    human_ortholog = NA,
+    ortholog = NA,
     gene_title = "unknown",
     ## chr = NA,
     source = "custom"
@@ -946,7 +971,7 @@ getCustomAnnotation2 <- function(probes, custom_annot, feature.col = "feature",
     newcols <- c(
       "feature" = feature.col, "symbol" = symbol.col,
       "gene_title" = gene_title.col,
-      "human_ortholog" = ortholog.col
+      "ortholog" = ortholog.col
     )
     newcols <- newcols[which(newcols != names(newcols))]
     newcols <- newcols[which(newcols %in% colnames(custom_annot))]
@@ -989,21 +1014,17 @@ getCustomAnnotation2 <- function(probes, custom_annot, feature.col = "feature",
 ## ================== GET ORTHOLOG FUNCTIONS ======================================
 ## ================================================================================
 
-##BRIDGE_SPECIES = c("dmelanogaster","drerio","celegans","scerevisiae","athaliana","ecoli")
-BRIDGE_SPECIES = c("dmelanogaster","drerio","celegans","scerevisiae","athaliana")
-
-## Auto-trigger the bridge search below this direct orthology ratio. The
-## poorly annotated species the bridge is meant for sit well above the old
-## 0.10 gate (trout ~0.16, hamster ~0.33) and so never bridged at all.
-BRIDGE_THRESHOLD = 0.5
-
-## Number of features probed to decide whether to bridge (see getHumanOrtholog)
-BRIDGE_PROBE_SIZE = 500
+## Below this direct orthology ratio we consider the result poor and
+## report *why* it is poor (see getHumanOrtholog).
+LOW_ORTHOLOGY_THRESHOLD = 0.5
 
 ## Below this fraction of resolvable identifiers we consider the input
-## namespace unsupported for the organism and skip the bridge fan-out:
-## bridging cannot work on IDs that cannot be resolved in the first place.
+## namespace unsupported for the organism.
 ID_RECOGNITION_MIN = 0.02
+
+## Max identifiers per ortholog query. The remote services cap the size
+## of a single request, so longer queries are chunked (see .query_orthologs).
+ORTHOLOG_BATCH_SIZE = 1500
 
 #' Fraction of input identifiers that g:Profiler can resolve for this
 #' organism at all, independent of orthology. This separates the two
@@ -1033,13 +1054,12 @@ ID_RECOGNITION_MIN = 0.02
 #' @noRd
 .collapse_orthologs <- function(df) {
   x <- tapply(df$ortholog, df$input, .clean_ortholog_set, simplify = FALSE)
-  data.frame(
-    input = names(x),
-    ortholog = sapply(x, function(s) if (length(s)) s[1] else NA),
-    orthologs = sapply(x, function(s) if (length(s)) paste(s, collapse = ";") else NA),
-    row.names = NULL,
-    stringsAsFactors = FALSE
-  )
+  ortholog = sapply(x, function(s) if (length(s)) s[1] else NA)
+  orthologs = sapply(x, function(s) if (length(s)) paste(s, collapse = ";") else NA)
+  df <- df[match(names(x),df$input), ]
+  df$ortholog  <- unname(ortholog)
+  df$orthologs <- unname(orthologs)  
+  return(df)
 }
 
 #' @title Get human ortholog from given symbols of organism by
@@ -1050,110 +1070,74 @@ ID_RECOGNITION_MIN = 0.02
 getHumanOrtholog <- function(organism, symbols,
                              ortho.methods = c("homologene","gprofiler","babelgene",
                                "gprofiler2","uppercase"),
-                             bridge = NULL,
-                             bridge_species = BRIDGE_SPECIES,
                              verbose = 1) {
-  
+  df <- getOrtholog(
+    symbols = symbols,
+    organism = organism,
+    target_species = "Human", 
+    ortho.methods = ortho.methods,
+    verbose = verbose)
+  df
+}
+
+
+#' @title Get ortholog from given symbols of organism by
+#'   aggregation of multiple methods. This package needs internet
+#'   connection.
+#'
+#' @export
+getOrtholog <- function(symbols, organism, target_species, 
+                        ortho.methods = c("homologene","gprofiler","babelgene",
+                          "gprofiler2","uppercase"),
+                        verbose = 1) {
+
   ## try also clean symbols
   symbols[is.na(symbols)] <- "NA"
   clean.symbols <- .clean_symbols(symbols)   ## NEED RETHINK!
   names(clean.symbols) <- symbols
   names(symbols) <- symbols
-  if(is.null(bridge_species)) bridge_species <- BRIDGE_SPECIES
   
   ## Try mapping with orthogene's databases
   species_id <- .getGprofilerSpecies(organism, "id")
-  species_id  
+  target_id <- .getGprofilerSpecies(target_species, "id")
 
-  i=1
-  batch_size=500
-  batch_size=1500
+  ## Degrade gracefully when either species can't be resolved (unknown
+  ## name, typo, organism not covered by g:Profiler) instead of letting
+  ## the NULL propagate into .convert_orthologs()/.map_gprofiler_id() and
+  ## throw, which would abort the whole PGX computation.
+  if (is.null(species_id) || is.null(target_id)) {
+    unresolved <- c(
+      if (is.null(species_id)) organism,
+      if (is.null(target_id)) target_species
+    )
+    if (verbose > 0) {
+      message("[getOrtholog] could not resolve species: ",
+        paste(unresolved, collapse = ", "), " -- returning empty ortholog mapping")
+    }
+    return(data.frame(
+      symbol = symbols,
+      ortholog = NA_character_,
+      orthologs = NA_character_,
+      description = NA_character_,
+      source = NA_character_,
+      row.names = NULL
+    ))
+  }
 
   ##genes <- c("---", unique(symbols[!is.na(symbols)]))
   genes <- c("---", unique(c(symbols,clean.symbols)))
   genes[is.na(genes)] <- "NA"
 
-  ## Decide ONCE whether to bridge, before the batching loop below. The
-  ## threshold used to be evaluated inside each convert_orthologs() call,
-  ## so the same dataset could bridge on one batch and not on the next
-  ## depending purely on feature order. The probe is an evenly spaced
-  ## (deterministic) sample, so the decision is reproducible across runs.
-  ## NOTE: only needed when batching. A single batch is one convert_orthologs()
-  ## call that decides on the same threshold itself, so probing there would
-  ## just do the whole lookup twice.
-  if (is.null(bridge) && length(genes) > batch_size) {
-    probe <- genes
-    if (length(probe) > BRIDGE_PROBE_SIZE) {
-      probe <- probe[unique(round(seq(1, length(probe), length.out = BRIDGE_PROBE_SIZE)))]
-    }
-    probe.out <- try(convert_orthologs(
-      genes = probe,
-      species = species_id,
-      method = ortho.methods,
-      bridge = FALSE,
-      verbose = 0
-    ), silent = TRUE)
-    if (inherits(probe.out, "data.frame") && nrow(probe.out) > 0) {
-      probe.ratio <- mean(!probe.out$ortholog %in% c(NA, "", "NA", "N/A"))
-      bridge <- (probe.ratio < BRIDGE_THRESHOLD)
-      if (verbose > 0) {
-        message("[getHumanOrtholog] probe ratio mapped = ", round(probe.ratio, 4),
-          " -> bridge = ", bridge)
-      }
-    } else {
-      bridge <- FALSE
-    }
-  }
-
-  ## Batch processing for large gene lists
-  if (length(genes) > batch_size) {      
-    
-    n_genes <- length(genes)
-    n_batches <- ceiling(n_genes / batch_size)
-    if (verbose > 0) message("[getHumanOrtholog] processing ", n_genes,
-      " genes in ", n_batches, " batches")
-    
-    batch_results <- list()
-    b=1
-    for (b in 1:n_batches) {
-      start_idx <- (b - 1) * batch_size + 1
-      end_idx <- min(b * batch_size, n_genes)
-      genes_batch <- genes[start_idx:end_idx]
-      
-      batch_out <- convert_orthologs(
-        genes = genes_batch,
-        species = species_id,
-        method = ortho.methods,
-        bridge = bridge,
-        bridge_species = bridge_species,
-        verbose = verbose
-      )
-      
-      ## Only keep successful results
-      if (!"try-error" %in% class(batch_out) &&
-            inherits(batch_out, "data.frame") &&
-            nrow(batch_out) > 0) {
-        batch_results[[length(batch_results) + 1]] <- batch_out
-      }
-    }
-    
-    ## Combine all successful batch results
-    if (length(batch_results) > 0) {
-      ortho.out <- do.call(rbind, batch_results)
-    } else {
-      ortho.out <- try(stop("All batches failed"), silent = TRUE)
-    }
-  } else {
-    ## Standard processing for smaller gene lists
-    ortho.out <- convert_orthologs(
-      genes = genes,
-      species = species_id,
-      method = ortho.methods,
-      bridge = bridge,
-      bridge_species = bridge_species,
-      verbose = verbose
-    )
-  }
+  ## NOTE: no batching here. Long queries are chunked inside
+  ## .query_orthologs(), which is where the request-size limit actually
+  ## lives, so the method cascade below sees the whole gene set at once.
+  ortho.out <- .convert_orthologs(
+    genes = genes,
+    species = species_id,
+    target_species = target_id,
+    methods = ortho.methods,
+    verbose = verbose
+  )
   
   class(ortho.out)
   results.ok <- (!"try-error" %in% class(ortho.out) &&
@@ -1161,12 +1145,12 @@ getHumanOrtholog <- function(organism, symbols,
                    nrow(ortho.out) > 0)
   results.ok
   if (!results.ok) {
-    if (verbose > 0) message("[getHumanOrtholog] failed lookup")
+    if (verbose > 0) message("[getOrtholog] failed lookup")
     ortho.out <- NULL
   }
   
   ## return dataframe. First column organism symbols, second column
-  ## human ortholog. NA if missing.
+  ## ortholog. NA if missing.
   table(ortho.out$method)
   gg <- c(symbols, clean.symbols)
   ortho.out <- ortho.out[match(gg, ortho.out$input), ]
@@ -1175,49 +1159,51 @@ getHumanOrtholog <- function(organism, symbols,
   df <- data.frame(
     symbol = ortho.out$symbol,
     input = ortho.out$input,
-    human = ortho.out$ortholog,
-    humans = ortho.out$orthologs,
-    source = ortho.out$method)
+    ortholog = ortho.out$ortholog,
+    orthologs = ortho.out$orthologs,
+    description = ortho.out$description,
+    source = ortho.out$method
+  )
 
   ## collapse duplicates
   df.concat <- function(x) tapply(x, df$symbol,
     function(s) paste(unique(setdiff(s,c("",NA,"NA","N/A"))), collapse=";"))
   ## NOTE: keep simplify=FALSE, otherwise a single unique symbol collapses
-  ## the result to a plain vector and df2$human becomes NULL
+  ## the result to a plain vector and df2$ortholog becomes NULL
   df2 <- do.call(cbind, apply(df, 2, df.concat, simplify = FALSE))
   df2[which(df2=="")] <- NA
   df2 <- data.frame(df2)
   df2 <- df2[match(symbols, df2$symbol),,drop=FALSE]
 
   ## A symbol and its cleaned form can map to different orthologs, so the
-  ## collapse above may have produced a ";"-joined 'human' as well. Keep
-  ## 'human' strictly single-valued (first alphabetically) and carry the
-  ## full candidate set in 'humans'.
-  hh <- lapply(paste(df2$human, df2$humans, sep=";"), .clean_ortholog_set)
-  df2$human <- sapply(hh, function(s) if(length(s)) s[1] else NA)
-  df2$humans <- sapply(hh, function(s) if(length(s)) paste(s, collapse=";") else NA)
+  ## collapse above may have produced a ";"-joined 'ortholog' as well. Keep
+  ## 'ortholog' strictly single-valued (first alphabetically) and carry the
+  ## full candidate set in 'orthologs'.
+  hh <- lapply(paste(df2$ortholog, df2$orthologs, sep=";"), .clean_ortholog_set)
+  df2$ortholog <- sapply(hh, function(s) if(length(s)) s[1] else NA)
+  df2$orthologs <- sapply(hh, function(s) if(length(s)) paste(s, collapse=";") else NA)
 
   ## compute mapping ratio
-  mean.mapped <- round(100 * mean(!is.na(df2$human)), digits = 4)
-  if (verbose > 0) message("[getHumanOrtholog] total ratio mapped  = ", mean.mapped, "%")
-  if (mean.mapped==0) message("[getHumanOrtholog] WARNING: no orthologs found!")
+  mean.mapped <- round(100 * mean(!is.na(df2$ortholog)), digits = 4)
+  if (verbose > 0) message("[getOrtholog] total ratio mapped  = ", mean.mapped, "%")
+  if (mean.mapped==0) message("[getOrtholog] WARNING: no orthologs found!")
 
   ## A poor result has two very different causes, and reporting only the
   ## mapping ratio hides which one it is: identifiers that cannot be
   ## resolved for this organism at all (unsupported namespace, or an
   ## obsolete annotation release) versus resolvable identifiers that
-  ## simply have no human counterpart. Only checked when the result is
+  ## simply have no ortholog counterpart. Only checked when the result is
   ## poor, so well-mapped organisms pay nothing.
-  if (mean.mapped < 100 * BRIDGE_THRESHOLD) {
+  if (mean.mapped < 100 * LOW_ORTHOLOGY_THRESHOLD) {
     recog <- .id_recognition_ratio(genes, species_id)
     if (!is.na(recog)) {
-      message("[getHumanOrtholog] recognised identifiers = ",
+      message("[getOrtholog] recognised identifiers = ",
         round(100 * recog, 2), "%")
       if (recog < ID_RECOGNITION_MIN) {
-        message("[getHumanOrtholog] WARNING: these identifiers are not ",
+        message("[getOrtholog] WARNING: these identifiers are not ",
           "recognised for ", organism, ". Check the feature ID type.")
-      } else if (recog < BRIDGE_THRESHOLD) {
-        message("[getHumanOrtholog] NOTE: most features could not be resolved ",
+      } else if (recog < LOW_ORTHOLOGY_THRESHOLD) {
+        message("[getOrtholog] NOTE: most features could not be resolved ",
           "for ", organism, ". They may come from an obsolete annotation ",
           "release; re-annotating against a current release should improve this.")
       }
@@ -1229,16 +1215,17 @@ getHumanOrtholog <- function(organism, symbols,
 }
 
 
-#'
+#' Internal helper function.
 #'
 #' 
-convert_orthologs <- function(genes, species, methods = c("homologene",
-  "gprofiler","babelgene", "gprofiler2", "uppercase"), bridge = NULL,
-  bridge_species = BRIDGE_SPECIES, target_species = "hsapiens", verbose = 1)
+.convert_orthologs <- function(genes, species, methods = c("homologene",
+  "gprofiler","babelgene", "gprofiler2", "uppercase"),
+  target_species = "Human", verbose = 1)
 {
 
-  res <- data.frame( input = genes, ortholog = NA, orthologs = NA, method=NA)
-  ##species = .getGprofilerSpecies(species, "id")
+  res <- data.frame( input = genes, ortholog = NA, orthologs = NA,
+    method = NA, description = NA)
+  target_species = .getGprofilerSpecies(target_species, "id")
 
   ## try all methods
   for(m in methods) {
@@ -1258,65 +1245,16 @@ convert_orthologs <- function(genes, species, methods = c("homologene",
       out$method <- m
       if(nrow(out)>0) {
         jj <- match( out$input, res$input)
-        res[jj,] <- out[,colnames(res)]
+        kk <- match( colnames(res), colnames(out))
+        res[jj,] <- out[,kk]
       }
     }
   }
 
   orth.ratio <- mean(!res$ortholog %in% c(NA,"","NA","N/A"))
   if(verbose) {
-    message("[convert_orthologs] pass 1: orth.ratio = ", orth.ratio)
+    message("[convert_orthologs] orth.ratio = ", orth.ratio)
   }
-  if(is.null(bridge)) {
-    ## Auto enable bridge lookup if poorly mapped. NOTE: when called from
-    ## getHumanOrtholog() the decision is taken once, above the batching
-    ## loop, and passed in explicitly: deciding here per batch makes the
-    ## same dataset bridge inconsistently depending on feature order.
-    bridge <- (orth.ratio < BRIDGE_THRESHOLD)
-  }
-  
-  ## Bridging requires the input identifiers to be resolvable for this
-  ## organism at all. If (almost) none are recognised, every bridge species
-  ## fails in turn -- five round-trips guaranteed to return nothing. Skip
-  ## the fan-out and report what is actually wrong instead.
-  if(bridge && !is.null(bridge_species)) {
-    recog <- .id_recognition_ratio(genes, species)
-    if(!is.na(recog) && recog < ID_RECOGNITION_MIN) {
-      message("WARNING: none of the features are recognised identifiers for ",
-        "this organism (", species, "). Skipping bridge search: the input ",
-        "looks like an unsupported namespace or an obsolete annotation release.")
-      bridge <- FALSE
-    }
-  }
-
-  ## try with bridge species
-  if(bridge && !is.null(bridge_species)) {
-    for(b in bridge_species) {
-      ii <- which(is.na(res$ortholog))
-      if(length(ii)) {
-        B <- .query_orthologs_bridged(
-          genes[ii],
-          species,
-          bridge_species = b,
-          target_species = target_species,
-          verbose = verbose
-        )
-        B$method <- paste0("bridged:",b)
-        B <- B[,c("input","ortholog","orthologs","method")]
-        jj <- which(!is.na(B$ortholog))
-        if(length(jj)) {
-          res[ii[jj],] <- B[jj,]
-        }
-      }
-    }
-
-    if(verbose) {
-      orth.ratio2 <- mean(!res$ortholog %in% c(NA,"","NA","N/A"))
-      message("[convert_orthologs] pass 2: orth.ratio = ", orth.ratio2)
-    }
-    
-  }
-  
   res
 }
 
@@ -1325,19 +1263,47 @@ convert_orthologs <- function(genes, species, methods = c("homologene",
 #'
 #' 
 .query_orthologs <- function(genes, species, method = c("homologene",
-  "gprofiler","babelgene", "gprofiler2"), target_species = "hsapiens",
-  verbose = 1)
+  "gprofiler","babelgene", "gprofiler2"), target_species = "Human",
+  batch_size = ORTHOLOG_BATCH_SIZE, verbose = 1)
 {
+  ## The remote services cap the number of identifiers per request, so a
+  ## long query is chunked here, at the single point that talks to them,
+  ## rather than by every caller. Chunking per method (instead of above
+  ## the method cascade in .convert_orthologs) means each method still
+  ## sees the full set of genes the previous methods left unresolved, so
+  ## a gene is queried once per method, not once per method per chunk.
+  if(length(genes) > batch_size) {
+    idx <- split(seq_along(genes), ceiling(seq_along(genes) / batch_size))
+    if(verbose > 0) {
+      message("[.query_orthologs] ", method, ": querying ", length(genes),
+        " genes in ", length(idx), " batches")
+    }
+    target_species = .getGprofilerSpecies(target_species, "id")
+    out <- lapply(idx, function(ii) {
+      .query_orthologs(genes[ii], species, method = method,
+        target_species = target_species, batch_size = batch_size,
+        verbose = 0)
+    })
+    ## a failed batch yields NULL: keep whatever the others returned
+    out <- out[!sapply(out, is.null)]
+    if(!length(out)) return(NULL)
+    out <- do.call(rbind, out)
+    rownames(out) <- NULL
+    return(out)
+  }
+
   out <- NULL
   if(method == "gprofiler2") {
     out <- try(gprofiler2::gorth(query = genes, source_organism = species,
       target_organism = target_species, mthreshold = Inf, filter_na = FALSE,
       numeric_ns = "ENTREZGENE_ACC"), silent = TRUE)
-    if(!inherits(out,"try-error")) {
-      out$ortholog_name <-sub("N/A",NA,out$ortholog_name)
-      out$ortholog_name <-sub("^NA$",NA,out$ortholog_name)
-      out <- out[,c("input","ortholog_name")]
-      colnames(out) <- c("input","ortholog")
+    if(!inherits(out,"try-error") && nrow(out)) {
+      out$ortholog_name <- sub("N/A",NA,out$ortholog_name)
+      out$ortholog_name <- sub("^NA$",NA,out$ortholog_name)
+      out$description <- sub("\\[Source.*","",out$description)
+      out$description <- sub("N/A",NA,out$description)            
+      out <- out[,c("input","ortholog_name","description")]
+      colnames(out) <- c("input","ortholog","description")
     }
   }
 
@@ -1351,9 +1317,12 @@ convert_orthologs <- function(genes, species, methods = c("homologene",
       non121_strategy = "drop_both_species",
       verbose = FALSE
     ), silent = TRUE)
-    if(!inherits(out,"try-error")) {
-      out <- data.frame( input = out[,"input_gene"],
-        ortholog = rownames(out))
+    if(!inherits(out,"try-error") && nrow(out)) {
+      out <- data.frame(
+        input = out[,"input_gene"],
+        ortholog = rownames(out),
+        description = NA
+      )
     }
   }
 
@@ -1362,108 +1331,16 @@ convert_orthologs <- function(genes, species, methods = c("homologene",
     human.genes <- playdata::GENE_SYMBOL
     ii <- which(!is.na(genes) & toupper(genes) %in% human.genes)
     if(length(ii)) {
-      out <- data.frame( input = genes[ii], ortholog = toupper(genes[ii]))
+      out <- data.frame(
+        input = genes[ii],
+        ortholog = toupper(genes[ii]),
+        description = NA        
+      )
     }
   }
 
   if(inherits(out,"try-error")) out <- NULL
   out
-}
-
-#' Bridged lookup of genes/features to human orthologs. Uses an
-#' intermediate bridge organism for mapping to human ortholog. This
-#' can be useful for poorly annotated species.
-#' 
-#' 
-.query_orthologs_bridged <- function(genes, species, bridge_species,
-                                     target_species = "hsapiens",
-                                     verbose = 1)
-{
-  genes1 <- genes
-  if(any(grepl("[;]",genes))) {
-    if(verbose) message("WARNING: multiple gene features detected. taking only first gene.")
-    genes1 <- sub(";.*","",genes) ## strip multiple genes
-  }
-
-  if(length(bridge_species)>1) {
-    if(verbose) message("WARNING: multiple bridge species detected. taking only first species.")    
-    bridge_species = bridge_species[1]
-  }
-  if(verbose) {
-    message("input species = ", species)
-    message("bridge species = ", bridge_species)
-    message("target species = ", target_species)  
-  }
-  
-  out1 <- try(gprofiler2::gorth(
-    query = genes1,
-    source_organism = species,
-    target_organism = bridge_species,
-    mthreshold = Inf, filter_na = FALSE, numeric_ns = "ENTREZGENE_ACC"),
-    silent = TRUE)
-  if(!inherits(out1,"try-error")) {
-    out1$ortholog_name <- sub("^N/A$",NA, out1$ortholog_name)
-  } else {
-    out1 <- NULL
-  }
-
-  bridge_genes <- out1$ortholog_name
-  out2 <- NULL
-  if(any(!is.na(bridge_genes))) {
-    jj <- which(!is.na(bridge_genes))
-    out2 <- try(gprofiler2::gorth(
-      query = bridge_genes[jj],
-      source_organism = bridge_species,
-      target_organism = target_species,
-      mthreshold = Inf, filter_na = FALSE, numeric_ns = "ENTREZGENE_ACC"),
-      silent = TRUE)
-    if(!inherits(out2,"try-error")) {
-      out2$ortholog_name <- sub("^N/A$",NA, out2$ortholog_name)
-    } else {
-      out2 <- NULL
-    }
-  }
-
-  if(is.null(out1) || is.null(out2)) {
-    message("WARNING: bridge conversion with ",bridge_species," failed")
-    out <- data.frame(input = genes, bridge = NA, ortholog = NA, orthologs = NA )
-    return(out)
-  }
-  
-  ## mappings
-  gene2bridge <- tapply(out1$ortholog_name, out1$input, list)
-  gene2bridge <- gene2bridge[match(genes1, names(gene2bridge))]
-  bridge2human <- tapply(out2$ortholog_name, out2$input, list)  
-  ##bridge2human <- bridge2human[match(genes1, names(bridge2human))]
-
-  ## mapped features
-  bridge <- lapply(gene2bridge, function(s) sort(unique(unlist(s))))
-  bridge <- sapply(bridge, paste, collapse=";")
-  bridge[bridge %in% c("","N/A")] <- NA
-  ## the bridge is one-to-many on both hops: report a single deterministic
-  ## ortholog (first alphabetically) plus the full candidate set. Keeping
-  ## only the ";"-joined value breaks every exact-match consumer downstream.
-  ortho <- lapply(gene2bridge, function(s) {
-    .clean_ortholog_set(unlist(bridge2human[s]))
-  })
-  ortholog  <- sapply(ortho, function(s) if(length(s)) s[1] else NA)
-  orthologs <- sapply(ortho, function(s) if(length(s)) paste(s, collapse=";") else NA)
-
-  table(!is.na(bridge))
-  table(!is.na(ortholog))
-
-  out <- data.frame(input = genes, bridge = bridge,
-    ortholog = ortholog, orthologs = orthologs )
-  out
-}
-
-#' Sort/dedupe a set of candidate ortholog symbols, dropping empty and
-#' N/A placeholders. Returns a sorted character vector (possibly empty).
-#'
-#' @noRd
-.clean_ortholog_set <- function(x) {
-  x <- unlist(strsplit(as.character(x), ";"))
-  sort(unique(setdiff(x, c("", NA, "NA", "N/A"))))
 }
   
 
@@ -1472,421 +1349,10 @@ convert_orthologs <- function(genes, species, methods = c("homologene",
 ## ================================================================================
 
 
-#' @title Detect probe type from probe set
-#' @export
-detect_probetype <- function(organism, probes, orgdb = NULL,
-                             nprobe = 1000, use.ah = NULL, datatype = NULL,
-                             verbose = TRUE) {
-  organism <- normalizeOrganism(organism)
-
-  if (is.null(datatype) && all(grepl("[:]", probes))) {
-    dbg("[detect_probetype] datatype is multi-omics?")
-    datatype <- "multi-omics"
-  }
-
-  if (!is.null(datatype) && datatype == "metabolomics") {
-    probe_type <- mx.detect_probetype(probes)
-    return(probe_type)
-  }
-
-  if (!is.null(datatype) && datatype == "multi-omics") {
-    mx.probes <- sub("^mx:", "", grep("^mx:", probes, value = TRUE))
-    px.probes <- sub("^px:", "", grep("^px:", probes, value = TRUE))
-    gx.probes <- sub("^gx:", "", grep("^gx:", probes, value = TRUE))
-    gx.probe_types <- px.probe_types <- mx.probe_types <- NA
-    if (length(gx.probes)) gx.probe_types <- detect_probetype(organism, gx.probes)
-    if (length(px.probes)) px.probe_types <- detect_probetype(organism, px.probes)
-    if (length(mx.probes)) mx.probe_types <- mx.detect_probetype(mx.probes)
-    probe_type <- c(gx = gx.probe_types, px = px.probe_types, mx = mx.probe_types)
-    dtypes <- sort(unique(sub(":.*", "", probes)))
-    probe_type <- probe_type[dtypes]
-    return(probe_type)
-  }
-
-  ## get correct OrgDb database for organism
-  if (is.null(orgdb)) {
-    orgdb <- getOrgDb(organism, use.ah = use.ah)
-  }
-  if (is.null(orgdb)) {
-    if (verbose) message("[detect_probetype] ERROR: unsupported organism '", organism, "'\n")
-    return(NULL)
-  }
-
-  ## get probe types for organism
-  keytypes <- c(
-    "SYMBOL", "ENSEMBL", "ACCNUM", "UNIPROT", "GENENAME",
-    "ALIAS", "MGI", "TAIR", ## organism specific
-    "ENSEMBLTRANS", "ENSEMBLPROT",
-    "REFSEQ", "ENTREZID"
-  )
-  keytypes <- intersect(keytypes, AnnotationDbi::keytypes(orgdb))
-  key_matches <- rep(0L, length(keytypes))
-  names(key_matches) <- keytypes
-
-  ## clean up probes
-  probes <- probes[!is.na(probes) & probes != ""]
-  probes <- sapply(strsplit(probes, split = ";"), head, 1) ## take first
-  probes <- unique(probes)
-
-  ## Subset probes if too many
-  if (length(probes) > nprobe) {
-    if (nprobe > length(probes)) nprobe <- length(probes)
-    # get random probes for query
-    probes <- sample(probes, nprobe)
-  }
-
-  ## try different cleaning methods. NEED RETHINK!!!! refseq has
-  ## underscore!
-  probes0 <- probes
-  probes1 <- .clean_probe_names(probes)
-  probesx <- unique(c(probes0, probes1))
-
-  ## Get all organism symbols
-  org_annot <- AnnotationDbi::select(
-    orgdb,
-    keys = AnnotationDbi::keys(orgdb, "ENTREZID"),
-    keytype = "ENTREZID",
-    columns = intersect(c("SYMBOL", "GENENAME"), keytypes)
-  )
-  org_symbols <- NULL
-  org_genenames <- NULL
-  if ("SYMBOL" %in% colnames(org_annot)) org_symbols <- setdiff(org_annot[, "SYMBOL"], c("", NA))
-  if ("GENENAME" %in% colnames(org_annot)) org_genenames <- setdiff(org_annot[, "GENENAME"], c("", NA))
-
-  # Iterate over probe types
-  key <- keytypes[1]
-  for (key in keytypes) {
-    probe_matches <- data.frame(NULL)
-    # add symbol and genename on top of key as they will be used to
-    # count the real number of probe matches
-    key2 <- intersect(c(key, "SYMBOL", "GENENAME"), keytypes)
-    suppressMessages(suppressWarnings(try(
-      probe_matches <- AnnotationDbi::select(
-        orgdb,
-        keys = probesx,
-        keytype = key,
-        columns = key2
-      ),
-      silent = TRUE
-    )))
-
-    if (nrow(probe_matches) && ncol(probe_matches)) {
-      ## extra check: if key is SYMBOL or GENENAME first column can be
-      ## wrongly set as the key.
-      if ("SYMBOL" %in% colnames(probe_matches) && !is.null(org_symbols)) {
-        not.symbol <- !(probe_matches[, "SYMBOL"] %in% org_symbols)
-        probe_matches[, "SYMBOL"][not.symbol] <- NA
-      }
-      if ("GENENAME" %in% colnames(probe_matches) && !is.null(org_genenames)) {
-        not.gene <- !(probe_matches[, "GENENAME"] %in% org_genenames)
-        probe_matches[, "GENENAME"][not.gene] <- NA
-      }
-
-      # set empty character to NA, as we only count not-NA to define probe type
-      probe_matches[probe_matches == ""] <- NA
-      # check which probe types (genename, symbol) return the most matches
-      n1 <- n2 <- 0
-      if ("SYMBOL" %in% colnames(probe_matches)) n1 <- sum(!is.na(probe_matches[, "SYMBOL"]))
-      if ("GENENAME" %in% colnames(probe_matches)) n2 <- sum(!is.na(probe_matches[, "GENENAME"]))
-      matchratio <- max(n1, n2) / (1e-4 + nrow(probe_matches))
-      key_matches[key] <- matchratio
-
-      ## stop search prematurely if matchratio > 99%
-      if (matchratio > 0.99) break()
-    }
-  }
-  key_matches <- round(key_matches, 4)
-  key_matches
-
-  ## Return top match key_matches
-  top_match <- NULL
-  if (all(key_matches == 0)) {
-    if (verbose) {
-      message("head.probes = ", paste(head(probes), collapse = " "))
-      message("WARNING: Probe type not found. Valid probe types: ", paste(keytypes, collapse = " "))
-    }
-    # fallback before giving up; try gprofiler to convert to UNIPROT
-    gp.organism <- .map_gprofiler_id(organism)    
-    gp.out <- tryCatch(
-    {
-      gprofiler2::gconvert(probesx, organism = gp.organism, target = "UNIPROT_GN_ACC")
-    },
-    error = function(e) {
-      return(NULL)
-    }
-    )
-    if (!is.null(gp.out)) { key_matches["GPROFILER"] <- length(unique(gp.out$input)) / length(probesx) }
-  }
-
-  if (max(key_matches, na.rm = TRUE) < 0.01) {
-    message("WARNING: Insufficient matching ratio. Max match = ", max(key_matches, na.rm = TRUE))
-    return(NA)
-  }
-  if (max(key_matches, na.rm = TRUE) < 0.50) {
-    message("WARNING: Low matching ratio. Max match = ", max(key_matches, na.rm = TRUE))
-  }
-  top_match <- names(which.max(key_matches))
-  return(top_match)
-}
-
-#' @title Get all species in AnnotationHub/OrgDB
-#'
-#' @export
-allSpecies <- function(col = "species_name") {
-  M <- data.frame(playbase::SPECIES_TABLE)
-  col <- intersect(col, colnames(M))[1]
-  if(length(col)==0) return(NULL)
-  species <- as.character(M[, col])
-  names(species) <- M[, "taxonomyid"]
-  species
-}
-
-.getSpeciesTable.GPROFILER <- function() {
-  jsonlite::fromJSON("https://biit.cs.ut.ee/gprofiler/api/util/organisms_list")
-}
-
-#' @title Get species table in AnnotationHub/OrgDB
-#'
-#' @export
-.getSpeciesTable.ANNOTHUB <- function(ah = NULL) {
-  if (is.null(ah)) {
-    ah <- AnnotationHub::AnnotationHub(localHub = FALSE) ## make global??
-  }
-  ah.tables <- AnnotationHub::query(ah, "OrgDb")
-
-  variables <- c(
-    "ah_id", "species", "description", "rdatadateadded", "rdataclass",
-    "title", "taxonomyid", "coordinate_1_based", "preparerclass", "sourceurl",
-    "dataprovider", "genome", "maintainer", "tags", "sourcetype"
-  )
-  variables <- c(
-    "ah_id", "species", "description", "rdatadateadded", "rdataclass",
-    "title", "taxonomyid", ## "coordinate_1_based", "preparerclass", "sourceurl",
-    ## "dataprovider", "genome", "maintainer", "tags",
-    "sourcetype"
-  )
-
-  # Iterate through each variable and store it as a table
-  tables <- lapply(variables, function(var) {
-    table <- eval(parse(text = paste0("ah.tables$", var)))
-  })
-  tables <- do.call(cbind, tables)
-
-  colnames(tables) <- variables
-  names(tables) <- variables
-  return(tables)
-}
-
-
-#' Check if probes can be detected by Orthogene or AnnotHub/OrgDb
-#' annotation engines.
-#'
-#' export
-check_probetype <- function(organism, probes, verbose=1) {
-  chk1 <- .check_probetype.GPROFILER(organism, probes, min.map=0.20)  
-  if (!is.null(chk1) && chk1 == TRUE) {
-    if(verbose) message("organism/features supported by Gprofiler")
-    return(TRUE)
-  }
-  ## using AnnotHub/OrgDb
-  chk2 <- detect_probetype(organism, probes)
-  if (!is.null(chk2)) {
-    if(verbose) message("organism/features supported by AnnotHub")    
-    return(TRUE)
-  }
-  if(verbose) message("Warning: organism/features not recognized")    
-  return(FALSE)
-}
-
-.check_probetype.GPROFILER <- function(organism, probes, min.map=0.20) {
-  gp.organism <- .map_gprofiler_id(organism)
-  map <- try(gprofiler2::gconvert(probes, organism = gp.organism, target = "ENSG"))
-  if ("try-error" %in% class(map) || is.null(map)) {
-    message("[check_probetype.GPROFILER] *WARNING* organism not  recogized, or server not reachable")
-    return(NULL)
-  }
-  mean.mapped <- mean(!is.na(map$target))
-  ## get correct OrgDb database for organism
-  if (mean.mapped < min.map) {
-    message("[check_probetype.GPROFILER] *WARNING* too low mapping coverage")
-    return(FALSE)
-  }
-  return(TRUE)
-}
-
-
-#' Automatically detects species by trying to detect probetype from
-#' list of test_species. Warning. bit slow.
-#'
-#' @export
-check_species_probetype <- function(
-  probes,
-  test_species = c("Human", "Mouse", "Rat"),
-  datatype = NULL, annot.cols = NULL
-) {
-  ## No check if custom
-  custom_datatype <- !is.null(datatype) && tolower(datatype) %in% c("custom", "unknown", "")
-  custom_organism <- any(tolower(test_species) %in% c("custom", "unknown", "no organism"))
-
-  if (custom_datatype || custom_organism) {
-    out <- rep("custom", length(test_species))
-    names(out) <- test_species
-    return(as.list(out))
-  }
-
-  probes <- unique(.clean_probe_names(probes))
-  ## report possible probetype per organism
-  ptype <- vector("list", length(test_species))
-  names(ptype) <- test_species
-  if (datatype == "metabolomics") {
-    mx.type <- NA
-    if (!is.null(annot.cols)) {
-      mx.ids <- toupper(colnames(playdata::METABOLITE_ID)[-1])
-      mx.ids <- c(mx.ids, paste0(mx.ids, "_ID"))
-      has.id <- any(toupper(annot.cols) %in% mx.ids)
-      if (has.id) {
-        ids <- intersect(toupper(annot.cols), mx.ids)
-        mx.type <- ids[1]
-      }
-    }
-    if (all(is.na(mx.type))) {
-      db <- mx.check_mapping(probes, check.first = TRUE)
-      table(db)
-      if (!all(is.na(db))) {
-        mx.type <- names(which.max(table(db[!is.na(db)])))
-      }
-    }
-    for (s in test_species) ptype[[s]] <- mx.type
-  } else {
-    s <- "Human"
-    for (s in test_species) {
-      ptype[[s]] <- detect_probetype(
-        organism = s,
-        probes = probes,
-        use.ah = FALSE,
-        datatype = datatype,
-        verbose = FALSE
-      )
-    }
-  }
-
-  ## remove NA
-  ptype <- ptype[!sapply(ptype, function(p) all(is.na(p)))]
-  return(ptype)
-}
-
-#' Annotate phosphosite with residue symbol. Feature names must be of
-#' form 'uniprot_position'. NOTE!!! Annotation is currently done here
-#' in feature name but it would be 'better' to add phosphosite
-#' modification type in the pgx$genes general annotation table.
-#'
-#' @export
-annotate_phospho_residue <- function(features, detect.only = FALSE) {
-  valid_name <- mean(grepl("[_][A-Z]?[0-9]+", features), na.rm = TRUE) > 0.9
-  valid_name
-  uniprot <- sub("[_].*", "", features)
-  positions <- gsub(".*[_][A-Za-z]?|[.].*", "", features)
-  positions <- strsplit(positions, split = "[;/,]")
-
-  P <- playdata::PHOSPHOSITE
-  prot.match <- mean(uniprot %in% P$UniProt, na.rm = TRUE)
-  pos.match <- mean(positions %in% P$Position, na.rm = TRUE)
-  is_phospho <- (valid_name && prot.match > 0.50 && pos.match > 0.50)
-  is_phospho
-
-  if (detect.only) {
-    return(is_phospho)
-  }
-
-  if (is_phospho) {
-    P <- P[which(P$UniProt %in% uniprot), ]
-    dim(P)
-    P.id <- paste0(P$UniProt, "_", P$Position)
-    F.id <- lapply(1:length(uniprot), function(i) {
-      paste0(uniprot[i], "_", positions[[i]])
-    })
-
-    ## this takes a while...
-    p.idx <- lapply(uniprot, function(p) which(P$UniProt == p))
-    type <- sapply(1:length(positions), function(i) {
-      jj <- match(positions[[i]], P$Position[p.idx[[i]]])
-      tt <- P$Residue[p.idx[[i]][jj]]
-      tt[is.na(tt)] <- "" ## not found
-      tt
-    })
-
-    ## determine separators for paste: sep1 for main position
-    ## separator. sep2 for entries with multiple positions.
-    sep1.match <- sapply(c("_", "."), function(s) {
-      sum(grepl(s, features, fixed = TRUE), na.rm = TRUE)
-    })
-    sep1 <- names(which.max(sep1.match))
-    sel <- grep("[;/,]", features)
-    sep2.match <- sapply(c(";", "/", ","), function(s) {
-      sum(grepl(s, features[sel], fixed = TRUE), na.rm = TRUE)
-    })
-    sep2 <- names(which.max(sep2.match))
-
-    ## insert modification type in front of position
-    new.features <- sapply(1:length(features), function(i) {
-      tt <- type[[i]]
-      pp <- paste(paste0(tt, positions[[i]]), collapse = sep2)
-      paste0(uniprot[i], sep1, pp)
-    })
-    features <- new.features
-  }
-  features
-}
-
-
-#' Convert probetype unsing annothub
-#'
-#' @export
-convert_probetype <- function(organism, probes, target_id, from_id = NULL,
-                              datatype = NULL, orgdb = NULL, verbose = TRUE) {
-  organism <- normalizeOrganism(organism)
-
-  if (!is.null(datatype) && datatype == "metabolomics") {
-    new.probes <- mx.convert_probe(probes, target_id = target_id)
-    return(new.probes)
-  }
-
-  ## get correct OrgDb database for organism
-  if (is.null(orgdb)) {
-    orgdb <- getOrgDb(organism)
-  }
-  if (is.null(orgdb)) {
-    if (verbose) message("[convert_probetype] ERROR: unsupported organism '", organism, "'\n")
-    return(NULL)
-  }
-
-  if (!target_id %in% AnnotationDbi::keytypes(orgdb)) {
-    message("[convert_probetype] invalid target probetype")
-    return(NULL)
-  }
-  if (is.null(from_id)) {
-    from_id <- detect_probetype(organism, probes, orgdb = orgdb, datatype = NULL)
-  }
-  from_id
-  message("[convert_probetype] converting from ", from_id, " to ", target_id)
-
-  suppressMessages(suppressWarnings(try(
-    res <- AnnotationDbi::select(
-      orgdb,
-      keys = probes,
-      keytype = from_id,
-      columns = target_id
-    ),
-    silent = TRUE
-  )))
-  new.probes <- res[match(probes, res[, from_id]), target_id]
-  return(new.probes)
-}
-
 #' Annotate multi-omics probetype. Probe names *must  be prefixed with
 #' data type unless classical transcriptomics/proteomics.
 #'
-getMultiOmicsProbeAnnotation <- function(organism, probes) {
+getMultiOmicsProbeAnnotation <- function(organism, probes, ortholog_species) {
   is.prefixed <- mean(grepl("^[A-Za-z]+:", probes)) > 0.8
   if (is.prefixed) {
     dtype <- sub(":.*", "", probes)
@@ -1931,7 +1397,11 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
     pp <- sub("^[a-zA-Z]+:", "", probes[ii])
     aa <- NULL
     if (dt %in% c("gx", "px")) {
-      aa <- getGeneAnnotation(organism, pp)
+      aa <- getGeneAnnotation(
+        organism = organism,
+        probes = pp,
+        ortholog_species = ortholog_species
+      )
     }
     if (dt %in% c("mx")) {
       aa <- getMetaboliteAnnotation(
@@ -1970,10 +1440,14 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
   ## fill NA
   annot$symbol[annot$symbol %in% c("-", "")] <- NA
   symbolx <- paste0("{", symbol, "}")
-  annot$human_ortholog[which(annot$human_ortholog == "")] <- NA
+  annot$ortholog[which(annot$ortholog == "")] <- NA
   annot$feature <- ifelse(is.na(annot$feature), probes, annot$feature)
   annot$symbol <- ifelse(is.na(annot$symbol), symbolx, annot$symbol)
-  annot$human_ortholog <- ifelse(is.na(annot$human_ortholog), symbol, annot$human_ortholog)
+  annot$ortholog <- ifelse(is.na(annot$ortholog), symbol, annot$ortholog)
+  if (!is.null(annot$human_ortholog)) {
+    annot$human_ortholog[which(annot$human_ortholog == "")] <- NA
+    annot$human_ortholog <- ifelse(is.na(annot$human_ortholog), symbol, annot$human_ortholog)
+  }
   annot$gene_name <- ifelse(is.na(annot$gene_name), probes, annot$gene_name)
   annot$data_type <- ifelse(is.na(annot$data_type), dtype, annot$data_type)
 

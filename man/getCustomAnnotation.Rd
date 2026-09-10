@@ -16,7 +16,7 @@ the features has to match the rownames of the counts provided.}
 \value{
 The pgx object with custom gene annotation added/appended. The gene annotation
 table has the same format as the one returned by pgx.gene_table(). However, the
-columns human_ortholog, gene_title, gene_biotype, chr, pos, tx_len, map, source are filled
+columns ortholog, gene_title, gene_biotype, chr, pos, tx_len, map, source are filled
 with default values.
 }
 \description{
