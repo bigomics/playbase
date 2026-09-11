@@ -233,6 +233,11 @@ pgx.createPGX <- function(counts,
       samples = samples, contrasts = contrasts,
       annot = annot_table, options = preprocess
     )
+    ## Phase 0 Task 0.2: persist the caller's option list verbatim (D-18).
+    ## Additive only - nothing reads this key yet. NB this is the caller's
+    ## PARTIAL list; the resolved opt is built inside pgx.preprocess() and
+    ## is not returned. See bead for that limitation.
+    settings$options <- preprocess
     counts <- pp$counts
     X <- pp$X
     if (!is.null(annot_table)) annot_table <- pp$annot
