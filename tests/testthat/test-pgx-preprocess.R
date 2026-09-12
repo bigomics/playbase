@@ -111,11 +111,17 @@ expect_parity <- function(counts, samples, contrasts, opt) {
   if (inherits(ref, "error")) testthat::skip(paste("reference unavailable:", conditionMessage(ref)))
   got <- pgx.preprocess(counts, samples, contrasts, options = o)
   testthat::expect_equal(got$X, ref$X, tolerance = 1e-8)
-  testthat::expect_equal(got$counts, ref$counts, tolerance = 1e-8)
-  ## Invariant: counts and X must stay row/col-aligned regardless of branch.
-  ## createPGX stop()s otherwise; cheap tripwire if the realign assumption breaks.
-  testthat::expect_identical(rownames(got$counts), rownames(got$X))
-  testthat::expect_identical(colnames(got$counts), colnames(got$X))
+  ## `counts` is no longer cut down to `X` (D-24/D-39): it comes back at the
+  ## shape it went in, whatever the removals did. The app reference still cuts
+  ## it, so parity on counts is now "the rows and samples the reference kept",
+  ## located through the alignment rather than by name.
+  a <- playbase.preprocess::pgx.alignXtoCounts(list(counts = got$counts, X = got$X))
+  testthat::expect_equal(got$counts[a$rows, a$cols, drop = FALSE], ref$counts,
+    tolerance = 1e-8)
+  ## The tripwire that replaces "counts and X stay row/col-aligned": every row
+  ## and sample of X is still one counts has, and the alignment says which.
+  testthat::expect_identical(rownames(got$counts)[a$rows], rownames(got$X))
+  testthat::expect_identical(colnames(got$counts)[a$cols], colnames(got$X))
 }
 
 get_fixture <- function() {

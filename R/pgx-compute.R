@@ -105,6 +105,33 @@ pgx.createFromFiles <- function(counts.file,
   pgx
 }
 
+## The rows of `counts` that `X` is made of.
+##
+## `pgx.preprocess()` returns `counts` at the shape it was handed and `X` at
+## whatever the removals left it (D-24/D-39), so the two are no longer one row
+## set and nothing downstream may assume they are. The index is derived, not
+## looked up: the provenance record stays inside playbase.preprocess (D-37), and
+## `pgx.alignXtoCounts()` recovers the relation from the data and the fixed
+## pipeline order instead -- refusing, never guessing, when the names cannot
+## answer it. While the two shapes still agree it is the identity, which is what
+## the caller-supplied `X` and plain-log2 paths get.
+counts_rows_of_X <- function(counts, X) {
+  if (is.null(X)) {
+    return(seq_len(nrow(counts)))
+  }
+  pgx.alignXtoCounts(list(counts = as.matrix(counts), X = as.matrix(X)))$rows
+}
+
+## The rows of `pgx$X` that stand for a set of `counts` rows, in the order that
+## set names them. The inverse of the above, and what a feature filter needs: it
+## decides on `counts`, and the index it produces cannot be applied to `X`. An
+## `X` row whose counts row is not in the set is dropped, which is the filter
+## doing its job.
+x_rows_for_counts_rows <- function(pgx, keep) {
+  i <- match(keep, counts_rows_of_X(pgx$counts, pgx$X))
+  i[!is.na(i)]
+}
+
 #' Create a PGX object
 #' This function creates a pgx object, which is the core object in the
 #' OmicsPlayground.
@@ -238,6 +265,12 @@ pgx.createPGX <- function(counts,
     ## PARTIAL list; the resolved opt is built inside pgx.preprocess() and
     ## is not returned. See bead for that limitation.
     settings$options <- preprocess
+    ## `counts` comes back at the shape it went in (D-39). The removals shrank
+    ## `X` and recorded the index they kept instead of applying it to the
+    ## upload, so what reaches pgx$counts below is the matrix the user gave us
+    ## (D-24) and `X` is the smaller thing derived from it. Every step from here
+    ## that renames or subsets features asks counts_rows_of_X() which of the two
+    ## it is talking about.
     counts <- pp$counts
     X <- pp$X
     if (!is.null(annot_table)) annot_table <- pp$annot
@@ -251,8 +284,13 @@ pgx.createPGX <- function(counts,
       if (!is.null(X)) X <- playbase::counts.mergeDuplicateFeatures(X, is.counts = FALSE)
     } else {
       message("[pgx.createPGX] ", ndup, " duplicated feature(s) detected. Making unique to keep all...")
+      ## One naming, taken from `counts` and handed down to the rows `X` kept.
+      ## make_unique() numbers the copies it can see, so renaming `X` from its
+      ## own rownames would give one feature a different suffix on each side
+      ## wherever a removal split a duplicate.
+      xrows <- counts_rows_of_X(counts, X)
       rownames(counts) <- playbase::make_unique(rownames(counts))
-      if (!is.null(X)) rownames(X) <- playbase::make_unique(rownames(X))
+      if (!is.null(X)) rownames(X) <- rownames(counts)[xrows]
       if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
     }
   }
@@ -295,13 +333,14 @@ pgx.createPGX <- function(counts,
     message("[pgx.createPGX] X has ", sum(is.na(X)), " missing values")
   }
 
-  if (!is.null(X) && !all(dim(counts) == dim(X))) {
-    stop("[pgx.createPGX] dimension of counts and X do not match\n")
-  }
-
-  if (!all(rownames(counts) == rownames(X))) {
-    stop("rownames of counts and X do not match\n")
-  }
+  ## D-24 deletes the two guards that stood here -- `dim(counts) == dim(X)` and
+  ## `rownames(counts) == rownames(X)`. They are what forced the trim: they made
+  ## a shrunk `X` illegal unless `counts` was cut down with it, and a cut-down
+  ## `counts` is what ratchets, because upload_server.R:1095 seeds the next
+  ## Reanalyse from it. What stands in their place is the weaker statement that
+  ## is still true -- every row and sample of `X` is one `counts` still has --
+  ## and counts_rows_of_X() stops when it is not.
+  if (!is.null(X)) counts_rows_of_X(counts, X)
 
   if (datatype == "multi-omics") {
     has.colons <- mean(grepl("[:]", rownames(counts)), na.rm = TRUE) > 0.9
@@ -371,10 +410,11 @@ pgx.createPGX <- function(counts,
   is.phospho <- annotate_phospho_residue(rownames(counts), detect.only = TRUE)
   if (datatype == "proteomics" && is.phospho) {
     info("[createPGX] annotating rownames with phospho residue...")
+    xrows <- counts_rows_of_X(counts, X)
     newnames <- annotate_phospho_residue(rownames(counts))
     newnames <- make_unique(newnames)
     rownames(counts) <- newnames
-    rownames(X) <- newnames
+    rownames(X) <- newnames[xrows]
     if (!is.null(annot_table)) {
       rownames(annot_table) <- newnames
       pos.col <- grep("site|position|phosho", colnames(annot_table), ignore.case = TRUE)
@@ -419,10 +459,13 @@ pgx.createPGX <- function(counts,
       kk <- grep("length|size", tolower(colnames(annot_table)))
       if (length(kk) > 0) feature.lengths <- annot_table[, kk[1]]
     }
+    ## Taken before the loop, because the loop is what makes the two namings
+    ## diverge; the rename itself is row by row, so row i keeps meaning row i.
+    xrows <- counts_rows_of_X(counts, X)
     for (i in 1:nrow(counts)) {
       rownames(counts)[i] <- reorder_uniprots(rownames(counts)[i], feature.lengths[i])$feature
     }
-    rownames(X) <- rownames(counts)
+    rownames(X) <- rownames(counts)[xrows]
   }
   if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
 
@@ -527,8 +570,13 @@ pgx.createPGX <- function(counts,
       if (sum(exgene)) pgx$genes <- pgx$genes[which(!exgene), , drop = FALSE]
     }
 
+    ## `genes` is built on `counts`, which keeps every uploaded feature while
+    ## `X` keeps the ones the preprocessing removals left (D-24), so `X` cannot
+    ## be indexed by `genes`' rownames. `X` goes first, because the translation
+    ## is an index into the `counts` the alignment was derived against.
+    keep <- match(rownames(pgx$genes), rownames(pgx$counts))
+    pgx$X <- pgx$X[x_rows_for_counts_rows(pgx, keep), , drop = FALSE]
     pgx$counts <- pgx$counts[rownames(pgx$genes), , drop = FALSE]
-    pgx$X <- pgx$X[rownames(pgx$genes), , drop = FALSE]
   }
 
   ## Methylomics arrays: if user-specified, remove X- & Y-linked CpG probes.
@@ -538,8 +586,11 @@ pgx.createPGX <- function(counts,
       jj <- grep("chrX|chrY|^X|^Y", pgx$genes[, kk], ignore.case = TRUE)
       if (length(jj) > 0) {
         message("[pgx.createPGX] Methylomics: removing ", length(jj), " X- & Y-linked CpG probes...")
+        ## `jj` indexes `genes`, which is `counts`-shaped; `X` may be smaller
+        ## (D-24), so it drops the rows whose counts row is going.
+        keep <- setdiff(seq_len(nrow(pgx$counts)), jj)
+        pgx$X <- pgx$X[x_rows_for_counts_rows(pgx, keep), , drop = FALSE]
         pgx$counts <- pgx$counts[-jj, , drop = FALSE]
-        pgx$X <- pgx$X[-jj, , drop = FALSE]
         pgx$genes <- pgx$genes[-jj, , drop = FALSE]
       }
     }
@@ -563,11 +614,14 @@ pgx.createPGX <- function(counts,
     new.names <- ifelse(feature_is_symbol, rownames(pgx$genes), new.names)
     new.names <- make_unique(new.names)
 
+    xrows <- pgx.alignXtoCounts(pgx)$rows
     rownames(pgx$genes) <- new.names
     pgx$genes$gene_name <- new.names ## gene_name should also be renamed??
     pgx$genes$feature <- new.names ## feature should also be renamed??
     rownames(pgx$counts) <- new.names
-    rownames(pgx$X) <- new.names
+    ## One naming again: `new.names` is as long as `genes`/`counts`, and `X`
+    ## takes the entries belonging to the rows it kept (D-24).
+    rownames(pgx$X) <- new.names[xrows]
   }
 
   ## -------------------------------------------------------------------
@@ -987,16 +1041,13 @@ pgx.filterZeroCounts <- function(pgx) {
   ## AZ: added na.rm=TRUE to avoid introducing NAs and edit to keep NAs.
   keep <- (Matrix::rowMeans(pgx$counts > 0, na.rm = TRUE) > 0) ## at least in one...
 
-  nas <- which(is.na(keep))
-  jj <- which(keep)
-  if (is.null(nas)) {
-    keep <- names(keep)[jj]
-  } else {
-    keep <- names(keep)[c(nas, jj)]
-  }
-
+  ## Positional, and the all-NA rows still first: `counts` keeps every uploaded
+  ## feature while `X` keeps the ones the preprocessing removals left (D-24), so
+  ## one set of rownames no longer indexes both. `genes` follows `counts`; `X`
+  ## drops the rows whose counts row is going, through the alignment.
+  keep <- c(which(is.na(keep)), which(keep))
+  pgx$X <- pgx$X[x_rows_for_counts_rows(pgx, keep), , drop = FALSE]
   pgx$counts <- pgx$counts[keep, , drop = FALSE]
-  pgx$X <- pgx$X[keep, , drop = FALSE]
   pgx$genes <- pgx$genes[keep, , drop = FALSE]
 
   pgx
@@ -1009,13 +1060,17 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   keep <- (rowSums(edgeR::cpm(pgx$counts) > prior.cpm, na.rm = TRUE) >= AT.LEAST)
   pgx$filtered <- NULL
   pgx$filtered[["low.expressed"]] <- paste(rownames(pgx$counts)[which(!keep)], collapse = ";")
+  if (!is.null(pgx$X)) {
+    ## Before `counts` is cut, because the alignment is an index into the
+    ## matrix the chain ran against. The warning that stood here -- "counts and
+    ## X should match dimensions" -- was the assumption, not a check: `keep` is
+    ## positional in `counts`, and under D-24 `counts` is the whole upload while
+    ## `X` is what the removals left.
+    pgx$X <- pgx$X[x_rows_for_counts_rows(pgx, which(keep)), , drop = FALSE]
+  }
   pgx$counts <- pgx$counts[keep, , drop = FALSE]
   message("filtering out ", sum(!keep), " low-expressed genes")
   message("keeping ", sum(keep), " expressed genes")
-  if (!is.null(pgx$X)) {
-    ## WARNING: counts and X should match dimensions.
-    pgx$X <- pgx$X[which(keep), , drop = FALSE]
-  }
   pgx
 }
 
