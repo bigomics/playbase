@@ -9,6 +9,14 @@
 #' @param counts.file Path to counts data file. Rows are genes, columns are samples.
 #' @param samples.file Path to samples data file. Rows are samples, columns are sample info.
 #' @param contrasts.file (optional) Path to contrasts file. Rows and columns define contrasts.
+#' @param preprocess (optional) Named list of preprocessing settings, forwarded to
+#'   [pgx.createPGX()] and from there to [pgx.preprocess()]. NULL (the default)
+#'   keeps the historical behaviour of this entry point, where `X` is a plain
+#'   `log2(counts + prior)` with no filtering, imputation or normalization.
+#'   Supplying a list is what makes a script reproduce the app: the wizard sends
+#'   the same list, so the same settings give the same `X`. See
+#'   \code{\link[playbase.preprocess]{pgx.preprocess}} for the settings and
+#'   their defaults.
 #' @param gxmethods a string with the gene-level methods to use. The default value is \code{"trend.limma,edger.qlf,deseq2.wald"}
 #' @param gsetmethods a string with the gene-set methods to use. The default value is \code{"fisher,gsva,fgsea"}
 #' @param extra a string with the extra modules to use. The default value is \code{"meta.go,deconv,infer,drugs,wordcloud"}
@@ -25,6 +33,7 @@
 pgx.createFromFiles <- function(counts.file,
                                 samples.file,
                                 contrasts.file = NULL,
+                                preprocess = NULL,
                                 gxmethods = "trend.limma,edger.qlf,deseq2.wald",
                                 gsetmethods = "fisher,gsva,fgsea",
                                 extra = "meta.go,deconv,infer,drugs,wordcloud",
@@ -67,6 +76,7 @@ pgx.createFromFiles <- function(counts.file,
     samples = samples,
     contrasts = contrasts,
     X = NULL,
+    preprocess = preprocess,
     is.logx = NULL,
     dotimeseries = FALSE,
     batch.correct.method = "no_batch_correct",
@@ -388,10 +398,17 @@ pgx.createPGX <- function(counts,
   }
 
   ## align samples
+  ## `counts`, `samples` and `contrasts` span every uploaded sample; `X` spans
+  ## the ones outlier removal left (D-24, the column half). The set used to be
+  ## intersected with `colnames(X)` first, which cut the dropped samples back
+  ## out of `counts` and `samples` -- the same ratchet on the sample axis that
+  ## the row trim was on the feature axis, seeded from the same place
+  ## (upload_server.R:1093-1095 hands Reanalyse `samples`, `contrasts` and
+  ## `counts` off the computed object). `X` is cut to the samples the object has,
+  ## keeping whichever of them it still carries.
   kk <- intersect(colnames(counts), rownames(samples))
-  kk <- intersect(kk, colnames(X))
   counts <- counts[, kk, drop = FALSE]
-  X <- X[, kk, drop = FALSE]
+  X <- X[, intersect(kk, colnames(X)), drop = FALSE]
   samples <- samples[kk, , drop = FALSE]
   samples <- utils::type.convert(samples, as.is = TRUE) ## automatic type conversion
   if (all(kk %in% rownames(contrasts))) {
@@ -661,13 +678,19 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Batch correction if user-selected
   ## -------------------------------------------------------------------
-  if (batch.correct.method != "no_batch_correct" && nrow(pgx$samples) > 2) {
+  if (batch.correct.method != "no_batch_correct" && ncol(pgx$X) > 2) {
     batch <- NULL
     mm <- batch.correct.method[1]
     if (length(batch.pars) == 0) batch.pars <- "<autodetect>"
+    ## Correction operates on `X`, so its covariates are `X`'s samples, not the
+    ## object's. Outlier removal leaves the two different (D-24) and every
+    ## method underneath is positional in X's column axis, so a full-length
+    ## batch factor would be silently paired with the wrong columns. The gate
+    ## above counts fittable samples for the same reason.
+    ss <- colnames(pgx$X)
     X <- pgx$X
-    samples <- pgx$samples
-    contrasts <- pgx$contrasts
+    samples <- pgx$samples[ss, , drop = FALSE]
+    contrasts <- pgx$contrasts[ss, , drop = FALSE]
 
     message("[pgx.createPGX] batch.correct.method=", batch.correct.method)
     message("[pgx.createPGX] batch.pars=", batch.pars)
@@ -816,6 +839,20 @@ pgx.computePGX <- function(pgx,
   contr.matrix <- contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
   contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
   contr.matrix <- sign(contr.matrix) ## sign is fine
+
+  ## The design is built from `pgx$samples`, which names every uploaded sample;
+  ## `X` names the ones outlier removal left (D-24, the column half). A sample
+  ## with no expression data cannot be fitted, so it leaves the design here --
+  ## once, where the design is built, rather than at each of its readers. The
+  ## contrast pruning below then drops any comparison that emptied out.
+  ss <- intersect(rownames(contr.matrix), colnames(pgx$X))
+  if (length(ss) < nrow(contr.matrix)) {
+    message(
+      "[pgx.computePGX] ", nrow(contr.matrix) - length(ss),
+      " sample(s) are not in X and cannot be tested; excluded from the design"
+    )
+    contr.matrix <- contr.matrix[ss, , drop = FALSE]
+  }
 
   ## sanity check
   if (NCOL(contr.matrix) == 0) {

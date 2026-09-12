@@ -153,15 +153,18 @@ groupsFromContrasts <- function(samples, contrasts) {
 #' @param contrasts Contrast matrix defining the comparisons. NULL, or a design
 #'   that cannot be reduced to sample groups, means no design is known and every
 #'   sample is treated as one single group.
-#' @param annot Optional annotation table aligned to `counts` rows; subset
-#'   alongside NA filtering.
+#' @param annot Optional annotation table aligned to `counts` rows. Returned as
+#'   given: it describes the features that were uploaded, not the ones `X` kept.
 #' @param options Named list of preprocessing settings; see
 #'   \code{\link[playbase.preprocess]{pgx.preprocess}} for the full set and its
 #'   defaults.
 #'
-#' @return A list with `counts` (aligned to X rows/cols), `X` (normalized
-#'   log-expression), `annot` (subset alongside X, or NULL) and `prior` (log2
-#'   prior used).
+#' @return A list with `counts` (the input, conditioned but never subset: same
+#'   features, same samples), `X` (normalized log-expression, which the
+#'   missingness filter and outlier removal may have made smaller than `counts`
+#'   on either axis), `annot` (the input, or NULL) and `prior` (log2 prior
+#'   used). Ask [pgx.alignXtoCounts()] which rows and samples of `counts` `X`
+#'   is made of; it derives the answer rather than being told it (D-24/D-39).
 #'
 #' @seealso \code{\link[playbase.preprocess]{pgx.preprocess}}
 #'

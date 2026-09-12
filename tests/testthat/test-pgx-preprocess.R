@@ -66,6 +66,8 @@ ref_normalize <- function(counts, samples, contrasts, annot = NULL, opt = list()
     }
   }
 
+  imputedX <- X ## what the wizard's imputedX() reactive shows
+
   ## normalizedX
   if (isTRUE(opt$normalize)) {
     if (opt$datatype == "multi-omics") {
@@ -77,6 +79,8 @@ ref_normalize <- function(counts, samples, contrasts, annot = NULL, opt = list()
       X <- playbase::normalizeExpression(X, method = opt$norm_method, ref = opt$ref_gene, prior = prior)
     }
   }
+
+  normalizedX <- X ## what the wizard's normalizedX() reactive shows
 
   ## cleanX
   kk <- intersect(rownames(X), rownames(counts))
@@ -93,7 +97,10 @@ ref_normalize <- function(counts, samples, contrasts, annot = NULL, opt = list()
       counts <- counts[, colnames(X), drop = FALSE]
     }
   }
-  list(counts = counts, X = X, annot = annot)
+  list(
+    counts = counts, X = X, annot = annot, prior = prior,
+    imputedX = imputedX, normalizedX = normalizedX
+  )
 }
 
 defaults <- list(
@@ -170,6 +177,48 @@ test_that("pgx.preprocess reproduces zero-as-NA + missingness filter + imputatio
 test_that("pgx.preprocess reproduces outlier-sample removal", {
   fx <- get_fixture()
   expect_parity(fx$counts, fx$samples, fx$contrasts, list(remove_outliers = TRUE, outlier_threshold = 3))
+})
+
+## ---- the preview stages ----
+## The upload wizard previews the pipeline at three points -- after imputation,
+## after normalization, after outlier removal -- and computes each with its own
+## copy of the code, so what the user approves is an approximation of what then
+## runs. Each point is the same chain stopped early, which pgx.preprocess()
+## expresses by switching off the steps that come after it; nothing else has to
+## exist for the wizard to show the real computation. This asserts that, stage
+## by stage, against the same golden reference the final matrix is checked
+## against.
+expect_preview_parity <- function(counts, samples, contrasts, opt) {
+  o <- utils::modifyList(defaults, opt)
+  ref <- tryCatch(ref_normalize(counts, samples, contrasts, opt = o), error = function(e) e)
+  if (inherits(ref, "error")) testthat::skip(paste("reference unavailable:", conditionMessage(ref)))
+  stage <- function(...) {
+    pgx.preprocess(counts, samples, contrasts,
+      options = utils::modifyList(o, list(...)))
+  }
+  imputed <- stage(normalize = FALSE, remove_outliers = FALSE)
+  normalized <- stage(remove_outliers = FALSE)
+  clean <- stage()
+  testthat::expect_equal(imputed$X, ref$imputedX, tolerance = 1e-8)
+  testthat::expect_equal(normalized$X, ref$normalizedX, tolerance = 1e-8)
+  testthat::expect_equal(clean$X, ref$X, tolerance = 1e-8)
+  ## The prior the preview panels label their axes with is the same one.
+  testthat::expect_equal(imputed$prior, ref$prior)
+  ## Not vacuous: the three stages must actually differ, or this would pass on
+  ## a pipeline that did nothing.
+  testthat::expect_false(isTRUE(all.equal(imputed$X, normalized$X)))
+  testthat::expect_lt(ncol(clean$X), ncol(normalized$X))
+}
+
+test_that("each wizard preview stage is the real chain stopped early", {
+  fx <- get_fixture()
+  ## Every removal fires: the filter cuts features, the threshold of 1 cuts
+  ## samples, and normalization changes every value in between.
+  expect_preview_parity(fx$counts, fx$samples, fx$contrasts, list(
+    zero_as_na = TRUE, filter_missing = TRUE, filter_threshold = 3,
+    impute = TRUE, impute_method = "SVD2",
+    remove_outliers = TRUE, outlier_threshold = 1
+  ))
 })
 
 test_that("pgx.preprocess default output is a plausible log-expression matrix", {
