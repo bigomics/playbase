@@ -37,8 +37,12 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
   }
 
   ## WARNING. this converts any phenotype to discrete
-  y <- as.character(pgx$samples[, pheno])
-  names(y) <- rownames(pgx$samples)
+  ## A phenotype is only ever read next to an expression profile -- `X` is
+  ## subset by names(y) below -- so `y` is defined on pgx$X's samples. Outlier
+  ## removal may have cut those below the upload pgx$samples spans (D-24).
+  ss <- intersect(rownames(pgx$samples), colnames(pgx$X))
+  y <- as.character(pgx$samples[ss, pheno])
+  names(y) <- ss
   if (!is.null(select_samples)) {
     y <- y[names(y) %in% select_samples]
   }

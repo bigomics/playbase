@@ -352,7 +352,13 @@ pgx.scatterPlot <- function(pgx, samples = NULL, pheno = NULL,
     if (method == "umap" && "tsne2d" %in% names(cpos)) pos <- cpos[["umap2d"]]
   }
 
-  if (nrow(pos) != nrow(pgx$samples)) {
+  ## `pos` names the samples the positions were computed on. pgx.clusterSamples()
+  ## builds them from the analysis matrix, so they span pgx$X's columns, which
+  ## outlier removal may have reduced below the upload that pgx$samples and
+  ## pgx$contrasts still span (D-24). Everything below indexes `pos` by name, so
+  ## the invariant is that its names are sample names -- not that `pos` and
+  ## pgx$samples have the same number of rows.
+  if (is.null(rownames(pos)) || !all(rownames(pos) %in% rownames(pgx$samples))) {
     stop("[pgx.scatterPlot] dimension mismatch of positions")
   }
 
@@ -2112,7 +2118,13 @@ pgx.plotExpression <- function(pgx,
   ## ------------- determine groups
   expmat <- pgx$model.parameters$exp.matrix
   cntrmat <- pgx$model.parameters$contr.matrix
-  expmat <- expmat[rownames(pgx$samples), , drop = FALSE]
+
+  ## A sample is drawn only if it has a group (it is in the design) and a value
+  ## (it is in pgx$X). Outlier removal may have dropped uploaded samples that
+  ## pgx$samples and pgx$contrasts still span (D-24), so that set is narrower
+  ## than the sample table. Cut to it once, here, and index by it below.
+  ss <- intersect(rownames(expmat), colnames(pgx$X))
+  expmat <- expmat[ss, , drop = FALSE]
 
   if (inherits(comp, "numeric")) comp <- colnames(expmat)[comp]
   if (!is.null(group.names) && length(group.names) != 2) stop("group.names must be length=2")
@@ -2126,7 +2138,7 @@ pgx.plotExpression <- function(pgx,
   ## if a named contrast table is available it is safer
   if (is.null(group.names) && "contrasts" %in% names(pgx)) {
     if (verbose) message("[pgx.plotExpression] parsing group names from contrast labels")
-    contr.labels <- pgx$contrasts[, comp]
+    contr.labels <- pgx$contrasts[ss, comp]
     contr.idx <- expmat[, comp]
     group1 <- names(which.max(table(contr.labels[contr.idx > 0])))
     group0 <- names(which.max(table(contr.labels[contr.idx < 0])))
@@ -2161,8 +2173,8 @@ pgx.plotExpression <- function(pgx,
 
   ## create groups
   ct <- expmat[, comp]
-  names(ct) <- rownames(expmat)
-  samples <- rownames(expmat)[which(ct != 0)]
+  names(ct) <- ss
+  samples <- ss[which(ct != 0)]
   grp0.name <- grp1.name <- NULL
   if (!is.null(group.names)) {
     grp0.name <- group.names[1]
@@ -2173,14 +2185,14 @@ pgx.plotExpression <- function(pgx,
   }
 
   xgroup <- c("other", grp0.name, grp1.name)[1 + 1 * (ct < 0) + 2 * (ct > 0)]
-  names(xgroup) <- rownames(pgx$samples)
+  names(xgroup) <- ss
   jj <- which(!(xgroup %in% xgroup[samples]))
 
   if (length(jj) > 0 && collapse.others) {
     xgroup <- as.character(xgroup)
     xgroup[jj] <- "other"
   }
-  names(xgroup) <- rownames(expmat)
+  names(xgroup) <- ss
 
   if (inherits(xgroup, "character")) {
     xgroup <- as.character(xgroup)
@@ -2200,9 +2212,9 @@ pgx.plotExpression <- function(pgx,
 
   ## -------------- get expression value
   if (level == "geneset") {
-    gx <- pgx$gsetX[probe, rownames(pgx$samples)]
+    gx <- pgx$gsetX[probe, ss]
   } else {
-    gx <- pgx$X[which(rownames(pgx$X) == probe), rownames(pgx$samples)]
+    gx <- pgx$X[which(rownames(pgx$X) == probe), ss]
   }
 
   if (!logscale) {
