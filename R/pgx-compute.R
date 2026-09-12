@@ -644,34 +644,15 @@ pgx.createPGX <- function(counts,
       cX[jj] <- NA ## Batch corrected X; original NAs restored
     }
 
-    ## Compute correctedCounts from corrected X.
-    counts <- pgx$counts ## same as the one originally uploaded by user.
-    jj <- which(rownames(counts) %in% rownames(cX))
-    kk <- which(colnames(counts) %in% colnames(cX))
-    counts <- counts[jj, kk]
-    tc.counts <- colSums(counts, na.rm = TRUE)
-
-    prior <- 0
-    if (min(counts, na.rm = TRUE) == 0 || any(is.na(counts))) {
-      prior <- min(counts[counts > 0], na.rm = TRUE)
-    }
-    if (grepl("CPM|TMM", norm_method)) prior <- 1
-    rc.counts <- pmax(2**cX - prior, 0) # recomputed counts
-    tc.rc.counts <- colSums(rc.counts, na.rm = TRUE)
-
-    ## Put back to original total counts.
-    corrected.counts <- t(t(rc.counts) / tc.rc.counts * tc.counts)
-
-    ## Restore original NAs in correctedCounts.
-    jj <- which(is.na(counts), arr.ind = TRUE)
-    if (any(jj)) corrected.counts[jj] <- NA
-
     message("[pgx.createPGX] Batch correction completed\n")
 
+    ## Correction changes X and nothing else. pgx$counts stays the matrix the
+    ## user uploaded (playbase-lh8); the count-scale matrix the negative
+    ## binomial fitters need is derived from X at the fitter boundary in
+    ## compute_testGenes(), and is never persisted.
     pgx$X <- cX
-    pgx$counts <- corrected.counts
 
-    rm(xlist, cX, counts, corrected.counts)
+    rm(xlist, cX)
   }
 
   rm(counts, X, samples, contrasts)

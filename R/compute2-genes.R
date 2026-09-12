@@ -88,7 +88,13 @@ compute_testGenes <- function(pgx,
   ## notice original counts will not be affected
   ss <- names(stat.group)
   gg <- intersect(rownames(pgx$X), rownames(pgx$counts))
-  counts <- pgx$counts[gg, ss, drop = FALSE]
+  ## edgeR and DESeq2 need count scale. Once batch correction has run, X no
+  ## longer corresponds to pgx$counts, so the count-scale matrix is derived
+  ## from X here rather than persisted onto the object (playbase-lh8).
+  ## pgx.ranWithCorrection() answers NA on an object carrying no preprocessing
+  ## record, and "we do not know" is not "it ran": the upload is used.
+  fit.counts <- if (isTRUE(pgx.ranWithCorrection(pgx))) pgx.recomputeCounts(pgx) else pgx$counts
+  counts <- fit.counts[gg, ss, drop = FALSE]
   samples <- pgx$samples[ss, ]
   X <- pgx$X[gg, ss, drop = FALSE]
 
