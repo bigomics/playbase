@@ -36,13 +36,22 @@ compute_extra <- function(pgx, extra = c(
   message("[pgx.computePGX: compute_extra] pgx.dir = ", pgx.dir)
   message("[pgx.computePGX: compute_extra] libx.dir = ", libx.dir)
 
-  rna.counts <- pgx$counts
+  ## The one back-transform rule (D-07), the same one both consumers default to.
+  ## It is named here rather than left to those defaults because the rownames
+  ## are rewritten below before the matrix is handed on, and it is built only
+  ## when one of the two is actually being run: the rule refuses rather than
+  ## guesses, and an object it would decline must still be able to compute a
+  ## word cloud.
+  rna.counts <- NULL
+  if (any(c("deconv", "infer") %in% extra)) {
+    rna.counts <- pgx.countScaleMatrix(pgx)
 
-  # If working on non-human species, use homologs. The reference sets
-  # used below (deconvolution signatures, cell-cycle/gender markers)
-  # are human-keyed, so bridge via human_ortholog specifically.
-  if (!is.null(pgx$genes$human_ortholog) && !all(is.na(pgx$genes$human_ortholog))) {
-    rownames(rna.counts) <- probe2symbol(rownames(rna.counts), pgx$genes, query = "human_ortholog")
+    # If working on non-human species, use homologs. The reference sets
+    # used below (deconvolution signatures, cell-cycle/gender markers)
+    # are human-keyed, so bridge via human_ortholog specifically.
+    if (!is.null(pgx$genes$human_ortholog) && !all(is.na(pgx$genes$human_ortholog))) {
+      rownames(rna.counts) <- probe2symbol(rownames(rna.counts), pgx$genes, query = "human_ortholog")
+    }
   }
 
   if ("meta.go" %in% extra) {
@@ -358,7 +367,7 @@ compute_extra <- function(pgx, extra = c(
 #' deconv <- compute_deconvolution(pgx)
 #' }
 #' @export
-compute_deconvolution <- function(pgx, rna.counts = pgx$counts, full = FALSE) {
+compute_deconvolution <- function(pgx, rna.counts = pgx.countScaleMatrix(pgx), full = FALSE) {
   ## list of reference matrices
   refmat <- list()
   refmat[["Immune cell (LM22)"]] <- playdata::LM22
@@ -418,7 +427,7 @@ compute_deconvolution <- function(pgx, rna.counts = pgx$counts, full = FALSE) {
 #' deconv <- compute_cellcycle_gender(pgx)
 #' }
 #' @export
-compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
+compute_cellcycle_gender <- function(pgx, rna.counts = pgx.countScaleMatrix(pgx)) {
   if (!is.null(pgx$organism)) {
     is.human <- (tolower(pgx$organism) == "human")
   } else {

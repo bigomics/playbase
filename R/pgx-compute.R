@@ -115,21 +115,28 @@ pgx.createFromFiles <- function(counts.file,
   pgx
 }
 
-## The rows of `counts` that `X` is made of.
+## The rows and samples of `counts` that `X` is made of, as `list(rows, cols)`.
 ##
 ## `pgx.preprocess()` returns `counts` at the shape it was handed and `X` at
 ## whatever the removals left it (D-24/D-39), so the two are no longer one row
-## set and nothing downstream may assume they are. The index is derived, not
-## looked up: the provenance record stays inside playbase.preprocess (D-37), and
-## `pgx.alignXtoCounts()` recovers the relation from the data and the fixed
-## pipeline order instead -- refusing, never guessing, when the names cannot
-## answer it. While the two shapes still agree it is the identity, which is what
-## the caller-supplied `X` and plain-log2 paths get.
+## set nor one sample set and nothing downstream may assume they are. The index
+## is derived, not looked up: the provenance record stays inside
+## playbase.preprocess (D-37), and `pgx.alignXtoCounts()` recovers the relation
+## from the data and the fixed pipeline order instead -- refusing, never
+## guessing, when the names cannot answer it. While the two shapes still agree
+## it is the identity, which is what the caller-supplied `X` and plain-log2
+## paths get. `as.matrix()` is the coercion, not a copy: the single-cell path
+## hands `pgx.createPGX()` a sparse `X`.
+counts_index_of_X <- function(counts, X) {
+  pgx.alignXtoCounts(list(counts = as.matrix(counts), X = as.matrix(X)))
+}
+
+## The rows only, and the identity when there is no `X` yet to align to.
 counts_rows_of_X <- function(counts, X) {
   if (is.null(X)) {
     return(seq_len(nrow(counts)))
   }
-  pgx.alignXtoCounts(list(counts = as.matrix(counts), X = as.matrix(X)))$rows
+  counts_index_of_X(counts, X)$rows
 }
 
 ## The rows of `pgx$X` that stand for a set of `counts` rows, in the order that
@@ -140,6 +147,39 @@ counts_rows_of_X <- function(counts, X) {
 x_rows_for_counts_rows <- function(pgx, keep) {
   i <- match(keep, counts_rows_of_X(pgx$counts, pgx$X))
   i[!is.na(i)]
+}
+
+#' @title This object's data on the count scale
+#'
+#' @description
+#' The one back-transform rule (D-07). Everything that needs count-scale values
+#' -- the edgeR/DESeq2 fitters, the deconvolution mixture, the cell-cycle and
+#' gender signatures -- asks here rather than reaching for `pgx$counts` or
+#' calling [pgx.recomputeCounts()] on its own.
+#'
+#' Batch correction moves `pgx$X` away from `pgx$counts`, and only then is the
+#' upload the wrong answer: the reconstruction is what `X` is now made of. When
+#' correction did not run, `X` is a transform of `counts` and `counts` is the
+#' better count-scale matrix of the two, because the reconstruction is lossy
+#' where normalization and imputation touched the data.
+#'
+#' [pgx.ranWithCorrection()] answers `NA` on an object that carries no
+#' preprocessing record, and "we do not know" is not "it ran" -- so the upload
+#' is used. playbase's own correction runs outside the record (D-37) and writes
+#' nothing to it, so on the objects it holds today the answer is always the
+#' upload and this rule is inert. That is a gap in the record, not in the rule.
+#'
+#' The two branches agree on scale, **not** on shape: the reconstruction has
+#' `X`'s rows and samples, the upload has its own (D-24). A caller that needs
+#' the shapes to line up subsets by name, or asks [pgx.alignXtoCounts()].
+#'
+#' @param pgx A pgx-shaped list carrying `counts` and `X`.
+#'
+#' @return A matrix on the count scale.
+#'
+#' @export
+pgx.countScaleMatrix <- function(pgx) {
+  if (isTRUE(pgx.ranWithCorrection(pgx))) pgx.recomputeCounts(pgx) else pgx$counts
 }
 
 #' Create a PGX object
@@ -642,10 +682,15 @@ pgx.createPGX <- function(counts,
   }
 
   ## -------------------------------------------------------------------
-  ## Infer cell cycle/gender here (before any batchcorrection)
+  ## Infer cell cycle/gender
   ## -------------------------------------------------------------------
+  ## This runs above the correction gate, which is why it used to see a
+  ## different matrix from the `compute_extra()` call that scores the same two
+  ## signatures. That split was an accident of call placement, not a design
+  ## (D-07), and it is gone: both sites take `pgx.countScaleMatrix()`, which is
+  ## the function's own default, so neither has to name a matrix at all.
   info("[createPGX] infer cell cycle")
-  pgx <- compute_cellcycle_gender(pgx, pgx$counts)
+  pgx <- compute_cellcycle_gender(pgx)
 
   ## -------------------------------------------------------------------
   ## Add GMT
@@ -911,19 +956,47 @@ pgx.computePGX <- function(pgx,
   }
 
   ## Shrink number of genes (highest SD/var)
-  if (max.genes > 0 && nrow(pgx$counts) > max.genes) {
-    message("shrinking data matrices: n= ", max.genes)
-    logcpm <- logCPM(pgx$counts, total = NULL)
-    sdx <- matrixStats::rowSds(logcpm, na.rm = TRUE)
-    jj <- Matrix::head(order(-sdx), max.genes) ## how many genes?
-    jj0 <- setdiff(seq_len(nrow(pgx$counts)), jj)
-    pgx$filtered[["low.variance"]] <- paste(rownames(pgx$counts)[jj0], collapse = ";")
-    pgx$counts <- pgx$counts[jj, ]
+  ##
+  ## The shrink keeps the top `max.genes` features of `X` by the standard
+  ## deviation of their log-CPM, and the matrix it ranks is conditional -- it
+  ## always was (D-06). Legacy read `pgx$counts`, which by the time it got here
+  ## had been cut to `X`'s features and samples, and had been OVERWRITTEN by the
+  ## batch-corrected reconstruction whenever correction ran. The cut is gone
+  ## (D-39) and the overwrite is gone (playbase-lh8), so both halves have to be
+  ## said out loud instead of arriving by side effect:
+  ##
+  ##   universe -- what `X` is made of, not what was uploaded, so `counts` is
+  ##     aligned down to `X` first (D-24).
+  ##   values   -- the reconstruction when correction ran, the pristine upload
+  ##     when it did not. This is `pgx.countScaleMatrix()`'s rule (D-07), spelt
+  ##     out rather than called: the universe clause above applies to one branch
+  ##     only, because the reconstruction already has `X`'s shape. A ranking
+  ##     universe is the shrink's own question, and the one place the shared
+  ##     rule is deliberately not the whole answer.
+  ##
+  ## `pgx.removeLowVariance()` carries this same gate and returns before it
+  ## aligns anything. It is repeated here because `rank_on` is built eagerly,
+  ## and building it on an object the gate would have skipped can refuse where
+  ## legacy did nothing at all.
+  if (max.genes > 0 && nrow(pgx$X) > max.genes) {
+    rank_on <- if (isTRUE(pgx.ranWithCorrection(pgx))) {
+      pgx.recomputeCounts(pgx)
+    } else {
+      a <- counts_index_of_X(pgx$counts, pgx$X)
+      pgx$counts[a$rows, a$cols, drop = FALSE]
+    }
+    ## The verb appends a provenance record, and that record does not live on
+    ## the objects playbase holds (D-37). A one-step chain anchored at `X`'s
+    ## shape would make every later pgx.alignXtoCounts() refuse, and would turn
+    ## pgx.ranWithCorrection()'s NA -- "unknown" -- into FALSE.
+    pp <- pgx$settings$preprocessing
+    pgx <- pgx.removeLowVariance(pgx, n = max.genes, rank_on = rank_on)
+    pgx$settings$preprocessing <- pp
   }
 
-  gg <- intersect(rownames(pgx$counts), rownames(pgx$X))
-  pgx$counts <- pgx$counts[gg, ]
-  pgx$X <- pgx$X[gg, ]
+  ## `counts` is NOT re-cut to `X` here any more (D-42). That re-cut undid D-39
+  ## on every compute run, and `upload_server.R:1095` seeds Reanalyse from a
+  ## computed object, so it put the ratchet back by a second route.
 
   pgx$timings <- c()
   GENETEST.METHODS <- c(

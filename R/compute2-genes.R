@@ -90,10 +90,11 @@ compute_testGenes <- function(pgx,
   gg <- intersect(rownames(pgx$X), rownames(pgx$counts))
   ## edgeR and DESeq2 need count scale. Once batch correction has run, X no
   ## longer corresponds to pgx$counts, so the count-scale matrix is derived
-  ## from X here rather than persisted onto the object (playbase-lh8).
-  ## pgx.ranWithCorrection() answers NA on an object carrying no preprocessing
-  ## record, and "we do not know" is not "it ran": the upload is used.
-  fit.counts <- if (isTRUE(pgx.ranWithCorrection(pgx))) pgx.recomputeCounts(pgx) else pgx$counts
+  ## from X rather than persisted onto the object (playbase-lh8). That choice
+  ## is `pgx.countScaleMatrix()`'s to make, here and at the two signature sites
+  ## alike (D-07); the two branches differ in shape, which is what `gg`/`ss` is
+  ## for.
+  fit.counts <- pgx.countScaleMatrix(pgx)
   counts <- fit.counts[gg, ss, drop = FALSE]
   samples <- pgx$samples[ss, ]
   X <- pgx$X[gg, ss, drop = FALSE]

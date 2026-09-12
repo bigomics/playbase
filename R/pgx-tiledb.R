@@ -740,6 +740,14 @@ tiledb.prepareData <- function(pgx) {
   gene_sds[gene_sds == 0] <- NA  ## Avoid division by zero
   zscores <- (X - gene_means) / gene_sds
 
+  ## The same alignment on the sample axis, and for the same reason: outlier
+  ## removal takes samples out of X and leaves them in counts (D-24), and
+  ## tiledb.writeData() walks one index j across both matrices, so an unaligned
+  ## zscores would pair every sample after the first dropped one with ANOTHER
+  ## sample's z-scores before running off the end. A sample counts has and X
+  ## does not gets NA z-scores, exactly as an unmatched gene does below.
+  zscores <- zscores[, match(colnames(counts), colnames(zscores)), drop = FALSE]
+
   ## Only filter/align when counts carries gene identifiers. A dataset without
   ## human-ortholog annotation maps to zero usable rows (NULL rownames); leave it
   ## for tiledb.writeData, which then writes nothing for it (the prior behaviour).

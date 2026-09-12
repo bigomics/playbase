@@ -87,3 +87,106 @@ test_that("pgx.computePGX runs without errors", {
   # Check output
   expect_equal(names(pgx_comp), expected_slots)
 })
+
+
+#' D-24 / D-42: what pgx.computePGX() is allowed to do to pgx$counts, which is
+#' nothing. The `max.genes` shrink takes rows out of `X`; the re-cut that used
+#' to follow it (`gg <- intersect(rownames(pgx$counts), rownames(pgx$X))`) is
+#' gone. It mattered because upload_server.R:1093-1095 seeds Reanalyse from the
+#' COMPUTED object, so a `counts` narrowed by compute made every recompute start
+#' from the previous recompute's output -- the ratchet playbase-lh8 measured.
+#' The second round below is that Reanalyse, and it is the assertion with teeth.
+test_that("pgx.computePGX shrinks X and leaves counts at the upload's shape", {
+  counts <- as.matrix(playbase::COUNTS)
+  opts <- list(
+    datatype = "RNA-seq", norm_method = "CPM",
+    remove_outliers = TRUE, outlier_threshold = 2, impute = FALSE
+  )
+  create <- function(counts, samples, contrasts) {
+    suppressMessages(playbase::pgx.createPGX(
+      counts = counts, samples = samples, contrasts = contrasts,
+      organism = "Human", datatype = "RNA-seq", preprocess = opts,
+      add.gmt = FALSE, convert.hugo = FALSE,
+      filter.genes = FALSE, only.known = FALSE, only.proteincoding = FALSE
+    ))
+  }
+  compute <- function(pgx) {
+    suppressMessages(suppressWarnings(playbase::pgx.computePGX(
+      pgx, max.genes = 500, gx.methods = "trend.limma", gset.methods = c(),
+      extra.methods = c(), do.cluster = FALSE, do.clustergenes = FALSE,
+      do.clustergenesets = FALSE
+    )))
+  }
+
+  pgx <- compute(create(counts, playbase::SAMPLES, playbase::CONTRASTS))
+
+  ## non-vacuity: both removals really fired, so the shapes really do split
+  expect_lt(ncol(pgx$X), ncol(counts))
+  expect_lt(nrow(pgx$X), nrow(counts))
+
+  ## counts is the upload, whole, including dimnames and storage mode
+  expect_identical(pgx$counts, counts)
+
+  ## the shrink is what capped X, and its audit trail names the rows it dropped
+  expect_identical(nrow(pgx$X), 500L)
+  dropped <- strsplit(pgx$filtered[["low.variance"]], ";")[[1]]
+  expect_identical(length(dropped), nrow(counts) - 500L)
+  expect_identical(intersect(dropped, rownames(pgx$X)), character(0))
+
+  ## X's samples and features are a subset of the ones counts still carries
+  expect_true(all(colnames(pgx$X) %in% colnames(pgx$counts)))
+  expect_true(all(rownames(pgx$X) %in% rownames(pgx$counts)))
+
+  ## Reanalyse: the computed object seeds the next upload. Round two must land
+  ## on round one, not inside it.
+  re <- compute(create(pgx$counts, pgx$samples, playbase::CONTRASTS))
+  expect_identical(re$counts, counts)
+  expect_identical(dim(re$X), dim(pgx$X))
+  expect_identical(rownames(re$X), rownames(pgx$X))
+})
+
+test_that("pgx.countScaleMatrix is the one back-transform rule", {
+  set.seed(1)
+  counts <- matrix(rpois(200, 50) + 1, 20, 10,
+    dimnames = list(paste0("g", 1:20), paste0("s", 1:10))
+  )
+
+  ## No provenance record: pgx.ranWithCorrection() says "we do not know", which
+  ## is not "it ran", so the upload is returned untouched. This is the answer
+  ## every object playbase holds today gets (D-37).
+  legacy <- list(counts = counts, X = log2(1 + counts))
+  expect_true(is.na(playbase.preprocess::pgx.ranWithCorrection(legacy)))
+  expect_identical(playbase::pgx.countScaleMatrix(legacy), counts)
+
+  ## A real record, no correction in its history: still the upload.
+  pgx <- playbase.preprocess::pgx.transform(
+    list(counts = counts, X = NULL),
+    to = "log2", prior = 1
+  )
+  expect_false(playbase.preprocess::pgx.ranWithCorrection(pgx))
+  expect_identical(playbase::pgx.countScaleMatrix(pgx), counts)
+
+  ## The same record with a batchCorrect step: the reconstruction, not the
+  ## upload. No verb in either package writes this step today (D-13/D-37), so
+  ## it is built by hand -- the branch is live code, not a branch that cannot
+  ## be reached.
+  pp <- pgx$settings$preprocessing
+  corrected <- pgx
+  corrected$settings$preprocessing <- playbase.preprocess:::new_pgx_preprocessing(
+    space = pp$space, layers = pp$layers, prior = pp$prior,
+    invertible = pp$invertible,
+    history = c(pp$history, list(list(verb = "batchCorrect", method = "ComBat"))),
+    sealed_at = pp$sealed_at, engine = pp$engine
+  )
+  expect_true(playbase.preprocess::pgx.ranWithCorrection(corrected))
+  expect_identical(
+    playbase::pgx.countScaleMatrix(corrected),
+    playbase.preprocess::pgx.recomputeCounts(corrected)
+  )
+
+  ## And it refuses rather than guessing when the record cannot be replayed
+  ## against the counts it is handed.
+  broken <- corrected
+  broken$counts <- counts[1:5, , drop = FALSE]
+  expect_error(playbase::pgx.countScaleMatrix(broken), "pgx.alignXtoCounts")
+})
