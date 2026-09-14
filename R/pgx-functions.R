@@ -1544,7 +1544,7 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   ## create matched counts/data table
   keep.prefix <- (keep.prefix && all(grepl(":", probes)))
   if (keep.prefix) {
-    dt <- mofa.get_prefix(probes)
+    dt <- .pgx_feature_prefix(probes)
     new.name <- annot_table[idx, new_id]
     new.name <- paste0(dt, ":", new.name)
   } else {

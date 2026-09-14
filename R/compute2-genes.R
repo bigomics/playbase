@@ -87,19 +87,10 @@ compute_testGenes <- function(pgx,
   ## Conform data matrices
   ## notice original counts will not be affected
   ss <- names(stat.group)
-  gg <- intersect(rownames(pgx$X), rownames(pgx$counts))
-  ## edgeR and DESeq2 need count scale, and which matrix that is is
-  ## `pgx.countScaleMatrix()`'s call to make -- here and at the two signature
-  ## sites alike (D-07). It is not made here, and it is not second-guessed here
-  ## either: on an object playbase batch-corrected it returns the uncorrected
-  ## upload and warns that it had to, because the correction left no record to
-  ## invert (playbase-lh8). `X` below is the corrected matrix, so that warning
-  ## is the notice that these two arguments are no longer the same data. The two
-  ## branches also differ in shape, which is what `gg`/`ss` is for.
-  fit.counts <- pgx.countScaleMatrix(pgx)
-  counts <- fit.counts[gg, ss, drop = FALSE]
+  ## Count-scale models receive the processed matrix through explicit metadata.
+  counts <- .pgx_count_scale_matrix(pgx)[, ss, drop = FALSE]
   samples <- pgx$samples[ss, ]
-  X <- pgx$X[gg, ss, drop = FALSE]
+  X <- pgx$X[, ss, drop = FALSE]
 
   methods <- test.methods
   message("Testing differential expression methods: ", paste(methods, collapse = ", "))
@@ -109,39 +100,59 @@ compute_testGenes <- function(pgx,
     if ("Differentially methylated regions" %in% pgx$dma) {
       message("[playbase::compute_testGenes] Methylomics: DMRs...")
 
-      ## The one exception to D-39's "compute never narrows `counts`", named
-      ## here because it is not a narrowing: the DMR path moves the whole object
-      ## off CpG probes and onto regions. `counts`, `genes` and `X` change
-      ## feature space together and an object left half in each is incoherent,
-      ## so `pgx$counts` has to be rewritten rather than left at the upload.
-      ## What must stay true is that the two mergeCpG() calls land in the SAME
-      ## space: they run over the same `gg` rows, so they collapse to the same
-      ## regions in the same order, and the check below is what keeps that true
-      ## if either side is edited.
-      vv <- range(counts, na.rm = TRUE)
-      is.beta <- (vv[1] >= 0 & vv[2] <= 1) ## original counts
-      MG <- mergeCpG(data = counts, genes = pgx$genes)
-      counts <- betaToM(MG$data)
-      if (is.beta) pgx$counts <- MG$data else pgx$counts <- counts ## restore as original (beta or m)
+      input.names <- rownames(X)
+      source.rows <- .pgx_first_source_rows(pgx$settings$preprocess)
+      analysis.genes <- pgx$genes[source.rows, , drop = FALSE]
+      rownames(analysis.genes) <- input.names
+      analysis.genes$feature <- input.names
+
+      MG <- mergeCpG(data = counts, genes = analysis.genes)
+      if (!is.list(MG)) {
+        stop("[compute_testGenes] DMR count collapse failed", call. = FALSE)
+      }
+      counts <- playbase.preprocess::pp.convertSpace(
+        MG$data,
+        from = "beta",
+        to = "mvalue"
+      )
       rm(MG)
       gc()
 
-      MG <- mergeCpG(data = X, genes = pgx$genes)
-      X <- betaToM(MG$data)
+      MG <- mergeCpG(data = X, genes = analysis.genes)
+      if (!is.list(MG)) {
+        stop("[compute_testGenes] DMR expression collapse failed", call. = FALSE)
+      }
+      X <- playbase.preprocess::pp.convertSpace(
+        MG$data,
+        from = "beta",
+        to = "mvalue"
+      )
       pgx$genes <- MG$genes
+      pgx$settings$preprocess <- .pgx_collapse_preprocess_rows(
+        pgx$settings$preprocess,
+        current_names = input.names,
+        members = pgx$genes$cpg_probe
+      )
+      pgx$settings$preprocess$space <- "mvalue"
       rm(MG)
       gc()
 
-      if (!identical(rownames(pgx$counts), rownames(pgx$genes))) {
+      if (
+        !identical(rownames(counts), rownames(X)) ||
+          !identical(rownames(X), rownames(pgx$genes))
+      ) {
         stop(
-          "[compute_testGenes] FATAL: methylomics DMR re-basing left `counts` ",
-          "and `genes` in different feature spaces (", nrow(pgx$counts), " vs ",
-          nrow(pgx$genes), " regions). The two mergeCpG() calls must collapse ",
-          "to the same regions."
+          "[compute_testGenes] methylomics DMR matrices are not aligned",
+          call. = FALSE
         )
       }
     } else {
-      counts <- X <- betaToM(counts)
+      counts <- X <- playbase.preprocess::pp.convertSpace(
+        counts,
+        from = "beta",
+        to = "mvalue"
+      )
+      pgx$settings$preprocess$space <- "mvalue"
     }
   }
 

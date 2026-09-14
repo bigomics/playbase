@@ -1,6 +1,4 @@
-## A pgx object shaped the way pgx.createPGX() + pgx.computePGX() leave one when
-## outlier removal drops a sample: `counts`, `samples` and `contrasts` span the
-## whole upload, `X` and the design span whatever the removal left (D-24).
+## A pgx object in which counts retain the upload while X follows outlier removal.
 ##
 ## The removal is the REAL one -- playbase.preprocess drops two samples of
 ## playbase::COUNTS at threshold 2 -- so the split is produced rather than
@@ -17,8 +15,10 @@ outlier_pgx <- local({
       samples = samples,
       contrasts = playbase::CONTRASTS,
       options = list(
-        datatype = "RNA-seq", norm_method = "CPM",
-        remove_outliers = TRUE, outlier_threshold = 2, impute = FALSE
+        norm_method = "CPM",
+        remove_outliers = TRUE,
+        outlier_threshold = 2,
+        impute = FALSE
       )
     ))
 
@@ -42,7 +42,8 @@ outlier_pgx <- local({
     set.seed(1)
     pgx$gsetX <- matrix(
       stats::rnorm(2 * ncol(pp$X)),
-      nrow = 2, dimnames = list(c("GS1", "GS2"), colnames(pp$X))
+      nrow = 2,
+      dimnames = list(c("GS1", "GS2"), colnames(pp$X))
     )
     cached <<- suppressMessages(
       playbase::pgx.clusterSamples(pgx, methods = c("pca", "tsne"), dims = 2)
@@ -79,8 +80,11 @@ outlier_mofa_pgx <- local({
       samples = samples,
       contrasts = playbase::CONTRASTS,
       options = list(
-        datatype = "multi-omics", norm_method = "CPM",
-        remove_outliers = TRUE, outlier_threshold = 3, impute = FALSE
+        datatype = "multi-omics",
+        norm_method = "CPM",
+        remove_outliers = TRUE,
+        outlier_threshold = 3,
+        impute = FALSE
       )
     ))
 
@@ -102,11 +106,13 @@ outlier_mofa_pgx <- local({
     ## as pgx.computePGX() leaves them on a multi-omics object
     pgx$mofa <- list(
       factorizations = suppressMessages(suppressWarnings(
-        mofa.compute_factorizations( ## internal
+        mofa.compute_factorizations(
+          ## internal
           playbase::mofa.split_data(pgx$X),
           samples[colnames(pgx$X), , drop = FALSE],
           labels[colnames(pgx$X), , drop = FALSE],
-          numfactors = 4, kernels = c("pca", "nmf2")
+          numfactors = 4,
+          kernels = c("pca", "nmf2")
         )
       ))
     )

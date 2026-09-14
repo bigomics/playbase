@@ -95,7 +95,7 @@ pgx.wgcna <- function(
     sc <- pgx.supercell(counts, samples, group = group, gamma = nb)
     message("[pgx.wgcna] SuperCell done: ", ncol(counts), " ->", ncol(sc$counts))
     message("[pgx.wgcna] Normalizing supercell matrix (logCPM)")
-    X <- as.matrix(logCPM(sc$counts, total = 1e4, prior = 1))
+    X <- as.matrix(.pgx_log_cpm(sc$counts, total = 1e4, prior = 1))
     samples <- sc$meta
     remove(counts, ct, group, nb, sc)
     gc()
@@ -103,7 +103,15 @@ pgx.wgcna <- function(
 
   if (!is.null(pgx$datatype) && pgx$datatype == "multi-omics") {
     message("[pgx.wgcna] Performing multi-omics normalization")
-    X <- normalizeMultiOmics(X)
+    layers <- .pgx_preprocess_layers(X)
+    methods <- ifelse(unique(layers) == "gx", "CPM", "maxMedian")
+    names(methods) <- unique(layers)
+    X <- playbase.preprocess::pp.normalize(
+      X,
+      layers = layers,
+      method = methods,
+      prior = stats::setNames(rep(1, length(methods)), names(methods))
+    )
   }
 
   if (!is.null(progress)) progress$set(message = "Calculating WGCNA...", value = 0.2)

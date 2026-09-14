@@ -67,13 +67,8 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     }
   } else {
     X <- pgx$X ## NB: this will augment
-    is.mox <- is.multiomics(rownames(X))
     if (any(is.na(X))) {
-      if (is.mox) {
-        X <- imputeMissing.mox(X, method = "SVD2")
-      } else {
-        X <- imputeMissing(X, method = "SVD2")
-      }
+      X <- .pgx_impute_svd2(X)
     }
   }
 

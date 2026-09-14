@@ -282,7 +282,7 @@ pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap"), nb = NULL, ...)
   X1 <- X[jj, ]
   X1 <- X1 - rowMeans(X1, na.rm = TRUE)
   if (any(is.na(X1))) {
-    X1 <- svdImpute2(X1)
+    X1 <- .pgx_impute_svd2(X1)
   }
   if (ncol(X1) < 20) {
     X1 <- cbind(X1, X1, X1)
@@ -7082,8 +7082,8 @@ plotlyLasagna <- function(df, znames = NULL, cex = 1, edges = NULL) {
 
   edgetype1 <- edgetype1 <- NULL
   if (!is.null(edges)) {
-    edgetype1 <- mofa.get_prefix(edges[, 1])
-    edgetype2 <- mofa.get_prefix(edges[, 2])
+    edgetype1 <- .pgx_feature_prefix(edges[, 1])
+    edgetype2 <- .pgx_feature_prefix(edges[, 2])
   }
   if (is.null(df$text)) df$text <- rownames(df)
 
@@ -7460,7 +7460,7 @@ plotMultiPartiteGraph <- function(X, f, group, groups = NULL,
   }
 
   ## limit number per group
-  igraph::V(gr)$group <- mofa.get_prefix(igraph::V(gr)$name)
+  igraph::V(gr)$group <- .pgx_feature_prefix(igraph::V(gr)$name)
   table(igraph::V(gr)$group)
   groups <- intersect(groups, unique(igraph::V(gr)$group))
   sel <- tapply(

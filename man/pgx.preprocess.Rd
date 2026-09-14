@@ -2,7 +2,7 @@
 % Please edit documentation in R/reexport-preprocess.R
 \name{pgx.preprocess}
 \alias{pgx.preprocess}
-\title{Preprocess uploaded counts into a normalized expression matrix}
+\title{Preprocess uploaded counts through the matrix pipeline}
 \usage{
 pgx.preprocess(
   counts,
@@ -13,37 +13,24 @@ pgx.preprocess(
 )
 }
 \arguments{
-\item{counts}{Raw counts matrix (features x samples). Not modified in place.}
+\item{counts}{Numeric source matrix with features in rows and samples in
+columns. The returned source matrix is byte-identical.}
 
-\item{samples}{Sample annotation table, rows in column order of `counts`.}
+\item{samples}{Optional sample annotation with rows in source-column order.}
 
-\item{contrasts}{Contrast matrix defining the comparisons. NULL, or a design
-that cannot be reduced to sample groups, means no design is known and every
-sample is treated as one single group.}
+\item{contrasts}{Optional contrast design used to derive missingness groups.}
 
-\item{annot}{Optional annotation table aligned to `counts` rows. Returned as
-given: it describes the features that were uploaded, not the ones `X` kept.}
+\item{annot}{Optional source-row-aligned annotation matrix or data frame.}
 
-\item{options}{Named list of preprocessing settings; see
-\code{\link[playbase.preprocess]{pgx.preprocess}} for the full set and its
-defaults.}
+\item{options}{Named canonical preprocessing options. Plain `target` and
+`batch` values, when needed, belong in this list.}
 }
 \value{
-A list with `counts` (the input, conditioned but never subset: same
-  features, same samples), `X` (normalized log-expression, which the
-  missingness filter and outlier removal may have made smaller than `counts`
-  on either axis), `annot` (the input, or NULL) and `prior` (log2 prior
-  used). Ask [pgx.alignXtoCounts()] which rows and samples of `counts` `X`
-  is made of; it derives the answer rather than being told it (D-24/D-39).
+The seven-field leaf result: `counts`, `X`, `annot`, `prior`,
+  `space`, `alignment`, and fully resolved `options`.
 }
 \description{
-Turns a raw uploaded counts matrix into the normalized log-expression matrix
-`X` used downstream. The pipeline itself lives in
-\code{playbase.preprocess::pgx.preprocess}, which describes the design as one
-grouping label per sample; playbase callers hold the design as a `samples`
-table plus a `contrasts` matrix, so this wrapper reduces the two and
-forwards the result.
-}
-\seealso{
-\code{\link[playbase.preprocess]{pgx.preprocess}}
+Converts playbase sample and contrast metadata to a plain group vector, then
+delegates once to [playbase.preprocess::pgx.preprocess()]. All numerical
+stage order and method dispatch remain in the leaf package.
 }

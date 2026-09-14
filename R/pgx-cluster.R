@@ -51,13 +51,8 @@ pgx.clusterGenes <- function(pgx,
   } else if (!is.null(pgx$X) && level == "gene") {
     message("[pgx.clusterGenes] Using normalized X matrix detected in pgx...")
     X <- pgx$X
-    is.mox <- is.multiomics(rownames(X))
     if (any(is.na(X))) {
-      if (is.mox) {
-        X <- imputeMissing.mox(X, method = "SVD2")
-      } else {
-        X <- imputeMissing(X, method = "SVD2")
-      }
+      X <- .pgx_impute_svd2(X)
     }
   } else if (!is.null(pgx$gsetX) && level == "geneset") {
     message("[pgx.clusterGenes] Using expression geneset X matrix detected in pgx...")
@@ -198,16 +193,11 @@ pgx.clusterSamples <- function(pgx,
     ## only sample set there is. The positions are named, and every reader
     ## (pgx.scatterPlot) indexes them by name.
     message("[pgx.clusterSamples] Using logCPM(pgx$counts)...")
-    X <- logCPM(pgx$counts, total = NULL)
+    X <- .pgx_log_cpm(pgx$counts, total = NULL)
   }
 
-  is.mox <- is.multiomics(rownames(X))
   if (any(is.na(X))) {
-    if (is.mox) {
-      X <- imputeMissing.mox(X, method = "SVD2")
-    } else {
-      X <- imputeMissing(X, method = "SVD2")
-    }
+    X <- .pgx_impute_svd2(X)
   }
 
   clust.pos <- pgx.clusterBigMatrix(

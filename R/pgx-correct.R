@@ -318,7 +318,13 @@ pgx.superBatchCorrect <- function(X, pheno,
       dbg("[pgx.superBatchCorrect] model.par = ", model.par)
       y1 <- pheno[, model.par, drop = FALSE]
       y1 <- apply(y1, 1, paste, collapse = ":")
-      cX <- nnmCorrect(cX, y1, center.x = TRUE, center.m = TRUE, return.B = TRUE)$X
+      cX <- playbase.preprocess::pp.batchCorrect(
+        cX,
+        target = y1,
+        method = "NPM",
+        center_x = TRUE,
+        center_m = TRUE
+      )
     }
 
     if (bc == "sva") {
@@ -984,7 +990,7 @@ removeTechnicalEffects <- function(X, samples, y, p.pheno = 0.05, p.pca = 0.5,
   ##  params = c("lib","mito","ribo","cellcycle","gender")
 
   X1 <- X
-  X1 <- svdImpute2(X1) ## temporary hack. need to refactor: allowing for real NA!!
+  X1 <- .pgx_impute_svd2(X1)
   if (force) {
     bc <- detectBatchEffects(X1, samples, y,
       params = "technical",
@@ -1093,18 +1099,23 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
     xlist[["limma"]] <- X
   }
   if ("limma" %in% methods && !is.null(batch)) {
-    cX <- try(limmaCorrect(X, batch, y = y))
-    if ("try-error" %in% class(cX)) {
-      ## if fails with model, try without
-      cX <- try(limmaCorrect(X, batch, y = NULL))
-    }
+    cX <- try(playbase.preprocess::pp.batchCorrect(
+      X,
+      target = y,
+      batch = batch,
+      method = "limma"
+    ))
     xlist[["limma"]] <- cX
   }
   if ("limma.no_mod" %in% methods && is.null(batch)) {
     xlist[["limma.no_mod"]] <- X
   }
   if ("limma.no_mod" %in% methods && !is.null(batch)) {
-    cX <- try(limmaCorrect(X, batch, y = NULL))
+    cX <- try(playbase.preprocess::pp.batchCorrect(
+      X,
+      batch = batch,
+      method = "limma"
+    ))
     xlist[["limma.no_mod"]] <- cX
   }
 
@@ -1114,16 +1125,21 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   }
   if ("ComBat" %in% methods && !is.null(batch)) {
     if (max(table(batch), na.rm = TRUE) > 1) {
-      bX <- try(combatCorrect(X, batch, y = y))
-      if ("try-error" %in% class(bX)) {
-        ## if not successful, try without model
-        bX <- try(combatCorrect(X, batch, y = NULL))
-      }
+      bX <- try(playbase.preprocess::pp.batchCorrect(
+        X,
+        target = y,
+        batch = batch,
+        method = "ComBat"
+      ))
       xlist[["ComBat"]] <- bX
     }
   }
   if ("ComBat.no_mod" %in% methods && !is.null(batch)) {
-    bX <- try(combatCorrect(X, batch, y = NULL))
+    bX <- try(playbase.preprocess::pp.batchCorrect(
+      X,
+      batch = batch,
+      method = "ComBat"
+    ))
     xlist[["ComBat.no_mod"]] <- bX
   }
   if ("ComBat.no_mod" %in% methods && is.null(batch)) {
@@ -1148,17 +1164,27 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
 
   ## RUV and SVA
   if ("RUV" %in% methods) {
-    xlist[["RUV"]] <- try(ruvCorrect(X, y, k = NULL, type = "III"))
-    ##  xlist[["RUVg"]] <- try(ruvCorrect(X, y, k = NULL, type = "g"))
+    xlist[["RUV"]] <- try(playbase.preprocess::pp.batchCorrect(
+      X,
+      target = y,
+      method = "RUV"
+    ))
   }
 
   if ("SVA" %in% methods) {
-    xlist[["SVA"]] <- try(svaCorrect(X, y))
+    xlist[["SVA"]] <- try(playbase.preprocess::pp.batchCorrect(
+      X,
+      target = y,
+      method = "SVA"
+    ))
   }
 
   if ("NPM" %in% methods) {
-    ## xlist[["NNM"]] <- nnmCorrect(X, y, return.B = TRUE)$X
-    xlist[["NPM"]] <- nnmCorrect(X, y, use.design = TRUE)
+    xlist[["NPM"]] <- try(playbase.preprocess::pp.batchCorrect(
+      X,
+      target = y,
+      method = "NPM"
+    ))
     ## xlist[["NNM2"]] <- nnmCorrect2(X, y, use.design = TRUE)
     ##    xlist[["NNM.no_mod"]] <- nnmCorrect2(X, y, use.design = FALSE)
   }
@@ -1826,197 +1852,6 @@ compare_batchcorrection_methods <- function(X,
 
 
 #' @export
-limmaCorrect <- function(X, B, y = NULL, use.covariates = FALSE,
-                         auto.detect = FALSE) {
-  cX <- X
-  if (!is.null(y) && length(y)) {
-    y[is.na(y)] <- "_"
-  }
-  if (is.null(ncol(B))) B <- cbind(B)
-  if (!is.null(y) && auto.detect) {
-    pars <- get_model_parameters(X, B, pheno = y, contrasts = NULL)
-    batch.pars <- pars$batch.pars
-    batch.pars <- intersect(batch.pars, colnames(B))
-    if (!is.null(batch.pars) && length(batch.pars)) {
-      message("auto-correcting for: ", paste(batch.pars, collapse = " "))
-      B <- B[, batch.pars, drop = FALSE]
-    } else {
-      B <- NULL
-    }
-  }
-  if (is.null(B)) {
-    return(X)
-  }
-
-  if (use.covariates) {
-    modB <- c()
-    for (i in 1:ncol(B)) {
-      b <- B[, i]
-      b[which(is.na(b))] <- "_"
-      b <- as.factor(b)
-      contrasts(b) <- contr.sum(levels(b))
-      b <- model.matrix(~b)[, -1, drop = FALSE]
-      modB <- cbind(modB, b)
-    }
-    cX <- limma::removeBatchEffect(cX, covariates = modB, group = y)
-  } else {
-    for (i in 1:ncol(B)) {
-      b <- B[, i]
-      b[is.na(b)] <- "_"
-      cX <- limma::removeBatchEffect(cX, batch = b, group = y)
-    }
-  }
-  cX
-}
-
-#' @export
-combatCorrect <- function(X, B, y = NULL, auto.detect = FALSE) {
-  cX <- X
-  if (is.null(ncol(B))) B <- cbind(B)
-  if (!is.null(y) && auto.detect) {
-    pars <- get_model_parameters(X, B, pheno = y, contrasts = NULL)
-    batch.pars <- pars$batch.pars
-    batch.pars <- intersect(batch.pars, colnames(B))
-    if (!is.null(batch.pars) && length(batch.pars)) {
-      message("auto-correcting for: ", paste(batch.pars, collapse = " "))
-      B <- B[, batch.pars, drop = FALSE]
-    } else {
-      B <- NULL
-    }
-  }
-  if (is.null(B)) {
-    return(X)
-  }
-
-  mod <- NULL
-  if (!is.null(y) && length(y)) {
-    y[is.na(y)] <- "_"
-    mod <- model.matrix(~ as.factor(y))
-  }
-  for (i in 1:ncol(B)) {
-    b <- B[, i]
-    b[is.na(b)] <- "_"
-    suppressMessages(
-      cX <- sva::ComBat(cX, batch = b, mod = mod)
-    )
-  }
-  cX
-}
-
-
-#' @export
-svaCorrect <- function(X, y, n.sv = NULL, nsd = 1000, return.sv = FALSE) {
-  ##
-  ## This is a combination of methods from SVA and SmartSVA
-  ## because of speed.
-
-  if (any(is.na(X))) {
-    stop("[svaCorrect] cannot handle missing values in X")
-  }
-  dimx <- ncol(X)
-
-  ## sva doesn't like if the dimension is too small
-  if (ncol(X) < 10) {
-    X <- cbind(X, X, X)
-    y <- rep(y, 3)
-  }
-
-  mod1x <- model.matrix(~ 1 + y)
-  mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
-
-  if (is.null(n.sv)) {
-    ## fast method using SmartSVA
-    #  pp <- paste0(model.par, collapse = "+")
-    #  lm.expr <- paste0("lm(t(X) ~ ", pp, ", data=pheno)")
-    X.r <- t(stats::resid(lm(t(X) ~ y)))
-    ## n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
-    n.sv <- isva::EstDimRMT(X.r, FALSE)$dim
-    n.sv <- pmax(n.sv - 1, 1)
-  }
-
-  ## top 1000 genes only (faster)
-  X1 <- X
-  if (!is.null(nsd) && nsd > 0) {
-    X1 <- Matrix::head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], 1000)
-  }
-  ## add a little bit of noise to avoid singular error
-  ## a <- 0.01 * mean(apply(X1, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
-  a <- 0.001 * mean(matrixStats::rowSds(X1, na.rm = TRUE), na.rm = TRUE)
-  X1 <- X1 + a * matrix(stats::rnorm(length(X1)), nrow(X1), ncol(X1))
-  sv <- try(sva::sva(X1, mod1x, mod0 = mod0x, n.sv = n.sv)$sv)
-  class(sv)
-
-  if (!any(class(sv) == "try-error")) {
-    message("[svaCorrect] Performing SVA correction...")
-    rownames(sv) <- colnames(X)
-    colnames(sv) <- paste0("SV.", 1:ncol(sv))
-    X <- limma::removeBatchEffect(X, covariates = sv, design = mod1x)
-  } else {
-    message("[svaCorrect] WARNING could not get covariates. no correction.")
-    sv <- NULL
-  }
-  X <- X[, 1:dimx] ## reduce to original dim
-  if (return.sv) {
-    if (!is.null(sv)) sv <- sv[1:dimx, ]
-    return(list(X = X, sv = sv))
-  }
-  X
-}
-
-#' @export
-ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
-  if (any(is.na(X))) {
-    stop("[ruvCorrect] cannot handle missing values in X.")
-  }
-  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
-
-  ## F-test using limma just variables
-  if (!is.null(y) && length(controls) == 1 && is.numeric(controls[1])) {
-    ii <- which(!duplicated(rownames(X)) & sdx > 0)
-    jj <- which(!is.na(y))
-    F <- gx.limmaF(X[ii, jj], y[jj],
-      lfc = 0, fdr = 1, method = 1,
-      sort.by = "none", compute.means = FALSE, verbose = 0
-    )
-    nc <- pmax(nrow(X) * as.numeric(controls), 1)
-    sel <- head(order(-F$P.Value), nc)
-    controls <- rownames(F)[sel]
-    controls <- intersect(controls, rownames(X))
-  }
-  message(paste("[ruvCorrect] Number of control features:", length(controls)))
-
-  if (is.null(k)) {
-    ## this is from SVA
-    jj <- which(!is.na(y))
-    fit <- lm(t(X[controls, jj, drop = FALSE]) ~ y[jj]) ## only within controls???
-    X.r <- t(stats::resid(fit))
-    k <- try(isva::EstDimRMT(X.r, FALSE)$dim + 1)
-    if ("try-error" %in% class(k)) {
-      k0 <- isva::EstDimRMT(X, FALSE)$dim
-      k <- ncol(X) - k0
-    }
-  }
-  message(paste("[ruvCorrect] Number of significant surrogate variables is:", k))
-
-  # Actually run correction
-  # Set number of threads for CRAN
-  ctl <- which(controls %in% rownames(X))
-  type <- type[1]
-  if (type == "III") {
-    ## setup model matrix
-    M <- model.matrix(~ 0 + y) ## how deal with missing values??
-    rownames(M) <- colnames(X)
-    ruvX <- t(ruv::RUVIII(Y = t(X), M = M, ctl = ctl, k = k, eta = NULL))
-    ruvX <- ruvX - mean(ruvX, na.rm = TRUE) + mean(X, na.rm = TRUE) ## ??
-  } else if (type == "g") {
-    ruvX <- RUVSeq::RUVg(x = X, cIdx = ctl, k = k, isLog = TRUE)$normalizedCounts
-  } else {
-    stop("[ruvCorrect] unknown RUV type", type)
-  }
-  ruvX
-}
-
-#' @export
 pcaCorrect <- function(X, y, k = 10, p.notsig = 0.20) {
   ## --------------------------------------------------------------------
   ## PCA correction: remove remaining batch effect using PCA
@@ -2281,118 +2116,6 @@ bbknn <- function(data_matrix, batch, pca = TRUE, compute_pca = "python", nPcs =
 #' @examples
 #' # TODO
 #'
-#' @export
-nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TRUE,
-                       knn = 2, sdtop = 2000, return.B = FALSE,
-                       use.design = TRUE, use.covariates = FALSE) {
-  ## Nearest-neighbour matching for batch correction. This
-  ## implementation creates a fully paired dataset with nearest
-  ## matching neighbours when pairs are missing.
-
-  ## use.design=TRUE;dist.method="cor";center.x=TRUE;center.m=TRUE;sdtop=1000;knn=2
-
-  knn <- ifelse(ncol(X) <= 3, 1, knn)
-
-  ## compute distance matrix for NNM-pairing
-  y1 <- paste0("y=", y)
-  dX <- X
-
-  ## reduce for speed
-  sdx <- matrixStats::rowSds(dX, na.rm = TRUE)
-  ii <- Matrix::head(order(-sdx), sdtop)
-  dX <- dX[ii, ]
-
-  if (center.x) {
-    dX <- dX - rowMeans(dX, na.rm = TRUE)
-  }
-  if (center.m) {
-    ## center per condition group (takes out batch differences)
-    mX <- tapply(1:ncol(dX), y1, function(i) rowMeans(dX[, i, drop = FALSE], na.rm = TRUE))
-    mX <- do.call(cbind, mX)
-    dX <- dX - mX[, y1]
-  }
-
-  if (dist.method == "cor") {
-    ## D <- 1 - crossprod(scale(dX)) / (nrow(dX) - 1) ## faster
-    D <- 1 - cor(dX)
-  } else {
-    D <- as.matrix(stats::dist(t(dX)))
-  }
-  ## remove(dX)
-  D[is.na(D)] <- 0 ## might have NA
-
-  ## find neighbours
-  B <- matrix(0, 0, 0)
-  if (knn > 1) {
-    message(paste0("[nnmCorrect] finding ", knn, "-nearest neighbours..."))
-    bb <- apply(D, 1, function(r) tapply(r, y1, function(s) head(names(sort(s)), knn)))
-    B <- do.call(rbind, lapply(bb, function(x) unlist(x)))
-    colnames(B) <- unlist(mapply(rep, names(bb[[1]]), sapply(bb[[1]], length)), use.names = FALSE)
-  }
-  if (knn == 1 || nrow(B) != ncol(X)) {
-    message("[nnmCorrect] finding nearest neighbours...")
-    B <- t(apply(D, 1, function(r) tapply(r, y1, function(s) names(which.min(s)))))
-  }
-
-  ## sanity check. bail out
-  if (nrow(B) != ncol(X)) {
-    message("[nnmCorrect] WARNING. FATAL ERROR. returning uncorrected X.")
-    return(X)
-  }
-
-  ## ensure sample is always present in own group
-  rownames(B) <- colnames(X)
-  idx <- cbind(1:nrow(B), match(y1, colnames(B)))
-  B[idx] <- rownames(B)
-  ##  B <- cbind(rownames(B), B)
-
-  ## imputing full paired data set
-  kk <- match(as.vector(B), rownames(B))
-  full.y <- y1[kk]
-  full.pairs <- rep(rownames(B), ncol(B))
-  full.X <- X[, kk]
-  dim(full.X)
-
-  ## remove pairing effect
-  message("[nnmCorrect] correcting for pairing effects...")
-  if (use.covariates) {
-    V <- model.matrix(~ 0 + full.pairs)
-    design <- stats::model.matrix(~full.y)
-    if (!use.design) design <- matrix(1, ncol(full.X), 1)
-    full.X <- limma::removeBatchEffect(
-      full.X,
-      covariates = scale(V),
-      design = design
-    )
-  } else {
-    design <- stats::model.matrix(~full.y)
-    if (!use.design) design <- matrix(1, ncol(full.X), 1)
-    full.X <- limma::removeBatchEffect(
-      full.X,
-      batch = full.pairs,
-      design = design
-    )
-  }
-
-  ## now contract to original samples
-  message("[nnmCorrect] matching result...")
-  full.idx <- rownames(B)[kk]
-  cX <- do.call(cbind, tapply(
-    1:ncol(full.X), full.idx,
-    function(i) rowMeans(full.X[, i, drop = FALSE], na.rm = TRUE)
-  ))
-  cX <- cX[, colnames(X)]
-
-  ## retain original row means
-  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
-  res <- cX
-  if (return.B) {
-    res <- list(X = cX, pairings = B)
-  }
-  return(res)
-}
-
-
 #' @export
 nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
                         scale.x = FALSE, center.y = TRUE, mode = "sym",

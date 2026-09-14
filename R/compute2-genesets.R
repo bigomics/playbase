@@ -83,17 +83,16 @@ compute_testGenesets <- function(pgx,
   gc()
 
   X1 <- X
-  is.mox <- playbase::is.multiomics(rownames(X))
   if (any(is.na(X))) {
-    if (is.mox) {
-      X1 <- imputeMissing.mox(X, method = "SVD2")
-    } else {
-      X1 <- imputeMissing(X, method = "SVD2")
-    }
+    X1 <- .pgx_impute_svd2(X)
   }
 
   if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {
-    X1 <- playbase::betaToM(X1)
+    X1 <- playbase.preprocess::pp.convertSpace(
+      X1,
+      from = "beta",
+      to = "mvalue"
+    )
   }
 
   gset.meta <- gset.fitContrastsWithAllMethods(

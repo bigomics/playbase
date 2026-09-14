@@ -47,7 +47,7 @@ MultiOmicsSAE <- R6::R6Class(
 
       if (any(sapply(X, function(x) sum(is.na(x))) > 0)) {
         message("missing features detected! imputing.")
-        X <- lapply(X, function(x) svdImpute2(x))
+        X <- lapply(X, .pgx_impute_svd2)
       }
 
       ## add tiny noise: for some reason this prevents NaN in some

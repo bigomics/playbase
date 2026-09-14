@@ -43,7 +43,12 @@ test_that("pgx.clusterSamples2 performs dimensionality reduction", {
 #' Test for pgx.findLouvainClusters
 #' Run Louvain clusters
 posx <- scale(cbind(ngs$cluster$pos[["umap2d"]], ngs$cluster$pos[["tsne2d"]]))
-idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
+idx <- playbase::pgx.findLouvainClusters(
+  posx,
+  level = 1,
+  prefix = "c",
+  small.zero = 0.0
+)
 
 test_that("pgx.findLouvainClusters runs correctly", {
   # Expect number of test performed
@@ -56,9 +61,14 @@ test_that("pgx.findLouvainClusters runs correctly", {
 
 #' Test for pgx.clusterGenes
 # Run logCPM normalisation and clustering for genes
-ngs$X <- playbase::logCPM(ngs$counts, total = 1e6, prior = 1)
+ngs$X <- playbase:::.pgx_log_cpm(ngs$counts, total = 1e6, prior = 1)
 # Run pgx.clusterGenes for only one clustering method (umap)
-ngs <- playbase::pgx.clusterGenes(ngs, methods = "umap", dims = c(3), level = "gene")
+ngs <- playbase::pgx.clusterGenes(
+  ngs,
+  methods = "umap",
+  dims = c(3),
+  level = "gene"
+)
 
 test_that("pgx.findLouvainClusters runs correctly", {
   # Expect number of test performed

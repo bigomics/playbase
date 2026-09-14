@@ -77,7 +77,11 @@ mergeCpG <- function(data, genes = NULL, collapse.by = "gene") {
     return(X)
   }
 
-  X <- mToBeta(data)
+  X <- playbase.preprocess::pp.convertSpace(
+    data,
+    from = "mvalue",
+    to = "beta"
+  )
 
   if (is.null(genes)) {
     genes <- annotate_methylomics(probes = rownames(X), meth_type = "450K array")
@@ -151,7 +155,11 @@ infer_sex_methyl <- function(data, genes = NULL, meth_type = "450K array") {
   msg <- function(...) message("[playbase::infer_sex_methyl] ", ...)
   msg("Methylomics: infer biological sex using sex-linked CpG methylation profiles.")
 
-  X <- mToBeta(data)
+  X <- playbase.preprocess::pp.convertSpace(
+    data,
+    from = "mvalue",
+    to = "beta"
+  )
 
   if (is.null(genes)) {
     c1 <- is.null(meth_type)
@@ -188,4 +196,3 @@ infer_sex_methyl <- function(data, genes = NULL, meth_type = "450K array") {
   return(list(pred_sex = pred_sex, x_med = x_med, y_med = y_med))
 
 }
-

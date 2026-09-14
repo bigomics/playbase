@@ -115,102 +115,6 @@ pgx.createFromFiles <- function(counts.file,
   pgx
 }
 
-## The rows and samples of `counts` that `X` is made of, as `list(rows, cols)`.
-##
-## `pgx.preprocess()` returns `counts` at the shape it was handed and `X` at
-## whatever the removals left it (D-24/D-39), so the two are no longer one row
-## set nor one sample set and nothing downstream may assume they are. The index
-## is derived, not looked up: the provenance record stays inside
-## playbase.preprocess (D-37), and `pgx.alignXtoCounts()` recovers the relation
-## from the data and the fixed pipeline order instead -- refusing, never
-## guessing, when the names cannot answer it. While the two shapes still agree
-## it is the identity, which is what the caller-supplied `X` and plain-log2
-## paths get. `as.matrix()` is the coercion, not a copy: the single-cell path
-## hands `pgx.createPGX()` a sparse `X`.
-counts_index_of_X <- function(counts, X) {
-  pgx.alignXtoCounts(list(counts = as.matrix(counts), X = as.matrix(X)))
-}
-
-## The rows only, and the identity when there is no `X` yet to align to.
-counts_rows_of_X <- function(counts, X) {
-  if (is.null(X)) {
-    return(seq_len(nrow(counts)))
-  }
-  counts_index_of_X(counts, X)$rows
-}
-
-## The rows of `pgx$X` that stand for a set of `counts` rows, in the order that
-## set names them. The inverse of the above, and what a feature filter needs: it
-## decides on `counts`, and the index it produces cannot be applied to `X`. An
-## `X` row whose counts row is not in the set is dropped, which is the filter
-## doing its job.
-x_rows_for_counts_rows <- function(pgx, keep) {
-  i <- match(keep, counts_rows_of_X(pgx$counts, pgx$X))
-  i[!is.na(i)]
-}
-
-#' @title This object's data on the count scale
-#'
-#' @description
-#' The one back-transform rule (D-07). Everything that needs count-scale values
-#' -- the edgeR/DESeq2 fitters, the deconvolution mixture, the cell-cycle and
-#' gender signatures -- asks here rather than reaching for `pgx$counts` or
-#' calling [pgx.recomputeCounts()] on its own.
-#'
-#' Batch correction moves `pgx$X` away from `pgx$counts`, and only then is the
-#' upload the wrong answer: the reconstruction is what `X` is now made of. When
-#' correction did not run, `X` is a transform of `counts` and `counts` is the
-#' better count-scale matrix of the two, because the reconstruction is lossy
-#' where normalization and imputation touched the data.
-#'
-#' [pgx.ranWithCorrection()] answers `NA` on an object that carries no
-#' preprocessing record, and "we do not know" is not "it ran" -- so the upload
-#' is used. playbase's own batch correction runs outside the record (D-37) and
-#' writes nothing to it, so on every object playbase creates today the answer is
-#' the upload. That is a gap in the record, not in the rule.
-#'
-#' The gap is not silent. `pgx.createPGX()` stamps `settings$batch.correct.method`
-#' where it corrects, so this function can tell the two record-less cases apart:
-#' an object that was never corrected, where the upload is simply the right
-#' answer, and an object whose `X` was corrected by a step the record cannot
-#' invert, where the upload is the only answer available but no longer the same
-#' data `X` holds. The second **warns**, because it splits a result by method
-#' rather than by contrast: `edgeR`/`DESeq2` and the deconvolution mixture come
-#' here and get uncorrected values, while `trend.limma` and `ttest` read the
-#' corrected `pgx$X` directly. Closing it needs the correction to reach the
-#' record; until then the split is visible instead of silent.
-#'
-#' The two branches agree on scale, **not** on shape: the reconstruction has
-#' `X`'s rows and samples, the upload has its own (D-24). A caller that needs
-#' the shapes to line up subsets by name, or asks [pgx.alignXtoCounts()].
-#'
-#' @param pgx A pgx-shaped list carrying `counts` and `X`.
-#'
-#' @return A matrix on the count scale. Warns, and returns `pgx$counts`, when
-#'   the object records a batch correction the preprocessing record cannot
-#'   invert.
-#'
-#' @export
-pgx.countScaleMatrix <- function(pgx) {
-  if (isTRUE(pgx.ranWithCorrection(pgx))) {
-    return(pgx.recomputeCounts(pgx))
-  }
-  mm <- pgx$settings$batch.correct.method
-  if (!is.null(mm)) {
-    warning(
-      "[pgx.countScaleMatrix] this object was batch-corrected with '", mm,
-      "', and that correction was applied to X outside the preprocessing ",
-      "record, so there is no chain to invert and the count scale cannot ",
-      "follow it. Returning the uploaded counts. Count-scale methods (edgeR, ",
-      "DESeq2, deconvolution) therefore answer on UNCORRECTED data while ",
-      "trend.limma and ttest read the corrected X: the same contrast can ",
-      "differ by method.",
-      call. = FALSE
-    )
-  }
-  pgx$counts
-}
-
 #' Create a PGX object
 #' This function creates a pgx object, which is the core object in the
 #' OmicsPlayground.
@@ -327,68 +231,39 @@ pgx.createPGX <- function(counts,
   message("[pgx.createPGX] class.counts: ", class(counts))
   message("[pgx.createPGX] counts has ", sum(is.na(counts)), " missing values")
 
-  ## Opt-in: build X from raw counts via the shared preprocessing pipeline.
-  ## Runs before de-duplication so counts and X are averaged/uniquified together,
-  ## matching the Shiny upload flow (normalization module -> createPGX).
-  if (is.null(X) && !is.null(preprocess) && datatype != "scRNA-seq") {
+  preprocess.metadata <- NULL
+  ran.preprocess <- is.null(X) && !is.null(preprocess) && datatype != "scRNA-seq"
+  if (ran.preprocess) {
     message("[pgx.createPGX] building X via pgx.preprocess()")
-    ## `contrasts` is never validated above and is legitimately NULL for an
-    ## upload with no comparisons defined yet; pgx.preprocess() tolerates that
-    ## and treats the samples as one single group.
+    if (is.null(preprocess$dedup)) {
+      preprocess$dedup <- if (average.duplicated) "average" else "unique"
+    }
+    if (!identical(batch.correct.method, "no_batch_correct")) {
+      preprocess$batch_correct <- TRUE
+      preprocess$batch_method <- batch.correct.method[[1L]]
+      if (is.null(preprocess$batch) && preprocess$batch_method %in% c("ComBat", "limma")) {
+        selected <- batch.pars
+        if (is.null(selected) || !length(selected) || any(selected %in% c("<autodetect>", "autodetect"))) {
+          preprocess["batch"] <- list(batchFromSamples(samples))
+        } else {
+          selected <- intersect(selected, colnames(samples))
+          preprocess["batch"] <- list(samples[, selected, drop = FALSE])
+        }
+      }
+    }
     pp <- pgx.preprocess(counts,
       samples = samples, contrasts = contrasts,
       annot = annot_table, options = preprocess
     )
-    ## Phase 0 Task 0.2: persist the caller's option list verbatim (D-18).
-    ## Additive only - nothing reads this key yet. NB this is the caller's
-    ## PARTIAL list; the resolved opt is built inside pgx.preprocess() and
-    ## is not returned. See bead for that limitation.
-    settings$options <- preprocess
-    ## `counts` comes back at the shape it went in (D-39). The removals shrank
-    ## `X` and recorded the index they kept instead of applying it to the
-    ## upload, so `X` is the smaller thing derived from it and every step from
-    ## here that renames or subsets features asks counts_rows_of_X() which of
-    ## the two it is talking about.
-    ##
-    ## That holds THROUGH PREPROCESSING, which is as far as D-24/D-39 reach. It
-    ## is not a claim about what finally lands in `pgx$counts`: the three
-    ## ANNOTATION filters further down -- `filter.genes`, the
-    ## `only.known`/`only.proteincoding`/`exclude.genes` block, and methylomics
-    ## `remove.xy.probes` -- still cut it, because `pgx$genes` is counts-shaped
-    ## and the gene-set universe is built from `pgx$genes$symbol`. See the note
-    ## at the first of them.
+    settings$options <- pp$options
+    preprocess.metadata <- .pgx_preprocess_metadata(pp)
+    settings$preprocess <- preprocess.metadata
+    if (isTRUE(pp$options$batch_correct)) {
+      settings$batch.correct.method <- pp$options$batch_method
+    }
     counts <- pp$counts
     X <- pp$X
     if (!is.null(annot_table)) annot_table <- pp$annot
-  }
-
-  ndup <- sum(duplicated(rownames(counts)))
-  if (ndup > 0) {
-    if (average.duplicated) {
-      message("[pgx.createPGX] ", ndup, " duplicated feature(s) detected. Averaging....")
-      ## Asked BEFORE the merge, like the make-unique branch below, and for a
-      ## sharper reason: the merge is what would hide the answer. `counts` and
-      ## `X` are averaged separately over row sets a preprocessing removal may
-      ## have made different (D-24), and the merge leaves BOTH name vectors
-      ## unique -- so afterwards pgx.alignXtoCounts() sees no repeated name to
-      ## object to and matches `counts["A"]`, the mean of every copy, to
-      ## `X["A"]`, the mean of only the copies `X` kept. It answers, wrongly,
-      ## where its own contract is to refuse. Here the copies are still there
-      ## and the split-duplicate refusal fires on its own.
-      if (!is.null(X)) invisible(counts_rows_of_X(counts, X))
-      counts <- playbase::counts.mergeDuplicateFeatures(counts, is.counts = TRUE)
-      if (!is.null(X)) X <- playbase::counts.mergeDuplicateFeatures(X, is.counts = FALSE)
-    } else {
-      message("[pgx.createPGX] ", ndup, " duplicated feature(s) detected. Making unique to keep all...")
-      ## One naming, taken from `counts` and handed down to the rows `X` kept.
-      ## make_unique() numbers the copies it can see, so renaming `X` from its
-      ## own rownames would give one feature a different suffix on each side
-      ## wherever a removal split a duplicate.
-      xrows <- counts_rows_of_X(counts, X)
-      rownames(counts) <- playbase::make_unique(rownames(counts))
-      if (!is.null(X)) rownames(X) <- rownames(counts)[xrows]
-      if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
-    }
   }
 
   if (datatype == "scRNA-seq") {
@@ -404,11 +279,45 @@ pgx.createPGX <- function(counts,
     return(pgx)
   }
 
-  if (is.null(X)) {
-    min.nz <- min(counts[counts > 0], na.rm = TRUE)
-    prior <- ifelse(grepl("CPM|TMM|TPM", norm_method), 1, min.nz)
-    message("[pgx.createPGX] creating X as log2(counts+p) with p = ", prior)
-    X <- log2(counts + prior)
+  if (!ran.preprocess) {
+    if (is.null(X)) {
+      min.nz <- min(counts[counts > 0], na.rm = TRUE)
+      prior <- ifelse(grepl("CPM|TMM|TPM", norm_method), 1, min.nz)
+      message("[pgx.createPGX] creating X as log2(counts+p) with p = ", prior)
+      X <- log2(counts + prior)
+    }
+    if (!exists("prior", inherits = FALSE)) {
+      prior <- 1
+    }
+    preprocess.metadata <- .pgx_identity_preprocess_metadata(
+      counts,
+      X,
+      space = "log2",
+      prior = prior
+    )
+    ndup <- sum(duplicated(rownames(counts)))
+    if (ndup > 0) {
+      method <- if (average.duplicated) "average" else "unique"
+      action <- if (average.duplicated) "Averaging" else "Making unique"
+      message(
+        "[pgx.createPGX] ",
+        ndup,
+        " duplicated feature(s) detected. ",
+        action,
+        " X while preserving source counts."
+      )
+      deduplicated <- playbase.preprocess::pp.deduplicate(
+        X,
+        method = method,
+        space = "log2"
+      )
+      X <- deduplicated$X
+      preprocess.metadata <- .pgx_group_preprocess_rows(
+        preprocess.metadata,
+        deduplicated$row_groups
+      )
+    }
+    settings$preprocess <- preprocess.metadata
   }
 
   if (!is.null(annot_table)) {
@@ -429,17 +338,11 @@ pgx.createPGX <- function(counts,
     message("[pgx.createPGX] X has ", sum(is.na(X)), " missing values")
   }
 
-  ## D-24 deletes the two guards that stood here -- `dim(counts) == dim(X)` and
-  ## `rownames(counts) == rownames(X)`. They are what forced the trim: they made
-  ## a shrunk `X` illegal unless `counts` was cut down with it, and a cut-down
-  ## `counts` is what ratchets, because upload_server.R:1095 seeds the next
-  ## Reanalyse from it. What stands in their place is the weaker statement that
-  ## is still true -- every row and sample of `X` is one `counts` still has --
-  ## and counts_rows_of_X() stops when it is not. The index it returns is
-  ## discarded on purpose: this call is the assertion, and `invisible()` says so,
-  ## because a bare expression whose only effect is its `stop()` reads as dead
-  ## code to the next cleanup.
-  if (!is.null(X)) invisible(counts_rows_of_X(counts, X))
+  playbase.preprocess::pp.alignCounts(
+    counts,
+    preprocess.metadata$alignment,
+    X = X
+  )
 
   if (datatype == "multi-omics") {
     has.colons <- mean(grepl("[:]", rownames(counts)), na.rm = TRUE) > 0.9
@@ -481,23 +384,22 @@ pgx.createPGX <- function(counts,
   contrasts[contrasts %in% c("", " ", "NA")] <- NA
   used.samples <- names(which(rowSums(!is.na(contrasts)) > 0))
   if (prune.samples && length(used.samples) < ncol(counts)) {
-    counts <- counts[, used.samples, drop = FALSE]
-    samples <- samples[used.samples, , drop = FALSE]
-    contrasts <- contrasts[used.samples, , drop = FALSE] ## sample-based!!!
+    keep.x <- which(colnames(X) %in% used.samples)
+    X <- X[, keep.x, drop = FALSE]
+    preprocess.metadata <- .pgx_subset_preprocess_cols(
+      preprocess.metadata,
+      keep.x
+    )
   }
 
-  ## align samples
-  ## `counts`, `samples` and `contrasts` span every uploaded sample; `X` spans
-  ## the ones outlier removal left (D-24, the column half). The set used to be
-  ## intersected with `colnames(X)` first, which cut the dropped samples back
-  ## out of `counts` and `samples` -- the same ratchet on the sample axis that
-  ## the row trim was on the feature axis, seeded from the same place
-  ## (upload_server.R:1093-1095 hands Reanalyse `samples`, `contrasts` and
-  ## `counts` off the computed object). `X` is cut to the samples the object has,
-  ## keeping whichever of them it still carries.
+  ## Align lifecycle metadata to the source samples without narrowing counts.
   kk <- intersect(colnames(counts), rownames(samples))
-  counts <- counts[, kk, drop = FALSE]
-  X <- X[, intersect(kk, colnames(X)), drop = FALSE]
+  keep.x <- which(colnames(X) %in% kk)
+  X <- X[, keep.x, drop = FALSE]
+  preprocess.metadata <- .pgx_subset_preprocess_cols(
+    preprocess.metadata,
+    keep.x
+  )
   samples <- samples[kk, , drop = FALSE]
   samples <- utils::type.convert(samples, as.is = TRUE) ## automatic type conversion
   if (all(kk %in% rownames(contrasts))) {
@@ -516,13 +418,11 @@ pgx.createPGX <- function(counts,
   is.phospho <- annotate_phospho_residue(rownames(counts), detect.only = TRUE)
   if (datatype == "proteomics" && is.phospho) {
     info("[createPGX] annotating rownames with phospho residue...")
-    xrows <- counts_rows_of_X(counts, X)
+    xrows <- .pgx_first_source_rows(preprocess.metadata)
     newnames <- annotate_phospho_residue(rownames(counts))
     newnames <- make_unique(newnames)
-    rownames(counts) <- newnames
     rownames(X) <- newnames[xrows]
     if (!is.null(annot_table)) {
-      rownames(annot_table) <- newnames
       pos.col <- grep("site|position|phosho", colnames(annot_table), ignore.case = TRUE)
       phosphosite <- sub(".*_|[.].*", "", newnames)
       if (length(pos.col)) {
@@ -567,13 +467,13 @@ pgx.createPGX <- function(counts,
     }
     ## Taken before the loop, because the loop is what makes the two namings
     ## diverge; the rename itself is row by row, so row i keeps meaning row i.
-    xrows <- counts_rows_of_X(counts, X)
-    for (i in 1:nrow(counts)) {
-      rownames(counts)[i] <- reorder_uniprots(rownames(counts)[i], feature.lengths[i])$feature
-    }
-    rownames(X) <- rownames(counts)[xrows]
+    xrows <- .pgx_first_source_rows(preprocess.metadata)
+    reordered <- vapply(seq_len(nrow(counts)), function(i) {
+      reorder_uniprots(rownames(counts)[i], feature.lengths[i])$feature
+    }, character(1))
+    rownames(X) <- reordered[xrows]
   }
-  if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
+  settings$preprocess <- preprocess.metadata
 
   pgx <- list(
     name = name,
@@ -640,40 +540,11 @@ pgx.createPGX <- function(counts,
   }
 
   ## -------------------------------------------------------------------
-  ## Filter out not-expressed
-  ## -------------------------------------------------------------------
-  ## THE ANNOTATION AXIS -- read once, for the three filters below.
-  ##
-  ## D-24/D-39 stop the PREPROCESSING removals from cutting `counts`: they
-  ## record the index they kept and `X` alone shrinks. The three filters that
-  ## follow -- here, the only.known/only.proteincoding/exclude.genes block, and
-  ## methylomics remove.xy.probes -- do NOT work that way. They decide on
-  ## `pgx$genes`, which is built from `rownames(pgx$counts)` just above and is
-  ## counts-shaped, and they cut `counts` and `genes` together while `X` follows
-  ## through x_rows_for_counts_rows(). So `pgx$counts` leaving pgx.createPGX()
-  ## is the upload MINUS whatever these three removed, not the upload, and
-  ## upload_server.R:1095 seeds the next Reanalyse from it.
-  ##
-  ## Measured (playbase.preprocess-5xx, review-c1-evidence/gates-on-ratchet.R):
-  ## with the gates on, a Reanalyse round 2 is not round 1 -- max |dX| 0.2368
-  ## log2 where only.proteincoding fires, because dropping features moves the
-  ## library size CPM divides by. It does not compound: rounds 3 and 4 are
-  ## byte-identical to round 2 and `rownames(X)` never moves, because all three
-  ## filters are idempotent on a fixed feature set. A one-step shift, not a
-  ## ratchet -- but round 1 is still not reproducible from a Reanalyse.
-  ##
-  ## Closing it is not a matter of deleting the counts cut: `pgx$genes` is what
-  ## pgx.add_GMT() builds the gene-set universe from, so keeping `genes` whole
-  ## would let genesets survive on members no longer analysed, and shrinking
-  ## `genes` below `counts` would break the counts-parallel reading that
-  ## pgx.filterZeroCounts() and 166 other `pgx$genes` sites depend on. That
-  ## decision is the bead's, not this comment's.
+  ## Filter the analysis rows while retaining the source counts and alignment.
   if (filter.genes) {
     nexpr <- sum(rowSums(pgx$counts, na.rm = TRUE) == 0)
     message("[pgx.createPGX] Filtering out ", nexpr, " not-expressed genes...")
     pgx <- pgx.filterZeroCounts(pgx)
-    ii <- match(rownames(pgx$counts), rownames(pgx$genes))
-    pgx$genes <- pgx$genes[ii, , drop = FALSE]
   }
 
   ## -------------------------------------------------------------------
@@ -681,35 +552,41 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   do.filter <- (only.known || only.proteincoding || !is.null(exclude.genes))
   if (do.filter) {
+    source.keep <- seq_len(nrow(pgx$genes))
     if (only.known) {
       message("[pgx.createPGX] Removing genes without symbol...")
-      no.symbol <- (is.na(pgx$genes$symbol) | pgx$genes$symbol %in% c("", "-"))
-      pgx$genes <- pgx$genes[which(!no.symbol), , drop = FALSE]
+      symbol <- pgx$genes$symbol[source.keep]
+      no.symbol <- is.na(symbol) | symbol %in% c("", "-")
+      source.keep <- source.keep[which(!no.symbol)]
     }
 
     if (only.proteincoding) {
       message("[pgx.createPGX] Removing Rik/ORF/LOC genes...")
-      is.unknown <- grepl("^rik|^loc|^orf", tolower(pgx$genes$symbol))
-      is.unknown <- is.unknown & !is.na(pgx$genes$symbol)
-      pgx$genes <- pgx$genes[which(!is.unknown), , drop = FALSE]
+      symbol <- pgx$genes$symbol[source.keep]
+      is.unknown <- grepl("^rik|^loc|^orf", tolower(symbol))
+      is.unknown <- is.unknown & !is.na(symbol)
+      source.keep <- source.keep[which(!is.unknown)]
     }
 
     if (!is.null(exclude.genes)) {
       message("[pgx.createPGX] excluding genes: ", exclude.genes)
       exstr <- strsplit(tolower(exclude.genes), split = "[ ,]")[[1]]
       exexpr <- paste(c(paste0("^", exstr), paste0(exstr, "$")), collapse = "|")
-      exgene <- grepl(exexpr, tolower(pgx$genes$symbol))
-      if (sum(exgene)) pgx$genes <- pgx$genes[which(!exgene), , drop = FALSE]
+      exgene <- grepl(exexpr, tolower(pgx$genes$symbol[source.keep]))
+      if (sum(exgene)) {
+        source.keep <- source.keep[which(!exgene)]
+      }
     }
 
-    ## `genes` is counts-shaped while `X` keeps only the rows the preprocessing
-    ## removals left (D-24), so `X` cannot be indexed by `genes`' rownames. `X`
-    ## goes first, because the translation is an index into the `counts` the
-    ## alignment was derived against. The second of the three cuts on the
-    ## annotation axis -- see the note above `filter.genes`.
-    keep <- match(rownames(pgx$genes), rownames(pgx$counts))
-    pgx$X <- pgx$X[x_rows_for_counts_rows(pgx, keep), , drop = FALSE]
-    pgx$counts <- pgx$counts[rownames(pgx$genes), , drop = FALSE]
+    keep.x <- .pgx_rows_for_source_rows(
+      pgx$settings$preprocess,
+      source.keep
+    )
+    pgx$X <- pgx$X[keep.x, , drop = FALSE]
+    pgx$settings$preprocess <- .pgx_subset_preprocess_rows(
+      pgx$settings$preprocess,
+      keep.x
+    )
   }
 
   ## Methylomics arrays: if user-specified, remove X- & Y-linked CpG probes.
@@ -719,13 +596,16 @@ pgx.createPGX <- function(counts,
       jj <- grep("chrX|chrY|^X|^Y", pgx$genes[, kk], ignore.case = TRUE)
       if (length(jj) > 0) {
         message("[pgx.createPGX] Methylomics: removing ", length(jj), " X- & Y-linked CpG probes...")
-        ## `jj` indexes `genes`, which is `counts`-shaped; `X` may be smaller
-        ## (D-24), so it drops the rows whose counts row is going. The third and
-        ## last cut on the annotation axis -- see the note above `filter.genes`.
         keep <- setdiff(seq_len(nrow(pgx$counts)), jj)
-        pgx$X <- pgx$X[x_rows_for_counts_rows(pgx, keep), , drop = FALSE]
-        pgx$counts <- pgx$counts[-jj, , drop = FALSE]
-        pgx$genes <- pgx$genes[-jj, , drop = FALSE]
+        keep.x <- .pgx_rows_for_source_rows(
+          pgx$settings$preprocess,
+          keep
+        )
+        pgx$X <- pgx$X[keep.x, , drop = FALSE]
+        pgx$settings$preprocess <- .pgx_subset_preprocess_rows(
+          pgx$settings$preprocess,
+          keep.x
+        )
       }
     }
   }
@@ -748,24 +628,18 @@ pgx.createPGX <- function(counts,
     new.names <- ifelse(feature_is_symbol, rownames(pgx$genes), new.names)
     new.names <- make_unique(new.names)
 
-    xrows <- counts_rows_of_X(pgx$counts, pgx$X)
+    xrows <- .pgx_first_source_rows(pgx$settings$preprocess)
     rownames(pgx$genes) <- new.names
     pgx$genes$gene_name <- new.names ## gene_name should also be renamed??
     pgx$genes$feature <- new.names ## feature should also be renamed??
-    rownames(pgx$counts) <- new.names
-    ## One naming again: `new.names` is as long as `genes`/`counts`, and `X`
-    ## takes the entries belonging to the rows it kept (D-24).
+    ## Apply source annotation names to the aligned analysis rows.
     rownames(pgx$X) <- new.names[xrows]
   }
 
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender
   ## -------------------------------------------------------------------
-  ## This runs above the correction gate, which is why it used to see a
-  ## different matrix from the `compute_extra()` call that scores the same two
-  ## signatures. That split was an accident of call placement, not a design
-  ## (D-07), and it is gone: both sites take `pgx.countScaleMatrix()`, which is
-  ## the function's own default, so neither has to name a matrix at all.
+  ## Both signature callers use the explicit count-scale policy helper.
   info("[createPGX] infer cell cycle")
   pgx <- compute_cellcycle_gender(pgx)
 
@@ -800,15 +674,11 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Batch correction if user-selected
   ## -------------------------------------------------------------------
-  if (batch.correct.method != "no_batch_correct" && ncol(pgx$X) > 2) {
+  if (!ran.preprocess && batch.correct.method != "no_batch_correct" && ncol(pgx$X) > 2) {
     batch <- NULL
     mm <- batch.correct.method[1]
     if (length(batch.pars) == 0) batch.pars <- "<autodetect>"
-    ## Correction operates on `X`, so its covariates are `X`'s samples, not the
-    ## object's. Outlier removal leaves the two different (D-24) and every
-    ## method underneath is positional in X's column axis, so a full-length
-    ## batch factor would be silently paired with the wrong columns. The gate
-    ## above counts fittable samples for the same reason.
+    ## Correction covariates follow the processed X sample axis.
     ss <- colnames(pgx$X)
     X <- pgx$X
     samples <- pgx$samples[ss, , drop = FALSE]
@@ -825,41 +695,22 @@ pgx.createPGX <- function(counts,
     pheno <- pars$pheno
 
     message("[pgx.createPGX] Batch correction using ", mm)
-    if (sum(is.na(X)) == 0) {
-      xlist <- playbase::runBatchCorrectionMethods(X, batch, pheno, methods = mm, ntop = Inf)
-      cX <- xlist[[mm]]
-    } else {
-      impute_method <- "SVD2"
-      pgx$impute_method <- impute_method ## recorded for the AI-report methods block
-      is.mox <- is.multiomics(rownames(X))
-      if (is.mox) {
-        impX <- imputeMissing.mox(X, method = impute_method)
-      } else {
-        impX <- imputeMissing(X, method = impute_method)
-      }
-      xlist <- playbase::runBatchCorrectionMethods(impX, batch, pheno, methods = mm, ntop = Inf)
-      cX <- xlist[[mm]]
-      jj <- which(is.na(X), arr.ind = TRUE)
-      cX[jj] <- NA ## Batch corrected X; original NAs restored
-    }
+    cX <- playbase.preprocess::pp.batchCorrect(
+      X,
+      layers = .pgx_preprocess_layers(X),
+      target = pheno,
+      batch = batch,
+      method = mm
+    )
 
     message("[pgx.createPGX] Batch correction completed\n")
 
-    ## Correction changes X and nothing else. pgx$counts stays the matrix the
-    ## user uploaded (playbase-lh8); the count-scale matrix the negative
-    ## binomial fitters need is derived from X at the fitter boundary in
-    ## compute_testGenes(), and is never persisted.
+    ## Correction changes X and nothing else; source counts remain pristine.
     pgx$X <- cX
 
-    ## Recorded because this correction happens OUTSIDE the preprocessing record
-    ## (D-37): pgx.ranWithCorrection() reads that record and so cannot see it,
-    ## which left pgx.countScaleMatrix() answering "the upload" on an object
-    ## whose `X` had moved, with nothing to say so. It is set only where the
-    ## correction actually ran, never from the argument alone -- the gate above
-    ## declines on fewer than three fittable samples.
     pgx$settings$batch.correct.method <- mm
 
-    rm(xlist, cX)
+    rm(cX)
   }
 
   rm(counts, X, samples, contrasts)
@@ -970,18 +821,7 @@ pgx.computePGX <- function(pgx,
   contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
   contr.matrix <- sign(contr.matrix) ## sign is fine
 
-  ## The design is built from `pgx$samples`, which names every uploaded sample;
-  ## `X` names the ones outlier removal left (D-24, the column half). A sample
-  ## with no expression data cannot be fitted, so it leaves the design here --
-  ## once, where the design is built, rather than at each of its readers. The
-  ## contrast pruning below then drops any comparison that emptied out.
-  ##
-  ## `ss` is ordered by `X`, and the subset is taken whether or not anything was
-  ## dropped, so the design's rows ARE `X`'s columns, in `X`'s order. Readers
-  ## that walk the design and the expression matrix together need that -- they
-  ## had it by coincidence, because the sample table happened to be in the same
-  ## order as `X`; `compute_testGenes()` copies these rows into
-  ## `model.parameters$exp.matrix` untouched, and that is what they read.
+  ## Build the model design in processed-X sample order.
   ss <- intersect(colnames(pgx$X), rownames(contr.matrix))
   if (length(ss) < nrow(contr.matrix)) {
     message(
@@ -1053,48 +893,24 @@ pgx.computePGX <- function(pgx,
     pgx <- pgx.clusterGenes(pgx, methods = mm, level = "gene")
   }
 
-  ## Shrink number of genes (highest SD/var)
-  ##
-  ## The shrink keeps the top `max.genes` features of `X` by the standard
-  ## deviation of their log-CPM, and the matrix it ranks is conditional -- it
-  ## always was (D-06). Legacy read `pgx$counts`, which by the time it got here
-  ## had been cut to `X`'s features and samples, and had been OVERWRITTEN by the
-  ## batch-corrected reconstruction whenever correction ran. The cut is gone
-  ## (D-39) and the overwrite is gone (playbase-lh8), so both halves have to be
-  ## said out loud instead of arriving by side effect:
-  ##
-  ##   universe -- what `X` is made of, not what was uploaded, so `counts` is
-  ##     aligned down to `X` first (D-24).
-  ##   values   -- the reconstruction when correction ran, the pristine upload
-  ##     when it did not. This is `pgx.countScaleMatrix()`'s rule (D-07), spelt
-  ##     out rather than called: the universe clause above applies to one branch
-  ##     only, because the reconstruction already has `X`'s shape. A ranking
-  ##     universe is the shrink's own question, and the one place the shared
-  ##     rule is deliberately not the whole answer.
-  ##
-  ## `pgx.removeLowVariance()` carries this same gate and returns before it
-  ## aligns anything. It is repeated here because `rank_on` is built eagerly,
-  ## and building it on an object the gate would have skipped can refuse where
-  ## legacy did nothing at all.
   if (max.genes > 0 && nrow(pgx$X) > max.genes) {
-    rank_on <- if (isTRUE(pgx.ranWithCorrection(pgx))) {
-      pgx.recomputeCounts(pgx)
-    } else {
-      a <- counts_index_of_X(pgx$counts, pgx$X)
-      pgx$counts[a$rows, a$cols, drop = FALSE]
-    }
-    ## The verb appends a provenance record, and that record does not live on
-    ## the objects playbase holds (D-37). A one-step chain anchored at `X`'s
-    ## shape would make every later pgx.alignXtoCounts() refuse, and would turn
-    ## pgx.ranWithCorrection()'s NA -- "unknown" -- into FALSE.
-    pp <- pgx$settings$preprocessing
-    pgx <- pgx.removeLowVariance(pgx, n = max.genes, rank_on = rank_on)
-    pgx$settings$preprocessing <- pp
+    filtered <- playbase.preprocess::pp.filterFeatures(
+      pgx$X,
+      method = "low_variance",
+      n = as.integer(max.genes),
+      rank_on = .pgx_count_scale_matrix(pgx)
+    )
+    dropped <- setdiff(seq_len(nrow(pgx$X)), filtered$keep_rows)
+    pgx$filtered[["low.variance"]] <- paste(
+      rownames(pgx$X)[dropped],
+      collapse = ";"
+    )
+    pgx$X <- filtered$X
+    pgx$settings$preprocess <- .pgx_subset_preprocess_rows(
+      pgx$settings$preprocess,
+      filtered$keep_rows
+    )
   }
-
-  ## `counts` is NOT re-cut to `X` here any more (D-42). That re-cut undid D-39
-  ## on every compute run, and `upload_server.R:1095` seeds Reanalyse from a
-  ## computed object, so it put the ratchet back by a second route.
 
   pgx$timings <- c()
   GENETEST.METHODS <- c(
@@ -1160,7 +976,16 @@ pgx.computePGX <- function(pgx,
   )
 
   ## methylomics: ensure all OPG graphics & tables use beta.
-  if (pgx$datatype == "methylomics") pgx$X <- playbase::mToBeta(pgx$X)
+  if (pgx$datatype == "methylomics") {
+    pgx$X <- playbase.preprocess::pp.convertSpace(
+      pgx$X,
+      from = pgx$settings$preprocess$space,
+      to = "beta",
+      prior = pgx$settings$preprocess$prior,
+      layers = pgx$settings$preprocess$layers
+    )
+    pgx$settings$preprocess$space <- "beta"
+  }
 
   if (!is.null(ai_features)) {
     if (!is.list(ai_features)) {
@@ -1249,16 +1074,14 @@ pgx.filterZeroCounts <- function(pgx) {
   ## AZ: added na.rm=TRUE to avoid introducing NAs and edit to keep NAs.
   keep <- (Matrix::rowMeans(pgx$counts > 0, na.rm = TRUE) > 0) ## at least in one...
 
-  ## Positional, and the all-NA rows still first: `counts` is counts-shaped
-  ## while `X` keeps only the rows the preprocessing removals left (D-24), so
-  ## one set of rownames no longer indexes both. `genes` follows `counts`; `X`
-  ## drops the rows whose counts row is going, through the alignment. This is
-  ## the first of the three cuts on the annotation axis -- see the note above
-  ## the `filter.genes` gate in pgx.createPGX() for what that costs.
+  ## Translate this source-row filter to processed-X positions explicitly.
   keep <- c(which(is.na(keep)), which(keep))
-  pgx$X <- pgx$X[x_rows_for_counts_rows(pgx, keep), , drop = FALSE]
-  pgx$counts <- pgx$counts[keep, , drop = FALSE]
-  pgx$genes <- pgx$genes[keep, , drop = FALSE]
+  keep.x <- .pgx_rows_for_source_rows(pgx$settings$preprocess, keep)
+  pgx$X <- pgx$X[keep.x, , drop = FALSE]
+  pgx$settings$preprocess <- .pgx_subset_preprocess_rows(
+    pgx$settings$preprocess,
+    keep.x
+  )
 
   pgx
 }
@@ -1271,18 +1094,17 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   pgx$filtered <- NULL
   pgx$filtered[["low.expressed"]] <- paste(rownames(pgx$counts)[which(!keep)], collapse = ";")
   if (!is.null(pgx$X)) {
-    ## Before `counts` is cut, because the alignment is an index into the
-    ## matrix the chain ran against. The warning that stood here -- "counts and
-    ## X should match dimensions" -- was the assumption, not a check: `keep` is
-    ## positional in `counts`, and under D-24 `counts` is the whole upload while
-    ## `X` is what the removals left.
-    pgx$X <- pgx$X[x_rows_for_counts_rows(pgx, which(keep)), , drop = FALSE]
+    ## Translate this source-row filter to processed-X positions explicitly.
+    keep.x <- .pgx_rows_for_source_rows(
+      pgx$settings$preprocess,
+      which(keep)
+    )
+    pgx$X <- pgx$X[keep.x, , drop = FALSE]
+    pgx$settings$preprocess <- .pgx_subset_preprocess_rows(
+      pgx$settings$preprocess,
+      keep.x
+    )
   }
-  pgx$counts <- pgx$counts[keep, , drop = FALSE]
-  ## `genes` follows `counts`, positionally, exactly as it does in
-  ## pgx.filterZeroCounts(). Leaving it whole while `counts` shrank put the two
-  ## out of step on the one axis the rest of the object indexes them by.
-  if (!is.null(pgx$genes)) pgx$genes <- pgx$genes[keep, , drop = FALSE]
   message("filtering out ", sum(!keep), " low-expressed genes")
   message("keeping ", sum(keep), " expressed genes")
   pgx

@@ -1,249 +1,213 @@
-#' Test for pgx.createFromFiles
-#'
-#'
-
-# pgx <- playbase::pgx.createPGX(
-#     samples = playbase::SAMPLES,
-#     counts = playbase::COUNTS,
-#     contrasts = playbase::CONTRASTS[,1:2],
-#     organism = "Human"
-#   )
-
-#' Test for pgx.createPGX
-test_that("pgx.createPGX produce all pgx slots", {
-  skip("high memory usage, maybe use mini-example?")
-  # Call example data
-  # pgx_data <- playbase::get_mini_example_data()
-
-  # Create expected outputs
-  expected_tests <- c(
-    "name", "organism", "version", "date", "creator", "datatype",
-    "description", "samples", "counts", "contrasts", "X",
-    "total_counts", "counts_multiplier", "genes", "all_genes",
-    "probe_type", "filtered", "tsne2d", "tsne3d", "cluster", "cluster.genes"
-  )
-  total_counts <- apply(playbase::COUNTS, 2, sum)
-
-  gene_table <- data.frame(
-    symbol = c("A1BG", "AGAP2", "ANXA4", "ARPC1A", "BATF", "C19orf53"),
-    gene_title = c(
-      "alpha-1-B glycoprotein", "ArfGAP with GTPase domain, ankyrin repeat and PH domain 2",
-      "annexin A4", "actin related protein 2/3 complex subunit 1A", "basic leucine zipper ATF-like transcription factor",
-      "chromosome 19 open reading frame 53"
-    ),
-    gene_biotype = rep("protein_coding", 6),
-    chr = c("19", "12", "2", "7", "14", "19"),
-    pos = c(58345178, 57723761, 69644425, 99325898, 75522455, 13774456),
-    tx_len = c(2134, 5388, 905, 1582, 617, 897),
-    map = c("q13.43", "q14.1", "p13.3", "q22.1", "q24.3", "p13.13"),
-    source = c(
-      "Source:HGNC Symbol;Acc:HGNC:5", "Source:HGNC Symbol;Acc:HGNC:16921", "Source:HGNC Symbol;Acc:HGNC:542",
-      "Source:HGNC Symbol;Acc:HGNC:703", "Source:HGNC Symbol;Acc:HGNC:958", "Source:HGNC Symbol;Acc:HGNC:24991"
-    ),
-    gene_name = c("A1BG", "AGAP2", "ANXA4", "ARPC1A", "BATF", "C19orf53"),
-    feature = c("A1BG", "AGAP2", "ANXA4", "ARPC1A", "BATF", "C19orf53")
-  )
-  rownames(gene_table) <- gene_table$symbol
-
-  # Check output
-  ## Check all te test present
-  expect_true(all(names(pgx) == expected_tests))
-
-  ## Check the total counts in each sample
-  expect_equal(pgx$total_counts, total_counts)
-
-  ## Check multiplier
-  expect_equal(pgx$counts_multiplier, 1)
-
-  ## Check contrast
-  expect_equal(dim(pgx$contrasts), c(18, 2))
-
-
-  ## Check that the gene info is generated correctly
-  # TODO expect_equal(pgx$genes[c(1, 10, 20, 30, 40, 50), , drop = FALSE], gene_table)
-
-  ## Check cluster.genes
-  expect_equal(dim(pgx$cluster$pos$pca2d), c(ncol(playbase::COUNTS), 2))
-  expect_equal(dim(pgx$cluster$pos$tsne3d), c(ncol(playbase::COUNTS), 3))
-  expect_equal(dim(pgx$cluster$pos$umap2d), c(ncol(playbase::COUNTS), 2))
-  expect_equal(dim(pgx$cluster$pos$umap3d), c(ncol(playbase::COUNTS), 3))
-})
-
-
-#' Test for pgx.computePGX
-test_that("pgx.computePGX runs without errors", {
-  skip("high memory usage, maybe use mini-example?")
-  # Run function
-  suppressWarnings(pgx_comp <- playbase::pgx.computePGX(pgx))
-
-  # Expected outputs
-  expected_slots <- c(
-    "name", "organism", "version", "date", "creator", "datatype", "description", "samples",
-    "counts", "contrasts", "X", "total_counts", "counts_multiplier", "genes",
-    "all_genes", "probe_type", "tsne2d", "tsne3d", "cluster", "cluster.genes",
-    "model.parameters", "filtered", "timings", "gx.meta", "gset.meta", "gsetX",
-    "GMT", "cluster.gsets", "meta.go"
-  )
-  # Check output
-  expect_equal(names(pgx_comp), expected_slots)
-})
-
-
-#' D-24 / D-42: what pgx.computePGX() is allowed to do to pgx$counts, which is
-#' nothing. The `max.genes` shrink takes rows out of `X`; the re-cut that used
-#' to follow it (`gg <- intersect(rownames(pgx$counts), rownames(pgx$X))`) is
-#' gone. It mattered because upload_server.R:1093-1095 seeds Reanalyse from the
-#' COMPUTED object, so a `counts` narrowed by compute made every recompute start
-#' from the previous recompute's output -- the ratchet playbase-lh8 measured.
-#' The second round below is that Reanalyse, and it is the assertion with teeth.
-test_that("pgx.computePGX shrinks X and leaves counts at the upload's shape", {
-  counts <- as.matrix(playbase::COUNTS)
-  opts <- list(
-    datatype = "RNA-seq", norm_method = "CPM",
-    remove_outliers = TRUE, outlier_threshold = 2, impute = FALSE
-  )
-  create <- function(counts, samples, contrasts) {
-    suppressMessages(playbase::pgx.createPGX(
-      counts = counts, samples = samples, contrasts = contrasts,
-      organism = "Human", datatype = "RNA-seq", preprocess = opts,
-      add.gmt = FALSE, convert.hugo = FALSE,
-      filter.genes = FALSE, only.known = FALSE, only.proteincoding = FALSE
-    ))
-  }
-  compute <- function(pgx) {
-    suppressMessages(suppressWarnings(playbase::pgx.computePGX(
-      pgx, max.genes = 500, gx.methods = "trend.limma", gset.methods = c(),
-      extra.methods = c(), do.cluster = FALSE, do.clustergenes = FALSE,
-      do.clustergenesets = FALSE
-    )))
-  }
-
-  pgx <- compute(create(counts, playbase::SAMPLES, playbase::CONTRASTS))
-
-  ## non-vacuity: both removals really fired, so the shapes really do split
-  expect_lt(ncol(pgx$X), ncol(counts))
-  expect_lt(nrow(pgx$X), nrow(counts))
-
-  ## counts is the upload, whole, including dimnames and storage mode
-  expect_identical(pgx$counts, counts)
-
-  ## the shrink is what capped X, and its audit trail names the rows it dropped
-  expect_identical(nrow(pgx$X), 500L)
-  dropped <- strsplit(pgx$filtered[["low.variance"]], ";")[[1]]
-  expect_identical(length(dropped), nrow(counts) - 500L)
-  expect_identical(intersect(dropped, rownames(pgx$X)), character(0))
-
-  ## X's samples and features are a subset of the ones counts still carries
-  expect_true(all(colnames(pgx$X) %in% colnames(pgx$counts)))
-  expect_true(all(rownames(pgx$X) %in% rownames(pgx$counts)))
-
-  ## The design's rows are X's columns, in X's order. pgx.contrastScatter()
-  ## walks the two axes together, and before this they agreed only because the
-  ## sample table happened to be ordered like X (review, UNCONFIRMED cx5).
-  expect_identical(rownames(pgx$model.parameters$exp.matrix), colnames(pgx$X))
-  expect_identical(rownames(pgx$model.parameters$contr.matrix), colnames(pgx$X))
-
-  ## Reanalyse: the computed object seeds the next upload. Round two must land
-  ## on round one, not inside it.
-  re <- compute(create(pgx$counts, pgx$samples, playbase::CONTRASTS))
-  expect_identical(re$counts, counts)
-  expect_identical(dim(re$X), dim(pgx$X))
-  expect_identical(rownames(re$X), rownames(pgx$X))
-})
-
-## Coverage gap (review C1): the test above proves counts survives whole only
-## because it turns filter.genes/only.known/only.proteincoding OFF. Playbase
-## ships with all three TRUE, and all three still cut `counts` inside
-## pgx.createPGX() before compute ever runs: pgx.filterZeroCounts() drops
-## Review C1, resolved as option B (DECISIONS.md D-49): the annotation gates
-## DO narrow pgx$counts, the claims were narrowed to match, and the narrowing
-## itself is tracked as a bead rather than fixed.
+## PGX lifecycle around the direct preprocessing result.
 ##
-## This is a CHARACTERIZATION test: it pins what the code actually does, so
-## that the day someone changes it, they have to come here and say so.
-##
-## Two measured properties matter more than the narrowing itself:
-##   * it is a strict row-SUBSET in the upload's own order -- nothing is
-##     invented, reordered or renamed;
-##   * it CONVERGES. Re-running the filters on their own output is a no-op,
-##     which is why this is a bounded one-step shift and not the compounding
-##     ratchet that playbase-lh8 was on the preprocessing axis.
-test_that("the annotation gates narrow counts once, and converge (C1)", {
-  counts <- as.matrix(playbase::COUNTS)
-  pgx <- suppressMessages(suppressWarnings(playbase::pgx.createPGX(
-    counts = counts, samples = playbase::SAMPLES, contrasts = playbase::CONTRASTS,
-    organism = "Human", datatype = "RNA-seq",
-    add.gmt = FALSE, convert.hugo = FALSE
-    # filter.genes, only.known, only.proteincoding at their shipped defaults.
-  )))
+## Source counts remain literal while X and explicit alignment carry analysis
+## filtering. Tests use annotation-free settings to isolate that contract.
 
-  ## narrowed, and a strict subset in the upload's own order
-  expect_lt(nrow(pgx$counts), nrow(counts))
-  expect_true(all(rownames(pgx$counts) %in% rownames(counts)))
+make_pgx_fixture <- function() {
+  set.seed(21)
+  counts <- matrix(
+    stats::rpois(80 * 8, 50),
+    nrow = 80,
+    dimnames = list(paste0("G", 1:80), paste0("S", 1:8))
+  )
+  counts[1:5, ] <- NA
+  samples <- data.frame(
+    group = rep(c("a", "b"), each = 4),
+    row.names = colnames(counts)
+  )
+  contrasts <- matrix(
+    samples$group,
+    ncol = 1L,
+    dimnames = list(colnames(counts), "b_vs_a")
+  )
+  list(counts = counts, samples = samples, contrasts = contrasts)
+}
+
+create_test_pgx <- function(
+  fixture,
+  options = list(),
+  filter.genes = FALSE,
+  prune.samples = FALSE
+) {
+  defaults <- list(
+    normalize = FALSE,
+    filter_missing = TRUE,
+    filter_threshold = 3,
+    remove_outliers = FALSE
+  )
+  suppressMessages(playbase::pgx.createPGX(
+    counts = fixture$counts,
+    samples = fixture$samples,
+    contrasts = fixture$contrasts,
+    organism = "No organism",
+    datatype = "RNA-seq",
+    preprocess = utils::modifyList(defaults, options),
+    add.gmt = FALSE,
+    filter.genes = filter.genes,
+    only.known = FALSE,
+    only.proteincoding = FALSE,
+    convert.hugo = FALSE,
+    prune.samples = prune.samples
+  ))
+}
+
+test_that("pgx.createPGX preserves counts and persists final metadata", {
+  fixture <- make_pgx_fixture()
+  pgx <- create_test_pgx(fixture)
+
+  expect_identical(pgx$counts, fixture$counts)
+  expect_lt(nrow(pgx$X), nrow(pgx$counts))
+  expect_named(
+    pgx$settings$preprocess,
+    c("alignment", "space", "prior", "layers", "options")
+  )
   expect_identical(
-    rownames(pgx$counts),
-    rownames(counts)[rownames(counts) %in% rownames(pgx$counts)]
+    playbase.preprocess::pp.alignCounts(
+      pgx$counts,
+      pgx$settings$preprocess$alignment,
+      X = pgx$X
+    ) |>
+      dimnames(),
+    dimnames(pgx$X)
   )
-  ## values are the upload's own, untouched
-  expect_identical(pgx$counts, counts[rownames(pgx$counts), colnames(pgx$counts)])
-
-  ## and it converges: feeding the narrowed matrix back cuts nothing further
-  pgx2 <- suppressMessages(suppressWarnings(playbase::pgx.createPGX(
-    counts = pgx$counts, samples = playbase::SAMPLES, contrasts = playbase::CONTRASTS,
-    organism = "Human", datatype = "RNA-seq",
-    add.gmt = FALSE, convert.hugo = FALSE
-  )))
-  expect_identical(rownames(pgx2$counts), rownames(pgx$counts))
 })
 
-test_that("pgx.countScaleMatrix is the one back-transform rule", {
-  set.seed(1)
-  counts <- matrix(rpois(200, 50) + 1, 20, 10,
-    dimnames = list(paste0("g", 1:20), paste0("s", 1:10))
+test_that("count-scale composition follows processed X and explicit alignment", {
+  fixture <- make_pgx_fixture()
+  pgx <- create_test_pgx(fixture)
+  count_scale <- .pgx_count_scale_matrix(pgx)
+
+  expect_identical(dim(count_scale), dim(pgx$X))
+  expect_identical(dimnames(count_scale), dimnames(pgx$X))
+  aligned <- playbase.preprocess::pp.alignCounts(
+    pgx$counts,
+    pgx$settings$preprocess$alignment,
+    X = pgx$X
+  )
+  expect_identical(is.na(count_scale), is.na(aligned))
+})
+
+test_that("lifecycle row filters preserve source counts", {
+  fixture <- make_pgx_fixture()
+  fixture$counts[10, ] <- 0
+  pgx <- create_test_pgx(
+    fixture,
+    options = list(filter_missing = FALSE),
+    filter.genes = TRUE
   )
 
-  ## No provenance record: pgx.ranWithCorrection() says "we do not know", which
-  ## is not "it ran", so the upload is returned untouched. This is the answer
-  ## every object playbase holds today gets (D-37).
-  legacy <- list(counts = counts, X = log2(1 + counts))
-  expect_true(is.na(playbase.preprocess::pgx.ranWithCorrection(legacy)))
-  expect_identical(playbase::pgx.countScaleMatrix(legacy), counts)
-
-  ## A real record, no correction in its history: still the upload.
-  pgx <- playbase.preprocess::pgx.transform(
-    list(counts = counts, X = NULL),
-    to = "log2", prior = 1
+  expect_identical(pgx$counts, fixture$counts)
+  expect_false("G10" %in% rownames(pgx$X))
+  expect_identical(
+    dim(playbase.preprocess::pp.alignCounts(
+      pgx$counts,
+      pgx$settings$preprocess$alignment,
+      X = pgx$X
+    )),
+    dim(pgx$X)
   )
-  expect_false(playbase.preprocess::pgx.ranWithCorrection(pgx))
-  expect_identical(playbase::pgx.countScaleMatrix(pgx), counts)
+})
 
-  ## The same record with a batchCorrect step: the reconstruction, not the
-  ## upload. No verb in either package writes this step today (D-13/D-37), so
-  ## it is built by hand -- the branch is live code, not a branch that cannot
-  ## be reached.
-  pp <- pgx$settings$preprocessing
-  corrected <- pgx
-  corrected$settings$preprocessing <- playbase.preprocess:::new_pgx_preprocessing(
-    space = pp$space, layers = pp$layers, prior = pp$prior,
-    invertible = pp$invertible,
-    history = c(pp$history, list(list(verb = "batchCorrect", method = "ComBat"))),
-    sealed_at = pp$sealed_at, engine = pp$engine
+test_that("lifecycle sample pruning preserves source counts", {
+  fixture <- make_pgx_fixture()
+  fixture$contrasts[8, 1] <- NA
+  pgx <- create_test_pgx(fixture, prune.samples = TRUE)
+
+  expect_identical(pgx$counts, fixture$counts)
+  expect_identical(colnames(pgx$X), colnames(fixture$counts)[1:7])
+  expect_identical(pgx$settings$preprocess$alignment$cols, 1:7)
+})
+
+make_duplicate_pgx <- function(average.duplicated) {
+  counts <- matrix(
+    c(10, 20, 30, 40, 20, 30, 40, 50, 5, 10, 15, 20),
+    nrow = 3L,
+    byrow = TRUE,
+    dimnames = list(c("dup", "dup", "other"), paste0("S", 1:4))
   )
-  expect_true(playbase.preprocess::pgx.ranWithCorrection(corrected))
-  ## T5: pgx.countScaleMatrix() *is*
-  ## `if (isTRUE(ranWithCorrection)) recomputeCounts(pgx) else pgx$counts`, and
-  ## the predicate was just asserted above -- comparing against
-  ## pgx.recomputeCounts(corrected) here re-runs that same true branch against
-  ## itself for zero marginal coverage. Reconstruct the expected counts by hand
-  ## instead: recomputeCounts() inverts log2 with the recorded prior
-  ## (2^X - prior) and rescales each column to the upload's own library size.
-  rc <- pmax(2**corrected$X - pp$prior, 0)
-  expected_counts <- t(t(rc) / colSums(rc, na.rm = TRUE) * colSums(counts, na.rm = TRUE))
-  expect_equal(playbase::pgx.countScaleMatrix(corrected), expected_counts)
+  X <- log2(counts + 1)
+  samples <- data.frame(
+    group = c("a", "a", "b", "b"),
+    row.names = colnames(counts)
+  )
+  contrasts <- matrix(
+    samples$group,
+    ncol = 1L,
+    dimnames = list(colnames(counts), "b_vs_a")
+  )
+  pgx <- suppressMessages(playbase::pgx.createPGX(
+    counts = counts,
+    X = X,
+    samples = samples,
+    contrasts = contrasts,
+    organism = "No organism",
+    datatype = "RNA-seq",
+    preprocess = NULL,
+    average.duplicated = average.duplicated,
+    add.gmt = FALSE,
+    filter.genes = FALSE,
+    only.known = FALSE,
+    only.proteincoding = FALSE,
+    convert.hugo = FALSE,
+    prune.samples = FALSE
+  ))
+  list(counts = counts, X = X, pgx = pgx)
+}
 
-  ## And it refuses rather than guessing when the record cannot be replayed
-  ## against the counts it is handed.
-  broken <- corrected
-  broken$counts <- counts[1:5, , drop = FALSE]
-  expect_error(playbase::pgx.countScaleMatrix(broken), "pgx.alignXtoCounts")
+test_that("caller-supplied X averages duplicates without changing counts", {
+  fixture <- make_duplicate_pgx(TRUE)
+  expected <- playbase.preprocess::pp.deduplicate(
+    fixture$X,
+    method = "average",
+    space = "log2"
+  )
+
+  expect_identical(
+    serialize(fixture$pgx$counts, NULL),
+    serialize(fixture$counts, NULL)
+  )
+  expect_identical(fixture$pgx$X, expected$X)
+  expect_identical(
+    fixture$pgx$settings$preprocess$alignment$rows,
+    list(c(1L, 2L), 3L)
+  )
+})
+
+test_that("caller-supplied X uniquifies duplicates without changing counts", {
+  fixture <- make_duplicate_pgx(FALSE)
+  expected <- playbase.preprocess::pp.deduplicate(
+    fixture$X,
+    method = "unique",
+    space = "log2"
+  )
+
+  expect_identical(
+    serialize(fixture$pgx$counts, NULL),
+    serialize(fixture$counts, NULL)
+  )
+  expect_identical(fixture$pgx$X, expected$X)
+  expect_identical(
+    fixture$pgx$settings$preprocess$alignment$rows,
+    lapply(1:3, as.integer)
+  )
+})
+
+test_that("max-feature bridge subsets X and final metadata together", {
+  fixture <- make_pgx_fixture()
+  pgx <- create_test_pgx(fixture)
+  before <- pgx$counts
+  computed <- suppressMessages(suppressWarnings(playbase::pgx.computePGX(
+    pgx,
+    max.genes = 20,
+    gx.methods = "trend.limma",
+    gset.methods = character(),
+    extra.methods = character(),
+    do.cluster = FALSE,
+    do.clustergenes = FALSE,
+    do.clustergenesets = FALSE
+  )))
+
+  expect_identical(computed$counts, before)
+  expect_identical(nrow(computed$X), 20L)
+  expect_length(computed$settings$preprocess$alignment$rows, 20L)
 })

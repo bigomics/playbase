@@ -6,7 +6,7 @@
 \usage{
 compute_deconvolution(
   pgx,
-  rna.counts = pgx.countScaleMatrix(pgx),
+  rna.counts = .pgx_count_scale_matrix(pgx),
   full = FALSE
 )
 }

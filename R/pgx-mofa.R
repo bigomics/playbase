@@ -173,8 +173,10 @@ mofa.compute <- function(xdata,
   nna
   if (any(nna > 0)) {
     message("[mofa.compute] warning: imputing missing values in X.")
-    xdata[which(nna > 0)] <- lapply(xdata[which(nna > 0)], svdImpute2)
-    ## X <- svdImpute2(X)
+    xdata[which(nna > 0)] <- lapply(
+      xdata[which(nna > 0)],
+      .pgx_impute_svd2
+    )
   }
 
   ## no dups
@@ -2414,7 +2416,7 @@ snf.cluster <- function(xx, pheno = NULL, plot = TRUE) {
   has.inf <- any(sapply(xx, function(x) sum(is.infinite(x)) > 0))
   has.missing <- has.na || has.inf
   if (has.missing) {
-    xx <- lapply(xx, function(x) svdImpute2(x, infinite.na = TRUE))
+    xx <- lapply(xx, .pgx_impute_svd2)
   }
 
   Data <- lapply(xx, t)
@@ -3585,76 +3587,6 @@ mofa.intNMF <- function(datasets, k = NULL, method = "RcppML",
   return(res)
 }
 
-
-#' Impute missing values for a multiomics expression matrix
-#' X. Features must be prefixed with datatype.
-#'
-mofa.imputeMissing <- function(X, method = "SVD2") {
-  xx <- mofa.split_data(X)
-  xx <- lapply(xx, function(x) imputeMissing(x, method = method))
-  impX <- mofa.merge_data(xx)
-  impX[rownames(X), ]
-}
-
-#' Normalize matrix for a multiomics expression matrix X. Features
-#' must be prefixed with datatype.
-#'
-#' See also: normalizeMultiOmics()
-#'
-mofa.normalizeExpression <- function(X, method1 = "maxMedian", method2 = "none") {
-  ## method1="maxMedian";method2="none"
-
-  xx <- mofa.split_data(X)
-
-  ## First normalization normalizes samples within each datatype but
-  ## not (yet) between datatypes.
-  xx <- lapply(xx, function(x) normalizeExpression(x, method = method1))
-
-  ## Second normalization
-  normX <- NULL
-  if (method2 != "none") {
-    if (method2 == "median") {
-      ## Median normalization on datatypes. This will effectively
-      ## equalize the median for each datatype.
-      xmedian <- sapply(xx, function(x) mean(matrixStats::colMedians(x, na.rm = TRUE)))
-      xx <- lapply(xx, function(x) x - median(x, na.rm = TRUE) + mean(xmedian))
-    }
-    if (method2 == "combat") {
-      ## ComBat normalization on datatypes. This will effectively
-      ## equalize the mean and SD of each datatype in each sample.
-      normX <- mofa.merge_data(xx)
-      dtype <- mofa.get_prefix(rownames(normX))
-      normX <- t(sva::ComBat(t(normX), batch = dtype))
-    }
-    if (method2 == "quantile") {
-      ## Quantile normalization on datatypes. We will need to cbind
-      ## and augment the datatypes so the number of features are
-      ## equal. We do this by repeating rows (so distribution not
-      ## affected). Then after quantile normalization we unpack again.
-      nr <- max(sapply(xx, nrow))
-      mx <- list()
-      i <- 1
-      for (i in 1:length(xx)) {
-        n <- ceiling(nr / nrow(xx[[i]]))
-        mx[[i]] <- do.call(rbind, rep(list(xx[[i]]), n))
-        mx[[i]] <- head(mx[[i]], nr)
-        dim(mx[[i]])
-      }
-      mxx <- do.call(cbind, mx)
-      mxx <- limma::normalizeQuantiles(mxx)
-      for (i in 1:length(xx)) {
-        kk <- ((i - 1) * ncol(X) + 1):(i * ncol(X))
-        jj <- 1:nrow(xx[[i]])
-        mx[[i]] <- mxx[jj, kk]
-      }
-      names(mx) <- names(xx)
-      normX <- mofa.merge_data(mx)
-    }
-  }
-  if (is.null(normX)) normX <- mofa.merge_data(xx)
-  normX <- normX[rownames(X), ]
-  return(normX)
-}
 
 ##----------------------------------------------------------------------
 ##----------------------------------------------------------------------

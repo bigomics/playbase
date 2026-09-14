@@ -300,7 +300,7 @@ pgx.supercell <- function(counts,
                           nvargenes = 1000,
                           log.transform = TRUE) {
   if (log.transform) { ## supercell uses log2 matrix
-    X <- logCPM(counts, total = 1e4)
+    X <- .pgx_log_cpm(counts, total = 1e4)
   } else {
     X <- counts
   }
@@ -991,7 +991,7 @@ pgx.createSingleCellPGX <- function(counts,
   colnames(contrasts2) <- gsub("[ ]", "_", colnames(contrasts2))
 
   ## single-cell specific normalization (10k)
-  X <- logCPM(counts2, total = 1e4, prior = 1)
+  X <- .pgx_log_cpm(counts2, total = 1e4, prior = 1)
 
   pgx <- pgx.createPGX(
     counts = counts2,

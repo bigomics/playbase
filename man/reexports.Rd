@@ -3,30 +3,16 @@
 \docType{import}
 \name{reexports}
 \alias{reexports}
-\alias{betaToM}
-\alias{detectOutlierSamples}
-\alias{getPrior}
-\alias{imputeMissing}
-\alias{imputeMissing.mox}
-\alias{is.multiomics}
-\alias{log1s}
-\alias{logCPM}
-\alias{mToBeta}
-\alias{maxMedianNormalization}
-\alias{maxSumNormalization}
-\alias{mofa.get_prefix}
-\alias{nmfImpute}
-\alias{nmfImpute2}
-\alias{normalizeExpression}
-\alias{normalizeMethylation}
-\alias{normalizeMultiOmics}
-\alias{normalizeRLE}
-\alias{normalizeTMM}
-\alias{perseusImpute}
-\alias{pgx.countNormalization}
-\alias{plotOutlierScores}
-\alias{referenceNormalization}
-\alias{svdImpute2}
+\alias{pp.alignCounts}
+\alias{pp.batchCorrect}
+\alias{pp.convertSpace}
+\alias{pp.countScaleMatrix}
+\alias{pp.deduplicate}
+\alias{pp.filterFeatures}
+\alias{pp.impute}
+\alias{pp.normalize}
+\alias{pp.removeOutliers}
+\alias{pp.toCountScale}
 \title{Objects exported from other packages}
 \keyword{internal}
 \description{
@@ -34,6 +20,6 @@ These objects are imported from other packages. Follow the links
 below to see their documentation.
 
 \describe{
-  \item{playbase.preprocess}{\code{\link[playbase.preprocess]{betaToM}}, \code{\link[playbase.preprocess]{detectOutlierSamples}}, \code{\link[playbase.preprocess]{getPrior}}, \code{\link[playbase.preprocess]{imputeMissing}}, \code{\link[playbase.preprocess]{imputeMissing.mox}}, \code{\link[playbase.preprocess]{is.multiomics}}, \code{\link[playbase.preprocess]{log1s}}, \code{\link[playbase.preprocess]{logCPM}}, \code{\link[playbase.preprocess]{maxMedianNormalization}}, \code{\link[playbase.preprocess]{maxSumNormalization}}, \code{\link[playbase.preprocess]{mofa.get_prefix}}, \code{\link[playbase.preprocess]{mToBeta}}, \code{\link[playbase.preprocess]{nmfImpute}}, \code{\link[playbase.preprocess]{nmfImpute2}}, \code{\link[playbase.preprocess]{normalizeExpression}}, \code{\link[playbase.preprocess]{normalizeMethylation}}, \code{\link[playbase.preprocess]{normalizeMultiOmics}}, \code{\link[playbase.preprocess]{normalizeRLE}}, \code{\link[playbase.preprocess]{normalizeTMM}}, \code{\link[playbase.preprocess]{perseusImpute}}, \code{\link[playbase.preprocess]{pgx.countNormalization}}, \code{\link[playbase.preprocess]{plotOutlierScores}}, \code{\link[playbase.preprocess]{referenceNormalization}}, \code{\link[playbase.preprocess]{svdImpute2}}}
+  \item{playbase.preprocess}{\code{\link[playbase.preprocess]{pp.alignCounts}}, \code{\link[playbase.preprocess]{pp.batchCorrect}}, \code{\link[playbase.preprocess]{pp.convertSpace}}, \code{\link[playbase.preprocess]{pp.countScaleMatrix}}, \code{\link[playbase.preprocess]{pp.deduplicate}}, \code{\link[playbase.preprocess]{pp.filterFeatures}}, \code{\link[playbase.preprocess]{pp.impute}}, \code{\link[playbase.preprocess]{pp.normalize}}, \code{\link[playbase.preprocess]{pp.removeOutliers}}, \code{\link[playbase.preprocess]{pp.toCountScale}}}
 }}
 

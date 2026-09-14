@@ -36,15 +36,10 @@ compute_extra <- function(pgx, extra = c(
   message("[pgx.computePGX: compute_extra] pgx.dir = ", pgx.dir)
   message("[pgx.computePGX: compute_extra] libx.dir = ", libx.dir)
 
-  ## The one back-transform rule (D-07), the same one both consumers default to.
-  ## It is named here rather than left to those defaults because the rownames
-  ## are rewritten below before the matrix is handed on, and it is built only
-  ## when one of the two is actually being run: the rule refuses rather than
-  ## guesses, and an object it would decline must still be able to compute a
-  ## word cloud.
+  ## Build the aligned downstream matrix before feature names are rewritten.
   rna.counts <- NULL
   if (any(c("deconv", "infer") %in% extra)) {
-    rna.counts <- pgx.countScaleMatrix(pgx)
+    rna.counts <- .pgx_count_scale_matrix(pgx)
 
     # If working on non-human species, use homologs. The reference sets
     # used below (deconvolution signatures, cell-cycle/gender markers)
@@ -367,7 +362,7 @@ compute_extra <- function(pgx, extra = c(
 #' deconv <- compute_deconvolution(pgx)
 #' }
 #' @export
-compute_deconvolution <- function(pgx, rna.counts = pgx.countScaleMatrix(pgx), full = FALSE) {
+compute_deconvolution <- function(pgx, rna.counts = .pgx_count_scale_matrix(pgx), full = FALSE) {
   ## list of reference matrices
   refmat <- list()
   refmat[["Immune cell (LM22)"]] <- playdata::LM22
@@ -427,7 +422,7 @@ compute_deconvolution <- function(pgx, rna.counts = pgx.countScaleMatrix(pgx), f
 #' deconv <- compute_cellcycle_gender(pgx)
 #' }
 #' @export
-compute_cellcycle_gender <- function(pgx, rna.counts = pgx.countScaleMatrix(pgx)) {
+compute_cellcycle_gender <- function(pgx, rna.counts = .pgx_count_scale_matrix(pgx)) {
   if (!is.null(pgx$organism)) {
     is.human <- (tolower(pgx$organism) == "human")
   } else {

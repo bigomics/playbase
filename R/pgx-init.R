@@ -96,15 +96,7 @@ pgx.initialize <- function(pgx, progress=NULL) {
 
   ## for COMPATIBILITY: if no counts, estimate from X
   ##
-  ## This is NOT a second back-transform rule competing with D-07's. Both of
-  ## pgx.countScaleMatrix()'s branches read `pgx$counts` -- the upload, or the
-  ## reconstruction aligned to it -- and this branch exists precisely because
-  ## the object has none. Nothing can be inverted here; what follows is an
-  ## ESTIMATE of a count scale for a pre-counts object, and the prior it assumes
-  ## is a guess, not a recovered value. `1` is the guess it has always made, and
-  ## the only one available: the object carries no preprocessing record to read a
-  ## prior from, and getPrior()'s smallest-non-zero rule needs the counts this
-  ## branch is standing in for.
+  ## Old objects without source counts can only carry an estimated count scale.
   if (is.null(pgx$counts)) {
     message("WARNING:: no counts table. estimating from X assuming prior = 1\n")
     pgx$counts <- pmax(2**pgx$X - 1, 0)

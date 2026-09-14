@@ -605,13 +605,8 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 
   ## global row clustering if no split
   if (cluster_rows && !do.split && nrow(gx) > 1) {
-    is.mox <- is.multiomics(rownames(gx))
     if (any(is.na(gx))) {
-      if (is.mox) {
-        gx2 <- imputeMissing.mox(gx, method = "SVD2")
-      } else {
-        gx2 <- imputeMissing(gx, method = "SVD2")
-      }
+      gx2 <- .pgx_impute_svd2(gx)
       cluster_rows <- as.dendrogram(hclust(dist(gx2)))
       rm(gx2)
     } else {
