@@ -110,12 +110,16 @@ defaults <- list(
   meth_type = NULL
 )
 
-## Assert pgx.preprocess() == app reference for a given option set. If computing
-## the reference errors in this environment (missing optional dep), skip.
+## Assert pgx.preprocess() == app reference for a given option set. ref_normalize()
+## calls the very functions under test (getPrior, imputeMissing, normalizeExpression,
+## detectOutlierSamples, mToBeta, normalizeMultiOmics) -- every optional package it
+## can reach is a hard Import of playbase, not a Suggests, so a reference error here
+## means one of those functions broke, not a missing dependency (T4). A skip would
+## make this harness fail open; fail loud instead.
 expect_parity <- function(counts, samples, contrasts, opt) {
   o <- utils::modifyList(defaults, opt)
-  ref <- tryCatch(ref_normalize(counts, samples, contrasts, opt = o), error = function(e) e)
-  if (inherits(ref, "error")) testthat::skip(paste("reference unavailable:", conditionMessage(ref)))
+  ref <- testthat::expect_no_error(ref_normalize(counts, samples, contrasts, opt = o))
+  if (is.null(ref)) return(invisible())
   got <- pgx.preprocess(counts, samples, contrasts, options = o)
   testthat::expect_equal(got$X, ref$X, tolerance = 1e-8)
   ## `counts` is no longer cut down to `X` (D-24/D-39): it comes back at the
@@ -190,8 +194,9 @@ test_that("pgx.preprocess reproduces outlier-sample removal", {
 ## against.
 expect_preview_parity <- function(counts, samples, contrasts, opt) {
   o <- utils::modifyList(defaults, opt)
-  ref <- tryCatch(ref_normalize(counts, samples, contrasts, opt = o), error = function(e) e)
-  if (inherits(ref, "error")) testthat::skip(paste("reference unavailable:", conditionMessage(ref)))
+  ## T4: fail loud on a reference error rather than skip -- see expect_parity() above.
+  ref <- testthat::expect_no_error(ref_normalize(counts, samples, contrasts, opt = o))
+  if (is.null(ref)) return(invisible())
   stage <- function(...) {
     pgx.preprocess(counts, samples, contrasts,
       options = utils::modifyList(o, list(...)))

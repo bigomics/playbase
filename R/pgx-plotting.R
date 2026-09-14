@@ -1831,8 +1831,13 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
   if (is.numeric(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
   exp.matrix <- pgx$model.parameters$exp.matrix
   ct <- exp.matrix[, contrast]
-  ii <- which(ct < 0)
-  jj <- which(ct > 0)
+  ## The design's rows are samples and so are the expression matrices' columns,
+  ## but they are two different axes: the design spans the samples that could be
+  ## fitted, the matrices span the samples that have values, and outlier removal
+  ## can leave the two neither equal nor equally ordered (D-24). Name the sides
+  ## of the contrast rather than counting into them.
+  ii <- rownames(exp.matrix)[which(ct < 0)]
+  jj <- rownames(exp.matrix)[which(ct > 0)]
   if (level == "gene") {
     x0 <- rowMeans(pgx$X[, ii, drop = FALSE], na.rm = TRUE)
     x1 <- rowMeans(pgx$X[, jj, drop = FALSE], na.rm = TRUE)

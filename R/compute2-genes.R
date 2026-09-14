@@ -88,12 +88,14 @@ compute_testGenes <- function(pgx,
   ## notice original counts will not be affected
   ss <- names(stat.group)
   gg <- intersect(rownames(pgx$X), rownames(pgx$counts))
-  ## edgeR and DESeq2 need count scale. Once batch correction has run, X no
-  ## longer corresponds to pgx$counts, so the count-scale matrix is derived
-  ## from X rather than persisted onto the object (playbase-lh8). That choice
-  ## is `pgx.countScaleMatrix()`'s to make, here and at the two signature sites
-  ## alike (D-07); the two branches differ in shape, which is what `gg`/`ss` is
-  ## for.
+  ## edgeR and DESeq2 need count scale, and which matrix that is is
+  ## `pgx.countScaleMatrix()`'s call to make -- here and at the two signature
+  ## sites alike (D-07). It is not made here, and it is not second-guessed here
+  ## either: on an object playbase batch-corrected it returns the uncorrected
+  ## upload and warns that it had to, because the correction left no record to
+  ## invert (playbase-lh8). `X` below is the corrected matrix, so that warning
+  ## is the notice that these two arguments are no longer the same data. The two
+  ## branches also differ in shape, which is what `gg`/`ss` is for.
   fit.counts <- pgx.countScaleMatrix(pgx)
   counts <- fit.counts[gg, ss, drop = FALSE]
   samples <- pgx$samples[ss, ]
@@ -107,6 +109,15 @@ compute_testGenes <- function(pgx,
     if ("Differentially methylated regions" %in% pgx$dma) {
       message("[playbase::compute_testGenes] Methylomics: DMRs...")
 
+      ## The one exception to D-39's "compute never narrows `counts`", named
+      ## here because it is not a narrowing: the DMR path moves the whole object
+      ## off CpG probes and onto regions. `counts`, `genes` and `X` change
+      ## feature space together and an object left half in each is incoherent,
+      ## so `pgx$counts` has to be rewritten rather than left at the upload.
+      ## What must stay true is that the two mergeCpG() calls land in the SAME
+      ## space: they run over the same `gg` rows, so they collapse to the same
+      ## regions in the same order, and the check below is what keeps that true
+      ## if either side is edited.
       vv <- range(counts, na.rm = TRUE)
       is.beta <- (vv[1] >= 0 & vv[2] <= 1) ## original counts
       MG <- mergeCpG(data = counts, genes = pgx$genes)
@@ -120,6 +131,15 @@ compute_testGenes <- function(pgx,
       pgx$genes <- MG$genes
       rm(MG)
       gc()
+
+      if (!identical(rownames(pgx$counts), rownames(pgx$genes))) {
+        stop(
+          "[compute_testGenes] FATAL: methylomics DMR re-basing left `counts` ",
+          "and `genes` in different feature spaces (", nrow(pgx$counts), " vs ",
+          nrow(pgx$genes), " regions). The two mergeCpG() calls must collapse ",
+          "to the same regions."
+        )
+      }
     } else {
       counts <- X <- betaToM(counts)
     }

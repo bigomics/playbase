@@ -191,6 +191,12 @@ pgx.clusterSamples <- function(pgx,
     message("[pgx.clusterSamples] Using normalized X pgx matrix (pgx$X).")
     X <- pgx$X
   } else {
+    ## `counts` can span samples that `X` does not (D-24), so positions built
+    ## from it can disagree with the rest of the object -- but not here: this
+    ## branch is reached only when the object has no `X` at all, which leaves
+    ## `counts` as the only expression matrix it owns and its samples as the
+    ## only sample set there is. The positions are named, and every reader
+    ## (pgx.scatterPlot) indexes them by name.
     message("[pgx.clusterSamples] Using logCPM(pgx$counts)...")
     X <- logCPM(pgx$counts, total = NULL)
   }

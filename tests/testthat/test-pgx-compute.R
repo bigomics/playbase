@@ -137,12 +137,63 @@ test_that("pgx.computePGX shrinks X and leaves counts at the upload's shape", {
   expect_true(all(colnames(pgx$X) %in% colnames(pgx$counts)))
   expect_true(all(rownames(pgx$X) %in% rownames(pgx$counts)))
 
+  ## The design's rows are X's columns, in X's order. pgx.contrastScatter()
+  ## walks the two axes together, and before this they agreed only because the
+  ## sample table happened to be ordered like X (review, UNCONFIRMED cx5).
+  expect_identical(rownames(pgx$model.parameters$exp.matrix), colnames(pgx$X))
+  expect_identical(rownames(pgx$model.parameters$contr.matrix), colnames(pgx$X))
+
   ## Reanalyse: the computed object seeds the next upload. Round two must land
   ## on round one, not inside it.
   re <- compute(create(pgx$counts, pgx$samples, playbase::CONTRASTS))
   expect_identical(re$counts, counts)
   expect_identical(dim(re$X), dim(pgx$X))
   expect_identical(rownames(re$X), rownames(pgx$X))
+})
+
+## Coverage gap (review C1): the test above proves counts survives whole only
+## because it turns filter.genes/only.known/only.proteincoding OFF. Playbase
+## ships with all three TRUE, and all three still cut `counts` inside
+## pgx.createPGX() before compute ever runs: pgx.filterZeroCounts() drops
+## Review C1, resolved as option B (DECISIONS.md D-49): the annotation gates
+## DO narrow pgx$counts, the claims were narrowed to match, and the narrowing
+## itself is tracked as a bead rather than fixed.
+##
+## This is a CHARACTERIZATION test: it pins what the code actually does, so
+## that the day someone changes it, they have to come here and say so.
+##
+## Two measured properties matter more than the narrowing itself:
+##   * it is a strict row-SUBSET in the upload's own order -- nothing is
+##     invented, reordered or renamed;
+##   * it CONVERGES. Re-running the filters on their own output is a no-op,
+##     which is why this is a bounded one-step shift and not the compounding
+##     ratchet that playbase-lh8 was on the preprocessing axis.
+test_that("the annotation gates narrow counts once, and converge (C1)", {
+  counts <- as.matrix(playbase::COUNTS)
+  pgx <- suppressMessages(suppressWarnings(playbase::pgx.createPGX(
+    counts = counts, samples = playbase::SAMPLES, contrasts = playbase::CONTRASTS,
+    organism = "Human", datatype = "RNA-seq",
+    add.gmt = FALSE, convert.hugo = FALSE
+    # filter.genes, only.known, only.proteincoding at their shipped defaults.
+  )))
+
+  ## narrowed, and a strict subset in the upload's own order
+  expect_lt(nrow(pgx$counts), nrow(counts))
+  expect_true(all(rownames(pgx$counts) %in% rownames(counts)))
+  expect_identical(
+    rownames(pgx$counts),
+    rownames(counts)[rownames(counts) %in% rownames(pgx$counts)]
+  )
+  ## values are the upload's own, untouched
+  expect_identical(pgx$counts, counts[rownames(pgx$counts), colnames(pgx$counts)])
+
+  ## and it converges: feeding the narrowed matrix back cuts nothing further
+  pgx2 <- suppressMessages(suppressWarnings(playbase::pgx.createPGX(
+    counts = pgx$counts, samples = playbase::SAMPLES, contrasts = playbase::CONTRASTS,
+    organism = "Human", datatype = "RNA-seq",
+    add.gmt = FALSE, convert.hugo = FALSE
+  )))
+  expect_identical(rownames(pgx2$counts), rownames(pgx$counts))
 })
 
 test_that("pgx.countScaleMatrix is the one back-transform rule", {
@@ -179,10 +230,16 @@ test_that("pgx.countScaleMatrix is the one back-transform rule", {
     sealed_at = pp$sealed_at, engine = pp$engine
   )
   expect_true(playbase.preprocess::pgx.ranWithCorrection(corrected))
-  expect_identical(
-    playbase::pgx.countScaleMatrix(corrected),
-    playbase.preprocess::pgx.recomputeCounts(corrected)
-  )
+  ## T5: pgx.countScaleMatrix() *is*
+  ## `if (isTRUE(ranWithCorrection)) recomputeCounts(pgx) else pgx$counts`, and
+  ## the predicate was just asserted above -- comparing against
+  ## pgx.recomputeCounts(corrected) here re-runs that same true branch against
+  ## itself for zero marginal coverage. Reconstruct the expected counts by hand
+  ## instead: recomputeCounts() inverts log2 with the recorded prior
+  ## (2^X - prior) and rescales each column to the upload's own library size.
+  rc <- pmax(2**corrected$X - pp$prior, 0)
+  expected_counts <- t(t(rc) / colSums(rc, na.rm = TRUE) * colSums(counts, na.rm = TRUE))
+  expect_equal(playbase::pgx.countScaleMatrix(corrected), expected_counts)
 
   ## And it refuses rather than guessing when the record cannot be replayed
   ## against the counts it is handed.

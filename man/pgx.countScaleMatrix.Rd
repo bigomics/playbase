@@ -10,7 +10,9 @@ pgx.countScaleMatrix(pgx)
 \item{pgx}{A pgx-shaped list carrying `counts` and `X`.}
 }
 \value{
-A matrix on the count scale.
+A matrix on the count scale. Warns, and returns `pgx$counts`, when
+  the object records a batch correction the preprocessing record cannot
+  invert.
 }
 \description{
 The one back-transform rule (D-07). Everything that needs count-scale values
@@ -26,9 +28,20 @@ where normalization and imputation touched the data.
 
 [pgx.ranWithCorrection()] answers `NA` on an object that carries no
 preprocessing record, and "we do not know" is not "it ran" -- so the upload
-is used. playbase's own correction runs outside the record (D-37) and writes
-nothing to it, so on the objects it holds today the answer is always the
-upload and this rule is inert. That is a gap in the record, not in the rule.
+is used. playbase's own batch correction runs outside the record (D-37) and
+writes nothing to it, so on every object playbase creates today the answer is
+the upload. That is a gap in the record, not in the rule.
+
+The gap is not silent. `pgx.createPGX()` stamps `settings$batch.correct.method`
+where it corrects, so this function can tell the two record-less cases apart:
+an object that was never corrected, where the upload is simply the right
+answer, and an object whose `X` was corrected by a step the record cannot
+invert, where the upload is the only answer available but no longer the same
+data `X` holds. The second **warns**, because it splits a result by method
+rather than by contrast: `edgeR`/`DESeq2` and the deconvolution mixture come
+here and get uncorrected values, while `trend.limma` and `ttest` read the
+corrected `pgx$X` directly. Closing it needs the correction to reach the
+record; until then the split is visible instead of silent.
 
 The two branches agree on scale, **not** on shape: the reconstruction has
 `X`'s rows and samples, the upload has its own (D-24). A caller that needs

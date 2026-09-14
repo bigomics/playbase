@@ -120,6 +120,12 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
   ## ----------------------------------------
   ## augment
   ## ----------------------------------------
+  ## Keep the phenotype as it stands before augmentation. It is the only copy
+  ## that carries all of the work above -- the discretisation, the cut to
+  ## pgx$X's samples, select_samples and the NA drop -- and the single-pass
+  ## MOFA branch below puts it back.
+  y0 <- y
+
   ## augment to at least 100 samples per level :)
   ii <- tapply(1:length(y), y, function(ii) {
     sample(c(ii, ii), size = 100, replace = TRUE)
@@ -155,10 +161,11 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
       sel <- head(intersect(rownames(P), rownames(X)), 4 * nfeatures) ## TUNE TOP
       X <- X[sel, ]
     } else {
-      ## Only single pass with MOFA is not using augmented data.
+      ## Only single pass with MOFA is not using augmented data. It also ranks
+      ## over MOFA's whole feature universe, which is wider than the top-SD
+      ## reduction above, so the unreduced matrix goes back too.
       X <- pgx$X
-      y <- pgx$samples[, pheno]
-      names(y) <- rownames(pgx$samples)
+      y <- y0
     }
   }
 

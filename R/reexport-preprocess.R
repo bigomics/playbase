@@ -15,6 +15,17 @@
 ## arguments on the way out, so it gets a real wrapper below rather than a bare
 ## delegation.
 
+## Imported for internal use by pgx-compute.R, NOT re-exported. These four are
+## called unqualified from playbase's own namespace, which resolves through the
+## imports env -- `Depends:` only attaches on library(), and the production
+## worker reaches us via playbase::pgx.createPGX() off a bare Rscript, which
+## loads without attaching. Without these directives that path cannot run.
+#' @importFrom playbase.preprocess pgx.alignXtoCounts
+#' @importFrom playbase.preprocess pgx.ranWithCorrection
+#' @importFrom playbase.preprocess pgx.recomputeCounts
+#' @importFrom playbase.preprocess pgx.removeLowVariance
+NULL
+
 #' @importFrom playbase.preprocess betaToM
 #' @export
 playbase.preprocess::betaToM
