@@ -1,9 +1,25 @@
 library(Matrix)
 
+# Returns the packaged gene-test fixture with explicit preprocessing metadata.
+# Its normalized matrix is log2 CPM with prior one and identity alignment.
+# The packaged object remains unchanged.
+make_compute_test_genes_pgx <- function() {
+  pgx <- playbase::PGX_CREATE
+  pgx$settings <- list(
+    preprocess = .pgx_identity_preprocess_metadata(
+      pgx$counts,
+      pgx$X,
+      space = "log2",
+      prior = 1
+    )
+  )
+  pgx
+}
+
 #' Test for compute_testGenes
 test_that("compute_testGenes returns correct number of genes", {
   # Call mock data
-  pgx <- playbase::PGX_CREATE
+  pgx <- make_compute_test_genes_pgx()
   ## make proper contrast matrix
   contr.matrix <- pgx$contrasts
   contr.values <- unique(as.vector(contr.matrix))
@@ -41,7 +57,7 @@ test_that("compute_testGenes returns correct number of genes", {
 #' Test for compute_testGenesSingleOmics
 test_that("compute_testGenesSingleOmics runs without errors", {
   # Call mock data
-  pgx <- playbase::PGX_CREATE
+  pgx <- make_compute_test_genes_pgx()
   ## make proper contrast matrix
   contr.matrix <- pgx$contrasts
   contr.values <- unique(as.vector(contr.matrix))

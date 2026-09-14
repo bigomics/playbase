@@ -29,6 +29,15 @@ test_that("compute_cellcycle_gender adds cell cycle and gender data", {
   pgx$counts <- pgx$counts[!duplicated(rownames(pgx$counts)), , drop = FALSE]
   pgx$genes <- pgx$genes[!pgx$genes$symbol == "", , drop = FALSE]
   pgx$counts <- pgx$counts[rownames(pgx$counts) %in% pgx$genes$symbol, , drop = FALSE]
+  pgx$X <- pgx$counts
+  pgx$settings <- list(
+    preprocess = .pgx_identity_preprocess_metadata(
+      pgx$counts,
+      pgx$X,
+      space = "counts",
+      prior = NA_real_
+    )
+  )
 
   result <- playbase::compute_cellcycle_gender(pgx)
   expect_cell_cycle_stages <- c(

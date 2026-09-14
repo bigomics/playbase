@@ -80,7 +80,6 @@ outlier_mofa_pgx <- local({
       samples = samples,
       contrasts = playbase::CONTRASTS,
       options = list(
-        datatype = "multi-omics",
         norm_method = "CPM",
         remove_outliers = TRUE,
         outlier_threshold = 3,
