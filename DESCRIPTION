@@ -100,6 +100,7 @@ Imports:
     MSnbase,
     MultiAssayExperiment,
     nipalsMCIA,
+    NPM,
     OlinkAnalyze,
     omicsai,
     org.Hs.eg.db,
@@ -198,5 +199,5 @@ Remotes:
     DeconRNASeq=url::https://bioconductor.org/packages/3.18/bioc/src/contrib/DeconRNASeq_1.44.0.tar.gz,
     plaid=url::https://github.com/bigomics/plaid/archive/HEAD.zip,
     grr=url::https://cran.r-project.org/src/contrib/Archive/grr/grr_0.9.1.tar.gz,
-    metaLINCS=url::https://github.com/bigomics/metaLINCS/archive/HEAD.zip
-Config/roxygen2/version: 8.1.0
+    metaLINCS=url::https://github.com/bigomics/metaLINCS/archive/HEAD.zip,
+    NPM=url::https://github.com/bigomics/NPM/archive/HEAD.zip
