@@ -4,9 +4,11 @@
 \alias{read_spectronaut_hPTM}
 \title{Read Spectronaut output hPTM abundance data file.}
 \usage{
-read_spectronaut_hPTM(file)
+read_spectronaut_hPTM(file, use_ptm_norm = TRUE)
 }
 \arguments{
+\item{use_ptm_norm}{Boolean. Use PTM abudances normalized to the global proteome. Default TRUE.}
+
 \item{Path}{to Spectronaut output hPTM abundance file.}
 }
 \value{

@@ -26,9 +26,12 @@ compute_testGenesets <- function(pgx,
     stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
   }
 
-  if (is.null(pgx$genes$human_ortholog)) {
+  if (is.null(pgx$genes$ortholog)) {
     # this is needed in case the species is human, and we dont have the homolog column or if we have an old pgx
     # which will ensure consistency between old and new pgx
+    pgx$genes$ortholog <- NA
+  }
+  if (is.null(pgx$genes$human_ortholog)) {
     pgx$genes$human_ortholog <- NA
   }
 
@@ -90,9 +93,9 @@ compute_testGenesets <- function(pgx,
   }
 
   if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {
-    X1 <- playbase::betaToM(X1) 
+    X1 <- playbase::betaToM(X1)
   }
-  
+
   gset.meta <- gset.fitContrastsWithAllMethods(
     gmt = gmt,
     X = X1,

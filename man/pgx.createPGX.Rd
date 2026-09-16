@@ -45,6 +45,9 @@ pgx.createPGX(
   remove.xxl = TRUE,
   remove.outliers = TRUE,
   add.gmt = TRUE,
+  ortholog_species = "Human",
+  include_default_gmt = TRUE,
+  species_go = NULL,
   settings = list(),
   sc_compute_settings = list()
 )

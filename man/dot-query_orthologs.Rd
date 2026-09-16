@@ -9,7 +9,8 @@ multi-methods search use .convert_orthologs()}
   genes,
   species,
   method = c("homologene", "gprofiler", "babelgene", "gprofiler2"),
-  target_species = "hsapiens",
+  target_species = "Human",
+  batch_size = ORTHOLOG_BATCH_SIZE,
   verbose = 1
 )
 }

@@ -33,7 +33,7 @@
 ##       BRCA1    | TCGA_BRCA::TCGA-A1-A0SB  | 234.1   | 0.78
 ##       ...      | ...                      | ...     | ...
 ##
-##   - Genes are human orthologs (converted via pgx$genes$human_ortholog)
+##   - Genes are human orthologs (converted via pgx$genes$ortholog)
 ##   - Samples are prefixed with dataset name: "dataset::original_sample_id"
 ##   - Zeros ARE stored (distinguish from missing data which is NA)
 ##   - Z-scores are computed per-dataset from log-scaled X: (X - gene_mean) / gene_sd

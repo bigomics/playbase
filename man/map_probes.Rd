@@ -3,7 +3,7 @@
 \name{map_probes}
 \alias{map_probes}
 \title{Map any feature identifier to other feature column. Warning does
-not retain original match order. Default mapping to rownames.}
+not retain original match order or length. Default mapping to rownames.}
 \usage{
 map_probes(
   annot,
@@ -15,5 +15,5 @@ map_probes(
 }
 \description{
 Map any feature identifier to other feature column. Warning does
-not retain original match order. Default mapping to rownames.
+not retain original match order or length. Default mapping to rownames.
 }

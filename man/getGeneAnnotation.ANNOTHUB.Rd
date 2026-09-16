@@ -10,8 +10,6 @@ getGeneAnnotation.ANNOTHUB(
   use.ah = NULL,
   probe_type = NULL,
   second.pass = TRUE,
-  bridge = NULL,
-  bridge_species = NULL,
   verbose = TRUE
 )
 }

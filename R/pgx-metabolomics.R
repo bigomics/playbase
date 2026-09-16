@@ -412,7 +412,7 @@ getMetaboliteAnnotation <- function(probes,
   df <- data.frame(
     feature = probes,
     symbol = rep(NA, length(probes)),
-    human_ortholog = rep(NA, length(probes)),
+    ortholog = rep(NA, length(probes)),
     gene_title = metadata$name,
     gene_alias = metadata$name, ## save original
     source = metadata$source,
@@ -451,7 +451,7 @@ getMetaboliteAnnotation <- function(probes,
   ## but if CHEBI not exists any other ID. If no ID exists we fill
   ## with '{feature}'
   df$symbol <- idtable$mapping_ID
-  df$human_ortholog <- df$HMDB_ID ## human?
+  df$ortholog <- df$HMDB_ID ## human?
 
   ## Fill empty symbols with something. Many lipids are not mapped to
   ## our standard ChEBI id.

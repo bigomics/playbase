@@ -165,7 +165,6 @@ pgx.createPGX <- function(counts,
                           samples,
                           contrasts,
                           organism,
-                          ortholog_species = "hsapiens",
                           custom.geneset = NULL,
                           annot_table = NULL,
                           max.genesets = 5000,
@@ -200,6 +199,8 @@ pgx.createPGX <- function(counts,
                           remove.xxl = TRUE, ## DEPRECATED
                           remove.outliers = TRUE, ## DEPRECATED
                           add.gmt = TRUE,
+                          ortholog_species = "Human",
+                          include_default_gmt = TRUE,
                           species_go = NULL,
                           settings = list(),
                           sc_compute_settings = list()) {
@@ -491,7 +492,7 @@ pgx.createPGX <- function(counts,
     ii <- match(rownames(pgx$counts), rownames(pgx$genes))
     pgx$genes <- pgx$genes[ii, , drop = FALSE]
   }
-  
+
   ## -------------------------------------------------------------------
   ## Filter genes
   ## -------------------------------------------------------------------
@@ -526,7 +527,7 @@ pgx.createPGX <- function(counts,
   if (pgx$datatype == "methylomics" & remove.xy.probes) {
     kk <- intersect(c("chr", "map"), colnames(pgx$genes))[1]
     if (length(kk) > 0) {
-      jj <- grep("chrX|chrY|^X|^Y", pgx$genes[,kk], ignore.case = TRUE)
+      jj <- grep("chrX|chrY|^X|^Y", pgx$genes[, kk], ignore.case = TRUE)
       if (length(jj) > 0) {
         message("[pgx.createPGX] Methylomics: removing ", length(jj), " X- & Y-linked CpG probes...")
         pgx$counts <- pgx$counts[-jj, , drop = FALSE]
@@ -579,8 +580,13 @@ pgx.createPGX <- function(counts,
     message("[pgx.createPGX] WARNING: empty GMT matrix. No gene sets. ")
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
   } else {
-    pgx <- pgx.add_GMT(pgx = pgx, custom.geneset = custom.geneset,
-      max.genesets = max.genesets, species_go = species_go)
+    pgx <- pgx.add_GMT(
+      pgx = pgx,
+      custom.geneset = custom.geneset,
+      max.genesets = max.genesets,
+      include_default_gmt = include_default_gmt,
+      species_go = species_go
+    )
   }
 
   ## --------------------------------
@@ -669,7 +675,6 @@ pgx.createPGX <- function(counts,
   message("\n\n")
 
   return(pgx)
-
 }
 
 
@@ -731,7 +736,6 @@ pgx.computePGX <- function(pgx,
                            progress = NULL,
                            ai_features = NULL,
                            user_input_dir = getwd()) {
-  
   message("[pgx.computePGX]===========================================")
   message("[pgx.computePGX]========== pgx.computePGX =================")
   message("[pgx.computePGX]===========================================")
@@ -1075,8 +1079,17 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   return(G)
 }
 
-pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000,
-                        include_iea = TRUE, species_go=NULL) {
+pgx.add_GMT <- function(pgx,
+                        custom.geneset = NULL,
+                        max.genesets = 20000,
+                        include_default_gmt = TRUE,
+                        include_iea = TRUE, species_go = NULL) {
+  ## An explicit NULL (e.g. params$include_default_gmt from a params.RData
+  ## written before this parameter existed) bypasses the TRUE default
+  ## above, since R only applies argument defaults when the argument is
+  ## missing, not when it's passed as NULL.
+  if (is.null(include_default_gmt)) include_default_gmt <- TRUE
+
   if (!"symbol" %in% colnames(pgx$genes)) {
     message(paste(
       "[pgx.add_GMT] ERROR: could not find 'symbol' column.",
@@ -1091,8 +1104,10 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000,
   message("[pgx.add_GMT] Creating GMT matrix... ")
 
   # Load geneset matrix from playdata. add metabolomics if data.type
-  # is metabolomics
-  target <- c("human_ortholog", "symbol", "gene_name", "rownames")
+  # is metabolomics. GSETxGENE is keyed on human gene symbols, so
+  # prefer the guaranteed-human ortholog column over the
+  # species-configurable one.
+  target <- c("human_ortholog", "ortholog", "symbol", "gene_name", "rownames")
   ortho.col <- intersect(target, colnames(pgx$genes))
   if (length(ortho.col) == 0) {
     symbol <- toupper(pgx$genes$symbol)
@@ -1133,7 +1148,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000,
   }
 
   ## add SYMBOL (classic) gene sets
-  if (has.px) {
+  if (has.px && include_default_gmt) {
     info("[pgx.add_GMT] Retrieving transcriptomics/proteomics genesets")
     G1 <- Matrix::t(playdata::GSETxGENE)
     G1 <- rename_by2(G1, pgx$genes, new_id = "symbol") ## symbol!
@@ -1141,7 +1156,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000,
   }
 
   # create a feature list that will be used to filter and reduce dimensions of G
-  ##full_feature_list <- c(pgx$genes$symbol, pgx$genes$human_ortholog, rownames(pgx$genes)) ## why ?? 
+  ##full_feature_list <- c(pgx$genes$symbol, pgx$genes$ortholog, rownames(pgx$genes)) ## why ??
   full_feature_list <- c(pgx$genes$symbol)
   full_feature_list <- setdiff(full_feature_list, c(NA,""))
   full_feature_list <- unique(full_feature_list)
@@ -1160,23 +1175,43 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000,
     ##species_go <- (num_goterms < 1000)
     species_go <- !(pgx$organism %in% c("Human","Mouse","Rat"))
   }
+
   if (has.px2 && species_go) {
     ## add species GO genesets from AnnotationHub
-    go.genesets <- NULL
     info("[pgx.add_GMT] Retrieving species GO for organism", pgx$organism,"...")
-    go.genesets <- tryCatch(
-      {
-        getOrganismGO( pgx$organism,
+    go.main = go.ortho = NULL
+
+    ## Lookup GO for main species
+    go.main <- tryCatch({
+      getOrganismGO(
+        organism = pgx$organism,
+        symbol.annot = pgx$genes,
+        features = full_feature_list,
+        db = c("annothub","gprofiler"),
+        include_iea = include_iea)
+    }, error = function(e) {
+      message("Error in getOrganismsGO:", e)
+    })
+
+    ## Lookup GO for ortholog species
+    if(!is.null(pgx$ortholog_species)) {
+      go.ortho <- tryCatch({
+        getOrganismGO(
+          organism = pgx$ortholog_species,
           symbol.annot = pgx$genes,
           features = full_feature_list,
+          db = c("annothub","gprofiler"),
           include_iea = include_iea)
-      },
-      error = function(e) {
+      }, error = function(e) {
         message("Error in getOrganismsGO:", e)
-      }
-    )
+      })
+    }
 
+    ## merge both
+    go.genesets <- c(go.main, go.ortho)
+    
     if (!is.null(go.genesets)) {
+      go.genesets <- go.merge_duplicates(go.genesets)
       dbg("[pgx.add_GMT] Adding", length(go.genesets), "species GO genesets")
       all_genes <- unique(pgx$genes$symbol)      
       G <- .append_gmt_to_matrix(go.genesets, G, all_genes, minsize = 15, maxsize = 400)
@@ -1189,10 +1224,10 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000,
     custom_gmt <- custom.geneset$gmt
     custom_gmt <- custom_gmt[sapply(custom_gmt,length)>1]
     names(custom_gmt) <- sub("^[A-Z_]+:", "", names(custom_gmt))
-    names(custom_gmt) <- paste0("CUSTOM:", names(custom_gmt))    
+    names(custom_gmt) <- paste0("CUSTOM:", names(custom_gmt))
 
     message(paste("[pgx.add_GMT] Adding",length(custom_gmt),"custom genesets"))
-    
+
     ## Map feature id always to species specific symbols. This uses
     ## the feature annotation table pgx$genes so it also uses the
     ## ortholog columns for matching.
