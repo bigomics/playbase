@@ -406,6 +406,50 @@ compute_deconvolution <- function(pgx, rna.counts = .pgx_count_scale_matrix(pgx)
 
 ## -------------- infer sample characteristics --------------------------------
 
+# Assigns analysis-sample predictions to source-spanning sample metadata.
+# Processed matrix column names determine the destination rows and their order.
+# Source samples absent from the processed matrix receive NA.
+.pgx_assign_inferred_samples <- function(
+  samples,
+  field,
+  values,
+  analysis_samples
+) {
+  source_samples <- rownames(samples)
+  if (
+    is.null(analysis_samples) ||
+      anyNA(analysis_samples) ||
+      anyDuplicated(analysis_samples) ||
+      any(!analysis_samples %in% source_samples)
+  ) {
+    stop(
+      "[sample inference] processed samples must match source sample names",
+      call. = FALSE
+    )
+  }
+  if (length(values) != length(analysis_samples)) {
+    stop(
+      "[sample inference] prediction length must match processed samples",
+      call. = FALSE
+    )
+  }
+  if (!is.null(names(values))) {
+    if (
+      anyDuplicated(names(values)) || !setequal(names(values), analysis_samples)
+    ) {
+      stop(
+        "[sample inference] prediction names must match processed samples",
+        call. = FALSE
+      )
+    }
+    values <- values[analysis_samples]
+  }
+  inferred <- values[rep.int(NA_integer_, nrow(samples))]
+  inferred[match(analysis_samples, source_samples)] <- values
+  samples[[field]] <- unname(inferred)
+  samples
+}
+
 #' Compute Cell Cycle and Gender Inference
 #'
 #' This function performs cell cycle phase inference and gender estimation based on the input RNA expression data.
@@ -447,8 +491,13 @@ compute_cellcycle_gender <- function(pgx, rna.counts = .pgx_count_scale_matrix(p
         counts[which(is.nan(counts))] <- NA
       }
       res <- try(pgx.inferCellCyclePhase(counts))
-      if (!inherits(res, "try-error")) {
-        pgx$samples$.cell_cycle <- res
+      if (!inherits(res, "try-error") && !is.null(res)) {
+        pgx$samples <- .pgx_assign_inferred_samples(
+          pgx$samples,
+          ".cell_cycle",
+          res,
+          colnames(rna.counts)
+        )
       }
     } else {
       message("cell cycle already estimated. skipping...")
@@ -459,7 +508,12 @@ compute_cellcycle_gender <- function(pgx, rna.counts = .pgx_count_scale_matrix(p
       pgx$samples$.gender <- NULL
       X <- log2(1 + rna.counts)
       gene_symbol <- pgx$genes[rownames(X), "symbol"] # Use gene-symbol also for gender
-      pgx$samples$.gender <- pgx.inferGender(X, gene_symbol)
+      pgx$samples <- .pgx_assign_inferred_samples(
+        pgx$samples,
+        ".gender",
+        pgx.inferGender(X, gene_symbol),
+        colnames(X)
+      )
     } else {
       message("gender already estimated. skipping...")
     }
