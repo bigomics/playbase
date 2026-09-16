@@ -71,6 +71,7 @@ for the gene annotation table and the probe to symbol conversion.}
 \item{preprocess}{(Optional) Named list of preprocessing options. If provided and
 `X` is NULL, `X` is built from `counts` via [pgx.preprocess()] (normalization,
 imputation, missingness filter, outlier removal) instead of a plain log2 transform.
+Requested batch correction is applied after the PGX annotation filters.
 This is how the Shiny upload flow and the compute endpoint obtain identical `X`.}
 
 \item{is.logx}{Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.}

@@ -127,6 +127,7 @@ pgx.createFromFiles <- function(counts.file,
 #' @param preprocess (Optional) Named list of preprocessing options. If provided and
 #'   `X` is NULL, `X` is built from `counts` via [pgx.preprocess()] (normalization,
 #'   imputation, missingness filter, outlier removal) instead of a plain log2 transform.
+#'   Requested batch correction is applied after the PGX annotation filters.
 #'   This is how the Shiny upload flow and the compute endpoint obtain identical `X`.
 #' @param is.logx Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.
 #' @param dotimeseries Logical indicating if timeseries analysis has been activated by the user at upload
@@ -233,34 +234,51 @@ pgx.createPGX <- function(counts,
 
   preprocess.metadata <- NULL
   ran.preprocess <- is.null(X) && !is.null(preprocess) && datatype != "scRNA-seq"
+  deferred.batch.method <- NULL
+  deferred.batch <- NULL
+  deferred.target <- NULL
+  deferred.batch.args <- list()
   if (ran.preprocess) {
     message("[pgx.createPGX] building X via pgx.preprocess()")
     if (is.null(preprocess$dedup)) {
       preprocess$dedup <- if (average.duplicated) "average" else "unique"
     }
     if (!identical(batch.correct.method, "no_batch_correct")) {
-      preprocess$batch_correct <- TRUE
-      preprocess$batch_method <- batch.correct.method[[1L]]
-      if (is.null(preprocess$batch) && preprocess$batch_method %in% c("ComBat", "limma")) {
-        selected <- batch.pars
-        if (is.null(selected) || !length(selected) || any(selected %in% c("<autodetect>", "autodetect"))) {
-          preprocess["batch"] <- list(batchFromSamples(samples))
-        } else {
-          selected <- intersect(selected, colnames(samples))
-          preprocess["batch"] <- list(samples[, selected, drop = FALSE])
-        }
+      deferred.batch.method <- batch.correct.method[[1L]]
+    } else if (isTRUE(preprocess$batch_correct)) {
+      deferred.batch.method <- preprocess$batch_method
+      if (is.null(deferred.batch.method)) deferred.batch.method <- "limma"
+    }
+    if (!is.null(deferred.batch.method)) {
+      if (
+        !is.character(deferred.batch.method) ||
+          length(deferred.batch.method) != 1L ||
+          !is.null(names(deferred.batch.method))
+      ) {
+        stop(
+          "[pgx.createPGX] batch method must be scalar; use pgx.preprocess() for per-layer methods",
+          call. = FALSE
+        )
       }
+      deferred.batch <- preprocess$batch
+      deferred.target <- preprocess$target
+      if (!is.null(preprocess$batch_args)) {
+        deferred.batch.args <- preprocess$batch_args
+      }
+      preprocess$batch_method <- deferred.batch.method
+      preprocess$batch_correct <- FALSE
     }
     pp <- pgx.preprocess(counts,
       samples = samples, contrasts = contrasts,
       annot = annot_table, options = preprocess
     )
     settings$options <- pp$options
+    if (!is.null(deferred.batch.method)) {
+      settings$options$batch_correct <- TRUE
+      settings$options$batch_method <- deferred.batch.method
+    }
     preprocess.metadata <- .pgx_preprocess_metadata(pp)
     settings$preprocess <- preprocess.metadata
-    if (isTRUE(pp$options$batch_correct)) {
-      settings$batch.correct.method <- pp$options$batch_method
-    }
     counts <- pp$counts
     X <- pp$X
     if (!is.null(annot_table)) annot_table <- pp$annot
@@ -674,9 +692,16 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Batch correction if user-selected
   ## -------------------------------------------------------------------
-  if (!ran.preprocess && batch.correct.method != "no_batch_correct" && ncol(pgx$X) > 2) {
+  selected.batch.method <- if (ran.preprocess) {
+    deferred.batch.method
+  } else if (!identical(batch.correct.method, "no_batch_correct")) {
+    batch.correct.method[[1L]]
+  } else {
+    NULL
+  }
+  if (!is.null(selected.batch.method) && ncol(pgx$X) > 2) {
     batch <- NULL
-    mm <- batch.correct.method[1]
+    mm <- selected.batch.method
     if (length(batch.pars) == 0) batch.pars <- "<autodetect>"
     ## Correction covariates follow the processed X sample axis.
     ss <- colnames(pgx$X)
@@ -684,7 +709,7 @@ pgx.createPGX <- function(counts,
     samples <- pgx$samples[ss, , drop = FALSE]
     contrasts <- pgx$contrasts[ss, , drop = FALSE]
 
-    message("[pgx.createPGX] batch.correct.method=", batch.correct.method)
+    message("[pgx.createPGX] batch.correct.method=", mm)
     message("[pgx.createPGX] batch.pars=", batch.pars)
 
     pars <- playbase::get_model_parameters(X, samples, pheno = NULL, contrasts)
@@ -693,14 +718,39 @@ pgx.createPGX <- function(counts,
     batch.pars <- intersect(batch.pars, colnames(samples))
     if (length(batch.pars)) batch <- samples[, batch.pars, drop = FALSE]
     pheno <- pars$pheno
+    if (ran.preprocess) {
+      source.sample.index <- match(ss, colnames(pgx$counts))
+      if (!is.null(deferred.batch)) {
+        batch <- deferred.batch
+        if (is.matrix(batch) || is.data.frame(batch)) {
+          if (!is.null(rownames(batch)) && all(ss %in% rownames(batch))) {
+            batch <- batch[ss, , drop = FALSE]
+          } else {
+            batch <- batch[source.sample.index, , drop = FALSE]
+          }
+        } else if (!is.null(names(batch)) && all(ss %in% names(batch))) {
+          batch <- batch[ss]
+        } else {
+          batch <- batch[source.sample.index]
+        }
+      }
+      if (!is.null(deferred.target)) {
+        pheno <- deferred.target
+        if (!is.null(names(pheno)) && all(ss %in% names(pheno))) {
+          pheno <- pheno[ss]
+        } else {
+          pheno <- pheno[source.sample.index]
+        }
+      }
+    }
 
     message("[pgx.createPGX] Batch correction using ", mm)
-    cX <- playbase.preprocess::pp.batchCorrect(
-      X,
-      layers = .pgx_preprocess_layers(X),
-      target = pheno,
-      batch = batch,
-      method = mm
+    cX <- do.call(
+      playbase.preprocess::pp.batchCorrect,
+      c(
+        list(X = X, layers = NULL, target = pheno, batch = batch, method = mm),
+        deferred.batch.args
+      )
     )
 
     message("[pgx.createPGX] Batch correction completed\n")

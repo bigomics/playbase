@@ -108,6 +108,137 @@ test_that("lifecycle row filters preserve source counts", {
   )
 })
 
+test_that("createPGX applies selected batch correction after feature filtering", {
+  skip_if_not_installed("sva")
+  skip_if_not_installed("limma")
+  fixture <- make_pgx_fixture()
+  fixture$counts[10L, ] <- 0
+  batch <- data.frame(
+    site = rep(c("one", "two"), 4L),
+    row.names = colnames(fixture$counts)
+  )
+  target <- stats::setNames(fixture$samples$group, rownames(fixture$samples))
+  options <- list(
+    batch = batch,
+    target = target,
+    normalize = FALSE,
+    filter_missing = TRUE,
+    remove_outliers = FALSE
+  )
+  uncorrected <- create_test_pgx(fixture, options, filter.genes = TRUE)
+
+  for (method in c("ComBat", "limma")) {
+    corrected <- create_test_pgx(
+      fixture,
+      utils::modifyList(
+        options,
+        list(
+          batch_correct = TRUE,
+          batch_method = method
+        )
+      ),
+      filter.genes = TRUE
+    )
+    expected <- playbase.preprocess::pp.batchCorrect(
+      uncorrected$X,
+      layers = NULL,
+      target = target[colnames(uncorrected$X)],
+      batch = batch[colnames(uncorrected$X), , drop = FALSE],
+      method = method
+    )
+
+    expect_identical(corrected$X, expected)
+    expect_identical(corrected$counts, fixture$counts)
+    expect_true(corrected$settings$options$batch_correct)
+    expect_identical(corrected$settings$batch.correct.method, method)
+  }
+})
+
+test_that("multi-omics createPGX sends ComBat the combined filtered matrix", {
+  skip_if_not_installed("sva")
+  fixture <- make_pgx_fixture()
+  rownames(fixture$counts) <- c(
+    paste0("gx:g", 1:40),
+    paste0("px:p", 1:40)
+  )
+  fixture$counts[10L, ] <- 0
+  batch <- data.frame(
+    site = rep(c("one", "two"), 4L),
+    row.names = colnames(fixture$counts)
+  )
+  target <- stats::setNames(fixture$samples$group, rownames(fixture$samples))
+  options <- list(
+    normalize = FALSE,
+    filter_missing = TRUE,
+    remove_outliers = FALSE,
+    target = target,
+    batch = batch
+  )
+  create <- function(method, preprocessing = options) {
+    suppressMessages(playbase::pgx.createPGX(
+      counts = fixture$counts,
+      samples = fixture$samples,
+      contrasts = fixture$contrasts,
+      organism = "No organism",
+      datatype = "multi-omics",
+      preprocess = preprocessing,
+      batch.correct.method = method,
+      filter.genes = TRUE,
+      only.known = FALSE,
+      only.proteincoding = FALSE,
+      add.gmt = FALSE
+    ))
+  }
+  uncorrected <- create("no_batch_correct")
+  corrected <- create("ComBat")
+  expected <- playbase.preprocess::pp.batchCorrect(
+    uncorrected$X,
+    layers = NULL,
+    target = target,
+    batch = batch,
+    method = "ComBat"
+  )
+  per_layer <- playbase.preprocess::pp.batchCorrect(
+    uncorrected$X,
+    layers = sub(":.*", "", rownames(uncorrected$X)),
+    target = target,
+    batch = batch,
+    method = "ComBat"
+  )
+  overridden <- create(
+    "ComBat",
+    utils::modifyList(
+      options,
+      list(
+        batch_correct = TRUE,
+        batch_method = c(gx = "limma", px = "limma")
+      )
+    )
+  )
+
+  expect_identical(corrected$X, expected)
+  expect_identical(overridden$X, expected)
+  expect_true(all(
+    overridden$settings$preprocess$options$batch_method == "ComBat"
+  ))
+  expect_false(identical(corrected$X, per_layer))
+  expect_false("gx:g10" %in% rownames(corrected$X))
+  expect_identical(corrected$counts, fixture$counts)
+  expect_error(
+    create(
+      "no_batch_correct",
+      utils::modifyList(
+        options,
+        list(
+          batch_correct = TRUE,
+          batch_method = c(gx = "ComBat", px = "ComBat")
+        )
+      )
+    ),
+    "batch method must be scalar"
+  )
+})
+
 test_that("lifecycle sample pruning preserves source counts", {
   fixture <- make_pgx_fixture()
   fixture$contrasts[8, 1] <- NA
