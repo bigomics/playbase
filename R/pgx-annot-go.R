@@ -44,11 +44,6 @@ getOrganismGO <- function(organism, features=NULL, minsize=3L, batch_size=2000L,
   ## check duplicated GO termsyes
   gmt <- go.merge_duplicates(gmt)
 
-  ## convert all id to species symbol
-  if(!is.null(symbol.annot)) {
-    gmt <- gmt.map2symbol(gmt, annot=symbol.annot, target="symbol") 
-  }
-  
   ## sort on largest
   gmt <- gmt[order(-sapply(gmt,length))]
   
