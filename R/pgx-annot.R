@@ -146,6 +146,7 @@ getProbeAnnotation <- function(organism,
       organism = organism,
       probes = probes,
       ortholog_species = ortholog_species,
+      methods = c("annothub", "gprofiler","uniprot"),
       is.phospho = is.phospho
     )
   }
@@ -445,8 +446,8 @@ getGeneAnnotation.ANNOTHUB <- function(
       annot$gene_title <- NA      
       annot$ortholog <- NULL
       annot$orthologs <- NULL     
-      annot$ortholog <- NULL
-      annot$orthologs <- NULL     
+      annot$human_ortholog <- NULL
+      annot$human_orthologs <- NULL     
       return(annot)
     }
   }
@@ -1600,6 +1601,9 @@ getExampleFeatures <- function(organism, n=20, db=c("gprofiler","orgdb")) {
     if(d == "gprofiler") {
       f <- try(getExampleFeatures.GPROFILER(organism, n=n), silent=TRUE)
     }
+    if(d == "uniprot") {
+      f <- try(getExampleFeatures.UNIPROT(organism, n=n), silent=TRUE)
+    }
     if(inherits(f,"try-error")) f <- NULL
     if(!is.null(f)) break
   }
@@ -1652,5 +1656,37 @@ getExampleFeatures.GPROFILER <- function(organism, n) {
   out <- try(gprofiler2::gconvert(query, organism=species_id,
     mthreshold=Inf, target="ENSG"))
   sample(out$name, n)
+}
+
+#' Example features (UniProt accessions) for organisms with no OrgDb
+#' package and no g:Profiler entry. Last-resort fallback: pulls a random
+#' sample of that organism's UniProt.ws keys directly.
+getExampleFeatures.UNIPROT <- function(organism, n) {
+  dbg("[getExampleFeatures.UNIPROT] 1: organism = ", organism)
+  ## Prefer the taxonomy ID from our own species table: it's exact and
+  ## sidesteps species_name strings (e.g. "Cricetulus barabensis_griseus")
+  ## that don't match UniProt's own species names for pattern search.
+  species_table <- data.frame(playbase::SPECIES_TABLE)
+  taxid <- species_table$taxonomyid[match(organism, species_table$species_name)]
+  taxid <- taxid[!is.na(taxid)]
+  if (length(taxid) == 0) {
+    organism <- normalizeOrganism(organism)
+    dbg("[getExampleFeatures.UNIPROT] 2: organism = ", organism)
+    sp <- try(UniProt.ws::availableUniprotSpecies(pattern = organism), silent = TRUE)
+    if (inherits(sp, "try-error") || is.null(sp) || nrow(sp) == 0) {
+      message("[getExampleFeatures.UNIPROT] unknown species")
+      return(NULL)
+    }
+    taxid <- sp[1, "Taxon Node"]
+  }
+  taxid <- taxid[1]
+  up <- try(UniProt.ws::UniProt.ws(taxId = taxid), silent = TRUE)
+  if (inherits(up, "try-error")) {
+    message("[getExampleFeatures.UNIPROT] could not connect for taxId ", taxid)
+    return(NULL)
+  }
+  pp <- UniProt.ws::keys(up, "UniProtKB")
+  if (length(pp) == 0) return(NULL)
+  sample(pp, min(n, length(pp)))
 }
 
