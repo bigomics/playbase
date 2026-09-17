@@ -13,8 +13,7 @@ Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Depends:
-    R (>= 3.5),
-    playbase.preprocess
+    R (>= 3.5)
 biocViews:
 Imports:
     AnnotationDbi,
@@ -117,6 +116,7 @@ Imports:
     plsRcox,
     png,
     ppcor,
+    playbase.preprocess,
     psych,
     purrr,
     qlcMatrix,

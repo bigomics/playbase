@@ -10,7 +10,8 @@
 #' @param samples.file Path to samples data file. Rows are samples, columns are sample info.
 #' @param contrasts.file (optional) Path to contrasts file. Rows and columns define contrasts.
 #' @param preprocess (optional) Named list of preprocessing settings, forwarded to
-#'   [pgx.createPGX()] and from there to [pgx.preprocess()]. NULL (the default)
+#'   [pgx.createPGX()] and from there to
+#'   [playbase.preprocess::pgx.preprocess()]. NULL (the default)
 #'   keeps the historical behaviour of this entry point, where `X` is a plain
 #'   `log2(counts + prior)` with no filtering, imputation or normalization.
 #'   Supplying a list is what makes a script reproduce the app: the wizard sends
@@ -124,12 +125,16 @@ pgx.createFromFiles <- function(counts.file,
 #' for the gene annotation table and the probe to symbol conversion.
 #' @param contrasts Data frame defining sample contrasts.
 #' @param X (Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.
-#' @param preprocess (Optional) Named list of preprocessing options. If provided and
-#'   `X` is NULL, `X` is built from `counts` via [pgx.preprocess()] (normalization,
-#'   imputation, missingness filter, outlier removal) instead of a plain log2 transform.
-#'   Requested batch correction is applied after the PGX annotation filters.
-#'   This is how the Shiny upload flow and the compute endpoint obtain identical `X`.
-#' @param is.logx Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.
+#' @param preprocess (Optional) Named list of preprocessing options. Whenever
+#'   `X` is NULL, `X` is built from `counts` via
+#'   [playbase.preprocess::pgx.preprocess()]. A NULL value selects explicit
+#'   legacy-compatible log2 conversion; supplied options select leaf pipeline
+#'   stages. Batch correction is selected only by `batch.correct.method` and
+#'   runs inside that pipeline. The legacy conversion requires at least one
+#'   finite positive count.
+#' @param is.logx Deprecated upload hint. Confirmed log2 uploads must be
+#'   back-transformed to counts before this function is called; they then pass
+#'   through the complete preprocessing pipeline like any other count input.
 #' @param dotimeseries Logical indicating if timeseries analysis has been activated by the user at upload
 #' @param batch.correct.method BC method. Default is "no_batch_correct" (meaning no batch correction).
 #' @param batch.pars BC variable. Default "autodetect" as per QC/BC tab in upload.
@@ -232,58 +237,6 @@ pgx.createPGX <- function(counts,
   message("[pgx.createPGX] class.counts: ", class(counts))
   message("[pgx.createPGX] counts has ", sum(is.na(counts)), " missing values")
 
-  preprocess.metadata <- NULL
-  ran.preprocess <- is.null(X) && !is.null(preprocess) && datatype != "scRNA-seq"
-  deferred.batch.method <- NULL
-  deferred.batch <- NULL
-  deferred.target <- NULL
-  deferred.batch.args <- list()
-  if (ran.preprocess) {
-    message("[pgx.createPGX] building X via pgx.preprocess()")
-    if (is.null(preprocess$dedup)) {
-      preprocess$dedup <- if (average.duplicated) "average" else "unique"
-    }
-    if (!identical(batch.correct.method, "no_batch_correct")) {
-      deferred.batch.method <- batch.correct.method[[1L]]
-    } else if (isTRUE(preprocess$batch_correct)) {
-      deferred.batch.method <- preprocess$batch_method
-      if (is.null(deferred.batch.method)) deferred.batch.method <- "limma"
-    }
-    if (!is.null(deferred.batch.method)) {
-      if (
-        !is.character(deferred.batch.method) ||
-          length(deferred.batch.method) != 1L ||
-          !is.null(names(deferred.batch.method))
-      ) {
-        stop(
-          "[pgx.createPGX] batch method must be scalar; use pgx.preprocess() for per-layer methods",
-          call. = FALSE
-        )
-      }
-      deferred.batch <- preprocess$batch
-      deferred.target <- preprocess$target
-      if (!is.null(preprocess$batch_args)) {
-        deferred.batch.args <- preprocess$batch_args
-      }
-      preprocess$batch_method <- deferred.batch.method
-      preprocess$batch_correct <- FALSE
-    }
-    pp <- pgx.preprocess(counts,
-      samples = samples, contrasts = contrasts,
-      annot = annot_table, options = preprocess
-    )
-    settings$options <- pp$options
-    if (!is.null(deferred.batch.method)) {
-      settings$options$batch_correct <- TRUE
-      settings$options$batch_method <- deferred.batch.method
-    }
-    preprocess.metadata <- .pgx_preprocess_metadata(pp)
-    settings$preprocess <- preprocess.metadata
-    counts <- pp$counts
-    X <- pp$X
-    if (!is.null(annot_table)) annot_table <- pp$annot
-  }
-
   if (datatype == "scRNA-seq") {
     pgx <- pgx.createSingleCellPGX(
       counts = counts,
@@ -297,16 +250,81 @@ pgx.createPGX <- function(counts,
     return(pgx)
   }
 
-  if (!ran.preprocess) {
-    if (is.null(X)) {
-      min.nz <- min(counts[counts > 0], na.rm = TRUE)
-      prior <- ifelse(grepl("CPM|TMM|TPM", norm_method), 1, min.nz)
-      message("[pgx.createPGX] creating X as log2(counts+p) with p = ", prior)
-      X <- log2(counts + prior)
+  ## -------------------------------------------------------------------
+  ## Establish the source and analysis sample axes
+  ## -------------------------------------------------------------------
+  samples <- as.data.frame(samples, drop = FALSE)
+  counts <- as.matrix(counts)
+  if (is.null(contrasts)) contrasts <- samples[, 0]
+  contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
+  contrasts <- fixContrastMatrix(contrasts)
+  if (dotimeseries) {
+    contrasts <- contrasts.addTimeInteraction(contrasts, samples)
+  }
+  contrasts[contrasts %in% c("", " ", "NA")] <- NA
+
+  source.samples <- intersect(colnames(counts), rownames(samples))
+  samples <- samples[source.samples, , drop = FALSE]
+  samples <- utils::type.convert(samples, as.is = TRUE)
+  rownames(samples) <- source.samples
+  if (all(source.samples %in% rownames(contrasts))) {
+    contrasts <- contrasts[source.samples, , drop = FALSE]
+  }
+  analysis.samples <- source.samples
+  used.samples <- rownames(contrasts)[rowSums(!is.na(contrasts)) > 0]
+  if (prune.samples) {
+    analysis.samples <- intersect(analysis.samples, used.samples)
+  }
+  if (!length(analysis.samples)) {
+    info("[createPGX] FATAL. no analysis samples")
+    return(NULL)
+  }
+
+  ## -------------------------------------------------------------------
+  ## Build the analysis matrix once
+  ## -------------------------------------------------------------------
+  preprocess.metadata <- NULL
+  ran.preprocess <- is.null(X)
+  if (ran.preprocess) {
+    message("[pgx.createPGX] building X via playbase.preprocess::pgx.preprocess()")
+    preprocess <- .pgx_preprocess_options(
+      preprocess,
+      counts,
+      norm_method,
+      average.duplicated,
+      batch.correct.method
+    )
+    preprocess <- .pgx_resolve_batch_metadata(
+      preprocess,
+      counts,
+      samples,
+      contrasts,
+      analysis.samples,
+      batch.pars
+    )
+
+    analysis.index <- match(analysis.samples, colnames(counts))
+    pp <- playbase.preprocess::pgx.preprocess(
+      counts = counts[, analysis.index, drop = FALSE],
+      samples = samples[analysis.samples, , drop = FALSE],
+      contrasts = contrasts[analysis.samples, , drop = FALSE],
+      annot = annot_table,
+      options = preprocess
+    )
+    pp$alignment$cols <- analysis.index[pp$alignment$cols]
+    settings$options <- pp$options
+    preprocess.metadata <- .pgx_preprocess_metadata(pp)
+    settings$preprocess <- preprocess.metadata
+    X <- pp$X
+    if (!is.null(annot_table)) annot_table <- pp$annot
+  } else {
+    if (!identical(batch.correct.method, "no_batch_correct")) {
+      stop(
+        "[pgx.createPGX] batch correction requires X = NULL",
+        call. = FALSE
+      )
     }
-    if (!exists("prior", inherits = FALSE)) {
-      prior <- 1
-    }
+    prior <- 1
     preprocess.metadata <- .pgx_identity_preprocess_metadata(
       counts,
       X,
@@ -338,6 +356,15 @@ pgx.createPGX <- function(counts,
     settings$preprocess <- preprocess.metadata
   }
 
+  ## Keep analysis outputs on the final sample axis.
+  keep.x <- which(colnames(X) %in% analysis.samples)
+  X <- X[, keep.x, drop = FALSE]
+  preprocess.metadata <- .pgx_subset_preprocess_cols(
+    preprocess.metadata,
+    keep.x
+  )
+  settings$preprocess <- preprocess.metadata
+
   if (!is.null(annot_table)) {
     message("[pgx.createPGX] dim(annot_table) = ", nrow(annot_table), " x ", ncol(annot_table))
     ndiff <- sum(rownames(annot_table) != rownames(counts))
@@ -367,64 +394,17 @@ pgx.createPGX <- function(counts,
     if (!has.colons) stop("[pgx.createPGX] FATAL: features must have multi-omics prefix\n")
   }
 
-  ## -------------------------------------------------------------------
-  ## clean up input files
-  ## -------------------------------------------------------------------
-  samples <- as.data.frame(samples, drop = FALSE)
-  counts <- as.matrix(counts)
   X <- as.matrix(X)
-  if (is.null(contrasts)) contrasts <- samples[, 0]
-
-  ## convert old-style contrast matrix to sample-wise labeled contrasts
-  contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
-  contrasts <- fixContrastMatrix(contrasts)
-
-  ## ---------------------------------------------------------------------
-  ## Time series conducted if user checked the box during upload
-  ## ---------------------------------------------------------------------
-  if (dotimeseries) contrasts <- contrasts.addTimeInteraction(contrasts, samples)
 
   ## -------------------------------------------------------------------
   ## Auto-scaling (scale down huge values, often in proteomics)
   ## -------------------------------------------------------------------
-  # res <- counts.autoScaling(counts)
-  # counts <- res$counts
-  # counts_multiplier <- res$counts_multiplier
   counts_multiplier <- Inf
-  # remove(res)
 
   ## -------------------------------------------------------------------
-  ## conform all matrices
+  ## Check the final analysis matrix
   ## -------------------------------------------------------------------
   message("[createPGX] conforming matrices...")
-
-  ## prune unused samples
-  contrasts[contrasts %in% c("", " ", "NA")] <- NA
-  used.samples <- names(which(rowSums(!is.na(contrasts)) > 0))
-  if (prune.samples && length(used.samples) < ncol(counts)) {
-    keep.x <- which(colnames(X) %in% used.samples)
-    X <- X[, keep.x, drop = FALSE]
-    preprocess.metadata <- .pgx_subset_preprocess_cols(
-      preprocess.metadata,
-      keep.x
-    )
-  }
-
-  ## Align lifecycle metadata to the source samples without narrowing counts.
-  kk <- intersect(colnames(counts), rownames(samples))
-  keep.x <- which(colnames(X) %in% kk)
-  X <- X[, keep.x, drop = FALSE]
-  preprocess.metadata <- .pgx_subset_preprocess_cols(
-    preprocess.metadata,
-    keep.x
-  )
-  samples <- samples[kk, , drop = FALSE]
-  samples <- utils::type.convert(samples, as.is = TRUE) ## automatic type conversion
-  if (all(kk %in% rownames(contrasts))) {
-    contrasts <- contrasts[kk, , drop = FALSE]
-  }
-
-  ## sanity checks
   if (ncol(X) == 0) {
     info("[createPGX] FATAL. ncol(X) == 0")
     return(NULL)
@@ -469,6 +449,7 @@ pgx.createPGX <- function(counts,
   settings$only.proteincoding <- only.proteincoding
   settings$convert.hugo <- convert.hugo
   settings$custom.geneset <- !is.null(custom.geneset)
+  settings$batch.correct.method <- batch.correct.method
 
   ## add versions info
   versions <- list()
@@ -539,13 +520,17 @@ pgx.createPGX <- function(counts,
   if (length(hh) > 0) {
     feature.lengths <- NULL
     kk <- grep("length|size", tolower(colnames(pgx$genes)))
-    if (length(kk) > 0) feature.lengths <- as.character(pgx$genes[, kk[1]])
+    if (length(kk) > 0) {
+      feature.lengths <- as.character(pgx$genes[, kk[1]])
+    }
     for (i in 1:nrow(pgx$genes)) {
       pgx$genes[i, hh[1]] <- reorder_uniprots(pgx$genes[i, hh[1]], feature.lengths[i])$feature
     }
   }
 
-  if (is.null(pgx$genes)) stop("[pgx.createPGX] FATAL: Could not build gene annotation")
+  if (is.null(pgx$genes)) {
+    stop("[pgx.createPGX] FATAL: Could not build gene annotation")
+  }
 
   if (!"symbol" %in% colnames(pgx$genes) && "gene_name" %in% colnames(pgx$genes)) {
     dbg("[pgx.createPGX] WARNING! no symbol column. copying deprecated gene_name column as symbol")
@@ -562,7 +547,19 @@ pgx.createPGX <- function(counts,
   if (filter.genes) {
     nexpr <- sum(rowSums(pgx$counts, na.rm = TRUE) == 0)
     message("[pgx.createPGX] Filtering out ", nexpr, " not-expressed genes...")
-    pgx <- pgx.filterZeroCounts(pgx)
+    filtered <- playbase.preprocess::pp.filterFeatures(
+      pgx$counts,
+      method = "zero_counts"
+    )
+    keep.x <- .pgx_rows_for_source_rows(
+      pgx$settings$preprocess,
+      filtered$keep_rows
+    )
+    pgx$X <- pgx$X[keep.x, , drop = FALSE]
+    pgx$settings$preprocess <- .pgx_subset_preprocess_rows(
+      pgx$settings$preprocess,
+      keep.x
+    )
   }
 
   ## -------------------------------------------------------------------
@@ -687,80 +684,6 @@ pgx.createPGX <- function(counts,
   ## --------------------------------
   if (ncol(pgx$samples) > 1) {
     pgx$samples <- pgx$samples[, colMeans(is.na(pgx$samples)) < 1, drop = FALSE]
-  }
-
-  ## -------------------------------------------------------------------
-  ## Batch correction if user-selected
-  ## -------------------------------------------------------------------
-  selected.batch.method <- if (ran.preprocess) {
-    deferred.batch.method
-  } else if (!identical(batch.correct.method, "no_batch_correct")) {
-    batch.correct.method[[1L]]
-  } else {
-    NULL
-  }
-  if (!is.null(selected.batch.method) && ncol(pgx$X) > 2) {
-    batch <- NULL
-    mm <- selected.batch.method
-    if (length(batch.pars) == 0) batch.pars <- "<autodetect>"
-    ## Correction covariates follow the processed X sample axis.
-    ss <- colnames(pgx$X)
-    X <- pgx$X
-    samples <- pgx$samples[ss, , drop = FALSE]
-    contrasts <- pgx$contrasts[ss, , drop = FALSE]
-
-    message("[pgx.createPGX] batch.correct.method=", mm)
-    message("[pgx.createPGX] batch.pars=", batch.pars)
-
-    pars <- playbase::get_model_parameters(X, samples, pheno = NULL, contrasts)
-    if (any(grepl("<autodetect>", batch.pars))) batch.pars <- pars$batch.pars
-    if (any(grepl("<none>", batch.pars))) batch.pars <- ""
-    batch.pars <- intersect(batch.pars, colnames(samples))
-    if (length(batch.pars)) batch <- samples[, batch.pars, drop = FALSE]
-    pheno <- pars$pheno
-    if (ran.preprocess) {
-      source.sample.index <- match(ss, colnames(pgx$counts))
-      if (!is.null(deferred.batch)) {
-        batch <- deferred.batch
-        if (is.matrix(batch) || is.data.frame(batch)) {
-          if (!is.null(rownames(batch)) && all(ss %in% rownames(batch))) {
-            batch <- batch[ss, , drop = FALSE]
-          } else {
-            batch <- batch[source.sample.index, , drop = FALSE]
-          }
-        } else if (!is.null(names(batch)) && all(ss %in% names(batch))) {
-          batch <- batch[ss]
-        } else {
-          batch <- batch[source.sample.index]
-        }
-      }
-      if (!is.null(deferred.target)) {
-        pheno <- deferred.target
-        if (!is.null(names(pheno)) && all(ss %in% names(pheno))) {
-          pheno <- pheno[ss]
-        } else {
-          pheno <- pheno[source.sample.index]
-        }
-      }
-    }
-
-    message("[pgx.createPGX] Batch correction using ", mm)
-    cX <- do.call(
-      playbase.preprocess::pp.batchCorrect,
-      c(
-        list(X = X, layers = NULL, target = pheno, batch = batch, method = mm),
-        deferred.batch.args
-      )
-    )
-
-    message("[pgx.createPGX] Batch correction completed\n")
-
-    ## Correction changes X and nothing else; source counts remain pristine.
-    pgx$X <- cX
-
-    pgx$settings$batch.correct.method <- mm
-
-    rm(cX)
   }
 
   rm(counts, X, samples, contrasts)
@@ -939,7 +862,9 @@ pgx.computePGX <- function(pgx,
   if (do.clustergenes) {
     message("[pgx.computePGX] clustering genes...")
     mm <- "umap"
-    if (pgx$datatype == "scRNAseq") mm <- c("pca", "tsne", "umap")
+    if (pgx$datatype == "scRNAseq") {
+      mm <- c("pca", "tsne", "umap")
+    }
     pgx <- pgx.clusterGenes(pgx, methods = mm, level = "gene")
   }
 
@@ -974,7 +899,9 @@ pgx.computePGX <- function(pgx,
   ) ## no GSEA, too slow...
 
   ## ------------------ gene level tests ---------------------
-  if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
+  if (!is.null(progress)) {
+    progress$inc(0.1, detail = "testing genes")
+  }
 
   timeseries <- any(grepl("^IA:*", colnames(pgx$contrasts)))
 
@@ -992,7 +919,9 @@ pgx.computePGX <- function(pgx,
   )
 
   ## ------------------ gene set tests -----------------------
-  if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
+  if (!is.null(progress)) {
+    progress$inc(0.2, detail = "testing gene sets")
+  }
 
   if ((pgx$organism != "No organism" && !is.null(pgx$GMT) && nrow(pgx$GMT) > 0) ||
     (pgx$organism == "No organism" && !is.null(custom.geneset$gmt))) {
@@ -1015,8 +944,13 @@ pgx.computePGX <- function(pgx,
   }
 
   ## ------------------ extra analyses ---------------------
-  if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
-  message("[pgx.computePGX] computing extra modules: ", paste0(extra.methods, collapse = "; "))
+  if (!is.null(progress)) {
+    progress$inc(0.3, detail = "extra modules")
+  }
+  message(
+    "[pgx.computePGX] computing extra modules: ",
+    paste0(extra.methods, collapse = "; ")
+  )
   pgx <- compute_extra(
     pgx,
     extra = extra.methods,
@@ -1063,103 +997,6 @@ pgx.computePGX <- function(pgx,
 ## ===================================================================
 ## =================== UTILITY FUNCTIONS =============================
 ## ===================================================================
-
-#' @export
-counts.autoScaling <- function(counts) {
-  message("[createPGX] scaling counts...")
-  counts_multiplier <- 1
-
-  ## If the difference in total counts is too large, we need to
-  ## euqalize them because the thresholds can become strange. Here
-  ## we decide if normalizing is necessary (WARNING changes total
-  ## counts!!!)
-  totcounts <- Matrix::colSums(counts, na.rm = TRUE)
-  totratio <- log10(max(1 + totcounts, na.rm = TRUE) / min(1 + totcounts, na.rm = TRUE))
-  totratio
-
-  if (totratio > 6) {
-    message("[createPGX:autoscale] WARNING: too large total counts ratio. forcing normalization.")
-    meancounts <- exp(mean(log(1 + totcounts), na.rm = TRUE))
-    counts <- t(t(counts) / totcounts) * meancounts
-  }
-
-  ## Check if too big (more than billion reads). This is important
-  ## for some proteomics intensity signals that are in billions of
-  ## units.
-  mean.counts <- mean(Matrix::colSums(counts, na.rm = TRUE))
-  is.toobig <- log10(mean.counts) > 9
-  if (is.toobig) {
-    ## scale to about 10 million reads
-    message("[createPGX:autoscale] WARNING: too large total counts. Scaling down to 10e6 reads.")
-    unit <- 10**(round(log10(mean.counts)) - 7)
-    unit
-    counts <- counts / unit
-    counts_multiplier <- unit
-  }
-  counts_multiplier
-  message("[createPGX:autoscale] count_multiplier= ", counts_multiplier)
-
-  list(counts = counts, counts_multiplier = counts_multiplier)
-}
-
-#' @export
-counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE) {
-  counts <- counts[rownames(counts) != "", ]
-  counts[which(is.nan(counts))] <- NA
-  ndup <- sum(duplicated(rownames(counts)))
-  if (ndup > 0) {
-    if (!is.counts) counts <- 2**counts
-    message("[mergeDuplicateFeatures] ", ndup, " duplicated rownames: averaging rows (in counts).")
-    counts <- playbase::rowmean(counts, group = rownames(counts), reorder = TRUE)
-    counts[which(is.nan(counts))] <- NA
-    if (!is.counts) counts <- log2(counts)
-  }
-  counts
-}
-
-#' @export
-pgx.filterZeroCounts <- function(pgx) {
-  ## There is second filter in the statistics computation. This
-  ## first filter is primarily to reduce the counts table.
-  ## AZ: added na.rm=TRUE to avoid introducing NAs and edit to keep NAs.
-  keep <- (Matrix::rowMeans(pgx$counts > 0, na.rm = TRUE) > 0) ## at least in one...
-
-  ## Translate this source-row filter to processed-X positions explicitly.
-  keep <- c(which(is.na(keep)), which(keep))
-  keep.x <- .pgx_rows_for_source_rows(pgx$settings$preprocess, keep)
-  pgx$X <- pgx$X[keep.x, , drop = FALSE]
-  pgx$settings$preprocess <- .pgx_subset_preprocess_rows(
-    pgx$settings$preprocess,
-    keep.x
-  )
-
-  pgx
-}
-
-#' @export
-pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
-  AT.LEAST <- ceiling(pmax(2, 0.01 * ncol(pgx$counts)))
-  message("filtering for low-expressed genes: > ", prior.cpm, " CPM in >= ", AT.LEAST, " samples")
-  keep <- (rowSums(edgeR::cpm(pgx$counts) > prior.cpm, na.rm = TRUE) >= AT.LEAST)
-  pgx$filtered <- NULL
-  pgx$filtered[["low.expressed"]] <- paste(rownames(pgx$counts)[which(!keep)], collapse = ";")
-  if (!is.null(pgx$X)) {
-    ## Translate this source-row filter to processed-X positions explicitly.
-    keep.x <- .pgx_rows_for_source_rows(
-      pgx$settings$preprocess,
-      which(keep)
-    )
-    pgx$X <- pgx$X[keep.x, , drop = FALSE]
-    pgx$settings$preprocess <- .pgx_subset_preprocess_rows(
-      pgx$settings$preprocess,
-      keep.x
-    )
-  }
-  message("filtering out ", sum(!keep), " low-expressed genes")
-  message("keeping ", sum(keep), " expressed genes")
-  pgx
-}
-
 
 #' Internal use: append gmt (list) to a sparse gene set matrix
 #'
@@ -1218,7 +1055,9 @@ pgx.add_GMT <- function(pgx,
   ## written before this parameter existed) bypasses the TRUE default
   ## above, since R only applies argument defaults when the argument is
   ## missing, not when it's passed as NULL.
-  if (is.null(include_default_gmt)) include_default_gmt <- TRUE
+  if (is.null(include_default_gmt)) {
+    include_default_gmt <- TRUE
+  }
 
   if (!"symbol" %in% colnames(pgx$genes)) {
     message(paste(
@@ -1286,7 +1125,7 @@ pgx.add_GMT <- function(pgx,
   }
 
   # create a feature list that will be used to filter and reduce dimensions of G
-  ##full_feature_list <- c(pgx$genes$symbol, pgx$genes$ortholog, rownames(pgx$genes)) ## why ?? 
+  ##full_feature_list <- c(pgx$genes$symbol, pgx$genes$ortholog, rownames(pgx$genes)) ## why ??
   full_feature_list <- c(pgx$genes$symbol)
   full_feature_list <- setdiff(full_feature_list, c(NA,""))
   full_feature_list <- unique(full_feature_list)
@@ -1308,8 +1147,12 @@ pgx.add_GMT <- function(pgx,
 
   if (has.px2 && species_go) {
     ## add species GO genesets from AnnotationHub
-    info("[pgx.add_GMT] Retrieving species GO for organism", pgx$organism,"...")
-    go.main = go.ortho = NULL
+    info(
+      "[pgx.add_GMT] Retrieving species GO for organism",
+      pgx$organism,
+      "..."
+    )
+    go.main <- go.ortho <- NULL
 
     ## Lookup GO for main species
     go.main <- tryCatch({
@@ -1373,8 +1216,12 @@ pgx.add_GMT <- function(pgx,
   ## !!!!!!!!!!!!
   ## NOTE: this can be replace by PLAID??
 
-  if (is.null(max.genesets)) max.genesets <- 20000
-  if (max.genesets < 0) max.genesets <- 20000
+  if (is.null(max.genesets)) {
+    max.genesets <- 20000
+  }
+  if (max.genesets < 0) {
+    max.genesets <- 20000
+  }
   if (!is.null(G) && ncol(G) > max.genesets) {
     message("[pgx.add_GMT] Matching gene set matrix...")
     # we use SYMBOL as rownames
@@ -1416,8 +1263,12 @@ pgx.add_GMT <- function(pgx,
       i <- 1
       LL.cor <- list()
       for (i in 1:(length(index) - 1)) {
-        if (index[i] == 1) jj <- 1:index[i + 1]
-        if (index[i] > 1) jj <- (index[i] + 1):index[i + 1]
+        if (index[i] == 1) {
+          jj <- 1:index[i + 1]
+        }
+        if (index[i] > 1) {
+          jj <- (index[i] + 1):index[i + 1]
+        }
         LL.cor[[i]] <- qlcMatrix::corSparse(G, cX[, jj, drop = FALSE])
       }
       gsetX <- do.call(cbind, LL.cor)
@@ -1427,7 +1278,9 @@ pgx.add_GMT <- function(pgx,
     gsetX.bygroup <- NULL
     ## If groups/conditions are present we calculate the SD by group
     if (!is.null(grp)) {
-      gsetX.bygroup <- tapply(1:ncol(gsetX), grp, function(i) rowMeans(gsetX[, i, drop = FALSE], na.rm = TRUE))
+      gsetX.bygroup <- tapply(1:ncol(gsetX), grp, function(i) {
+        rowMeans(gsetX[, i, drop = FALSE], na.rm = TRUE)
+      })
       gsetX.bygroup <- do.call(cbind, gsetX.bygroup)
       ## sdx <- apply(gsetX.bygroup, 1, stats::sd, na.rm = TRUE)
       sdx <- matrixStats::rowSds(gsetX.bygroup, na.rm = TRUE)
@@ -1477,7 +1330,9 @@ pgx.add_GMT <- function(pgx,
     add.gmt <- NULL
     rr <- sample(3:400, 50)
     gg <- pgx$genes$symbol
-    random.gmt <- lapply(rr, function(n) head(sample(gg), min(n, length(gg) / 2)))
+    random.gmt <- lapply(rr, function(n) {
+      head(sample(gg), min(n, length(gg) / 2))
+    })
     names(random.gmt) <- paste0("TEST:random_geneset.", 1:length(random.gmt))
     # Extreme low feature count control, avoids crash
     if (all(lapply(random.gmt, length) |> unlist() < 3)) {

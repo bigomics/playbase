@@ -36,12 +36,12 @@ make_preprocess_fixture <- function() {
   list(counts = counts, samples = samples, contrasts = contrasts)
 }
 
-test_that("wrapper reduces the contrast design without changing source counts", {
+test_that("leaf reduces the contrast design without changing source counts", {
   fixture <- make_preprocess_fixture()
-  result <- pgx.preprocess(
-    fixture$counts,
-    fixture$samples,
-    fixture$contrasts,
+  result <- playbase.preprocess::pgx.preprocess(
+    counts = fixture$counts,
+    samples = fixture$samples,
+    contrasts = fixture$contrasts,
     options = list(
       normalize = FALSE,
       filter_missing = FALSE,
@@ -57,17 +57,16 @@ test_that("wrapper reduces the contrast design without changing source counts", 
   expect_identical(result$alignment$cols, seq_len(ncol(fixture$counts)))
 })
 
-test_that("wrapper derives plain target and batch metadata", {
+test_that("leaf derives plain target and batch metadata", {
   fixture <- make_preprocess_fixture()
   options <- list(
     normalize = FALSE,
-    batch_correct = TRUE,
-    batch_method = "limma"
+    batch.correct.method = "limma"
   )
-  result <- pgx.preprocess(
-    fixture$counts,
-    fixture$samples,
-    fixture$contrasts,
+  result <- playbase.preprocess::pgx.preprocess(
+    counts = fixture$counts,
+    samples = fixture$samples,
+    contrasts = fixture$contrasts,
     options = options
   )
 
@@ -84,10 +83,10 @@ test_that("wrapper derives plain target and batch metadata", {
 test_that("unknown legacy options fail at the matrix boundary", {
   fixture <- make_preprocess_fixture()
   expect_error(
-    pgx.preprocess(
-      fixture$counts,
-      fixture$samples,
-      fixture$contrasts,
+    playbase.preprocess::pgx.preprocess(
+      counts = fixture$counts,
+      samples = fixture$samples,
+      contrasts = fixture$contrasts,
       options = list(datatype = "RNA-seq")
     ),
     "unknown option"
@@ -96,10 +95,10 @@ test_that("unknown legacy options fail at the matrix boundary", {
 
 test_that("private count-scale policy supplies explicit leaf inputs", {
   fixture <- make_preprocess_fixture()
-  result <- pgx.preprocess(
-    fixture$counts,
-    fixture$samples,
-    fixture$contrasts,
+  result <- playbase.preprocess::pgx.preprocess(
+    counts = fixture$counts,
+    samples = fixture$samples,
+    contrasts = fixture$contrasts,
     options = list(normalize = FALSE)
   )
   pgx <- list(

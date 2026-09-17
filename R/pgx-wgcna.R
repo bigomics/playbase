@@ -103,7 +103,7 @@ pgx.wgcna <- function(
 
   if (!is.null(pgx$datatype) && pgx$datatype == "multi-omics") {
     message("[pgx.wgcna] Performing multi-omics normalization")
-    layers <- .pgx_preprocess_layers(X)
+    layers <- playbase.preprocess::pp.inferLayers(X)
     methods <- ifelse(unique(layers) == "gx", "CPM", "maxMedian")
     names(methods) <- unique(layers)
     X <- playbase.preprocess::pp.normalize(

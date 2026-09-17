@@ -26,7 +26,8 @@ pgx.createFromFiles(
 \item{contrasts.file}{(optional) Path to contrasts file. Rows and columns define contrasts.}
 
 \item{preprocess}{(optional) Named list of preprocessing settings, forwarded to
-[pgx.createPGX()] and from there to [pgx.preprocess()]. NULL (the default)
+[pgx.createPGX()] and from there to
+[playbase.preprocess::pgx.preprocess()]. NULL (the default)
 keeps the historical behaviour of this entry point, where `X` is a plain
 `log2(counts + prior)` with no filtering, imputation or normalization.
 Supplying a list is what makes a script reproduce the app: the wizard sends

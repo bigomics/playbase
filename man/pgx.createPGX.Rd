@@ -68,13 +68,17 @@ for the gene annotation table and the probe to symbol conversion.}
 
 \item{X}{(Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.}
 
-\item{preprocess}{(Optional) Named list of preprocessing options. If provided and
-`X` is NULL, `X` is built from `counts` via [pgx.preprocess()] (normalization,
-imputation, missingness filter, outlier removal) instead of a plain log2 transform.
-Requested batch correction is applied after the PGX annotation filters.
-This is how the Shiny upload flow and the compute endpoint obtain identical `X`.}
+\item{preprocess}{(Optional) Named list of preprocessing options. Whenever
+`X` is NULL, `X` is built from `counts` via
+[playbase.preprocess::pgx.preprocess()]. A NULL value selects explicit
+legacy-compatible log2 conversion; supplied options select leaf pipeline
+stages. Batch correction is selected only by `batch.correct.method` and
+runs inside that pipeline. The legacy conversion requires at least one
+finite positive count.}
 
-\item{is.logx}{Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.}
+\item{is.logx}{Deprecated upload hint. Confirmed log2 uploads must be
+back-transformed to counts before this function is called; they then pass
+through the complete preprocessing pipeline like any other count input.}
 
 \item{dotimeseries}{Logical indicating if timeseries analysis has been activated by the user at upload}
 

@@ -1,16 +1,3 @@
-#' Test for imputeMedian
-test_that("imputeMedian replaces NA with median", {
-  # Test matrix input
-  X <- matrix(c(1, NA, 3, NA, 2, NA), ncol = 2)
-  expected <- matrix(c(1, 2, 3, 1, 2, 3), ncol = 2)
-
-  imputed <- playbase::imputeMedian(X)
-
-  # Compare result to expected
-  expect_equal(imputed, expected)
-  expect_true(sum(is.na(imputed)) == 0)
-})
-
 #' Test for averageByGroup
 mat <- matrix(rep(1:10, 10), ncol = 10, byrow = TRUE)
 groups <- gl(2, 5)
@@ -41,7 +28,6 @@ test_that("averageByGroup calculates correct group means", {
 ##   # Test for handling NA
 ##   expect_true(is.na(playbase::gmean(c(NA, 1, 2))))
 ## })
-
 
 #' Test for mat2hugo
 #'

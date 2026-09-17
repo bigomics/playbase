@@ -10,7 +10,7 @@ outlier_pgx <- local({
       return(cached)
     }
     samples <- playbase::SAMPLES
-    pp <- suppressMessages(playbase::pgx.preprocess(
+    pp <- suppressMessages(playbase.preprocess::pgx.preprocess(
       counts = as.matrix(playbase::COUNTS),
       samples = samples,
       contrasts = playbase::CONTRASTS,
@@ -75,7 +75,7 @@ outlier_mofa_pgx <- local({
     rownames(gx) <- paste0("gx:", rownames(gx))
     rownames(px) <- paste0("px:", rownames(px))
 
-    pp <- suppressMessages(playbase::pgx.preprocess(
+    pp <- suppressMessages(playbase.preprocess::pgx.preprocess(
       counts = rbind(gx, px),
       samples = samples,
       contrasts = playbase::CONTRASTS,
