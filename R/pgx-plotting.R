@@ -282,7 +282,7 @@ pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap"), nb = NULL, ...)
   X1 <- X[jj, ]
   X1 <- X1 - rowMeans(X1, na.rm = TRUE)
   if (any(is.na(X1))) {
-    X1 <- svdImpute2(X1)
+    X1 <- .pgx_impute_svd2(X1)
   }
   if (ncol(X1) < 20) {
     X1 <- cbind(X1, X1, X1)
@@ -352,7 +352,13 @@ pgx.scatterPlot <- function(pgx, samples = NULL, pheno = NULL,
     if (method == "umap" && "tsne2d" %in% names(cpos)) pos <- cpos[["umap2d"]]
   }
 
-  if (nrow(pos) != nrow(pgx$samples)) {
+  ## `pos` names the samples the positions were computed on. pgx.clusterSamples()
+  ## builds them from the analysis matrix, so they span pgx$X's columns, which
+  ## outlier removal may have reduced below the upload that pgx$samples and
+  ## pgx$contrasts still span (D-24). Everything below indexes `pos` by name, so
+  ## the invariant is that its names are sample names -- not that `pos` and
+  ## pgx$samples have the same number of rows.
+  if (is.null(rownames(pos)) || !all(rownames(pos) %in% rownames(pgx$samples))) {
     stop("[pgx.scatterPlot] dimension mismatch of positions")
   }
 
@@ -1825,8 +1831,13 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
   if (is.numeric(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
   exp.matrix <- pgx$model.parameters$exp.matrix
   ct <- exp.matrix[, contrast]
-  ii <- which(ct < 0)
-  jj <- which(ct > 0)
+  ## The design's rows are samples and so are the expression matrices' columns,
+  ## but they are two different axes: the design spans the samples that could be
+  ## fitted, the matrices span the samples that have values, and outlier removal
+  ## can leave the two neither equal nor equally ordered (D-24). Name the sides
+  ## of the contrast rather than counting into them.
+  ii <- rownames(exp.matrix)[which(ct < 0)]
+  jj <- rownames(exp.matrix)[which(ct > 0)]
   if (level == "gene") {
     x0 <- rowMeans(pgx$X[, ii, drop = FALSE], na.rm = TRUE)
     x1 <- rowMeans(pgx$X[, jj, drop = FALSE], na.rm = TRUE)
@@ -2112,7 +2123,13 @@ pgx.plotExpression <- function(pgx,
   ## ------------- determine groups
   expmat <- pgx$model.parameters$exp.matrix
   cntrmat <- pgx$model.parameters$contr.matrix
-  expmat <- expmat[rownames(pgx$samples), , drop = FALSE]
+
+  ## A sample is drawn only if it has a group (it is in the design) and a value
+  ## (it is in pgx$X). Outlier removal may have dropped uploaded samples that
+  ## pgx$samples and pgx$contrasts still span (D-24), so that set is narrower
+  ## than the sample table. Cut to it once, here, and index by it below.
+  ss <- intersect(rownames(expmat), colnames(pgx$X))
+  expmat <- expmat[ss, , drop = FALSE]
 
   if (inherits(comp, "numeric")) comp <- colnames(expmat)[comp]
   if (!is.null(group.names) && length(group.names) != 2) stop("group.names must be length=2")
@@ -2126,7 +2143,7 @@ pgx.plotExpression <- function(pgx,
   ## if a named contrast table is available it is safer
   if (is.null(group.names) && "contrasts" %in% names(pgx)) {
     if (verbose) message("[pgx.plotExpression] parsing group names from contrast labels")
-    contr.labels <- pgx$contrasts[, comp]
+    contr.labels <- pgx$contrasts[ss, comp]
     contr.idx <- expmat[, comp]
     group1 <- names(which.max(table(contr.labels[contr.idx > 0])))
     group0 <- names(which.max(table(contr.labels[contr.idx < 0])))
@@ -2161,8 +2178,8 @@ pgx.plotExpression <- function(pgx,
 
   ## create groups
   ct <- expmat[, comp]
-  names(ct) <- rownames(expmat)
-  samples <- rownames(expmat)[which(ct != 0)]
+  names(ct) <- ss
+  samples <- ss[which(ct != 0)]
   grp0.name <- grp1.name <- NULL
   if (!is.null(group.names)) {
     grp0.name <- group.names[1]
@@ -2173,14 +2190,14 @@ pgx.plotExpression <- function(pgx,
   }
 
   xgroup <- c("other", grp0.name, grp1.name)[1 + 1 * (ct < 0) + 2 * (ct > 0)]
-  names(xgroup) <- rownames(pgx$samples)
+  names(xgroup) <- ss
   jj <- which(!(xgroup %in% xgroup[samples]))
 
   if (length(jj) > 0 && collapse.others) {
     xgroup <- as.character(xgroup)
     xgroup[jj] <- "other"
   }
-  names(xgroup) <- rownames(expmat)
+  names(xgroup) <- ss
 
   if (inherits(xgroup, "character")) {
     xgroup <- as.character(xgroup)
@@ -2200,9 +2217,9 @@ pgx.plotExpression <- function(pgx,
 
   ## -------------- get expression value
   if (level == "geneset") {
-    gx <- pgx$gsetX[probe, rownames(pgx$samples)]
+    gx <- pgx$gsetX[probe, ss]
   } else {
-    gx <- pgx$X[which(rownames(pgx$X) == probe), rownames(pgx$samples)]
+    gx <- pgx$X[which(rownames(pgx$X) == probe), ss]
   }
 
   if (!logscale) {
@@ -7065,8 +7082,8 @@ plotlyLasagna <- function(df, znames = NULL, cex = 1, edges = NULL) {
 
   edgetype1 <- edgetype1 <- NULL
   if (!is.null(edges)) {
-    edgetype1 <- mofa.get_prefix(edges[, 1])
-    edgetype2 <- mofa.get_prefix(edges[, 2])
+    edgetype1 <- .pgx_feature_prefix(edges[, 1])
+    edgetype2 <- .pgx_feature_prefix(edges[, 2])
   }
   if (is.null(df$text)) df$text <- rownames(df)
 
@@ -7443,7 +7460,7 @@ plotMultiPartiteGraph <- function(X, f, group, groups = NULL,
   }
 
   ## limit number per group
-  igraph::V(gr)$group <- mofa.get_prefix(igraph::V(gr)$name)
+  igraph::V(gr)$group <- .pgx_feature_prefix(igraph::V(gr)$name)
   table(igraph::V(gr)$group)
   groups <- intersect(groups, unique(igraph::V(gr)$group))
   sel <- tapply(

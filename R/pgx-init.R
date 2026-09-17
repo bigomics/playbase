@@ -95,8 +95,10 @@ pgx.initialize <- function(pgx, progress=NULL) {
   }
 
   ## for COMPATIBILITY: if no counts, estimate from X
+  ##
+  ## Old objects without source counts can only carry an estimated count scale.
   if (is.null(pgx$counts)) {
-    message("WARNING:: no counts table. estimating from X\n")
+    message("WARNING:: no counts table. estimating from X assuming prior = 1\n")
     pgx$counts <- pmax(2**pgx$X - 1, 0)
     k <- grep("lib.size|libsize", colnames(pgx$samples))[1]
     if (length(k) > 0) {

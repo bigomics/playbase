@@ -10,6 +10,7 @@ pgx.createFromFiles(
   counts.file,
   samples.file,
   contrasts.file = NULL,
+  preprocess = NULL,
   gxmethods = "trend.limma,edger.qlf,deseq2.wald",
   gsetmethods = "fisher,gsva,fgsea",
   extra = "meta.go,deconv,infer,drugs,wordcloud",
@@ -23,6 +24,16 @@ pgx.createFromFiles(
 \item{samples.file}{Path to samples data file. Rows are samples, columns are sample info.}
 
 \item{contrasts.file}{(optional) Path to contrasts file. Rows and columns define contrasts.}
+
+\item{preprocess}{(optional) Named list of preprocessing settings, forwarded to
+[pgx.createPGX()] and from there to
+[playbase.preprocess::pgx.preprocess()]. NULL (the default)
+keeps the historical behaviour of this entry point, where `X` is a plain
+`log2(counts + prior)` with no filtering, imputation or normalization.
+Supplying a list is what makes a script reproduce the app: the wizard sends
+the same list, so the same settings give the same `X`. See
+\code{\link[playbase.preprocess]{pgx.preprocess}} for the settings and
+their defaults.}
 
 \item{gxmethods}{a string with the gene-level methods to use. The default value is \code{"trend.limma,edger.qlf,deseq2.wald"}}
 

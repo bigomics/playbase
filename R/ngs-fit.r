@@ -864,7 +864,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
   if (!method %in% c("qlf", "lrt")) stop("EdgeR method must be qlf or lrt")
 
   ## EdgeR/Deseq2 not available for proteomics. Thus, autoscaling is rarely run.
-  counts <- playbase::counts.autoScaling(counts)$counts
+  counts <- playbase.preprocess::pp.scaleCounts(counts)$counts
 
   exp0 <- contr.matrix
 
@@ -1057,7 +1057,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
   if (!method %in% c("qlf", "lrt")) stop("EdgeR method must be qlf or lrt")
 
   ## EdgeR/Deseq2 not available for proteomics. Thus, autoscaling is rarely run.
-  counts <- playbase::counts.autoScaling(counts)$counts
+  counts <- playbase.preprocess::pp.scaleCounts(counts)$counts
 
   tables <- list()
   for (i in 1:NCOL(contr.matrix)) {
@@ -1340,7 +1340,7 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
                                        conform.output = FALSE,
                                        timeseries = NULL) {
   ## EdgeR/Deseq2 not available for proteomics. Thus, autoscaling is rarely run.
-  counts <- playbase::counts.autoScaling(counts)$counts
+  counts <- playbase.preprocess::pp.scaleCounts(counts)$counts
 
   exp0 <- contr.matrix
 
@@ -1378,7 +1378,7 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
                                                  X = NULL,
                                                  timeseries = NULL) {
   ## EdgeR/Deseq2 not available for proteomics. Thus, autoscaling is rarely run.
-  counts <- playbase::counts.autoScaling(counts)$counts
+  counts <- playbase.preprocess::pp.scaleCounts(counts)$counts
 
   counts <- round(counts)
   if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
@@ -1632,7 +1632,7 @@ ngs.fitContrastsWithDESEQ2.regress.covs <- function(counts,
                                                             fitType = "mean",
                                                             use.spline = NULL) {
   ## EdgeR/Deseq2 not available for proteomics. Thus, autoscaling is rarely run.
-  counts <- playbase::counts.autoScaling(counts)$counts
+  counts <- playbase.preprocess::pp.scaleCounts(counts)$counts
 
   if (!all(colnames(counts) %in% names(timeseries))) {
     stop("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] counts and time contain different set of samples.")

@@ -3,42 +3,6 @@
 ## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
-
-#' Impute missing values with row medians
-#'
-#' @param X Numeric matrix
-#'
-#' @return Matrix with missing values imputed
-#'
-#' @details
-#' This function imputes missing values in a numeric matrix
-#' by replacing them with the median value for each row.
-#'
-#' It first calculates the median of each row, ignoring NA values.
-#' For rows where the median is NA, it takes the median of the row medians.
-#' It then creates a copy of the input matrix and replaces all NA elements
-#' with the corresponding row median value.
-#'
-#' @examples
-#' \dontrun{
-#' mat <- matrix(c(1:10, NA), nrow = 5)
-#' imputed <- imputeMedian(mat)
-#' }
-#'
-#' @export
-imputeMedian <- function(X) {
-  if (NCOL(X) == 1) {
-    mx <- stats::median(X, na.rm = TRUE)
-  } else {
-    mx <- apply(X, 1, stats::median, na.rm = TRUE)
-  }
-  mx[is.na(mx)] <- stats::median(mx, na.rm = TRUE)
-  impX <- X
-  impX[is.na(impX)] <- 0
-  impX <- impX + is.na(X) * mx
-  return(impX)
-}
-
 #' @title Calculate group means
 #'
 #' @description

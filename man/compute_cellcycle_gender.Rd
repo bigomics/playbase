@@ -4,7 +4,7 @@
 \alias{compute_cellcycle_gender}
 \title{Compute Cell Cycle and Gender Inference}
 \usage{
-compute_cellcycle_gender(pgx, rna.counts = pgx$counts)
+compute_cellcycle_gender(pgx, rna.counts = .pgx_count_scale_matrix(pgx))
 }
 \arguments{
 \item{pgx}{An object containing the input data for analysis.}

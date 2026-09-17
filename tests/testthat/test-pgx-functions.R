@@ -164,26 +164,6 @@ test_that("add_opacity adds opacity correctly", {
   expect_equal(result, expected)
 })
 
-#' Test for logCPM
-test_that("logCPM transforms counts to logCPM", {
-  # Generate test data
-  set.seed(123)
-  counts <- matrix(rpois(100, lambda = 10), ncol = 10)
-
-  # Expected output
-  expected <- log2(counts / colSums(counts) * 1e6 + 1)
-
-  # Run function
-  result <- playbase::logCPM(counts)
-
-  # Check class
-  expect_equal(class(result), c("matrix", "array"))
-
-  # Check values
-  expect_equal(round(result, 4), round(expected, 4), tolerance = 0.5)
-})
-
-
 #' Test for pgx.checkObject
 #'
 

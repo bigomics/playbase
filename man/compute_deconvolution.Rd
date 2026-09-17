@@ -4,7 +4,11 @@
 \alias{compute_deconvolution}
 \title{Compute Deconvolution}
 \usage{
-compute_deconvolution(pgx, rna.counts = pgx$counts, full = FALSE)
+compute_deconvolution(
+  pgx,
+  rna.counts = .pgx_count_scale_matrix(pgx),
+  full = FALSE
+)
 }
 \arguments{
 \item{pgx}{An object containing the input data for analysis.}

@@ -64,7 +64,7 @@ pgx.computePCSF <- function(pgx, contrast, datatypes = NULL,
 
   ## filter on datatype or geneset collection
   if (!is.null(datatypes)) {
-    dt <- mofa.get_prefix(rownames(X))
+    dt <- .pgx_feature_prefix(rownames(X))
     datatypes <- intersect(datatypes, unique(dt))
     if (length(datatypes) == 0) {
       message("[pgx.computePCSF2] ERROR. no valid datatypes")
@@ -74,7 +74,7 @@ pgx.computePCSF <- function(pgx, contrast, datatypes = NULL,
 
   ## take top features by datatype
   if (!is.null(datatypes)) {
-    dt <- mofa.get_prefix(names(zx))
+    dt <- .pgx_feature_prefix(names(zx))
     ii <- tapply(zx, dt, function(x) head(names(sort(-abs(x))), 2 * ntop))
     ii <- unlist(ii[datatypes])
   } else {
