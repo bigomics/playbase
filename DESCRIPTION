@@ -185,7 +185,7 @@ Remotes:
     org.Pf.plasmo.db=url::https://bioconductor.org/packages/3.14/data/annotation/src/contrib/org.Pf.plasmo.db_3.14.0.tar.gz,
     PCSF=url::https://github.com/bigomics/PCSF/archive/HEAD.zip,
     playdata=url::https://github.com/bigomics/playdata/archive/HEAD.zip,
-    playbase.preprocess=url::https://github.com/bigomics/playbase.preprocess/archive/HEAD.zip,
+    bigomics/playbase.preprocess,
     infercnv=url::https://github.com/broadinstitute/infercnv/archive/refs/tags/infercnv-v1.3.3.zip,
     EPIC=url::https://github.com/GfellerLab/EPIC/archive/HEAD.zip,
     SuperCell=url::https://github.com/GfellerLab/SuperCell/archive/HEAD.zip,
