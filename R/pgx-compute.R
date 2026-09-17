@@ -1195,8 +1195,12 @@ pgx.add_GMT <- function(pgx,
   if (!is.null(custom.geneset$gmt)) {
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in columns.
     custom_gmt <- custom.geneset$gmt
-    custom_gmt <- custom_gmt[sapply(custom_gmt,length)>1]    
+    custom_gmt <- custom_gmt[sapply(custom_gmt,length)>1]
+    names(custom_gmt) <- sub("^[A-Z_]+:", "", names(custom_gmt))
+    names(custom_gmt) <- paste0("CUSTOM:", names(custom_gmt))
+
     message(paste("[pgx.add_GMT] Adding",length(custom_gmt),"custom genesets"))
+
     ## Map feature id always to species specific symbols. This uses
     ## the feature annotation table pgx$genes so it also uses the
     ## ortholog columns for matching.

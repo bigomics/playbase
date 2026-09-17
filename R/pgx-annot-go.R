@@ -33,7 +33,7 @@ getOrganismGO <- function(organism, features=NULL, minsize=3L, batch_size=2000L,
       batch_size=batch_size, include_iea=include_iea)
     message(paste("Got",length(gmt2),"GO terms from Gprofiler"))
   }
-  
+
   ## merge
   gmt <- c(gmt1, gmt2)
   if(length(gmt)==0) {
@@ -41,14 +41,9 @@ getOrganismGO <- function(organism, features=NULL, minsize=3L, batch_size=2000L,
     return(NULL)
   }
   
-## check duplicated GO termsyes
+  ## check duplicated GO termsyes
   gmt <- go.merge_duplicates(gmt)
 
-  ## convert all id to species symbol
-  if(!is.null(symbol.annot)) {
-    gmt <- gmt.map2symbol(gmt, annot=symbol.annot, target="symbol") 
-  }
-  
   ## sort on largest
   gmt <- gmt[order(-sapply(gmt,length))]
   

@@ -72,7 +72,7 @@ getProbeAnnotation <- function(organism,
                                annot_table = NULL) {
   if (is.null(datatype)) datatype <- "unknown"
   if (is.null(probetype)) probetype <- "unknown"
-  if (is.null(ortholog_species)) ortholog_species <- "Human"  
+  if (is.null(ortholog_species)) ortholog_species <- "Human"
 
   unknown.organism <- (tolower(organism) %in% c("no organism", "custom", "unkown"))
   unknown.datatype <- (datatype %in% c("custom", "unkown"))
@@ -279,6 +279,8 @@ getGeneAnnotation <- function(
     ##annot$orthologs <- ortho$orthologs  ## all candidates, ";"-joined
     annot$ortholog_description <- ortho$description
 
+    annot$description_source <- organism
+        
     ## A number of downstream resources (default genesets, TileDB,
     ## CMAP, GENE_SUMMARY, Reactome/WikiPathways, GTEx tissue,
     ## cross-dataset compare, ...) are keyed on human gene symbols
@@ -297,6 +299,36 @@ getGeneAnnotation <- function(
       )
       annot$human_ortholog <- ortho.human$ortholog
     }
+
+
+    ## if gene_title is missing or "unknown","hypothetical" and there
+    ## is a better ortholog_description replacte gene_title with
+    ## ortholog description.
+    if("gene_title" %in% colnames(annot)) {
+      missing.regex <- "unknown|missing|hypothetical"
+      na.strings <- c(NA,"","NA","na","N/A","n/a")
+      title.missing <- annot$gene_title %in% na.strings | grepl(missing.regex,tolower(annot$gene_title))
+      has.ortho_description <- !(annot$ortholog_description %in% na.strings) &
+        !grepl(missing.regex, tolower(annot$ortholog_description))
+      ii <- which( title.missing & has.ortho_description )
+      if(length(ii)) {
+        annot$gene_title[ii] <- annot$ortholog_description[ii]
+        annot$description_source[ii] <- ortholog_species
+      }
+
+      title.missing <- annot$gene_title %in% na.strings | grepl(missing.regex,tolower(annot$gene_title))
+      has.human_description <- !(annot$ortholog_description %in% na.strings) &
+        !grepl(missing.regex, tolower(annot$human_description))
+      ii <- which( title.missing & has.human_description )
+      if(length(ii)) {
+        annot$gene_title[ii] <- annot$human_description[ii]
+        annot$description_source[ii] <- "human"
+      }
+      
+    }
+
+
+
   }
 
   if (verbose > 0) {
@@ -406,10 +438,10 @@ getGeneAnnotation.ANNOTHUB <- function(
       annot <- cleanupAnnotation(annot)
       annot$symbol <- NA
       annot$gene_title <- NA      
+      annot$human_ortholog <- NULL
+      annot$human_orthologs <- NULL
       annot$ortholog <- NULL
-      annot$orthologs <- NULL     
-      annot$ortholog <- NULL
-      annot$orthologs <- NULL     
+      annot$orthologs <- NULL
       return(annot)
     }
   }
@@ -1074,7 +1106,7 @@ getHumanOrtholog <- function(organism, symbols,
   df <- getOrtholog(
     symbols = symbols,
     organism = organism,
-    target_species = "Human", 
+    target_species = "Human",
     ortho.methods = ortho.methods,
     verbose = verbose)
   df
@@ -1342,7 +1374,7 @@ getOrtholog <- function(symbols, organism, target_species,
   if(inherits(out,"try-error")) out <- NULL
   out
 }
-  
+
 
 ## ================================================================================
 ## ========================= FUNCTIONS ============================================
