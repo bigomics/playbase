@@ -81,23 +81,18 @@ combined_build_report_data <- function(ai_slot, pgx) {
   list(text = text, slots = slots)
 }
 
-ai.combined.create_report <- function(pgx, slice, ai) {
+#' Build the LLM job for the combined summary report.
+#'
+#' Must be built *after* the per-module reports exist: the data block is
+#' assembled from `pgx$ai`, so a caller running modules concurrently has to
+#' fold those results back into `pgx` before calling this.
+#' @keywords internal
+ai.combined.build_jobs <- function(pgx, slice, ai) {
   slots <- combined_report_slots(slice)
   if (!length(slots)) return(NULL)
   if (!requireNamespace("omicsai", quietly = TRUE)) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
-
-  data_block <- combined_build_report_data(slice, pgx)$text
-  bp <- .ai_report_build_prompt(pgx, "combined", data_block)
-  out <- .ai_report_run_prompt(bp, ai)
-  # Normalize model slips like "**Discussion**" or "## Discussion".
-  out$report <- gsub(
-    "(?m)^\\s*(?:##\\s+)?(?:\\*\\*)?(Discussion|Conclusion)(?:\\*\\*)?\\s*$",
-    "## **\\1**",
-    out$report,
-    perl = TRUE
-  )
 
   method_headings <- c(
     "Differential expression",
@@ -109,13 +104,33 @@ ai.combined.create_report <- function(pgx, slice, ai) {
   allowed_headings <- unique(vapply(slots, function(slot) {
     .combined_report_source_info(slot)[["title"]]
   }, character(1)))
-  for (heading in setdiff(method_headings, allowed_headings)) {
-    out$report <- gsub(
-      paste0("(?ms)^###\\s+", heading, "\\s*\\n.*?(?=^###\\s+|^##\\s+|\\z)"),
-      "",
-      out$report,
-      perl = TRUE
-    )
-  }
-  out
+  drop_headings <- setdiff(method_headings, allowed_headings)
+
+  data_block <- combined_build_report_data(slice, pgx)$text
+  list(.ai_report_job(
+    module = "combined", slot = "combined",
+    bp = .ai_report_build_prompt(pgx, "combined", data_block),
+    finalize = function(report) {
+      # Normalize model slips like "**Discussion**" or "## Discussion".
+      report <- gsub(
+        "(?m)^\\s*(?:##\\s+)?(?:\\*\\*)?(Discussion|Conclusion)(?:\\*\\*)?\\s*$",
+        "## **\\1**",
+        report,
+        perl = TRUE
+      )
+      for (heading in drop_headings) {
+        report <- gsub(
+          paste0("(?ms)^###\\s+", heading, "\\s*\\n.*?(?=^###\\s+|^##\\s+|\\z)"),
+          "",
+          report,
+          perl = TRUE
+        )
+      }
+      report
+    }
+  ))
+}
+
+ai.combined.create_report <- function(pgx, slice, ai) {
+  .ai_report_create_report_compat("combined", pgx, slice, ai)
 }

@@ -69,12 +69,32 @@
   omicsai::build_prompt(prompt)
 }
 
+.ai_report_accepts_reasoning <- function(model) {
+  omicsai::omicsai_model_accepts_extra(model, "reasoning_effort")
+}
+
 .ai_report_run_prompt <- function(bp, ai) {
   if (!requireNamespace("omicsai", quietly = TRUE)) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
-  cfg <- omicsai::omicsai_config(model = ai$llm_model,
-                                 system_prompt = bp$system)
+  ## credentials: a BYOK key closure reaches us on `ai` and has to be handed to
+  ## the config, otherwise the call silently falls back to the deployment's own
+  ## provider key. timeout/retries: bound one stalled provider connection, which
+  ## otherwise sits on ellmer's 300s x 3 default for 15 minutes.
+  cfg_args <- list(
+    model           = ai$llm_model,
+    system_prompt   = bp$system,
+    credentials     = ai$credentials,
+    timeout_seconds = ai$timeout_seconds,
+    retries         = ai$retries
+  )
+  ## Passed through `...` into config$extra. Strict validation rejects the key
+  ## on models that do not declare it, so only send it when we have one.
+  if (!is.null(ai$reasoning_effort) && nzchar(ai$reasoning_effort) &&
+      .ai_report_accepts_reasoning(ai$llm_model)) {
+    cfg_args$reasoning_effort <- ai$reasoning_effort
+  }
+  cfg <- do.call(omicsai::omicsai_config, cfg_args)
   res <- omicsai::omicsai_gen_text(bp$board, config = cfg)
   ## Preserve omicsai's usage list verbatim (a plain list from
   ## .omicsai_extract_usage(), not the S7 object) so downstream telemetry reads
