@@ -85,6 +85,8 @@ normalizeOrganism <- function(organism) {
   if (grepl("canis.*familiaris|^dog$", org_lower)) {
     return("Canis familiaris")
   }
+
+
   organism
 }
 
@@ -402,14 +404,28 @@ collapse_by_humansymbol <- function(obj, annot) {
   map.obj
 }
 
+
+.map_gprofiler_id.SPECIES_TABLE <- function(species) {
+  if (is.null(species) || is.na(species) || !nzchar(species)) return(NULL)
+  spt <- playbase::SPECIES_TABLE[,c("species_name","ah_species","gprofiler_species")]
+  idx <- which(apply(spt,1, function(s) species %in% s))
+  if(length(idx)==0) return(NULL)
+  playbase::SPECIES_TABLE[idx,"gprofiler_id"]
+}
+
 #'
 #' 
 .map_gprofiler_id <- function(species) {
 
   if (is.null(species) || is.na(species) || !nzchar(species)) return(NULL)
 
+  ## first try SPECIES_TABLE
+  id <- .map_gprofiler_id.SPECIES_TABLE(species) 
+  if(!is.null(id)) return(id)
+  
+  ## get full list of supported gprofiler organisms
   orgs <- jsonlite::fromJSON("https://biit.cs.ut.ee/gprofiler/api/util/organisms_list")
-
+  
   ## exact match
   exact.species <- paste0("^",species,"$")
   i <- which(

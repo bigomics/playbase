@@ -146,6 +146,7 @@ getProbeAnnotation <- function(organism,
       organism = organism,
       probes = probes,
       ortholog_species = ortholog_species,
+      methods = c("annothub", "gprofiler","uniprot"),
       is.phospho = is.phospho
     )
   }
@@ -191,7 +192,7 @@ getGeneAnnotation <- function(
   probes,
   is.phospho = FALSE,
   use.ah = NULL,
-  methods = c("annothub", "gprofiler"),
+  methods = c("annothub", "gprofiler","uniprot"),
   ortholog_species = "Human",
   verbose = TRUE
 ) {
@@ -233,6 +234,11 @@ getGeneAnnotation <- function(
           verbose = verbose
         ),
         "gprofiler" = getGeneAnnotation.GPROFILER(
+          organism = organism,
+          probes = missing_probes,
+          verbose = verbose
+        ),
+        "uniprot" = getGeneAnnotation.UNIPROT(
           organism = organism,
           probes = missing_probes,
           verbose = verbose
@@ -441,7 +447,9 @@ getGeneAnnotation.ANNOTHUB <- function(
       annot$human_ortholog <- NULL
       annot$human_orthologs <- NULL
       annot$ortholog <- NULL
-      annot$orthologs <- NULL
+      annot$orthologs <- NULL     
+      annot$human_ortholog <- NULL
+      annot$human_orthologs <- NULL     
       return(annot)
     }
   }
@@ -731,6 +739,98 @@ getGeneAnnotation.GPROFILER <- function(
   }
 
   return(df)
+}
+
+#' Regex sniff of the dominant ID pattern in `probes`, mapped straight to a
+#' UniProt.ws::mapUniProt() `from` key. Cheap alternative to
+#' detect_probetype(), which needs an OrgDb/network lookup and returns
+#' OrgDb keytypes (e.g. "ENSEMBL") rather than UniProt.ws `from` names
+#' (e.g. "Ensembl") anyway.
+#'
+#' Returns NA if no pattern matches a majority of probes, so the caller
+#' does not guess a keytype (e.g. "Gene_Name") for unrecognized IDs.
+detect_probetype.UNIPROT <- function(probes) {
+  probes <- probes[!is.na(probes) & probes != ""]
+  if (length(probes) == 0) return(NA_character_)
+  patterns <- c(
+    "Ensembl_Protein"    = "^ENS[A-Z]*P[0-9]+",
+    "Ensembl_Transcript" = "^ENS[A-Z]*T[0-9]+",
+    "Ensembl"            = "^ENS[A-Z]*G[0-9]+",
+    "RefSeq_Protein"     = "^[NXY]P_[0-9]+",
+    "UniProtKB_AC-ID"    = "^[OPQ][0-9][A-Z0-9]{3}[0-9]$|^[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}$",
+    "GeneID"             = "^[0-9]+$"
+  )
+  hits <- sapply(patterns, function(p) mean(grepl(p, probes)))
+  if (max(hits) > 0.5) return(names(which.max(hits)))
+  NA_character_
+}
+
+#' Annotate using UniProt.ws::mapUniProt. Third backend for
+#' getGeneAnnotation(), based on UniProt's REST ID-mapping service.
+#' mapUniProt has no taxId argument, so `organism` is only used to drop
+#' cross-species hits when a query maps to more than one organism (e.g.
+#' a gene symbol shared across species).
+getGeneAnnotation.UNIPROT <- function(
+  organism,
+  probes,
+  probe_type = NULL,
+  verbose = TRUE
+) {
+  if (verbose) message("[getGeneAnnotation.UNIPROT] Retrieving gene annotation...")
+
+  probes[is.na(probes) | probes == ""] <- "NA"
+  probes0 <- make_unique(probes)
+
+  if (is.null(probe_type)) probe_type <- detect_probetype.UNIPROT(probes)
+  if (is.na(probe_type)) {
+    message("[getGeneAnnotation.UNIPROT] could not detect probe type; skipping")
+    return(NULL)
+  }
+  if (verbose) message("[getGeneAnnotation.UNIPROT] probe_type = ", probe_type)
+
+  cols <- c("accession", "gene_primary", "protein_name", "organism_name")
+  map <- try(UniProt.ws::mapUniProt(
+    from = probe_type,
+    to = "UniProtKB",
+    columns = cols,
+    query = unique(probes),
+    verbose = FALSE,
+    paginate = TRUE,
+    pageSize = 500L
+  ), silent = TRUE)
+
+  if (inherits(map, "try-error") || is.null(map) || nrow(map) == 0) {
+    message("[getGeneAnnotation.UNIPROT] *WARNING* no results from UniProt.ws")
+    return(NULL)
+  }
+
+  ## keep only hits matching organism (mapUniProt has no taxId filter,
+  ## so a symbol/gene name can come back for the wrong species)
+  organism <- normalizeOrganism(organism)
+  if (!is.null(organism) && "Organism" %in% colnames(map)) {
+    keep <- grepl(organism, map$Organism, fixed = TRUE) | !nzchar(map$Organism)
+    if (any(keep)) map <- map[keep, , drop = FALSE]
+  }
+
+  ## collapse multiple hits per query key into one ";"-joined row
+  collapse <- function(x) paste(unique(x[!is.na(x) & nzchar(x)]), collapse = ";")
+  agg <- aggregate(
+    map[, c("Entry", "Gene.Names..primary.", "Protein.names")],
+    by = list(From = map$From),
+    FUN = collapse
+  )
+
+  genes <- data.frame(
+    feature = probes,
+    symbol = agg$Gene.Names..primary.[match(probes, agg$From)],
+    uniprot = agg$Entry[match(probes, agg$From)],
+    gene_title = agg$Protein.names[match(probes, agg$From)],
+    chr = NA,
+    source = "UniProt.ws",
+    stringsAsFactors = FALSE
+  )
+  rownames(genes) <- probes0
+  genes
 }
 
 .getGprofilerSpecies <- function(organism, as = c("name", "id")[1]) {
@@ -1503,6 +1603,9 @@ getExampleFeatures <- function(organism, n=20, db=c("gprofiler","orgdb")) {
     if(d == "gprofiler") {
       f <- try(getExampleFeatures.GPROFILER(organism, n=n), silent=TRUE)
     }
+    if(d == "uniprot") {
+      f <- try(getExampleFeatures.UNIPROT(organism, n=n), silent=TRUE)
+    }
     if(inherits(f,"try-error")) f <- NULL
     if(!is.null(f)) break
   }
@@ -1555,5 +1658,37 @@ getExampleFeatures.GPROFILER <- function(organism, n) {
   out <- try(gprofiler2::gconvert(query, organism=species_id,
     mthreshold=Inf, target="ENSG"))
   sample(out$name, n)
+}
+
+#' Example features (UniProt accessions) for organisms with no OrgDb
+#' package and no g:Profiler entry. Last-resort fallback: pulls a random
+#' sample of that organism's UniProt.ws keys directly.
+getExampleFeatures.UNIPROT <- function(organism, n) {
+  dbg("[getExampleFeatures.UNIPROT] 1: organism = ", organism)
+  ## Prefer the taxonomy ID from our own species table: it's exact and
+  ## sidesteps species_name strings (e.g. "Cricetulus barabensis_griseus")
+  ## that don't match UniProt's own species names for pattern search.
+  species_table <- data.frame(playbase::SPECIES_TABLE)
+  taxid <- species_table$taxonomyid[match(organism, species_table$species_name)]
+  taxid <- taxid[!is.na(taxid)]
+  if (length(taxid) == 0) {
+    organism <- normalizeOrganism(organism)
+    dbg("[getExampleFeatures.UNIPROT] 2: organism = ", organism)
+    sp <- try(UniProt.ws::availableUniprotSpecies(pattern = organism), silent = TRUE)
+    if (inherits(sp, "try-error") || is.null(sp) || nrow(sp) == 0) {
+      message("[getExampleFeatures.UNIPROT] unknown species")
+      return(NULL)
+    }
+    taxid <- sp[1, "Taxon Node"]
+  }
+  taxid <- taxid[1]
+  up <- try(UniProt.ws::UniProt.ws(taxId = taxid), silent = TRUE)
+  if (inherits(up, "try-error")) {
+    message("[getExampleFeatures.UNIPROT] could not connect for taxId ", taxid)
+    return(NULL)
+  }
+  pp <- UniProt.ws::keys(up, "UniProtKB")
+  if (length(pp) == 0) return(NULL)
+  sample(pp, min(n, length(pp)))
 }
 
