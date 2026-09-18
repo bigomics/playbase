@@ -25,15 +25,15 @@
 
 .ai_resolve_defaults <- function(ai) {
   if (is.null(ai)) ai <- list()
-  if (!is.list(ai)) stop("[pgx.update_reports] `ai` must be a list")
+  if (!is.list(ai)) stop("[.ai_resolve_defaults] `ai` must be a list")
   out <- .AI_DEFAULTS
   for (nm in names(ai)) out[[nm]] <- ai[[nm]]
   if (!out$report_type %in% c("normal", "deep")) {
-    stop("[pgx.update_reports] ai$report_type must be 'normal' or 'deep'; got '",
+    stop("[.ai_resolve_defaults] ai$report_type must be 'normal' or 'deep'; got '",
          out$report_type, "'")
   }
   if (!out$on_error %in% c("skip", "abort", "warn")) {
-    stop("[pgx.update_reports] ai$on_error must be 'skip', 'abort', or 'warn'")
+    stop("[.ai_resolve_defaults] ai$on_error must be 'skip', 'abort', or 'warn'")
   }
   out
 }

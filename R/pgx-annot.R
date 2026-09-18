@@ -72,7 +72,7 @@ getProbeAnnotation <- function(organism,
                                annot_table = NULL) {
   if (is.null(datatype)) datatype <- "unknown"
   if (is.null(probetype)) probetype <- "unknown"
-  if (is.null(ortholog_species)) ortholog_species <- "Human"  
+  if (is.null(ortholog_species)) ortholog_species <- "Human"
 
   unknown.organism <- (tolower(organism) %in% c("no organism", "custom", "unkown"))
   unknown.datatype <- (datatype %in% c("custom", "unkown"))
@@ -332,9 +332,9 @@ getGeneAnnotation <- function(
       }
       
     }
-    
 
-    
+
+
   }
 
   if (verbose > 0) {
@@ -444,6 +444,8 @@ getGeneAnnotation.ANNOTHUB <- function(
       annot <- cleanupAnnotation(annot)
       annot$symbol <- NA
       annot$gene_title <- NA      
+      annot$human_ortholog <- NULL
+      annot$human_orthologs <- NULL
       annot$ortholog <- NULL
       annot$orthologs <- NULL     
       annot$human_ortholog <- NULL
@@ -1204,7 +1206,7 @@ getHumanOrtholog <- function(organism, symbols,
   df <- getOrtholog(
     symbols = symbols,
     organism = organism,
-    target_species = "Human", 
+    target_species = "Human",
     ortho.methods = ortho.methods,
     verbose = verbose)
   df
@@ -1472,7 +1474,7 @@ getOrtholog <- function(symbols, organism, target_species,
   if(inherits(out,"try-error")) out <- NULL
   out
 }
-  
+
 
 ## ================================================================================
 ## ========================= FUNCTIONS ============================================

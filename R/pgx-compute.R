@@ -1156,7 +1156,7 @@ pgx.add_GMT <- function(pgx,
   }
 
   # create a feature list that will be used to filter and reduce dimensions of G
-  ##full_feature_list <- c(pgx$genes$symbol, pgx$genes$ortholog, rownames(pgx$genes)) ## why ?? 
+  ##full_feature_list <- c(pgx$genes$symbol, pgx$genes$ortholog, rownames(pgx$genes)) ## why ??
   full_feature_list <- c(pgx$genes$symbol)
   full_feature_list <- setdiff(full_feature_list, c(NA,""))
   full_feature_list <- unique(full_feature_list)
@@ -1222,8 +1222,12 @@ pgx.add_GMT <- function(pgx,
   if (!is.null(custom.geneset$gmt)) {
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in columns.
     custom_gmt <- custom.geneset$gmt
-    custom_gmt <- custom_gmt[sapply(custom_gmt,length)>1]    
+    custom_gmt <- custom_gmt[sapply(custom_gmt,length)>1]
+    names(custom_gmt) <- sub("^[A-Z_]+:", "", names(custom_gmt))
+    names(custom_gmt) <- paste0("CUSTOM:", names(custom_gmt))
+
     message(paste("[pgx.add_GMT] Adding",length(custom_gmt),"custom genesets"))
+
     ## Map feature id always to species specific symbols. This uses
     ## the feature annotation table pgx$genes so it also uses the
     ## ortholog columns for matching.
