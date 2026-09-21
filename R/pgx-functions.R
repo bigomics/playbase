@@ -1286,35 +1286,6 @@ getHSGeneInfo.eg <- function(eg, as.link = TRUE) {
 #' @describeIn pgx.getGeneSetCollections Get the gene families.
 #' @export
 pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
-  read.gmt <- function(gmt.file, dir = NULL, add.source = FALSE, nrows = -1) {
-    f0 <- gmt.file
-    if (strtrim(gmt.file, 1) == "/") dir <- NULL
-    if (!is.null(dir)) f0 <- paste(sub("/$", "", dir), "/", gmt.file, sep = "")
-
-    gmt <- utils::read.csv(f0, sep = "!", header = FALSE, comment.char = "#", nrows = nrows)[, 1]
-    gmt <- as.character(gmt)
-
-    gmt <- sapply(gmt, strsplit, split = "\t")
-    names(gmt) <- NULL
-    gmt.name <- sapply(gmt, "[", 1)
-    gmt.source <- sapply(gmt, "[", 2)
-    gmt.genes <- sapply(gmt, function(x) {
-      if (length(x) < 3) {
-        return("")
-      }
-      paste(x[3:length(x)], collapse = " ")
-    })
-
-    gset <- strsplit(gmt.genes, split = "[ \t]")
-    gset <- lapply(gset, function(x) setdiff(x, c("", "NA", NA)))
-    names(gset) <- gmt.name
-    if (add.source) {
-      names(gset) <- paste0(names(gset), " (", gmt.source, ")")
-    }
-
-    return(gset)
-  }
-
   ## -----------------------------------------------------------------------------
   ## Gene families
   ## -----------------------------------------------------------------------------
@@ -1322,13 +1293,13 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
   families <- list()
   families[["<all>"]] <- genes ## X is sorted
 
-  gmt.kea <- read.gmt(playdata::get_file("kinase_substrates_kea.gmt"))
-  gmt.chea <- read.gmt(playdata::get_file("tf_targets_chea.gmt"))
+  gmt.kea <- playbase.ingest::read.gmt(playdata::get_file("kinase_substrates_kea.gmt"))
+  gmt.chea <- playbase.ingest::read.gmt(playdata::get_file("tf_targets_chea.gmt"))
   families[["Kinases (KEA)"]] <- names(gmt.kea)
   families[["Transcription factors (ChEA)"]] <- names(gmt.chea)
 
   ## Read standard HGNC gene families (www.genefamilies.org)
-  gmt.hgnc <- read.gmt(playdata::get_file("hgnc_genefamilies_EDITED.gmt"))
+  gmt.hgnc <- playbase.ingest::read.gmt(playdata::get_file("hgnc_genefamilies_EDITED.gmt"))
 
   gmt.hgnc.size <- sapply(gmt.hgnc, length)
   gmt.hgnc <- gmt.hgnc[which(gmt.hgnc.size >= 50 & gmt.hgnc.size <= 1000)]
@@ -2646,11 +2617,6 @@ is_logged <- function(x, verbose = 0) {
   possible.linear <- (is.ratio || has.bigx || is.counts || is.singlecell)
   is.log <- possible.log && !possible.linear
   is.log
-}
-
-#' @export
-first_feature <- function(x) {
-  unname(sapply(strsplit(x, split = "[;,\\|]"), "[[", 1))
 }
 
 #' @export

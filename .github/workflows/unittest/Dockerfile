@@ -29,6 +29,10 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # RUN Rscript -e "remotes::install_github('lifs-tools/rgoslin')"
 # RUN Rscript -e "remotes::install_github('ncats/RAMP-DB')"
 
+# The base image may not have playbase.ingest yet, and R CMD INSTALL does
+# not resolve Remotes: install it first.
+RUN Rscript -e "remotes::install_github('bigomics/playbase.ingest', dependencies = FALSE, upgrade = 'never')"
+
 # copy bigomics/playbase code from github checkout
 COPY . /playbase
 

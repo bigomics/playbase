@@ -395,7 +395,7 @@ pgx.getGEOcounts.GEOquery <- function(accession) {
           R.utils::gunzip(destfile, remove = TRUE)
           file <- gsub(".gz", "", destfile)
         }
-        counts <- playbase::read_counts(file)
+        counts <- playbase.ingest::read_counts(file)
         base::file.remove(file)
         return(counts)
       }

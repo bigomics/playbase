@@ -1728,8 +1728,8 @@ mofa.exampledata <- function(dataset = "geiger", ntop = 2000,
   data <- NULL
   if (dataset == "geiger") {
     dir <- "~/Playground/opg-exampledata/metabolomics-kegg"
-    counts <- read_counts(file.path(dir, "multiomics-counts.csv"))
-    samples <- read_samples(file.path(dir, "multiomics-samples.csv"))
+    counts <- playbase.ingest::read_counts(file.path(dir, "multiomics-counts.csv"))
+    samples <- playbase.ingest::read_samples(file.path(dir, "multiomics-samples.csv"))
     ## X <- logCPM(counts)
     mindet <- min(counts[counts > 0])
     X <- log2(counts + mindet)
