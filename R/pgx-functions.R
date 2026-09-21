@@ -502,9 +502,9 @@ trimsame <- function(s, split = " ", ends = TRUE, summarize = FALSE) {
 #' @export
 trimsame.ends <- function(s, split = " ", summarize = FALSE) {
   s1 <- trimsame0(s, split = split, summarize = summarize)
-  s2 <- sapply(strsplit(s1, split = split), function(x) paste(rev(x), collapse = " "))
+  s2 <- sapply(strsplit(s1, split = split), function(x) paste(rev(x), collapse = split))
   s3 <- trimsame0(s2, split = split, summarize = summarize, rev = TRUE)
-  s4 <- sapply(strsplit(s3, split = split), function(x) paste(rev(x), collapse = " "))
+  s4 <- sapply(strsplit(s3, split = split), function(x) paste(rev(x), collapse = split))
   s4
 }
 
@@ -539,41 +539,48 @@ trimsame0 <- function(s, split = " ", summarize = FALSE, rev = FALSE) {
 
   ##
   i <- 1
-  is.same <- FALSE
-  while (i < 1000 && !is.same) {
+  done <- FALSE
+  while (i < 1000 && !done) {
     s1 <- sapply(s, "[", 1)
     slen <- sapply(s, length)
     ss <- setdiff(s1, NA)
     if (all(ss == ss[1])) {
       s <- lapply(s, "[", -1)
     } else {
-      is.same <- FALSE
+      done <- TRUE
     }
     i <- i + 1
   }
   sapply(s, length)
 
-  if (sapply(s, length) == 0 || all(s == "")) {
+  if (all(sapply(s, length) == 0) || all(s == "")) {
     sx <- sapply(s.orig, "[", 1)
     sx
     return(sx)
   }
 
   i <- 1
-  is.same <- FALSE
-  while (i < 1000 && !is.same) {
+  done <- FALSE
+  while (i < 1000 && !done) {
     slen <- sapply(s, length)
-    s2 <- sapply(s, tail, 1)
+    ## tail() on an emptied element returns character(0), which would make
+    ## sapply return a list and the comparison below error. Pad with NA so
+    ## setdiff() drops it, matching how "[" handles the leading-token loop.
+    s2 <- sapply(s, function(x) if (length(x)) utils::tail(x, 1) else NA_character_)
     ss <- setdiff(s2, NA)
     if (all(ss == ss[1])) {
-      s <- mapply(head, s, slen - 1)
+      ## SIMPLIFY = FALSE: when every element has the same remaining length
+      ## mapply would collapse the list into a matrix, and the final
+      ## sapply(s, paste) would then iterate cells instead of strings,
+      ## returning more elements than were passed in.
+      s <- mapply(head, s, slen - 1, SIMPLIFY = FALSE)
     } else {
-      is.same <- FALSE
+      done <- TRUE
     }
     i <- i + 1
   }
 
-  if (sapply(s, length) == 0 || all(s == "")) {
+  if (all(sapply(s, length) == 0) || all(s == "")) {
     s <- sapply(s.orig, "[", 1)
   }
   s <- sapply(s, paste, collapse = split)
