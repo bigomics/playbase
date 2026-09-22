@@ -32,6 +32,13 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # copy bigomics/playbase code from github checkout
 COPY . /playbase
 
+# private playbase.preprocess is not in the base image. Named explicitly:
+# dev/write_description.R drops Remotes packages from Imports, so
+# install_deps() would skip it. PAT comes in as a build secret, not a layer.
+RUN --mount=type=secret,id=gh_pat \
+    GITHUB_PAT=$(cat /run/secrets/gh_pat) \
+    Rscript -e "remotes::install_github('bigomics/playbase.preprocess', upgrade = 'never')"
+
 RUN set -e && \
     R CMD INSTALL /playbase
 
