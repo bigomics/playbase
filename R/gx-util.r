@@ -3,33 +3,6 @@
 ## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
-#' @title Calculate group means
-#'
-#' @description
-#' Calculates the column means within groups defined by a grouping variable.
-#'
-#' @param X Numeric matrix with columns as samples.
-#' @param y Grouping vector or factor.
-#'
-#' @return Matrix with group means.
-#'
-#' @details This function calculates the column means of \code{X} within groups
-#'  defined by \code{y}. It calculates the mean for each column within each
-#' group. The output is a matrix with rows corresponding to groups and columns
-#' corresponding to samples.
-#'
-#' @examples
-#' \dontrun{
-#' mat <- matrix(rnorm(100), ncol = 10)
-#' groups <- gl(2, 5)
-#' means <- averageByGroup(mat, groups)
-#' }
-#'
-#' @export
-averageByGroup <- function(X, y) {
-  t(apply(X, 1, function(x) tapply(x, y, mean)))
-}
-
 
 #' @title Calculate geometric mean
 #'

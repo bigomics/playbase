@@ -211,70 +211,15 @@ itercluster_louvain <- function(g, n = 3) {
 #'
 #' @return A matrix with hierarchical clustering assignments for nodes.
 #'
-#' @description Performs hierarchical clustering on a graph using iterative Louvain clustering.
+#' @description Retained for backward compatibility. Delegates to \code{\link{hclustGraph}},
+#' which is the maintained implementation.
 #'
-#' @details This function takes an igraph graph object \code{g} and performs hierarchical clustering to detect communities.
-#' It uses iterative Louvain clustering, optimizing modularity at each level of the hierarchy.
-#'
-#' At each iteration, it runs Louvain clustering on the communities from the previous level.
-#' This splits up the communities into smaller sub-communities in a hierarchical fashion.
-#'
-#' The number of levels \code{k} can be specified, otherwise it iterates until convergence.
-#' Parallel processing with \code{mc.cores} is used to speed up the computations.
-#'
-#' The algorithm returns a matrix containing the hierarchical clustering assignments for each node.
-#' The columns represent the clustering at each level of the hierarchy.
+#' @details This is a thin wrapper around \code{\link{hclustGraph}}, kept as an exported
+#' alias since it is part of the public API. New code should call \code{hclustGraph} directly.
 #'
 #' @export
 hclust_graph <- function(g, k = NULL, mc.cores = 2) {
-  ## Hierarchical clustering of graph using iterative Louvain
-  ## clustering on different levels. If k=NULL iterates until
-  ## convergences.
-  ##
-
-  idx <- rep(1, length(igraph::V(g)))
-  K <- c()
-  maxiter <- 100
-  if (!is.null(k)) maxiter <- k
-  iter <- 1
-  ok <- 1
-  idx.len <- -1
-  while (iter <= maxiter && ok) {
-    old.len <- idx.len
-    newidx0 <- newidx <- idx
-    i <- idx[1]
-    if (mc.cores > 1 && length(unique(idx)) > 1) {
-      idx.list <- tapply(1:length(idx), idx, list)
-      mc.cores
-      system.time(newidx0 <- parallel::mclapply(idx.list, function(ii) {
-        subg <- igraph::induced_subgraph(g, ii)
-        subi <- igraph::cluster_louvain(subg)$membership
-        return(subi)
-      }, mc.cores = mc.cores))
-      newidx0 <- lapply(1:length(newidx0), function(i) paste0(i, "-", newidx0[[i]]))
-      newidx0 <- as.vector(unlist(newidx0))
-      newidx <- rep(NA, length(idx))
-      newidx[as.vector(unlist(idx.list))] <- newidx0
-    } else {
-      for (i in unique(idx)) {
-        ii <- which(idx == i)
-        subg <- igraph::induced_subgraph(g, ii)
-        subi <- igraph::cluster_louvain(subg)$membership
-        newidx[ii] <- paste(i, subi, sep = "-")
-      }
-    }
-    vv <- names(sort(table(newidx), decreasing = TRUE))
-    idx <- as.integer(factor(newidx, levels = vv))
-    K <- cbind(K, idx)
-    idx.len <- length(table(idx))
-    ok <- (idx.len > old.len)
-    iter <- iter + 1
-  }
-  rownames(K) <- igraph::V(g)$name
-  if (!ok && is.null(k)) K <- K[, 1:(ncol(K) - 1)]
-
-  colnames(K) <- NULL
-  return(K)
+  hclustGraph(g, k = k, mc.cores = mc.cores)
 }
 
 ## ===================================================================================

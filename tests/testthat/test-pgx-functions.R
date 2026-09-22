@@ -195,18 +195,6 @@ test_that("add_opacity adds opacity correctly", {
 #'
 
 
-#' Test for trimsame
-#'
-#'
-
-#' Test for trimsame.ends
-#'
-#'
-
-#' Test for trimsame0
-#'
-#'
-
 #' Test for dbg.BAK
 #'
 #'

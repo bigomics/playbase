@@ -105,7 +105,6 @@ Imports:
     plsRcox,
     png,
     ppcor,
-    psych,
     purrr,
     qlcMatrix,
     quarto,
