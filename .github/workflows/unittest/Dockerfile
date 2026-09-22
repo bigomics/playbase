@@ -35,12 +35,10 @@ COPY . /playbase
 # private playbase.preprocess is not in the base image. Named explicitly:
 # dev/write_description.R drops Remotes packages from Imports, so
 # install_deps() would skip it. PAT comes in as a build secret, not a layer.
-# Bioc repos passed by hand: its DESCRIPTION has no biocViews, so remotes
-# won't find its Bioc annotation deps. install_github only warns on failure,
-# hence the explicit check.
+# install_github only warns on failure, hence the explicit check.
 RUN --mount=type=secret,id=gh_pat \
     GITHUB_PAT=$(cat /run/secrets/gh_pat) \
-    Rscript -e "remotes::install_github('bigomics/playbase.preprocess', upgrade = 'never', repos = c(getOption('repos'), remotes::bioc_install_repos())); if (!requireNamespace('playbase.preprocess', quietly = TRUE)) stop('playbase.preprocess failed to install')"
+    Rscript -e "remotes::install_github('bigomics/playbase.preprocess', upgrade = 'never'); if (!requireNamespace('playbase.preprocess', quietly = TRUE)) stop('playbase.preprocess failed to install')"
 
 RUN set -e && \
     R CMD INSTALL /playbase
