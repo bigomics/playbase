@@ -48,7 +48,9 @@ if(imports.start > 1) {
     new.desc <- desc.lines[1:(imports.start-1)]
 }
 
-pkg.imports <- sort(pkg$imports)
+## Remotes only say where to fetch a package; it must still be declared in
+## Imports, or R CMD INSTALL/check and install_deps() never see the dependency.
+pkg.imports <- sort(union(pkg$imports, names(pkg$remotes)))
 new.desc <- c(new.desc, "Imports:")
 new.desc <- c(new.desc, paste0("    ", pkg.imports, ","))
 
