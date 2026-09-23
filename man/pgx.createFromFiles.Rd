@@ -52,9 +52,9 @@ OmicsPlayground. It then runs the specified differential expression methods.
 \examples{
 \dontrun{
 library(playbase)
-counts <- system.file("extdata", "counts.csv", package = "playbase")
-contrasts <- system.file("extdata", "contrasts.csv", package = "playbase")
-samples <- system.file("extdata", "samples.csv", package = "playbase")
+counts <- playbase.ingest::example_file("counts.csv")
+contrasts <- playbase.ingest::example_file("contrasts.csv")
+samples <- playbase.ingest::example_file("samples.csv")
 mypgx <- pgx.createFromFiles(counts, samples, contrasts)
 }
 }

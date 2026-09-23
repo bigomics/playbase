@@ -1,56 +1,6 @@
 ## This file is part of the Omics Playground project.
 ## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 
-#' @title Convert Seurat to PGX
-#' @param obj Seurat object to convert
-#' @param do.cluster Logical indicating whether to cluster samples. Default is FALSE.
-#' @return PGX object
-#' @description Converts a Seurat single-cell RNA-seq object into a PGX object
-#' @details This function takes a Seurat object containing single-cell RNA-seq data and converts it into a PGX object.
-#' The count matrix, normalized expression matrix, and sample metadata are extracted from the Seurat object.
-#' Gene annotations are added using the gene symbols.
-#' If do.cluster=TRUE, dimensionality reduction and clustering of samples is performed.
-#' Any existing tsne/umap embeddings and cluster assignments are copied over from the Seurat object.
-#' @export
-seurat2pgx <- function(obj, do.cluster = FALSE, organism) {
-  message("[createPGX.10X] creating PGX object...")
-
-  pgx <- list()
-  pgx$name <- "SeuratProject"
-  pgx$description <- "Seurat object converted using seurat2pgx"
-  pgx$date <- Sys.Date()
-  pgx$datatype <- "scRNA-seq"
-  pgx$counts <- obj[["RNA"]]@counts
-  pgx$X <- obj[["RNA"]]@data
-  pgx$samples <- obj@meta.data
-
-  probes <- rownames(pgx$counts)
-  pgx$genes <- ngs.getGeneAnnotation(rownames(pgx$counts), organism = organism)
-
-  if (do.cluster) {
-    message("[seurat2pgx] clustering samples")
-    pgx <- pgx.clusterSamples(
-      pgx,
-      dims = c(2, 3), methods = c("pca", "tsne", "umap")
-    )
-    names(pgx$cluster$pos)
-  }
-
-  ## copy clustering from Seurat
-  if ("tsne" %in% names(obj@reductions)) {
-    pos <- obj@reductions[["tsne"]]@cell.embeddings[, 1:2]
-    pgx$cluster$pos[["tsne2d"]] <- pos
-    pgx$tsne2d <- pos
-    pgx$tsne3d <- cbind(pos, 0)
-  }
-  if ("umap" %in% names(obj@reductions)) {
-    pgx$cluster$pos[["umap2d"]] <- obj@reductions[["umap"]]@cell.embeddings[, 1:2]
-  }
-  pgx$samples$cluster <- obj@meta.data[, "seurat_clusters"]
-
-  return(pgx)
-}
-
 #' @title Integrate single-cell data across batches
 #' @param X Numeric matrix of expression values, cells as columns
 #' @param batch Factor specifying batch for each cell
@@ -260,35 +210,6 @@ pgx.SeuratBatchIntegrate <- function(counts,
   }
 
   return(mat.integrated)
-}
-
-#' @export
-pgx.read_singlecell_counts <- function(filename) {
-  counts <- NULL
-
-  if (grepl("[.]csv$", filename)) {
-    counts <- as.matrix(data.table::fread(filename, header = TRUE), row.names = 1)
-  }
-
-  if (grepl("[.]mtx$", filename)) {
-    dir <- dirname(filename)
-    barcode.file <- file.path(dir, "barcodes.tsv")
-    genes.file <- file.path(dir, "genes.tsv")
-    if (!file.exists(filename)) stop("could not find counts matrix: ", filename)
-    if (!file.exists(barcode.file)) stop("could not find barcode file: ", barcode.file)
-    if (!file.exists(genes.file)) stop("could not find genes file: ", genes.file)
-    counts <- Matrix::readMM(filename)
-    bc <- read.csv(barcode.file, header = FALSE, sep = "\t")
-    gn <- read.csv(genes.file, header = FALSE, sep = "\t")
-    rownames(counts) <- gc[, 2] ## gene names?
-    colnames(counts) <- bc[, 1]
-  }
-
-  if (grepl("[.]h5$", filename)) {
-    counts <- Seurat::Read10X_h5(filename, use.names = TRUE, unique.features = TRUE)
-  }
-
-  counts
 }
 
 #' @title SuperCell down sampling. Uniform down samplsing using gamma = 20.

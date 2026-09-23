@@ -39,17 +39,17 @@ library(playbase)
 
 # Here we check that your input files do not have problems
 
-playbase::PGX_CHECKS # These are the possible errors you can encounter
+playbase.ingest::PGX_CHECKS # These are the possible errors you can encounter
 
 # individual file checks
 
-SAMPLES = playbase::pgx.checkINPUT(playbase::SAMPLES, type = "SAMPLES")
-COUNTS = playbase::pgx.checkINPUT(playbase::COUNTS, type = "COUNTS")
-CONTRASTS = playbase::pgx.checkINPUT(playbase::SAMPLES, type = "CONTRASTS")
+SAMPLES = playbase.ingest::pgx.checkINPUT(playbase::SAMPLES, type = "SAMPLES")
+COUNTS = playbase.ingest::pgx.checkINPUT(playbase::COUNTS, type = "COUNTS")
+CONTRASTS = playbase.ingest::pgx.checkINPUT(playbase::SAMPLES, type = "CONTRASTS")
 
 # Checks across input files
 
-INPUTS_CHECKED <- pgx.crosscheckINPUT(SAMPLES, COUNTS, CONTRASTS)
+INPUTS_CHECKED <- playbase.ingest::pgx.crosscheckINPUT(SAMPLES, COUNTS, CONTRASTS)
 
 SAMPLES = INPUTS_CHECKED$SAMPLES
 COUNTS = INPUTS_CHECKED$COUNTS

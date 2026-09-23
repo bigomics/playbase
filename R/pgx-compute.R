@@ -25,9 +25,9 @@
 #' @examples
 #' \dontrun{
 #' library(playbase)
-#' counts <- system.file("extdata", "counts.csv", package = "playbase")
-#' contrasts <- system.file("extdata", "contrasts.csv", package = "playbase")
-#' samples <- system.file("extdata", "samples.csv", package = "playbase")
+#' counts <- playbase.ingest::example_file("counts.csv")
+#' contrasts <- playbase.ingest::example_file("contrasts.csv")
+#' samples <- playbase.ingest::example_file("samples.csv")
 #' mypgx <- pgx.createFromFiles(counts, samples, contrasts)
 #' }
 #' @export
@@ -41,16 +41,16 @@ pgx.createFromFiles <- function(counts.file,
                                 pgx.dir = "./data",
                                 libx.dir = "./libx") {
   ## read counts table (allow dup rownames)
-  counts <- read.as_matrix(counts.file)
+  counts <- playbase.ingest::read.as_matrix(counts.file)
 
   ## compile sample table
-  samples <- read.as_matrix(samples.file)
+  samples <- playbase.ingest::read.as_matrix(samples.file)
   samples <- data.frame(samples, check.names = FALSE)
 
   ## parse requested phenotypes
   if (!is.null(contrasts.file) && file.exists(contrasts.file)) {
     message("reading contrasts file ", contrasts.file)
-    contrasts <- read.as_matrix(contrasts.file)
+    contrasts <- playbase.ingest::read.as_matrix(contrasts.file)
   } else {
     ## take first (not-dotted) column in samples as phenotype vector
     group.col <- head(grep("group|condition", colnames(samples), ignore.case = TRUE), 1)
