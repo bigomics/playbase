@@ -20,7 +20,19 @@
   force        = FALSE,
   on_error     = "skip",
   max_turns    = 50L,
-  tier         = NULL
+  tier         = NULL,
+  credentials  = NULL,
+  ## A report module routinely decodes for 120-170s, so the per-request
+  ## deadline has to clear that comfortably; two attempts caps the worst case
+  ## at 480s rather than ellmer's default 900s.
+  timeout_seconds = 240L,
+  retries         = 2L,
+  ## Reports are a summarisation job over data that has already been computed,
+  ## so extended reasoning buys little and costs a lot of wall time: on a
+  ## reasoning model at "medium" the reasoning tokens were ~60% of the latency
+  ## for a report no longer than the one produced without them. Models that do
+  ## not accept the knob ignore it.
+  reasoning_effort = "low"
 )
 
 .ai_resolve_defaults <- function(ai) {
@@ -74,6 +86,194 @@
   )
 }
 
+.ai_report_module_builder <- function(module) {
+  fn <- .ai_report_module_function(module)
+  if (is.null(fn)) NULL else sub("\\.create_report$", ".build_jobs", fn)
+}
+
+#' Describe one LLM call for a report slot
+#'
+#' A job is the unit the orchestrator hands to a runner. It deliberately holds
+#' nothing but plain strings plus a `finalize` closure, so the two halves can be
+#' separated: `system`/`board` are all a worker process needs (a few hundred KB,
+#' versus the hundreds of MB a pgx costs to ship), while `finalize` stays with
+#' the caller and never crosses a process boundary.
+#'
+#' @param module Module name the job belongs to.
+#' @param slot Target slot under `pgx$ai`.
+#' @param bp Built prompt, `list(system=, board=)`.
+#' @param finalize Function applied to the generated report text, or NULL.
+#' @return An `ai_report_job` list.
+#' @keywords internal
+.ai_report_job <- function(module, slot, bp, finalize = NULL) {
+  structure(
+    list(
+      module   = module,
+      slot     = slot,
+      system   = bp$system,
+      board    = bp$board,
+      finalize = finalize
+    ),
+    class = c("ai_report_job", "list")
+  )
+}
+
+#' Build the LLM jobs for one module
+#'
+#' @return A list of `ai_report_job`s, or an `ai_report_skip`.
+#' @keywords internal
+.ai_report_build_module <- function(module, pgx, ai) {
+  fn_name <- .ai_report_module_builder(module)
+  if (is.null(fn_name)) {
+    return(structure(list(reason = "module not found"),
+                     class = "ai_report_skip"))
+  }
+  if (!exists(fn_name, mode = "function")) {
+    return(structure(list(reason = paste0("no entry point '", fn_name, "()'")),
+                     class = "ai_report_skip"))
+  }
+  slice <- .ai_report_module_slice(module, pgx)
+  if (is.null(slice)) {
+    return(structure(list(reason = "slot is empty"), class = "ai_report_skip"))
+  }
+  get(fn_name, mode = "function")(pgx, slice, ai)
+}
+
+#' Run one report job against the provider
+#'
+#' @param job An `ai_report_job`.
+#' @param ai Resolved AI options.
+#' @return `list(report=, prompt=, usage=)`.
+#' @keywords internal
+.ai_report_run_job <- function(job, ai) {
+  out <- .ai_report_run_prompt(list(system = job$system, board = job$board), ai)
+  if (is.function(job$finalize)) out$report <- job$finalize(out$report)
+  out
+}
+
+#' Legacy single-module entry point, expressed as build + run
+#'
+#' Kept so `ai.<module>.create_report()` callers outside the orchestrator keep
+#' working unchanged.
+#' @keywords internal
+.ai_report_create_report_compat <- function(module, pgx, slice, ai) {
+  ## Re-dispatch through the builder rather than the slice we were handed: the
+  ## builders read the slice back off pgx themselves, and wgcna_mox may
+  ## redirect to the single-omics builder.
+  jobs <- .ai_report_build_module(module, pgx, ai)
+  if (inherits(jobs, "ai_report_skip") || !length(jobs)) return(NULL)
+  .ai_report_run_job(jobs[[1L]], ai)
+}
+
+#' Build every LLM job needed for the selected report modules
+#'
+#' Assembles prompts without contacting any provider, so a caller can run them
+#' how it likes - serially, or fanned out across worker processes. Prompt
+#' assembly is cheap (single-digit seconds for a full pgx); essentially all the
+#' wall time of a report run is the provider calls these jobs stand for.
+#'
+#' `combined` is deliberately *not* returned here even when selected: its
+#' prompt is assembled from `pgx$ai`, so it can only be built once the other
+#' modules' reports have been folded back in. Call
+#' [pgx.build_combined_report_job()] for that second phase.
+#'
+#' @param pgx PGX object.
+#' @param ai Report-generation options, as for [pgx.update_reports()].
+#' @return A list of `ai_report_job`s (possibly empty).
+#' @export
+pgx.build_report_jobs <- function(pgx, ai = NULL) {
+  ai <- .ai_resolve_defaults(ai)
+  modules <- setdiff(ai$select, "combined")
+  jobs <- list()
+  for (module in modules) {
+    if (!.ai_report_wanted(pgx, module, ai)) next
+    built <- tryCatch(
+      .ai_report_build_module(module, pgx, ai),
+      error = function(e) {
+        .ai_report_report_error(module, e, ai)
+        NULL
+      }
+    )
+    if (inherits(built, "ai_report_skip")) {
+      message("[pgx.build_report_jobs] skipping '", module, "', ", built$reason)
+      next
+    }
+    if (!length(built)) next
+    jobs <- c(jobs, built)
+  }
+  jobs
+}
+
+#' Build the combined-summary job for the current state of `pgx$ai`
+#'
+#' @inheritParams pgx.build_report_jobs
+#' @return A list holding zero or one `ai_report_job`.
+#' @export
+pgx.build_combined_report_job <- function(pgx, ai = NULL) {
+  ai <- .ai_resolve_defaults(ai)
+  if (!"combined" %in% ai$select) return(list())
+  if (!.ai_report_wanted(pgx, "combined", ai)) return(list())
+  built <- tryCatch(
+    .ai_report_build_module("combined", pgx, ai),
+    error = function(e) {
+      .ai_report_report_error("combined", e, ai)
+      NULL
+    }
+  )
+  if (inherits(built, "ai_report_skip")) {
+    message("[pgx.build_combined_report_job] skipping combined, ", built$reason)
+    return(list())
+  }
+  if (!length(built)) list() else built
+}
+
+#' Fold one finished report into `pgx$ai`
+#'
+#' @param pgx PGX object.
+#' @param job The `ai_report_job` the result came from.
+#' @param result `list(report=, prompt=, usage=)` as produced by a runner. The
+#'   `report` is passed through the job's `finalize` unless `finalized = TRUE`.
+#' @param finalized Set TRUE when the runner already applied `job$finalize`.
+#' @return The PGX object with the slot populated.
+#' @export
+pgx.apply_report_result <- function(pgx, job, result, finalized = FALSE) {
+  if (is.null(result) || is.null(result$report)) return(pgx)
+  report <- result$report
+  if (!isTRUE(finalized) && is.function(job$finalize)) {
+    report <- job$finalize(report)
+  }
+  if (is.null(pgx$ai)) pgx$ai <- list()
+  pgx$ai[[job$slot]] <- list(
+    report     = .ai_report_normheadings(report),
+    prompt     = result$prompt,
+    usage      = result$usage,
+    created_at = as.numeric(Sys.time()),
+    edited     = FALSE,
+    edited_at  = ""
+  )
+  pgx
+}
+
+#' Should this module be (re)generated?
+#' @keywords internal
+.ai_report_wanted <- function(pgx, module, ai) {
+  if (isTRUE(ai$force)) return(TRUE)
+  if (is.null(pgx$ai[[module]])) return(TRUE)
+  message("[pgx.update_reports] '", module, "' already present; skipping")
+  FALSE
+}
+
+#' Apply the configured `on_error` policy to a module failure.
+#' @keywords internal
+.ai_report_report_error <- function(module, e, ai) {
+  msg <- paste0("[pgx.update_reports] '", module, "' failed: ",
+                conditionMessage(e))
+  if (identical(ai$on_error, "abort")) stop(msg, call. = FALSE)
+  if (identical(ai$on_error, "warn"))  warning(msg, call. = FALSE)
+  else                                  message(msg)
+  NULL
+}
+
 .ai_report_module_slice <- function(module, pgx) {
   switch(module,
     wgcna     = pgx$wgcna,
@@ -87,6 +287,10 @@
   )
 }
 
+## Superseded by .ai_report_build_module() + .ai_report_run_job(), which split
+## prompt assembly from the provider call so the two can run in different
+## processes. Retained because it is the documented extension point for a
+## module entry point with the (pgx, slice, ai) signature.
 .ai_dispatch_module <- function(module, pgx, ai) {
   fn_name <- .ai_report_module_function(module)
   if (is.null(fn_name)) {
@@ -141,55 +345,29 @@ pgx.update_reports <- function(pgx, ai = NULL) {
   }
   if (is.null(pgx$ai)) pgx$ai <- list()
 
-  for (module in ai$select) {
-    if (!is.null(pgx$ai[[module]]) && !isTRUE(ai$force)) {
-      message("[pgx.update_reports] '", module, "' already present; skipping")
-      next
-    }
-    message("[pgx.update_reports] generating '", module, "' report...")
-    out <- tryCatch(
-      .ai_dispatch_module(module, pgx, ai),
-      error = function(e) {
-        msg <- paste0("[pgx.update_reports] '", module, "' failed: ",
-                      conditionMessage(e))
-        if (identical(ai$on_error, "abort")) stop(msg, call. = FALSE)
-        if (identical(ai$on_error, "warn"))  warning(msg, call. = FALSE)
-        else                                  message(msg)
-        NULL
-      }
-    )
-    if (inherits(out, "ai_report_skip")) {
-      message("[pgx.update_reports] skipping '", module, "', ", out$reason)
-      next
-    }
-    if (is.null(out)) {
-      message("[pgx.update_reports] skipping '", module,
-              "', no report returned")
-      next
-    }
-    if (inherits(out, "ai_report_multi")) {
-      for (key in names(out)) {
-        slot_name <- paste0(module, "_", key)
-        pgx$ai[[slot_name]] <- list(
-          report     = .ai_report_normheadings(out[[key]]$report),
-          prompt     = out[[key]]$prompt,
-          usage      = out[[key]]$usage,
-          created_at = as.numeric(Sys.time()),
-          edited     = FALSE,
-          edited_at  = ""
-        )
-      }
-    } else {
-      pgx$ai[[module]] <- list(
-        report     = .ai_report_normheadings(out$report),
-        prompt     = out$prompt,
-        usage      = out$usage,
-        created_at = as.numeric(Sys.time()),
-        edited     = FALSE,
-        edited_at  = ""
+  ## Two phases, because `combined` reads pgx$ai: everything else is built and
+  ## run first, then combined is built against the updated pgx. Within a phase
+  ## the jobs are run serially here; callers that want them concurrent build
+  ## the same jobs with pgx.build_report_jobs() and run them themselves.
+  run_phase <- function(pgx, jobs) {
+    for (job in jobs) {
+      message("[pgx.update_reports] generating '", job$slot, "' report...")
+      res <- tryCatch(
+        .ai_report_run_job(job, ai),
+        error = function(e) .ai_report_report_error(job$module, e, ai)
       )
+      if (is.null(res)) {
+        message("[pgx.update_reports] skipping '", job$slot,
+                "', no report returned")
+        next
+      }
+      pgx <- pgx.apply_report_result(pgx, job, res, finalized = TRUE)
     }
+    pgx
   }
+
+  pgx <- run_phase(pgx, pgx.build_report_jobs(pgx, ai))
+  pgx <- run_phase(pgx, pgx.build_combined_report_job(pgx, ai))
 
   pgx$ai$meta <- .ai_build_meta(ai)
   pgx
