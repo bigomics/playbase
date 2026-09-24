@@ -62,7 +62,9 @@ pgx.computeDrugEnrichment <- function(pgx, X = NULL, xdrugs = NULL,
     return(NULL)
   }
 
-  colnames(X) <- paste0(xdrugs,"_",colnames(X))
+  if( !all(sub("[@_].*","",colnames(X)) == xdrugs) ) {
+    colnames(X) <- paste0(xdrugs,"@",colnames(X))
+  }
   fc_colnames <- colnames(FC)
   enr <- metaLINCS::computeConnectivityEnrichment(
     FC, names = rownames(FC), mDrugEnrich = X, 
@@ -77,17 +79,48 @@ pgx.computeDrugEnrichment <- function(pgx, X = NULL, xdrugs = NULL,
                         dimnames = list(names(enr$stats), fc_colnames))
   }
 
-  ## Now compute the MoA enrichment (if not done)
-  moa <- NULL
-  if(!is.null(drug_info)) {
-    moa <- metaLINCS::computeMoaEnrichment(
-      enr, annot = drug_info)
+  ## attach annotation
+  if(is.null(drug_info)) {
+    message("[pgx.computeDrugEnrichment] creating MoA annotation")
+    ##is.l1000 <- grepl("activity|drug|ChemPert", f, ignore.case = TRUE)
+    l1000_info <- playdata::L1000_REPURPOSING_DRUGS
+    is.l1000 <- mean(rownames(enr$X) %in% l1000_info$pert_iname) > 0.20
+    if (is.l1000) {
+      drug_info <- l1000_info
+      drug_info$drug <- drug_info$pert_iname
+      rownames(drug_info) <- drug_info$pert_iname
+    } else {
+      ## gene perturbation OE/LIG/SH
+      dd <- rownames(enr$X)
+      d1 <- dd
+      d2 <- sub("-.*", "", dd)
+      drug_info <- data.frame(drug = dd, moa = d1, target = d2)
+      rownames(drug_info) <- dd
+    }
+  } else {
+    if(!"drug" %in% colnames(drug_info) && "pert_iname" %in% colnames(drug_info)) {
+      drug_info$drug <- drug_info$pert_iname
+    }
+    if( !all( c("drug", "moa", "target") %in% colnames(drug_info))) {
+      message("[pgx.computeDrugEnrichment] ERROR: drug_info must have columns: drug, moa, target")
+      return(NULL)
+    }
+    message("[pgx.computeDrugEnrichment] using provided MoA annotation")
   }
-
+  drug_info <- drug_info[, c("drug", "moa", "target")]
+  drug_info <- drug_info[match(rownames(enr$X), rownames(drug_info)), ]
+  rownames(drug_info) <- rownames(enr$X)
+  
+  ## Compute the MoA enrichment
+  message("[pgx.computeDrugEnrichment] computing MoA enrichment")
+  drug_info$pert_iname <- drug_info$drug  ## need...
+  moa <- metaLINCS::computeMoaEnrichment(enr, annot = drug_info)
+  drug_info$pert_iname <- NULL
+  
   ## Compute 2D UMAP positions for drug profiles (required by CMAP scatter plot)
   clust <- NULL
-  sel_profiles <- rownames(enr$stats)
-  xsel_idx <- match(sel_profiles, colnames(X))
+  sel_drugs <- rownames(enr$X)
+  xsel_idx <- match(sel_drugs, xdrugs)
   xsel_idx <- xsel_idx[!is.na(xsel_idx)]
   if (length(xsel_idx) >= 5) {
     cX <- X[gg, xsel_idx, drop = FALSE]
@@ -110,11 +143,18 @@ pgx.computeDrugEnrichment <- function(pgx, X = NULL, xdrugs = NULL,
   }
 
   results <- list()
-  results$cor <- list(NULL)
-  results$GSEA <- enr[c("X","Q","P","size")]
+  results$cor <- NULL
+  results$GSEA <- NULL
+  ##results$cor <- list(NULL)
+  ##results$GSEA <- enr[c("X","Q","P","size")]
+  results$X <- enr$X
+  results$Q <- enr$Q
+  results$P <- enr$P
+  results$size <- enr$size
   results$stats <- enr$stats
   results$drug <- enr$drug
   results$moa <- moa
+  results$annot <- drug_info
   results$clust <- clust
 
   message("[pgx.computeDrugEnrichment] done!")
@@ -122,34 +162,6 @@ pgx.computeDrugEnrichment <- function(pgx, X = NULL, xdrugs = NULL,
   return(results)
 }
 
-#' Compute missing CMAP cluster (UMAP) positions for each drug database
-#'
-#' @description Lazily fills in \code{pgx$drugs[[db]]$clust} for any database
-#'   that is missing it, using the stored \code{stats} (drug profiles x contrasts)
-#'   matrix as UMAP input. Works on both plain lists and Shiny reactiveValues.
-#'
-#' @param pgx A PGX object with a \code{drugs} slot.
-#' @return The (possibly modified) PGX object.
-#' @export
-pgx.compute_drugs_clust <- function(pgx) {
-  if (is.null(pgx$drugs)) return(pgx)
-  for (db in names(pgx$drugs)) {
-    if (!is.null(pgx$drugs[[db]]$clust)) next
-    smat <- pgx$drugs[[db]]$stats
-    if (is.null(smat) || !is.matrix(smat) || nrow(smat) < 5 || ncol(smat) < 2) next
-    smat[is.na(smat)] <- 0
-    nn <- min(15L, nrow(smat) - 1L)
-    clust <- try(
-      uwot::umap2(smat, fast_sgd = TRUE, verbose = FALSE, n_neighbors = nn),
-      silent = TRUE
-    )
-    if (!inherits(clust, "try-error")) {
-      rownames(clust) <- rownames(smat)
-      pgx$drugs[[db]]$clust <- clust
-    }
-  }
-  return(pgx)
-}
 
 
 #' Update older versions of pgx$drugs with cluster and MOA results
@@ -159,11 +171,6 @@ pgx.update_drugs_results <- function(pgx) {
 
   if(is.null(pgx$drugs)) {
     return(pgx)
-  }
-
-  if (is.null(pgx$drugs[[1]]$clust)) {
-    dbg("[pgx.update_drugs_results] computing CMAP cluster positions...")
-    pgx <- pgx.compute_drugs_clust(pgx)
   }
 
   if(is.null(pgx$drugs[[1]]$moa)) {
