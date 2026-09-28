@@ -141,7 +141,7 @@ pgx.createFromFiles <- function(counts.file,
 #' @param covariates variables to regress out. Valid only for linear model-based tests.
 #' @param dma Differential methylation analysis. If datatype=="methylomics", can be DMP (default) vs. DMR. Else NULL.
 #' @param remove.xy.probes Logical. Only activated when datatype=="methylomics". Remove X- and Y-linked CpG probes.
-#' @param meth_type Type of array: 450K array or EPIC array
+#' @param meth_type Type of array: 450K array, EPIC array or EPIC v2 array
 #' @param auto.scale Logical indicating whether to automatically scale/center genes. Default is TRUE.
 #' @param filter.genes Logical indicating whether to filter lowly expressed genes. Default is TRUE.
 #' @param prune.samples Logical indicating whether to remove samples without contrasts. Default is FALSE.
@@ -256,6 +256,22 @@ pgx.createPGX <- function(counts,
   samples <- as.data.frame(samples, drop = FALSE)
   counts <- as.matrix(counts)
   if (is.null(contrasts)) contrasts <- samples[, 0]
+
+  ## EPIC v2 carries replicate probes (cg00000029_TC21, _BC11, ...). Keep
+  ## Illumina's recommended replicate per cg id, renamed to the bare id, so
+  ## the pgx only ever holds bare ids - the ids the clocks, cell references,
+  ## EWAS catalog and cross-reactive masks key on.
+  if (identical(datatype, "methylomics") &&
+    any(grepl(EPICV2_REPLICATE_RE, rownames(counts)))) {
+    counts <- .pgx_collapse_epicv2(counts)
+    if (!is.null(X)) X <- .pgx_collapse_epicv2(X)
+    if (!is.null(annot_table)) {
+      ## Replicates of one cg id share its locus, so any one row annotates it.
+      bare <- sub("_[A-Z]{2}[0-9]{2}$", "", rownames(annot_table))
+      annot_table <- annot_table[match(rownames(counts), bare), , drop = FALSE]
+      rownames(annot_table) <- rownames(counts)
+    }
+  }
   contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
   contrasts <- fixContrastMatrix(contrasts)
   if (dotimeseries) {
@@ -522,6 +538,15 @@ pgx.createPGX <- function(counts,
     ortholog_species = pgx$ortholog_species,    
     annot_table = annot_table
   )
+
+  ## Array and genome build, so consumers never re-guess them from probe ids.
+  ## 450K and EPIC annotate against hg19, EPIC v2 against hg38.
+  if (identical(datatype, "methylomics")) {
+    array <- if (isTRUE(meth_type %in% c("EPIC array", "EPIC v2 array"))) meth_type else "450K array"
+    pgx$meth$array <- array
+    pgx$meth$genome <- attr(pgx$genes, "genome") %||%
+      (if (array == "EPIC v2 array") "hg38" else "hg19")
+  }
 
   ## Reorder uniprots in pgx$genes. Valid for all datatypes.
   message("[pgx.createPGX] Reordering uniprot column in pgx$genes")
@@ -1048,6 +1073,27 @@ pgx.computePGX <- function(pgx,
       playbase.epigenetics::compute_cell_counts(pgx$X),
       error = function(e) {
         warning("[pgx.computePGX] cell composition failed: ", conditionMessage(e))
+        NULL
+      }
+    )
+
+    ## Per-sample QC ledger (bimodality, DNAm age, predicted vs recorded sex,
+    ## imprint drift, verdict), on the same terms as the clocks: a pure function
+    ## of the beta matrix, stored once so the app never refits it. Reuses the
+    ## stored Horvath age rather than fitting it a second time. The annotation
+    ## is aligned to X because only its chromosome column is read, to decide
+    ## whether sex can be predicted from the probes X still has.
+    message("[pgx.computePGX] computing methylation sample QC...")
+    pgx$meth$qc <- tryCatch(
+      playbase.epigenetics::sample_qc(
+        pgx$X,
+        pgx$genes[match(rownames(pgx$X), rownames(pgx$genes)), , drop = FALSE],
+        pgx$samples,
+        ## methylclock names it Horvath, the wateRmelon fallback horvath.
+        ages = pgx$meth$clocks$age$Horvath %||% pgx$meth$clocks$age$horvath
+      ),
+      error = function(e) {
+        warning("[pgx.computePGX] methylation sample QC failed: ", conditionMessage(e))
         NULL
       }
     )

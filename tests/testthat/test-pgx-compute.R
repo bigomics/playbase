@@ -736,3 +736,39 @@ test_that("max-feature bridge subsets X and final metadata together", {
   expect_identical(nrow(computed$X), 20L)
   expect_length(computed$settings$preprocess$alignment$rows, 20L)
 })
+
+test_that("methylomics EPIC v2 ids are collapsed and array/genome recorded", {
+  set.seed(3)
+  ids <- c("cg01_TC21", "cg01_BC11", "cg02_TC21", "cg03_TC11")
+  beta <- matrix(stats::runif(16), 4, dimnames = list(ids, paste0("S", 1:4)))
+  samples <- data.frame(group = c("a", "a", "b", "b"), row.names = colnames(beta))
+  contrasts <- matrix(samples$group, ncol = 1, dimnames = list(colnames(beta), "b_vs_a"))
+  annotated <- NULL
+  local_mocked_bindings(
+    .pgx_collapse_epicv2 = function(X) {
+      bare <- sub("_[A-Z]{2}[0-9]{2}$", "", rownames(X))
+      X <- X[!duplicated(bare), , drop = FALSE]
+      rownames(X) <- unique(bare)
+      X
+    },
+    getProbeAnnotation = function(probes, meth_type, ...) {
+      annotated <<- meth_type
+      data.frame(feature = probes, symbol = probes, row.names = probes)
+    },
+    compute_cellcycle_gender = function(pgx) pgx,
+    .package = "playbase"
+  )
+
+  pgx <- suppressMessages(playbase::pgx.createPGX(
+    counts = beta, samples = samples, contrasts = contrasts,
+    organism = "Human", datatype = "methylomics", meth_type = "EPIC v2 array",
+    preprocess = list(input_space = "beta", output_space = "beta", normalize = FALSE),
+    add.gmt = FALSE, filter.genes = FALSE, only.known = FALSE,
+    only.proteincoding = FALSE
+  ))
+
+  expect_identical(rownames(pgx$counts), c("cg01", "cg02", "cg03"))
+  expect_identical(rownames(pgx$X), c("cg01", "cg02", "cg03"))
+  expect_identical(annotated, "EPIC v2 array")
+  expect_identical(pgx$meth, list(array = "EPIC v2 array", genome = "hg38"))
+})

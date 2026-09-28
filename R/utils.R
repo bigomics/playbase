@@ -480,3 +480,20 @@ require_epigenetics <- function() {
   }
   invisible(TRUE)
 }
+
+## EPIC v2 replicate-probe suffix: cg00000029_TC21, cg00000029_BC11.
+EPICV2_REPLICATE_RE <- "^cg[0-9]+_[A-Z]{2}[0-9]{2}$"
+
+## Collapses EPIC v2 replicate probes to one bare cg id each through
+## playbase.epigenetics, the single place the replicate choice is made.
+.pgx_collapse_epicv2 <- function(X) {
+  require_epigenetics()
+  if (!exists("collapse_epicv2_replicates", envir = asNamespace("playbase.epigenetics"))) {
+    stop(
+      "EPIC v2 probe ids need playbase.epigenetics::collapse_epicv2_replicates(); ",
+      "the installed playbase.epigenetics is too old.",
+      call. = FALSE
+    )
+  }
+  playbase.epigenetics::collapse_epicv2_replicates(X)
+}
