@@ -29,7 +29,7 @@ ref_normalize <- function(counts, samples, contrasts, annot = NULL, opt = list()
       X[ii, ] <- log2(counts[ii, ] + prior)
     }
   } else if (opt$datatype == "methylomics") {
-    X <- playbase::mToBeta(counts)
+    X <- playbase.epigenetics::mToBeta(counts)
     prior <- 0
   } else {
     prior0 <- playbase::getPrior(counts)
@@ -71,7 +71,7 @@ ref_normalize <- function(counts, samples, contrasts, annot = NULL, opt = list()
     if (opt$datatype == "multi-omics") {
       X <- playbase::normalizeMultiOmics(X)
     } else if (opt$datatype == "methylomics") {
-      nX <- try(playbase::normalizeMethylation(X, opt$norm_method, opt$meth_type), silent = TRUE)
+      nX <- try(playbase.epigenetics::normalizeMethylation(X, opt$norm_method, opt$meth_type), silent = TRUE)
       if (!inherits(nX, "try-error") && !is.null(nX)) X <- nX
     } else {
       X <- playbase::normalizeExpression(X, method = opt$norm_method, ref = opt$ref_gene, prior = prior)

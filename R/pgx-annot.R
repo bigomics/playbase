@@ -81,10 +81,12 @@ getProbeAnnotation <- function(organism,
   organism <- normalizeOrganism(organism)
   
   if (datatype == "methylomics") {
-    c1 <- is.null(meth_type)
-    c2 <- !meth_type %in% c("450K array", "EPIC array")
-    if (c1 | c2) meth_type <- "450K array"
-    genes <- annotate_methylomics(organism, probes, meth_type = meth_type)
+    require_epigenetics()
+    ## NB: || not |. `!NULL %in% x` is logical(0), which makes `if` throw.
+    if (is.null(meth_type) || !meth_type %in% c("450K array", "EPIC array")) {
+      meth_type <- "450K array"
+    }
+    genes <- playbase.epigenetics::annotate_methylomics(organism, probes, meth_type = meth_type)
     return(genes)
   }
 
@@ -1122,6 +1124,25 @@ getOrtholog <- function(symbols, organism, target_species,
                         ortho.methods = c("homologene","gprofiler","babelgene",
                           "gprofiler2","uppercase"),
                         verbose = 1) {
+
+  ## A human gene's human ortholog is itself. Without this the whole
+  ## orthogene/gprofiler machinery runs hsapiens -> hsapiens, which is slow
+  ## (tens of seconds on an array-sized feature set) and lossy. Uppercased
+  ## to match the convention the rest of the pipeline assumes (pgx-init.R).
+  if (identical(normalizeOrganism(organism), "Homo sapiens") &&
+        identical(normalizeOrganism(target_species), "Homo sapiens")) {
+    if (verbose > 0) {
+      message("[getOrtholog] human -> human; orthologs are the symbols themselves")
+    }
+    up <- toupper(symbols)
+    return(data.frame(
+      symbol = symbols,
+      ortholog = up,
+      orthologs = up,
+      description = NA_character_,
+      source = ifelse(is.na(up), NA_character_, "identity")
+    ))
+  }
 
   ## try also clean symbols
   symbols[is.na(symbols)] <- "NA"

@@ -38,6 +38,9 @@ pgx.preprocess(
   \item{outlier_methods}{z-score methods for `detectOutlierSamples`: any of
     "z.correlation", "z.distance", "z.features", "z.isoforest". Default the
     first three; "z.isoforest" is opt-in as it fits an isolation forest.}
+  \item{drop_samples}{Sample names to remove before anything else runs, so
+    normalization sees only the retained columns. Names absent from `counts`
+    are ignored. Default NULL.}
   \item{meth_type}{Methylation array type for `normalizeMethylation`. Default NULL.}
 }}
 }
