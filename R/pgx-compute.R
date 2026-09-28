@@ -442,6 +442,15 @@ pgx.createPGX <- function(counts,
   description <- gsub("[\n]", ". ", description) ## replace newline
   description <- trimws(gsub("[ ]+", " ", description)) ## remove ws
 
+  ## Appending the symbol rewrites cg00000029 -> cg00000029_RBL2, and every
+  ## methylation lookup keys on the bare probe ID: the epigenetic clocks come
+  ## back with zero coverage and no ages at all. Off for methylomics whatever
+  ## the caller asked for, and corrected here so settings record what happened.
+  if (identical(datatype, "methylomics") && isTRUE(convert.hugo)) {
+    message("[pgx.createPGX] methylomics: not appending symbols to probe IDs")
+    convert.hugo <- FALSE
+  }
+
   ## add to setting info
   settings$filter.genes <- filter.genes
   settings$exclude.genes <- exclude.genes
@@ -827,7 +836,42 @@ pgx.computePGX <- function(pgx,
   if (do.cluster || cluster.contrasts) {
     message("[pgx.computePGX] clustering samples...")
     mm <- c("pca", "tsne", "umap")
-    pgx <- pgx.clusterSamples(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
+    ## Methylomics clusters on M, not on beta. Beta is a bounded ratio and is
+    ## heteroscedastic at both ends, so the top-SD feature selection inside
+    ## pgx.clusterBigMatrix is dominated by probes sitting near 0.5 whatever
+    ## their behaviour, while a probe moving 0.02 -> 0.10 - a fourfold change
+    ## in methylation - barely registers. M is the convention for every
+    ## distance-based method on arrays (Du 2010), and it is the scale the EWAS
+    ## is fitted on, so the embedding and the model see the same data.
+    ## Converted from the space preprocessing declared, never guessed from
+    ## the range, so a pgx already processed as M is not transformed twice.
+    Xclust <- NULL
+    if (isTRUE(pgx$datatype == "methylomics")) {
+      Xclust <- playbase.preprocess::pp.convertSpace(
+        pgx$X,
+        from = pgx$settings$preprocess$space %||% "beta",
+        to = "mvalue"
+      )
+    }
+    pgx <- pgx.clusterSamples(pgx, dims = c(2, 3), perplexity = NULL, X = Xclust, methods = mm)
+  }
+
+  ## pgx.initialize() lists tsne2d in obj.needed and returns NULL when it is
+  ## absent, so a dataset computed with do.cluster = FALSE - which is how
+  ## methylomics is computed now - passes pgx.checkObject(), reaches the
+  ## Library, and then fails to open with "ERROR in object initialization".
+  ## GMT already had this problem and solves it two hundred lines up by
+  ## storing an explicitly empty matrix; tsne2d had no such fallback.
+  ##
+  ## NA coordinates rather than an empty matrix, and rownames kept, so that a
+  ## consumer indexing by sample name gets NA instead of a subscript error.
+  ## Every reader is a Dashboard board, and no datatype computed without
+  ## clustering opens one.
+  if (is.null(pgx$tsne2d)) {
+    pgx$tsne2d <- matrix(
+      NA_real_, nrow = ncol(pgx$X), ncol = 2,
+      dimnames = list(colnames(pgx$X), c("tsne2d.1", "tsne2d.2"))
+    )
   }
 
   ## Make contrasts by cluster
@@ -969,6 +1013,44 @@ pgx.computePGX <- function(pgx,
       layers = pgx$settings$preprocess$layers
     )
     pgx$settings$preprocess$space <- "beta"
+
+    ## Everything below reads beta, which is why it follows the conversion.
+    require_epigenetics()
+
+    ## Epigenetic clocks, fitted here rather than in the app: they are a pure
+    ## function of the beta matrix, so once it exists there is nothing left to
+    ## wait for, and this is the first line at which it does. Ten clocks take
+    ## ~40s, which is a fine one-off at dataset creation and a bad thing to
+    ## make every session pay. Fitted with no coverage floor and no clock
+    ## selection - both are display choices the app applies to `cov`, not
+    ## inputs that change any age.
+    ##
+    ## A failure here must not lose the dataset: the slot is left NULL and a
+    ## warning is raised.
+    message("[pgx.computePGX] fitting epigenetic clocks...")
+    pgx$meth$clocks <- tryCatch(
+      playbase.epigenetics::compute_clocks(pgx$X),
+      error = function(e) {
+        warning("[pgx.computePGX] epigenetic clocks failed: ", conditionMessage(e))
+        NULL
+      }
+    )
+
+    ## Cell composition, for the same reason and on the same terms: the
+    ## proportions are a pure function of the beta matrix and a panel name, so
+    ## nothing about them needs a session. All nine reference panels are fitted
+    ## rather than just the blood default - the panel follows the tissue, not
+    ## the user, and at ~56 KB on a 150-sample cohort storing the lot costs
+    ## about a tenth of a percent of the pgx while making every panel switch in
+    ## the app instant. ~93s at that size.
+    message("[pgx.computePGX] estimating cell composition...")
+    pgx$meth$cells <- tryCatch(
+      playbase.epigenetics::compute_cell_counts(pgx$X),
+      error = function(e) {
+        warning("[pgx.computePGX] cell composition failed: ", conditionMessage(e))
+        NULL
+      }
+    )
   }
 
   if (!is.null(ai_features)) {
@@ -1195,8 +1277,12 @@ pgx.add_GMT <- function(pgx,
   if (!is.null(custom.geneset$gmt)) {
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in columns.
     custom_gmt <- custom.geneset$gmt
-    custom_gmt <- custom_gmt[sapply(custom_gmt,length)>1]    
+    custom_gmt <- custom_gmt[sapply(custom_gmt,length)>1]
+    names(custom_gmt) <- sub("^[A-Z_]+:", "", names(custom_gmt))
+    names(custom_gmt) <- paste0("CUSTOM:", names(custom_gmt))
+
     message(paste("[pgx.add_GMT] Adding",length(custom_gmt),"custom genesets"))
+
     ## Map feature id always to species specific symbols. This uses
     ## the feature annotation table pgx$genes so it also uses the
     ## ortholog columns for matching.

@@ -329,13 +329,21 @@ mofa_assemble_prompt <- function(slice, pgx, ai) {
 #' @param pgx Full PGX object.
 #' @param ai Resolved AI-report options.
 #' @return List with `report` and `prompt`, or NULL when MOFA is absent.
-ai.mofa.create_report <- function(pgx, slice, ai) {
+#' Build the LLM jobs for the MOFA report.
+#' @keywords internal
+ai.mofa.build_jobs <- function(pgx, slice, ai) {
   if (!requireNamespace("omicsai", quietly = TRUE)) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
   if (is.null(slice)) return(NULL)
-  bp <- mofa_assemble_prompt(slice, pgx, ai)
-  out <- .ai_report_run_prompt(bp, ai)
-  out$report <- paste(out$report, mofa_build_methods(slice, pgx), sep = "\n\n")
-  out
+  methods_text <- mofa_build_methods(slice, pgx)
+  list(.ai_report_job(
+    module = "mofa", slot = "mofa",
+    bp = mofa_assemble_prompt(slice, pgx, ai),
+    finalize = function(report) paste(report, methods_text, sep = "\n\n")
+  ))
+}
+
+ai.mofa.create_report <- function(pgx, slice, ai) {
+  .ai_report_create_report_compat("mofa", pgx, slice, ai)
 }

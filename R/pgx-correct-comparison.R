@@ -402,6 +402,7 @@ compare_batchcorrection_methods <- function(X,
                                             samples,
                                             pheno,
                                             contrasts,
+                                            beta.scale = FALSE,
                                             methods = c(
                                               "uncorrected",
                                               "ComBat", "limma", "RUV", "SVA", "NPM"
@@ -427,6 +428,19 @@ compare_batchcorrection_methods <- function(X,
     B <- samples[, batch.pars, drop = FALSE]
   } else {
     B <- NULL
+  }
+
+  ## Methylation beta is a bounded ratio, and every method compared here is an
+  ## additive linear correction, so on beta they are ranked on a scale none of
+  ## them is valid on. Nothing is converted back: this function returns a
+  ## clustering and a ranking, never a stored matrix, and M is the right scale
+  ## for both. The range check keeps an M-valued input from being clamped.
+  if (isTRUE(beta.scale) && min(X, na.rm = TRUE) >= 0 && max(X, na.rm = TRUE) <= 1) {
+    to_m <- function(x) {
+      playbase.preprocess::pp.convertSpace(x, from = "beta", to = "mvalue")
+    }
+    X <- to_m(X)
+    xlist.init <- lapply(xlist.init, to_m)
   }
 
   nmissing <- sum(is.na(X))

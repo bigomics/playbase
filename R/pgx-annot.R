@@ -72,7 +72,7 @@ getProbeAnnotation <- function(organism,
                                annot_table = NULL) {
   if (is.null(datatype)) datatype <- "unknown"
   if (is.null(probetype)) probetype <- "unknown"
-  if (is.null(ortholog_species)) ortholog_species <- "Human"  
+  if (is.null(ortholog_species)) ortholog_species <- "Human"
 
   unknown.organism <- (tolower(organism) %in% c("no organism", "custom", "unkown"))
   unknown.datatype <- (datatype %in% c("custom", "unkown"))
@@ -81,10 +81,12 @@ getProbeAnnotation <- function(organism,
   organism <- normalizeOrganism(organism)
   
   if (datatype == "methylomics") {
-    c1 <- is.null(meth_type)
-    c2 <- !meth_type %in% c("450K array", "EPIC array")
-    if (c1 | c2) meth_type <- "450K array"
-    genes <- annotate_methylomics(organism, probes, meth_type = meth_type)
+    require_epigenetics()
+    ## NB: || not |. `!NULL %in% x` is logical(0), which makes `if` throw.
+    if (is.null(meth_type) || !meth_type %in% c("450K array", "EPIC array")) {
+      meth_type <- "450K array"
+    }
+    genes <- playbase.epigenetics::annotate_methylomics(organism, probes, meth_type = meth_type)
     return(genes)
   }
 
@@ -279,6 +281,8 @@ getGeneAnnotation <- function(
     ##annot$orthologs <- ortho$orthologs  ## all candidates, ";"-joined
     annot$ortholog_description <- ortho$description
 
+    annot$description_source <- organism
+        
     ## A number of downstream resources (default genesets, TileDB,
     ## CMAP, GENE_SUMMARY, Reactome/WikiPathways, GTEx tissue,
     ## cross-dataset compare, ...) are keyed on human gene symbols
@@ -297,6 +301,36 @@ getGeneAnnotation <- function(
       )
       annot$human_ortholog <- ortho.human$ortholog
     }
+
+
+    ## if gene_title is missing or "unknown","hypothetical" and there
+    ## is a better ortholog_description replacte gene_title with
+    ## ortholog description.
+    if("gene_title" %in% colnames(annot)) {
+      missing.regex <- "unknown|missing|hypothetical"
+      na.strings <- c(NA,"","NA","na","N/A","n/a")
+      title.missing <- annot$gene_title %in% na.strings | grepl(missing.regex,tolower(annot$gene_title))
+      has.ortho_description <- !(annot$ortholog_description %in% na.strings) &
+        !grepl(missing.regex, tolower(annot$ortholog_description))
+      ii <- which( title.missing & has.ortho_description )
+      if(length(ii)) {
+        annot$gene_title[ii] <- annot$ortholog_description[ii]
+        annot$description_source[ii] <- ortholog_species
+      }
+
+      title.missing <- annot$gene_title %in% na.strings | grepl(missing.regex,tolower(annot$gene_title))
+      has.human_description <- !(annot$ortholog_description %in% na.strings) &
+        !grepl(missing.regex, tolower(annot$human_description))
+      ii <- which( title.missing & has.human_description )
+      if(length(ii)) {
+        annot$gene_title[ii] <- annot$human_description[ii]
+        annot$description_source[ii] <- "human"
+      }
+      
+    }
+
+
+
   }
 
   if (verbose > 0) {
@@ -406,10 +440,10 @@ getGeneAnnotation.ANNOTHUB <- function(
       annot <- cleanupAnnotation(annot)
       annot$symbol <- NA
       annot$gene_title <- NA      
+      annot$human_ortholog <- NULL
+      annot$human_orthologs <- NULL
       annot$ortholog <- NULL
-      annot$orthologs <- NULL     
-      annot$ortholog <- NULL
-      annot$orthologs <- NULL     
+      annot$orthologs <- NULL
       return(annot)
     }
   }
@@ -1074,7 +1108,7 @@ getHumanOrtholog <- function(organism, symbols,
   df <- getOrtholog(
     symbols = symbols,
     organism = organism,
-    target_species = "Human", 
+    target_species = "Human",
     ortho.methods = ortho.methods,
     verbose = verbose)
   df
@@ -1090,6 +1124,25 @@ getOrtholog <- function(symbols, organism, target_species,
                         ortho.methods = c("homologene","gprofiler","babelgene",
                           "gprofiler2","uppercase"),
                         verbose = 1) {
+
+  ## A human gene's human ortholog is itself. Without this the whole
+  ## orthogene/gprofiler machinery runs hsapiens -> hsapiens, which is slow
+  ## (tens of seconds on an array-sized feature set) and lossy. Uppercased
+  ## to match the convention the rest of the pipeline assumes (pgx-init.R).
+  if (identical(normalizeOrganism(organism), "Homo sapiens") &&
+        identical(normalizeOrganism(target_species), "Homo sapiens")) {
+    if (verbose > 0) {
+      message("[getOrtholog] human -> human; orthologs are the symbols themselves")
+    }
+    up <- toupper(symbols)
+    return(data.frame(
+      symbol = symbols,
+      ortholog = up,
+      orthologs = up,
+      description = NA_character_,
+      source = ifelse(is.na(up), NA_character_, "identity")
+    ))
+  }
 
   ## try also clean symbols
   symbols[is.na(symbols)] <- "NA"
@@ -1342,7 +1395,7 @@ getOrtholog <- function(symbols, organism, target_species,
   if(inherits(out,"try-error")) out <- NULL
   out
 }
-  
+
 
 ## ================================================================================
 ## ========================= FUNCTIONS ============================================

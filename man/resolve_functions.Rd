@@ -7,5 +7,20 @@
 resolve_functions(features, annot, max_chars = 60L)
 }
 \description{
-Look up function descriptions for features (NULL-safe)
+Resolved per feature through a fallback chain rather than from one fixed
+column: `gene_title`, then `ortholog_description`, `gene_name`,
+`description`. Placeholder values ("hypothetical protein", "Uknown
+feature", ...) and values that merely repeat the feature id or its symbol
+are skipped, so the next column gets a turn. This matters for non-model
+organisms, where `gene_title` is a placeholder for nearly every feature
+(7 of 2000 informative on the soybean multi-omics demo) while a real
+description sits unused in `ortholog_description`.
+}
+\details{
+A known `human_ortholog` that differs from the feature's own symbol is
+appended as `[ortholog: XXX]` -- for a non-model organism it is often the
+only recognizable handle in the row, and it is what the enrichment gene
+sets are keyed on. The tag sits outside the `max_chars` budget so it cannot
+be truncated away. Human datasets, where the ortholog equals the symbol,
+are unaffected.
 }

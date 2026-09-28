@@ -202,20 +202,33 @@ pathways_build_methods <- function(slice, pgx) {
                        params = .methods_params(pgx, slice, "pathways"))
 }
 
-ai.pathways.create_report <- function(pgx, slice, ai) {
-  contrasts <- names(slice$meta %||% list())
-  if (!length(contrasts)) {
-    message("[ai.pathways.create_report] no contrasts in pgx$gset.meta$meta -- skipping")
-    return(NULL)
-  }
+#' Assemble the pathway-enrichment report prompt.
+#' @keywords internal
+pathways_assemble_prompt <- function(slice, pgx, ai) {
   if (!requireNamespace("omicsai", quietly = TRUE)) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
-
   ntop <- min(as.integer(ai$ntop), 50L)
   data_block <- pathways_build_report_tables(slice, pgx, ntop = ntop)$text
-  bp <- .ai_report_build_prompt(pgx, "pathways", data_block)
-  out <- .ai_report_run_prompt(bp, ai)
-  out$report <- paste(out$report, pathways_build_methods(slice, pgx), sep = "\n\n")
-  out
+  .ai_report_build_prompt(pgx, "pathways", data_block)
+}
+
+#' Build the LLM jobs for the pathway-enrichment report.
+#' @keywords internal
+ai.pathways.build_jobs <- function(pgx, slice, ai) {
+  contrasts <- names(slice$meta %||% list())
+  if (!length(contrasts)) {
+    message("[ai.pathways.build_jobs] no contrasts in pgx$gset.meta$meta -- skipping")
+    return(NULL)
+  }
+  methods_text <- pathways_build_methods(slice, pgx)
+  list(.ai_report_job(
+    module = "pathways", slot = "pathways",
+    bp = pathways_assemble_prompt(slice, pgx, ai),
+    finalize = function(report) paste(report, methods_text, sep = "\n\n")
+  ))
+}
+
+ai.pathways.create_report <- function(pgx, slice, ai) {
+  .ai_report_create_report_compat("pathways", pgx, slice, ai)
 }
