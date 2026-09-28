@@ -340,3 +340,75 @@ build_report_methods <- function(report, template_name = NULL, params = list(),
   }
   text
 }
+
+# =============================================================================
+# Report text helpers
+# =============================================================================
+# The functions above assemble the *input* fed into a report prompt; these
+# operate on an already-generated report's *output* text (e.g.
+# pgx$ai[[slot]]$report), for callers that want to pull out one section
+# rather than show the whole thing (e.g. a dataset summary popup, a board
+# preview) instead of duplicating markdown-heading parsing at each call site.
+
+#' Extract one section from an AI report's markdown text.
+#'
+#' Pulls the text under a given ATX heading (e.g. "## Discussion", any
+#' level 1-6), up to (but not including) the next heading at the same or a
+#' higher level, or the end of the text. Matching is by heading text alone
+#' (case-insensitive, `#`s and surrounding `**bold**`/`*italic*` markup
+#' ignored) -- the level isn't part of the match, only used to find where
+#' the section ends. Line-based, so a `#`-led line inside a fenced code
+#' block is (incorrectly) treated as a heading -- not expected in an
+#' LLM-generated prose report, but worth knowing if this is ever pointed at
+#' arbitrary markdown.
+#'
+#' @param report Character scalar (or vector, joined with `"\n"`): the
+#'   report's markdown text, e.g. `pgx$ai$combined$report`.
+#' @param heading Heading text to match, e.g. `"Discussion"`. A leading
+#'   `#`/`##`/etc. is stripped if present, so `"## Discussion"` also works.
+#' @param include_heading Include the heading line itself in the returned
+#'   text. Default `FALSE` (just the section body).
+#' @return Character scalar with the section's text (possibly `""` for an
+#'   empty section), or `NULL` if `report` is empty or `heading` isn't
+#'   found.
+#' @export
+ai_report_get_section <- function(report, heading, include_heading = FALSE) {
+  if (is.null(report) || !length(report) || !nzchar(report[[1L]])) return(NULL)
+  heading <- trimws(sub("^#{1,6}[ \t]*", "", heading %||% ""))
+  if (!nzchar(heading)) return(NULL)
+
+  txt <- paste(report, collapse = "\n")
+  txt <- gsub("\r\n?", "\n", txt)
+  lines <- strsplit(txt, "\n", fixed = TRUE)[[1]]
+
+  is_heading <- function(line) grepl("^#{1,6}[ \t]+", line)
+  heading_level <- function(line) nchar(regmatches(line, regexpr("^#+", line)))
+  heading_text <- function(line) {
+    trimws(gsub("\\*+", "", sub("^#{1,6}[ \t]+", "", line)))
+  }
+
+  start_idx <- NA_integer_
+  start_level <- NA_integer_
+  for (i in seq_along(lines)) {
+    if (is_heading(lines[i]) && tolower(heading_text(lines[i])) == tolower(heading)) {
+      start_idx <- i
+      start_level <- heading_level(lines[i])
+      break
+    }
+  }
+  if (is.na(start_idx)) return(NULL)
+
+  end_idx <- length(lines)
+  if (start_idx < length(lines)) {
+    for (i in seq(start_idx + 1L, length(lines))) {
+      if (is_heading(lines[i]) && heading_level(lines[i]) <= start_level) {
+        end_idx <- i - 1L
+        break
+      }
+    }
+  }
+
+  body_start <- if (isTRUE(include_heading)) start_idx else start_idx + 1L
+  if (body_start > end_idx) return("")
+  trimws(paste(lines[body_start:end_idx], collapse = "\n"))
+}

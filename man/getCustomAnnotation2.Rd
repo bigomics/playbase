@@ -12,7 +12,7 @@ getCustomAnnotation2(
   feature.col = "feature",
   symbol.col = "symbol",
   gene_title.col = "gene_title",
-  ortholog.col = "human_ortholog",
+  ortholog.col = "ortholog",
   extra.columns = TRUE
 )
 }

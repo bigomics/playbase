@@ -63,7 +63,7 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
   for (ct in colnames(F1)) {
     fc <- F1[, ct]
 
-    k <- intersect(c("human_ortholog", "symbol", "gene_name"), colnames(pgx$genes))
+    k <- intersect(c("human_ortholog", "ortholog", "symbol", "gene_name"), colnames(pgx$genes))
     k <- k[which(colMeans(is.na(pgx$genes[, k])) < 1)] ## no all NA columns...
     k
     if (length(k) == 0) {
@@ -76,8 +76,8 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
 
     ## collapse duplicates by average or max absFC
     ## fc <- tapply( fc, names(fc), mean, na.rm = TRUE)
-    fc <- tapply(fc, names(fc), function(x) x[which.max(abs(x))])
     fc[is.na(fc)] <- 0
+    fc <- tapply(fc, names(fc), function(x) x[which.max(abs(x))])
 
     res <- pgx.correlateSignatureH5(
       fc,

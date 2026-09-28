@@ -435,6 +435,19 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     col.annot <- col.annot[jj, ]
   }
 
+  ## reorder grp here, not in the plotting loop: col.ha below is built from
+  ## it, and ComplexHeatmap attaches top_annotation positionally, so the
+  ## per-group matrix and its annotation must share one column order
+  if (ngrp > 1 && inherits(cluster_columns, c("hclust", "dendrogram"))) {
+    col.order <- labels(stats::as.dendrogram(cluster_columns))
+    if (all(colnames(gx) %in% col.order)) {
+      grp[] <- lapply(grp, function(jj) jj[order(match(jj, col.order))])
+    } else {
+      warning("gx.splitmap: cluster_columns does not cover all columns; ignoring")
+    }
+    cluster_columns <- FALSE
+  }
+
   ## -------------------------------------------------------------------------------
   ## column  HeatmapAnnotation objects
   ## -------------------------------------------------------------------------------

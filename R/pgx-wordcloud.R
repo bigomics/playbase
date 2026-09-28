@@ -71,6 +71,11 @@ pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
   ## Calculate incidence matrix
   words2 <- lapply(words, function(w) intersect(w, terms))
   words2 <- words2[sapply(words2, length) > 0]
+
+  if (length(words2) == 0) {
+    message("[pgx.calculateWordCloud] WARNING:: no valid words left")
+    return(NULL)
+  }
   idx <- lapply(1:length(words2), function(i) cbind(i, match(words2[[i]], terms)))
   idx <- do.call(rbind, idx)
 
@@ -98,7 +103,7 @@ pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
   ## compute for average contrast
   rms.FC <- Matrix::rowMeans(S**2)**0.5
   rms.FC <- rms.FC + 0.01 * stats::rnorm(length(rms.FC))
-  gmt <- apply(W, 2, function(x) names(which(x != 0)))
+  gmt <- apply(W, 2, function(x) names(which(x != 0)), simplify = FALSE)
   suppressWarnings(res <- fgsea::fgseaSimple(gmt, rms.FC, nperm = 1000))
   res$leadingEdge <- sapply(res$leadingEdge, paste, collapse = "//")
   colnames(res)[1] <- "word"
@@ -141,17 +146,13 @@ pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
   pos2 <- uwot::umap2(t(as.matrix(W)), n_neighbors = max(nb, 2))
   rownames(pos1) <- rownames(pos2) <- colnames(W)
   colnames(pos1) <- colnames(pos2) <- c("x", "y")
-  pos1 <- pos1[match(res$word, rownames(pos1)), ]
-  pos2 <- pos2[match(res$word, rownames(pos2)), ]
+  pos1 <- pos1[match(res$word, rownames(pos1)), , drop = FALSE]
+  pos2 <- pos2[match(res$word, rownames(pos2)), , drop = FALSE]
 
   # sometimes we have words that NA is tsne, make sure we remove them
   # (likely special characters) in windows or wsl
-  pos1 <- pos1[!is.na(rownames(pos1)), ]
-  pos2 <- pos2[!is.na(rownames(pos2)), ]
-
-  ordered_words <- all.gsea[[1]]$word
-  res$tsne <- res$tsne[ordered_words, ]
-  res$umap <- res$umap[ordered_words, ]
+  pos1 <- pos1[!is.na(rownames(pos1)), , drop = FALSE]
+  pos2 <- pos2[!is.na(rownames(pos2)), , drop = FALSE]
 
   all.res <- list(gsea = all.gsea, S = S, W = W, tsne = pos1, umap = pos2)
   return(all.res)

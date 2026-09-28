@@ -503,11 +503,15 @@ read_h5_counts <- function(h5.file) {
           n_csr_rows <- length(x_indptr) - 1L
           transposed <- (n_csr_rows == n_vars && n_csr_rows != n_obs)
           if (transposed) {
-            row_names <- var_names; col_names <- obs_names
-            n_rows <- n_vars;      n_cols    <- n_obs
+            row_names <- var_names
+            col_names <- obs_names
+            n_rows <- n_vars
+            n_cols <- n_obs
           } else {
-            row_names <- obs_names; col_names <- var_names
-            n_rows <- n_obs;        n_cols    <- n_vars
+            row_names <- obs_names
+            col_names <- var_names
+            n_rows <- n_obs
+            n_cols <- n_vars
           }
           message("[playbase::read_h5_counts] AnnData sparse CSR detected")
           message("[playbase::read_h5_counts] Size: ", n_obs, " cells; ", n_vars, " features")
@@ -523,36 +527,39 @@ read_h5_counts <- function(h5.file) {
           counts_mat <- if (transposed) mat else Matrix::t(mat)
 
           ## read /obs cell metadata
-          obs_meta <- tryCatch({
-            FF_obs <- FF[FF[, "group"] == "/obs", , drop = FALSE]
-            col_names_obs <- FF_obs[, "name"]
-            ## skip internal AnnData fields and sub-group entries
-            skip <- c("_index", "__categories")
-            is_subgroup <- col_names_obs %in% FF[FF[, "group"] != "/obs", "name"]
-            top_cols <- col_names_obs[!col_names_obs %in% skip & !is_subgroup]
-            ## also skip columns that have sub-paths (categorical stored as categories/codes)
-            has_subpath <- vapply(top_cols, function(cn) {
-              any(FF[, "group"] == paste0("/obs/", cn))
-            }, logical(1))
-            cat_cols  <- top_cols[has_subpath]
-            scal_cols <- top_cols[!has_subpath]
+          obs_meta <- tryCatch(
+            {
+              FF_obs <- FF[FF[, "group"] == "/obs", , drop = FALSE]
+              col_names_obs <- FF_obs[, "name"]
+              ## skip internal AnnData fields and sub-group entries
+              skip <- c("_index", "__categories")
+              is_subgroup <- col_names_obs %in% FF[FF[, "group"] != "/obs", "name"]
+              top_cols <- col_names_obs[!col_names_obs %in% skip & !is_subgroup]
+              ## also skip columns that have sub-paths (categorical stored as categories/codes)
+              has_subpath <- vapply(top_cols, function(cn) {
+                any(FF[, "group"] == paste0("/obs/", cn))
+              }, logical(1))
+              cat_cols <- top_cols[has_subpath]
+              scal_cols <- top_cols[!has_subpath]
 
-            meta <- data.frame(row.names = obs_names)
-            for (cn in scal_cols) {
-              v <- tryCatch(as.vector(rhdf5::h5read(h5.file, paste0("/obs/", cn))), error = function(e) NULL)
-              if (!is.null(v) && length(v) == n_obs) meta[[cn]] <- v
-            }
-            for (cn in cat_cols) {
-              cats  <- tryCatch(as.character(rhdf5::h5read(h5.file, paste0("/obs/", cn, "/categories"))), error = function(e) NULL)
-              codes <- tryCatch(as.integer(rhdf5::h5read(h5.file, paste0("/obs/", cn, "/codes"))),      error = function(e) NULL)
-              if (!is.null(cats) && !is.null(codes) && length(codes) == n_obs) {
-                ## AnnData encodes missing categoricals as -1; map to NA
-                idx <- codes + 1L
-                meta[[cn]] <- ifelse(idx > 0L, cats[ifelse(idx > 0L, idx, 1L)], NA_character_)
+              meta <- data.frame(row.names = obs_names)
+              for (cn in scal_cols) {
+                v <- tryCatch(as.vector(rhdf5::h5read(h5.file, paste0("/obs/", cn))), error = function(e) NULL)
+                if (!is.null(v) && length(v) == n_obs) meta[[cn]] <- v
               }
-            }
-            if (ncol(meta) > 0) meta else NULL
-          }, error = function(e) NULL)
+              for (cn in cat_cols) {
+                cats <- tryCatch(as.character(rhdf5::h5read(h5.file, paste0("/obs/", cn, "/categories"))), error = function(e) NULL)
+                codes <- tryCatch(as.integer(rhdf5::h5read(h5.file, paste0("/obs/", cn, "/codes"))), error = function(e) NULL)
+                if (!is.null(cats) && !is.null(codes) && length(codes) == n_obs) {
+                  ## AnnData encodes missing categoricals as -1; map to NA
+                  idx <- codes + 1L
+                  meta[[cn]] <- ifelse(idx > 0L, cats[ifelse(idx > 0L, idx, 1L)], NA_character_)
+                }
+              }
+              if (ncol(meta) > 0) meta else NULL
+            },
+            error = function(e) NULL
+          )
 
           list(counts = counts_mat, samples = obs_meta)
         },
@@ -625,7 +632,7 @@ read_spectronaut <- function(file) {
 
   counts <- counts[!is.na(rownames(counts)) & rownames(counts) != "", , drop = FALSE]
   if (!any(is.na(suppressWarnings(as.numeric(rownames(counts)))))) {
-    rownames(counts) <- paste0("P", 1:nrow(counts))
+    rownames(counts) <- paste0("Feature", 1:nrow(counts))
   }
   msg("Initial matrix size: ", nrow(counts), " x ", ncol(counts))
 
@@ -687,9 +694,11 @@ read_spectronaut <- function(file) {
 
 #' Read Spectronaut output hPTM abundance data file.
 #' @param Path to Spectronaut output hPTM abundance file.
+#' @param use_ptm_norm Boolean. Use PTM abudances normalized to the global proteome. Default TRUE.
 #' @return Abundance data matrix + annotation (features on rows; samples on columns)
 #' @export
-read_spectronaut_hPTM <- function(file) {
+read_spectronaut_hPTM <- function(file, use_ptm_norm = TRUE) {
+
   msg <- function(...) message("[playbase::read_spectronaut_hPTM] ", ...)
 
   counts <- try(read.csv(file, sep = "\t"), silent = TRUE)
@@ -700,15 +709,16 @@ read_spectronaut_hPTM <- function(file) {
       return(NULL)
     }
   }
-
+  
   counts <- counts[!is.na(rownames(counts)) & rownames(counts) != "", , drop = FALSE]
   if (!any(is.na(suppressWarnings(as.numeric(rownames(counts)))))) {
-    rownames(counts) <- paste0("P", 1:nrow(counts))
+    rownames(counts) <- paste0("Feature", 1:nrow(counts))
   }
   msg("Initial matrix size: ", nrow(counts), " x ", ncol(counts))
 
   ## PTM annotation
   ss <- "proteinid|^pg\\.|key|modification|position|location|sitelocation|siteAA"
+  ss <- paste0(ss, "|multiplicity|flankingregion")
   ann_idx <- unique(c(grep(ss, colnames(counts), ignore.case = TRUE)))
   if (length(ann_idx) == 0) {
     msg("FATAL: No PTM annotation columns found. Exiting")
@@ -722,16 +732,15 @@ read_spectronaut_hPTM <- function(file) {
   if (!is.na(mod_idx)) {
     ptm_data <- as.character(ann[, mod_idx])
     keep <- grepl("sty", ptm_data, ignore.case = TRUE) | ptm_data == "" | is.na(ptm_data)
-    if (length(keep) > 0) {
-      ann <- ann[keep, , drop = FALSE]
-      counts <- counts[keep, , drop = FALSE]
-    }
+    ann <- ann[keep, , drop = FALSE]
+    counts <- counts[keep, , drop = FALSE]
   }
 
   ## Feature names
   pid_idx <- grep("proteinid", colnames(ann), ignore.case = TRUE)[1]
   aa_idx <- grep("siteAA", colnames(ann), ignore.case = TRUE)[1]
   pos_idx <- grep("position|location|sitelocation", colnames(ann), ignore.case = TRUE)[1]
+  ff <- rownames(ann)
   if (!is.na(pid_idx)) {
     ff <- as.character(ann[, pid_idx])
     jj <- which(is.na(ff) | ff == "")
@@ -747,10 +756,13 @@ read_spectronaut_hPTM <- function(file) {
     }
   }
   rownames(ann) <- rownames(counts) <- make.unique(ff)
-
+  
+  mult_idx <- grep("multiplicity", colnames(ann), ignore.case = TRUE)[1]
+  if (!is.na(mult_idx)) ann[, mult_idx] <- as.character(ann[, mult_idx]) ## else interpreted as 'abundance'
+  
   ## Remove contaminants
   pid <- grep("proteinid", colnames(ann), ignore.case = TRUE)[1]
-  if (length(pid) > 0) {
+  if (!is.na(pid)) {
     is.contam <- grep("cont_", ann[, pid], ignore.case = TRUE)
     if (any(is.contam)) {
       msg("Identified ", length(is.contam), " contaminants. Removing...")
@@ -758,25 +770,47 @@ read_spectronaut_hPTM <- function(file) {
       counts <- counts[rownames(ann), , drop = FALSE]
     }
   }
-
-  ## PTM quantity (abundance) data
-  ptm_qty <- grep("ptm\\..*quantity$", colnames(counts), ignore.case = TRUE)
-  if (length(ptm_qty) == 0) {
-    msg("FATAL: No PTM quantity columns found. Exiting")
-    return(NULL)
+  
+  ## PTM.Quantity & PTM.QuantityPerProtein abundances (both are Spectronaut outputs).
+  ## PTM.Quantity: PTM abundance not-normalized to the global proteome.
+  ## PTM.QuantityPerProtein: PTM abundance normalized to the global proteome.
+  if (use_ptm_norm) {
+    ptm_qty <- grep("ptm\\..*quantityperprotein$", colnames(counts), ignore.case = TRUE)
+    if (length(ptm_qty) == 0) {
+      msg("No PTM.QuantityPerProtein columns found. Checking for PTM.Quantity columns...")
+      ptm_qty <- grep("ptm\\..*quantity$", colnames(counts), ignore.case = TRUE)
+      if (length(ptm_qty) == 0) {
+        msg("FATAL: No PTM.Quantity columns found either. Exiting")
+        return(NULL)
+      }
+    }
+  } else {
+    ptm_qty <- grep("ptm\\..*quantity$", colnames(counts), ignore.case = TRUE)
+    if (length(ptm_qty) == 0) {
+      msg("FATAL: No PTM quantity columns found. Exiting")
+      return(NULL)
+    }
   }
-  res <- cbind(ann, counts[, ptm_qty, drop = FALSE])
 
+  counts <- counts[, ptm_qty, drop = FALSE]
+  
+  ## Spectronaut seems to write "Filtered" for some values.
+  ## For now i coerce to numeric so they become NA. Real NaN/NA are preserved
+  ## Subject to verification with client.
+  counts[] <- lapply(counts, function(x) suppressWarnings(as.numeric(x)))  
+  res <- cbind(ann, as.matrix(counts))  
+  
   ## Clean colnames
-  colnames(res) <- gsub("^PG\\.|[.]PTM[.]Quantity|PTM[.]|[.]PTM[.]|[.]raw", "", colnames(res))
+  ss <- "^PG\\.|[.]PTM[.]Quantity|[.]PTM[.]QuantityPerProtein|PTM[.]|[.]PTM[.]|[.]raw"
+  colnames(res) <- gsub(ss, "", colnames(res))
   colnames(res) <- gsub("^X\\.[0-9]+|\\.{2,}", "", colnames(res))
   colnames(res) <- gsub("\\.d$", "", colnames(res))
 
   msg("Completed. Final matrix size: ", nrow(res), " x ", ncol(res))
   rm(counts, ann)
-  gc()
-
+  
   return(res)
+
 }
 
 #' Read 10X Cell Ranger Software output (version V3 onwards).

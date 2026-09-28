@@ -10,8 +10,9 @@ getGeneAnnotation(
   probes,
   is.phospho = FALSE,
   use.ah = NULL,
-  verbose = TRUE,
-  methods = c("annothub", "gprofiler")
+  methods = c("annothub", "gprofiler"),
+  ortholog_species = "Human",
+  verbose = TRUE
 )
 }
 \description{

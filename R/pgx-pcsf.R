@@ -873,7 +873,7 @@ pgx.getPCSFcentrality <- function(pgx, contrast, pcsf, level = "gene",
       match.sum <- apply(pgx$genes, 2, function(a) sum(ft %in% a))
     }
     ii <- match(ft, pgx$genes[, which.max(match.sum)])
-    aa <- pgx$genes[ii, c("feature", "symbol", "human_ortholog", "gene_title")]
+    aa <- pgx$genes[ii, c("feature", "symbol", "ortholog", "gene_title")]
   }
   if (level == "geneset") {
     aa <- data.frame(geneset = rownames(M))

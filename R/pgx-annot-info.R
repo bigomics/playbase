@@ -35,7 +35,9 @@ pgx.getFeatureInfo <- function(pgx, feature) {
     annot[["protein"]] <- gene2uniprot(annot$symbol, pgx$organism)
   }
 
-  if (annot$human_ortholog %in% names(playdata::GENE_SUMMARY)) {
+  ## GENE_SUMMARY is keyed on human gene symbols, so look up via the
+  ## guaranteed-human ortholog column, not the species-configurable one.
+  if (!is.null(annot$human_ortholog) && annot$human_ortholog %in% names(playdata::GENE_SUMMARY)) {
     annot.summary <- playdata::GENE_SUMMARY[annot$human_ortholog]
     annot.summary <- gsub("Publication Note.*|##.*", "", annot.summary)
     annot[["summary"]] <- annot.summary
@@ -52,6 +54,7 @@ pgx.getFeatureInfo <- function(pgx, feature) {
       annot, feature, datatype,
       nm.symbol = "symbol",
       nm.prot = "protein",
+      ## the GeneCards link built here only resolves for human symbols
       nm.ortholog = "human_ortholog",
       as.link = TRUE, add.summary = FALSE
     )
@@ -171,7 +174,7 @@ info.add_hyperlinks <- function(info, feature, datatype,
                                 nm.ortholog = "ORTHOLOG",
                                 as.link = TRUE, add.summary = TRUE) {
   ## nm.symbol='SYMBOL';nm.prot='UNIPROT';nm.ortholog='ORTHOLOG';as.link=TRUE;add.summary=TRUE
-  ## nm.symbol='symbol';nm.prot='protein';nm.ortholog='human_ortholog';as.link=TRUE;add.summary=TRUE
+  ## nm.symbol='symbol';nm.prot='protein';nm.ortholog='ortholog';as.link=TRUE;add.summary=TRUE
 
   symbol <- info[[nm.symbol]]
   ortholog <- info[[nm.ortholog]]

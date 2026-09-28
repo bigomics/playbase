@@ -3,13 +3,13 @@
 \name{collapse_by_humansymbol}
 \alias{collapse_by_humansymbol}
 \title{Rename features names of object to available human symbol by
-human_ortholog or other 'human-like' uppercased annotation
+ortholog or other 'human-like' uppercased annotation
 columns. WARNING: does not necessarily keep original length.}
 \usage{
 collapse_by_humansymbol(obj, annot)
 }
 \description{
 Rename features names of object to available human symbol by
-human_ortholog or other 'human-like' uppercased annotation
+ortholog or other 'human-like' uppercased annotation
 columns. WARNING: does not necessarily keep original length.
 }
