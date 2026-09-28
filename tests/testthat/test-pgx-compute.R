@@ -739,14 +739,14 @@ test_that("max-feature bridge subsets X and final metadata together", {
 
 test_that("methylomics EPIC v2 ids are collapsed and array/genome recorded", {
   set.seed(3)
-  ids <- c("cg01_TC21", "cg01_BC11", "cg02_TC21", "cg03_TC11")
+  ids <- c("cg01_TC21", "cg01_BC11", "cg02_TC21", "cg03_TO110")
   beta <- matrix(stats::runif(16), 4, dimnames = list(ids, paste0("S", 1:4)))
   samples <- data.frame(group = c("a", "a", "b", "b"), row.names = colnames(beta))
   contrasts <- matrix(samples$group, ncol = 1, dimnames = list(colnames(beta), "b_vs_a"))
   annotated <- NULL
   local_mocked_bindings(
     .pgx_collapse_epicv2 = function(X) {
-      bare <- sub("_[A-Z]{2}[0-9]{2}$", "", rownames(X))
+      bare <- sub("_[TB][CO][12][0-9]+$", "", rownames(X))
       X <- X[!duplicated(bare), , drop = FALSE]
       rownames(X) <- unique(bare)
       X

@@ -257,18 +257,19 @@ pgx.createPGX <- function(counts,
   counts <- as.matrix(counts)
   if (is.null(contrasts)) contrasts <- samples[, 0]
 
-  ## EPIC v2 carries replicate probes (cg00000029_TC21, _BC11, ...). Keep
-  ## Illumina's recommended replicate per cg id, renamed to the bare id, so
-  ## the pgx only ever holds bare ids - the ids the clocks, cell references,
-  ## EWAS catalog and cross-reactive masks key on.
+  ## EPIC v2 ids carry a design suffix (cg00000029_TC21), and ~5,000 CpGs
+  ## have several replicate probes. Keep the recommended replicate per CpG,
+  ## renamed to the bare id, so the pgx only ever holds bare ids - the ids the
+  ## annotation, clocks, cell references, EWAS catalog and masks key on.
   if (identical(datatype, "methylomics") &&
-    any(grepl(EPICV2_REPLICATE_RE, rownames(counts)))) {
+    any(grepl(EPICV2_SUFFIX, rownames(counts)))) {
+    source.ids <- rownames(counts)
     counts <- .pgx_collapse_epicv2(counts)
     if (!is.null(X)) X <- .pgx_collapse_epicv2(X)
     if (!is.null(annot_table)) {
-      ## Replicates of one cg id share its locus, so any one row annotates it.
-      bare <- sub("_[A-Z]{2}[0-9]{2}$", "", rownames(annot_table))
-      annot_table <- annot_table[match(rownames(counts), bare), , drop = FALSE]
+      ## The rows the collapse kept, in its (source) order.
+      kept <- source.ids[!source.ids %in% attr(counts, "epicv2_dropped")]
+      annot_table <- annot_table[match(kept, rownames(annot_table)), , drop = FALSE]
       rownames(annot_table) <- rownames(counts)
     }
   }

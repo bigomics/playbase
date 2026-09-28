@@ -481,8 +481,11 @@ require_epigenetics <- function() {
   invisible(TRUE)
 }
 
-## EPIC v2 replicate-probe suffix: cg00000029_TC21, cg00000029_BC11.
-EPICV2_REPLICATE_RE <- "^cg[0-9]+_[A-Z]{2}[0-9]{2}$"
+## EPIC v2 design suffix, carried by every v2 probe id: strand (T/B),
+## converted or opposite strand (C/O), Infinium type (1/2) and replicate
+## number (cg00000029_TC21, cg06373096_TC110). Same pattern as
+## playbase.epigenetics' EPICV2_SUFFIX.
+EPICV2_SUFFIX <- "_[TB][CO][12][0-9]+$"
 
 ## Collapses EPIC v2 replicate probes to one bare cg id each through
 ## playbase.epigenetics, the single place the replicate choice is made.
