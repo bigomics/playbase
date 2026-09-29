@@ -65,18 +65,26 @@
     "SVA",
     "NPM"
   )
+  ## A named value selects one method per multi-omics layer; JSON callers
+  ## deliver such maps as named lists.
+  batch.correct.method <- unlist(batch.correct.method)
   if (
     !is.character(batch.correct.method) ||
-      length(batch.correct.method) != 1L ||
-      is.na(batch.correct.method) ||
-      !batch.correct.method %in% batch.methods
+      length(batch.correct.method) < 1L ||
+      anyNA(batch.correct.method) ||
+      !all(batch.correct.method %in% batch.methods) ||
+      (length(batch.correct.method) > 1L && is.null(names(batch.correct.method)))
   ) {
     stop(
-      "[pgx.createPGX] batch.correct.method must select one supported method",
+      "[pgx.createPGX] batch.correct.method must select one supported method, or one per named layer",
       call. = FALSE
     )
   }
   preprocess$batch.correct.method <- batch.correct.method
+  layered <- c("input_space", "output_space", "impute_method", "norm_method")
+  for (k in intersect(layered, names(preprocess))) {
+    if (is.list(preprocess[[k]])) preprocess[[k]] <- unlist(preprocess[[k]])
+  }
   preprocess
 }
 
@@ -91,7 +99,7 @@
   analysis.samples,
   batch.pars
 ) {
-  if (identical(preprocess$batch.correct.method, "no_batch_correct")) {
+  if (all(preprocess$batch.correct.method == "no_batch_correct")) {
     preprocess[["batch"]] <- NULL
     preprocess$target <- NULL
     preprocess$batch_args <- list()

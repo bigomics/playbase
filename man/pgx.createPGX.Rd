@@ -82,7 +82,9 @@ through the complete preprocessing pipeline like any other count input.}
 
 \item{dotimeseries}{Logical indicating if timeseries analysis has been activated by the user at upload}
 
-\item{batch.correct.method}{BC method. Default is "no_batch_correct" (meaning no batch correction).}
+\item{batch.correct.method}{BC method. Default is "no_batch_correct" (meaning no batch correction).
+For multi-omics, a named vector selects one method per layer prefix,
+e.g. `c(gx = "limma", px = "no_batch_correct")`.}
 
 \item{batch.pars}{BC variable. Default "autodetect" as per QC/BC tab in upload.}
 
