@@ -221,3 +221,20 @@ test_that("mixed count-scale policy preserves each processed count-like layer", 
   expect_false(isTRUE(all.equal(actual[1:6, ], aligned[1:6, ])))
   expect_identical(actual[7:8, ], aligned[7:8, ])
 })
+
+test_that("createPGX options accept one batch method per layer", {
+  counts <- matrix(1:4, 2, dimnames = list(c("gx:a", "px:b"), c("s1", "s2")))
+  opts <- .pgx_preprocess_options(
+    list(norm_method = list(gx = "CPM", px = "maxMedian")),
+    counts,
+    norm_method = "CPM",
+    average.duplicated = FALSE,
+    batch.correct.method = list(gx = "limma", px = "no_batch_correct")
+  )
+  expect_identical(opts$batch.correct.method, c(gx = "limma", px = "no_batch_correct"))
+  expect_identical(opts$norm_method, c(gx = "CPM", px = "maxMedian"))
+  expect_error(
+    .pgx_preprocess_options(NULL, counts, "CPM", FALSE, c("limma", "SVA")),
+    "one per named layer"
+  )
+})

@@ -137,6 +137,8 @@ pgx.createFromFiles <- function(counts.file,
 #'   through the complete preprocessing pipeline like any other count input.
 #' @param dotimeseries Logical indicating if timeseries analysis has been activated by the user at upload
 #' @param batch.correct.method BC method. Default is "no_batch_correct" (meaning no batch correction).
+#'   For multi-omics, a named vector selects one method per layer prefix,
+#'   e.g. `c(gx = "limma", px = "no_batch_correct")`.
 #' @param batch.pars BC variable. Default "autodetect" as per QC/BC tab in upload.
 #' @param covariates variables to regress out. Valid only for linear model-based tests.
 #' @param dma Differential methylation analysis. If datatype=="methylomics", can be DMP (default) vs. DMR. Else NULL.
@@ -318,7 +320,7 @@ pgx.createPGX <- function(counts,
     X <- pp$X
     if (!is.null(annot_table)) annot_table <- pp$annot
   } else {
-    if (!identical(batch.correct.method, "no_batch_correct")) {
+    if (!all(unlist(batch.correct.method) == "no_batch_correct")) {
       stop(
         "[pgx.createPGX] batch correction requires X = NULL",
         call. = FALSE
