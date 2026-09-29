@@ -87,7 +87,7 @@ getProbeAnnotation <- function(organism,
       meth_type <- "450K array"
     }
     genes <- playbase.epigenetics::annotate_methylomics(organism, probes, meth_type = meth_type)
-    return(genes)
+    return(methyl_manifest_chr(genes, meth_type))
   }
 
   ## clean probe names
@@ -181,6 +181,22 @@ getProbeAnnotation <- function(organism,
   genes <- cleanupAnnotation(genes)
 
   return(genes)
+}
+
+
+## Each methylation probe's own chromosome, from its array manifest.
+## annotate_methylomics() keeps the gene annotation's `chr` (the gene's
+## cytoband), which is empty for a probe outside a single gene - a third of a
+## 450K array, two thirds of EPIC v2 - although its `pos` is the manifest's for
+## every probe. The manifest's "chr16" goes in instead, in the same build as
+## `pos` (hg19 for 450K/EPIC, hg38 for EPIC v2); the gene columns are untouched.
+methyl_manifest_chr <- function(genes, meth_type) {
+  if (is.null(genes)) return(NULL)
+  ## The manifest rows annotate_methylomics() read, EPIC v2 replicates
+  ## collapsed to bare ids the same way (internal to playbase.epigenetics).
+  manifest <- get("methyl_annotation", envir = asNamespace("playbase.epigenetics"))(meth_type)
+  genes$chr <- as.character(manifest$chr[match(rownames(genes), rownames(manifest))])
+  genes
 }
 
 
