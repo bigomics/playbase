@@ -141,7 +141,7 @@ pgx.createFromFiles <- function(counts.file,
 #' @param covariates variables to regress out. Valid only for linear model-based tests.
 #' @param dma Differential methylation analysis. If datatype=="methylomics", can be DMP (default) vs. DMR. Else NULL.
 #' @param remove.xy.probes Logical. Only activated when datatype=="methylomics". Remove X- and Y-linked CpG probes.
-#' @param meth_type Type of array: 450K array or EPIC array
+#' @param meth_type Type of array: 450K array, EPIC array or EPIC v2 array
 #' @param auto.scale Logical indicating whether to automatically scale/center genes. Default is TRUE.
 #' @param filter.genes Logical indicating whether to filter lowly expressed genes. Default is TRUE.
 #' @param prune.samples Logical indicating whether to remove samples without contrasts. Default is FALSE.
@@ -256,6 +256,23 @@ pgx.createPGX <- function(counts,
   samples <- as.data.frame(samples, drop = FALSE)
   counts <- as.matrix(counts)
   if (is.null(contrasts)) contrasts <- samples[, 0]
+
+  ## EPIC v2 ids carry a design suffix (cg00000029_TC21), and ~5,000 CpGs
+  ## have several replicate probes. Keep the recommended replicate per CpG,
+  ## renamed to the bare id, so the pgx only ever holds bare ids - the ids the
+  ## annotation, clocks, cell references, EWAS catalog and masks key on.
+  if (identical(datatype, "methylomics") &&
+    any(grepl(EPICV2_SUFFIX, rownames(counts)))) {
+    source.ids <- rownames(counts)
+    counts <- .pgx_collapse_epicv2(counts)
+    if (!is.null(X)) X <- .pgx_collapse_epicv2(X)
+    if (!is.null(annot_table)) {
+      ## The rows the collapse kept, in its (source) order.
+      kept <- source.ids[!source.ids %in% attr(counts, "epicv2_dropped")]
+      annot_table <- annot_table[match(kept, rownames(annot_table)), , drop = FALSE]
+      rownames(annot_table) <- rownames(counts)
+    }
+  }
   contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
   contrasts <- fixContrastMatrix(contrasts)
   if (dotimeseries) {
@@ -442,6 +459,15 @@ pgx.createPGX <- function(counts,
   description <- gsub("[\n]", ". ", description) ## replace newline
   description <- trimws(gsub("[ ]+", " ", description)) ## remove ws
 
+  ## Appending the symbol rewrites cg00000029 -> cg00000029_RBL2, and every
+  ## methylation lookup keys on the bare probe ID: the epigenetic clocks come
+  ## back with zero coverage and no ages at all. Off for methylomics whatever
+  ## the caller asked for, and corrected here so settings record what happened.
+  if (identical(datatype, "methylomics") && isTRUE(convert.hugo)) {
+    message("[pgx.createPGX] methylomics: not appending symbols to probe IDs")
+    convert.hugo <- FALSE
+  }
+
   ## add to setting info
   settings$filter.genes <- filter.genes
   settings$exclude.genes <- exclude.genes
@@ -513,6 +539,15 @@ pgx.createPGX <- function(counts,
     ortholog_species = pgx$ortholog_species,    
     annot_table = annot_table
   )
+
+  ## Array and genome build, so consumers never re-guess them from probe ids.
+  ## 450K and EPIC annotate against hg19, EPIC v2 against hg38.
+  if (identical(datatype, "methylomics")) {
+    array <- if (isTRUE(meth_type %in% c("EPIC array", "EPIC v2 array"))) meth_type else "450K array"
+    pgx$meth$array <- array
+    pgx$meth$genome <- attr(pgx$genes, "genome") %||%
+      (if (array == "EPIC v2 array") "hg38" else "hg19")
+  }
 
   ## Reorder uniprots in pgx$genes. Valid for all datatypes.
   message("[pgx.createPGX] Reordering uniprot column in pgx$genes")
@@ -827,7 +862,42 @@ pgx.computePGX <- function(pgx,
   if (do.cluster || cluster.contrasts) {
     message("[pgx.computePGX] clustering samples...")
     mm <- c("pca", "tsne", "umap")
-    pgx <- pgx.clusterSamples(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
+    ## Methylomics clusters on M, not on beta. Beta is a bounded ratio and is
+    ## heteroscedastic at both ends, so the top-SD feature selection inside
+    ## pgx.clusterBigMatrix is dominated by probes sitting near 0.5 whatever
+    ## their behaviour, while a probe moving 0.02 -> 0.10 - a fourfold change
+    ## in methylation - barely registers. M is the convention for every
+    ## distance-based method on arrays (Du 2010), and it is the scale the EWAS
+    ## is fitted on, so the embedding and the model see the same data.
+    ## Converted from the space preprocessing declared, never guessed from
+    ## the range, so a pgx already processed as M is not transformed twice.
+    Xclust <- NULL
+    if (isTRUE(pgx$datatype == "methylomics")) {
+      Xclust <- playbase.preprocess::pp.convertSpace(
+        pgx$X,
+        from = pgx$settings$preprocess$space %||% "beta",
+        to = "mvalue"
+      )
+    }
+    pgx <- pgx.clusterSamples(pgx, dims = c(2, 3), perplexity = NULL, X = Xclust, methods = mm)
+  }
+
+  ## pgx.initialize() lists tsne2d in obj.needed and returns NULL when it is
+  ## absent, so a dataset computed with do.cluster = FALSE - which is how
+  ## methylomics is computed now - passes pgx.checkObject(), reaches the
+  ## Library, and then fails to open with "ERROR in object initialization".
+  ## GMT already had this problem and solves it two hundred lines up by
+  ## storing an explicitly empty matrix; tsne2d had no such fallback.
+  ##
+  ## NA coordinates rather than an empty matrix, and rownames kept, so that a
+  ## consumer indexing by sample name gets NA instead of a subscript error.
+  ## Every reader is a Dashboard board, and no datatype computed without
+  ## clustering opens one.
+  if (is.null(pgx$tsne2d)) {
+    pgx$tsne2d <- matrix(
+      NA_real_, nrow = ncol(pgx$X), ncol = 2,
+      dimnames = list(colnames(pgx$X), c("tsne2d.1", "tsne2d.2"))
+    )
   }
 
   ## Make contrasts by cluster
@@ -969,6 +1039,65 @@ pgx.computePGX <- function(pgx,
       layers = pgx$settings$preprocess$layers
     )
     pgx$settings$preprocess$space <- "beta"
+
+    ## Everything below reads beta, which is why it follows the conversion.
+    require_epigenetics()
+
+    ## Epigenetic clocks, fitted here rather than in the app: they are a pure
+    ## function of the beta matrix, so once it exists there is nothing left to
+    ## wait for, and this is the first line at which it does. Ten clocks take
+    ## ~40s, which is a fine one-off at dataset creation and a bad thing to
+    ## make every session pay. Fitted with no coverage floor and no clock
+    ## selection - both are display choices the app applies to `cov`, not
+    ## inputs that change any age.
+    ##
+    ## A failure here must not lose the dataset: the slot is left NULL and a
+    ## warning is raised.
+    message("[pgx.computePGX] fitting epigenetic clocks...")
+    pgx$meth$clocks <- tryCatch(
+      playbase.epigenetics::compute_clocks(pgx$X),
+      error = function(e) {
+        warning("[pgx.computePGX] epigenetic clocks failed: ", conditionMessage(e))
+        NULL
+      }
+    )
+
+    ## Cell composition, for the same reason and on the same terms: the
+    ## proportions are a pure function of the beta matrix and a panel name, so
+    ## nothing about them needs a session. All nine reference panels are fitted
+    ## rather than just the blood default - the panel follows the tissue, not
+    ## the user, and at ~56 KB on a 150-sample cohort storing the lot costs
+    ## about a tenth of a percent of the pgx while making every panel switch in
+    ## the app instant. ~93s at that size.
+    message("[pgx.computePGX] estimating cell composition...")
+    pgx$meth$cells <- tryCatch(
+      playbase.epigenetics::compute_cell_counts(pgx$X),
+      error = function(e) {
+        warning("[pgx.computePGX] cell composition failed: ", conditionMessage(e))
+        NULL
+      }
+    )
+
+    ## Per-sample QC ledger (bimodality, DNAm age, predicted vs recorded sex,
+    ## imprint drift, verdict), on the same terms as the clocks: a pure function
+    ## of the beta matrix, stored once so the app never refits it. Reuses the
+    ## stored Horvath age rather than fitting it a second time. The annotation
+    ## is aligned to X because only its chromosome column is read, to decide
+    ## whether sex can be predicted from the probes X still has.
+    message("[pgx.computePGX] computing methylation sample QC...")
+    pgx$meth$qc <- tryCatch(
+      playbase.epigenetics::sample_qc(
+        pgx$X,
+        pgx$genes[match(rownames(pgx$X), rownames(pgx$genes)), , drop = FALSE],
+        pgx$samples,
+        ## methylclock names it Horvath, the wateRmelon fallback horvath.
+        ages = pgx$meth$clocks$age$Horvath %||% pgx$meth$clocks$age$horvath
+      ),
+      error = function(e) {
+        warning("[pgx.computePGX] methylation sample QC failed: ", conditionMessage(e))
+        NULL
+      }
+    )
   }
 
   if (!is.null(ai_features)) {

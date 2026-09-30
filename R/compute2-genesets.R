@@ -87,10 +87,12 @@ compute_testGenesets <- function(pgx,
     X1 <- .pgx_impute_svd2(X)
   }
 
-  if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {
+  if (!is.null(pgx$datatype) && pgx$datatype == "methylomics") {
+    ## Declared conversion, not range-sniffing: SVD2 imputation of beta can
+    ## overshoot [0,1], and beta->mvalue clamps before the logit.
     X1 <- playbase.preprocess::pp.convertSpace(
       X1,
-      from = "beta",
+      from = pgx$settings$preprocess$space %||% "beta",
       to = "mvalue"
     )
   }
@@ -118,13 +120,20 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------------------------
   ## Recompute geneset meta.fx as average fold-change of genes
   ## -----------------------------------------------------------------------------
-  message("[compute_testGenesets] Recomputing geneset fold-changes")
-  nc <- length(pgx$gset.meta$meta)
-  F <- pgx.getMetaMatrix(pgx)$fc
-  F <- rename_by2(F, pgx$genes, "symbol")
-  avgFC <- gset.averageFC(F, pgx$GMT)
-  for (i in 1:nc) {
-    pgx$gset.meta$meta[[i]]$meta.fx <- avgFC[, i]
+  ## Only when gx.meta was actually fitted. compute_testGenes() stubs it for
+  ## methylomics and marks the stub with a single "not.fitted" column; for that
+  ## stub pgx.getMetaMatrix() falls through to meta.fx, which the stub fills
+  ## with zeros, so averaging it would overwrite every geneset's effect size
+  ## with exactly 0 while leaving meta.p/meta.q real.
+  if (!identical(colnames(unclass(pgx$gx.meta$meta[[1]]$fc)), "not.fitted")) {
+    message("[compute_testGenesets] Recomputing geneset fold-changes")
+    nc <- length(pgx$gset.meta$meta)
+    F <- pgx.getMetaMatrix(pgx)$fc
+    F <- rename_by2(F, pgx$genes, "symbol")
+    avgFC <- gset.averageFC(F, pgx$GMT)
+    for (i in 1:nc) {
+      pgx$gset.meta$meta[[i]]$meta.fx <- avgFC[, i]
+    }
   }
 
   ## -------------------------------------------------------

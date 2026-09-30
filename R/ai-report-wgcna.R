@@ -856,18 +856,24 @@ wgcna_assemble_prompt <- function(slice, pgx, ai) {
 #' @param pgx full pgx object.
 #' @param ai resolved `ai` list.
 #' @return `list(report = <markdown>, prompt = <markdown>)`.
-ai.wgcna.create_report <- function(pgx, slice, ai) {
+#' Build the LLM jobs for the WGCNA report.
+#' @keywords internal
+ai.wgcna.build_jobs <- function(pgx, slice, ai) {
   if (!requireNamespace("omicsai", quietly = TRUE)) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
-  bp  <- wgcna_assemble_prompt(slice, pgx, ai)
-  out <- .ai_report_run_prompt(bp, ai)
-
-  ## Append the deterministic methods appendix after generation so the
-  ## report text matches the legacy board.wgcna path.
+  ## The methods appendix is deterministic and is appended after generation so
+  ## it cannot influence the prompt; building it here keeps it off the worker.
   methods_text <- wgcna_build_methods(slice, pgx)
-  out$report <- paste(out$report, methods_text, sep = "\n\n")
-  out
+  list(.ai_report_job(
+    module = "wgcna", slot = "wgcna",
+    bp = wgcna_assemble_prompt(slice, pgx, ai),
+    finalize = function(report) paste(report, methods_text, sep = "\n\n")
+  ))
+}
+
+ai.wgcna.create_report <- function(pgx, slice, ai) {
+  .ai_report_create_report_compat("wgcna", pgx, slice, ai)
 }
 
 

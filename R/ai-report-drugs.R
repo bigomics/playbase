@@ -803,7 +803,13 @@ drugs_assemble_prompt <- function(pgx, method, ai) {
 #'   `list(report, prompt)`. The orchestrator expands each entry into a
 #'   top-level `pgx$ai$drugs_<safe_db>` slot - mirrors the wgcna/wgcna_mox
 #'   top-level-per-variant pattern. Returns NULL when drugs slot empty.
-ai.drugs.create_report <- function(pgx, slice, ai) {
+#' Build the LLM jobs for the drug-connectivity report.
+#'
+#' One job per drug database. These were previously issued inside a `for` loop
+#' in the entry point, which made them serial even when the orchestrator ran
+#' modules concurrently; emitting them as separate jobs lets the caller decide.
+#' @keywords internal
+ai.drugs.build_jobs <- function(pgx, slice, ai) {
   if (is.null(slice) || length(slice) == 0L) return(NULL)
   if (!requireNamespace("omicsai", quietly = TRUE)) {
     stop("omicsai package required for AI report generation", call. = FALSE)
@@ -813,14 +819,26 @@ ai.drugs.create_report <- function(pgx, slice, ai) {
   dbs <- intersect(dbs, names(slice))
   if (length(dbs) == 0L) return(NULL)
 
+  lapply(dbs, function(db) {
+    methods_text <- drugconnectivity_build_methods(pgx, db)
+    .ai_report_job(
+      module = "drugs",
+      slot   = paste0("drugs_", .drugs_safe_db_key(db)),
+      bp     = drugs_assemble_prompt(pgx, db, ai),
+      finalize = function(report) paste(report, methods_text, sep = "\n\n")
+    )
+  })
+}
+
+ai.drugs.create_report <- function(pgx, slice, ai) {
+  jobs <- ai.drugs.build_jobs(pgx, slice, ai)
+  if (!length(jobs)) return(NULL)
   out <- list()
-  for (db in dbs) {
-    bp  <- drugs_assemble_prompt(pgx, db, ai)
-    res <- .ai_report_run_prompt(bp, ai)
-    res$report <- paste(res$report, drugconnectivity_build_methods(pgx, db),
-                        sep = "\n\n")
-    key <- .drugs_safe_db_key(db)
-    out[[key]] <- res
+  for (job in jobs) {
+    ## Strip the "drugs_" prefix: the orchestrator re-adds it when it expands
+    ## an ai_report_multi into top-level slots.
+    key <- sub("^drugs_", "", job$slot)
+    out[[key]] <- .ai_report_run_job(job, ai)
   }
   structure(out, class = c("ai_report_multi", "list"))
 }

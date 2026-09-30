@@ -187,8 +187,12 @@ match_probe_names <- function(probes, orgdb, probe_type = NULL) {
   probe.names <- names(probes)
   all.keys <- AnnotationDbi::keys(orgdb, probe_type)
   tsub <- function(s) gsub("[-:;.]|\\[|\\]", ".", s)
-  ii <- match(toupper(tsub(probes)), toupper(tsub(all.keys)))
-  table(is.na(ii))
+  ## An exact key first: the loose match takes the first key that is equal up
+  ## to case and punctuation, and that can be another gene's - "SF3B1" matched
+  ## SF3B2's alias "SF3b1", "NKX6-1" the alias "NKX6.1".
+  ii <- match(probes, all.keys)
+  loose <- which(is.na(ii))
+  ii[loose] <- match(toupper(tsub(probes[loose])), toupper(tsub(all.keys)))
   new.probes <- all.keys[ii]
   if (sum(is.na(new.probes))) {
     jj <- which(is.na(new.probes))
@@ -512,7 +516,9 @@ AnnotationDbi_select_2pass <- function(orgdb, keys, columns, keytype,
     }
   }
   dim(annot)
-  
+
+  annot <- resolve_alias_rows(annot, keytype)
+
   ## collapse to original keys (ordered). There may be duplicates
   ## from 2-pass matching. Prefer non-NA entries
   symbol <- annot[[symbol.col]]
@@ -520,6 +526,26 @@ AnnotationDbi_select_2pass <- function(orgdb, keys, columns, keytype,
   annot <- annot[match(keys, annot[,keytype]),,drop=FALSE]
   
   return(annot)
+}
+
+## An ALIAS key can name several genes: "TPO" is thyroid peroxidase's
+## official symbol and also an alias of THPO, "EBF3" is EBF3's symbol and an
+## alias of MAPRE3. Collapsing those rows by sorting on the symbol picked
+## whichever gene sorted first, so a probe got another gene's title and
+## UniProt ids. Keep the gene whose official symbol is the key; with none,
+## keep an alias only when it names exactly one gene. Other keytypes pass
+## through untouched.
+resolve_alias_rows <- function(annot, keytype) {
+  if (is.null(annot) || keytype != "ALIAS" || !"SYMBOL" %in% colnames(annot)) {
+    return(annot)
+  }
+  key <- annot[[keytype]]
+  sym <- annot$SYMBOL
+  exact <- !is.na(sym) & !is.na(key) & sym == key
+  has_exact <- key %in% key[exact]
+  n_genes <- tapply(sym, key, function(x) length(unique(x[!is.na(x)])))
+  unambiguous <- !is.na(key) & n_genes[key] <= 1
+  annot[exact | (!has_exact & unambiguous), , drop = FALSE]
 }
 
 #' Maps a gmt list to symbol using annotation table. We go via

@@ -726,19 +726,34 @@ moxwgcna_assemble_prompt <- function(slice, pgx, ai) {
 #' @param slice WGCNA multi-omics result slot (`pgx$wgcna_mox`).
 #' @param ai resolved `ai` list.
 #' @return `list(report = <markdown>, prompt = <markdown>)`.
-ai.wgcna_mox.create_report <- function(pgx, slice, ai) {
+#' Build the LLM jobs for the multi-omics WGCNA report.
+#'
+#' Objects without a `$layers` list are not multi-omics (an older or
+#' mis-populated slot); those are handed to the single-omics builder so the
+#' caller still gets a report rather than an error. The resulting job keeps
+#' `slot = "wgcna_mox"` so the report still lands in the slot the caller asked
+#' for, matching the previous create_report behaviour.
+#' @keywords internal
+ai.wgcna_mox.build_jobs <- function(pgx, slice, ai) {
   if (!requireNamespace("omicsai", quietly = TRUE)) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
   if (is.null(slice$layers) || length(slice$layers) == 0) {
-    return(ai.wgcna.create_report(pgx, slice, ai))
+    jobs <- ai.wgcna.build_jobs(pgx, slice, ai)
+    return(lapply(jobs, function(job) {
+      job$module <- "wgcna_mox"
+      job$slot   <- "wgcna_mox"
+      job
+    }))
   }
-  bp  <- moxwgcna_assemble_prompt(slice, pgx, ai)
-  out <- .ai_report_run_prompt(bp, ai)
+  methods_text <- moxwgcna_build_methods(slice, pgx)
+  list(.ai_report_job(
+    module = "wgcna_mox", slot = "wgcna_mox",
+    bp = moxwgcna_assemble_prompt(slice, pgx, ai),
+    finalize = function(report) paste(report, methods_text, sep = "\n\n")
+  ))
+}
 
-  ## Deterministic methods appendix, appended after generation so it cannot
-  ## influence the prompt.
-  out$report <- paste(out$report, moxwgcna_build_methods(slice, pgx),
-                      sep = "\n\n")
-  out
+ai.wgcna_mox.create_report <- function(pgx, slice, ai) {
+  .ai_report_create_report_compat("wgcna_mox", pgx, slice, ai)
 }

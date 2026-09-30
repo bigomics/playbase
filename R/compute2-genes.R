@@ -96,65 +96,53 @@ compute_testGenes <- function(pgx,
   message("Testing differential expression methods: ", paste(methods, collapse = ", "))
   PRIOR.CPM <- 1
 
-  if (!is.null(pgx$datatype) & pgx$datatype == "methylomics") {
-    if ("Differentially methylated regions" %in% pgx$dma) {
-      message("[playbase::compute_testGenes] Methylomics: DMRs...")
-
-      input.names <- rownames(X)
-      source.rows <- .pgx_first_source_rows(pgx$settings$preprocess)
-      analysis.genes <- pgx$genes[source.rows, , drop = FALSE]
-      rownames(analysis.genes) <- input.names
-      analysis.genes$feature <- input.names
-
-      MG <- mergeCpG(data = counts, genes = analysis.genes)
-      if (!is.list(MG)) {
-        stop("[compute_testGenes] DMR count collapse failed", call. = FALSE)
-      }
-      counts <- playbase.preprocess::pp.convertSpace(
-        MG$data,
-        from = "beta",
-        to = "mvalue"
-      )
-      rm(MG)
-      gc()
-
-      MG <- mergeCpG(data = X, genes = analysis.genes)
-      if (!is.list(MG)) {
-        stop("[compute_testGenes] DMR expression collapse failed", call. = FALSE)
-      }
-      X <- playbase.preprocess::pp.convertSpace(
-        MG$data,
-        from = "beta",
-        to = "mvalue"
-      )
-      pgx$genes <- MG$genes
-      pgx$settings$preprocess <- .pgx_collapse_preprocess_rows(
-        pgx$settings$preprocess,
-        current_names = input.names,
-        members = pgx$genes$cpg_probe
-      )
-      pgx$settings$preprocess$space <- "mvalue"
-      rm(MG)
-      gc()
-
-      if (
-        !identical(rownames(counts), rownames(X)) ||
-          !identical(rownames(X), rownames(pgx$genes))
-      ) {
-        stop(
-          "[compute_testGenes] methylomics DMR matrices are not aligned",
-          call. = FALSE
-        )
-      }
-    } else {
-      counts <- X <- playbase.preprocess::pp.convertSpace(
-        counts,
-        from = "beta",
-        to = "mvalue"
-      )
-      pgx$settings$preprocess$space <- "mvalue"
+  ## Methylomics: fill gx.meta rather than fit it.
+  ##
+  ## The slot is required - pgx.checkObject() lists it, pgxinfo.updateDatasetFolder()
+  ## skips any pgx failing that check, and opg_server.R reads gx.meta$meta[[1]]$fc
+  ## unguarded - but nothing renders it. Methylomics opens the standalone Methylome
+  ## app, which refits limma itself from pgx$X with the user's own covariates,
+  ## masking and SVA. Fitting here computes a model no screen displays, and the
+  ## expensive part is not limma: it is betaToM() over the whole probe matrix,
+  ## which on an 850K EPIC array is two more copies of the data.
+  ##
+  ## The fill is neutral, not random: zero effect, q = 1. This dataset therefore
+  ## contributes no fold changes to the cross-dataset FC index, which is honest -
+  ## no differential test was run - where invented values would not be.
+  if (!is.null(pgx$datatype) && pgx$datatype == "methylomics") {
+    message("[compute_testGenes] methylomics: filling gx.meta, not fitting")
+    ctd <- colnames(contr.matrix)
+    n <- nrow(X)
+    one_col <- function(v) {
+      m <- matrix(v, nrow = n, ncol = 1,
+                  dimnames = list(rownames(X), "not.fitted"))
+      I(m)
     }
+    stub <- lapply(ctd, function(k) {
+      data.frame(
+        meta.fx = rep(0, n), meta.p = rep(1, n), meta.q = rep(1, n),
+        avg.0 = rep(0, n), avg.1 = rep(0, n),
+        fc = one_col(0), p = one_col(1), q = one_col(1),
+        row.names = rownames(X), check.names = FALSE
+      )
+    })
+    names(stub) <- ctd
+    pgx$model.parameters <- model.parameters
+    ## pgx$X is left as it is: it stays in the space preprocessing declared,
+    ## and pgx.computePGX() converts from that declared space to beta.
+    pgx$gx.meta <- list(
+      meta = stub,
+      meta.covs = NULL,
+      sig.counts = NULL
+    )
+    message("[compute_testGenes] done (methylomics, not fitted)")
+    return(pgx)
   }
+
+  ## (The DMR-collapsing branch that used to live here is gone with the block
+  ## above: it tested the same condition, so it had become unreachable, and the
+  ## upload option that set pgx$dma to "Differentially methylated regions" was
+  ## removed for overwriting pgx$counts/X/genes with a gene-level matrix.)
 
   ## Run methods
   message("[compute_testGenes] start fitting... ")

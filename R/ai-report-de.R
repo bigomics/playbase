@@ -192,20 +192,33 @@ de_build_methods <- function(slice, pgx) {
                        params = .methods_params(pgx, slice, "de"))
 }
 
-ai.de.create_report <- function(pgx, slice, ai) {
-  contrasts <- names(slice$meta %||% list())
-  if (!length(contrasts)) {
-    message("[ai.de.create_report] no contrasts in pgx$gx.meta$meta -- skipping")
-    return(NULL)
-  }
+#' Assemble the differential-expression report prompt.
+#' @keywords internal
+de_assemble_prompt <- function(slice, pgx, ai) {
   if (!requireNamespace("omicsai", quietly = TRUE)) {
     stop("omicsai package required for AI report generation", call. = FALSE)
   }
-
   ntop <- min(as.integer(ai$ntop), 50L)
   data_block <- de_build_report_tables(slice, pgx, ntop = ntop)$text
-  bp <- .ai_report_build_prompt(pgx, "de", data_block)
-  out <- .ai_report_run_prompt(bp, ai)
-  out$report <- paste(out$report, de_build_methods(slice, pgx), sep = "\n\n")
-  out
+  .ai_report_build_prompt(pgx, "de", data_block)
+}
+
+#' Build the LLM jobs for the differential-expression report.
+#' @keywords internal
+ai.de.build_jobs <- function(pgx, slice, ai) {
+  contrasts <- names(slice$meta %||% list())
+  if (!length(contrasts)) {
+    message("[ai.de.build_jobs] no contrasts in pgx$gx.meta$meta -- skipping")
+    return(NULL)
+  }
+  methods_text <- de_build_methods(slice, pgx)
+  list(.ai_report_job(
+    module = "de", slot = "de",
+    bp = de_assemble_prompt(slice, pgx, ai),
+    finalize = function(report) paste(report, methods_text, sep = "\n\n")
+  ))
+}
+
+ai.de.create_report <- function(pgx, slice, ai) {
+  .ai_report_create_report_compat("de", pgx, slice, ai)
 }
