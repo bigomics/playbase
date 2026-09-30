@@ -81,11 +81,13 @@ getProbeAnnotation <- function(organism,
   organism <- normalizeOrganism(organism)
   
   if (datatype == "methylomics") {
-    c1 <- is.null(meth_type)
-    c2 <- !meth_type %in% c("450K array", "EPIC array")
-    if (c1 | c2) meth_type <- "450K array"
-    genes <- annotate_methylomics(organism, probes, meth_type = meth_type)
-    return(genes)
+    require_epigenetics()
+    ## NB: || not |. `!NULL %in% x` is logical(0), which makes `if` throw.
+    if (is.null(meth_type) || !meth_type %in% c("450K array", "EPIC array", "EPIC v2 array")) {
+      meth_type <- "450K array"
+    }
+    genes <- playbase.epigenetics::annotate_methylomics(organism, probes, meth_type = meth_type)
+    return(methyl_manifest_chr(genes, meth_type))
   }
 
   ## clean probe names
@@ -179,6 +181,22 @@ getProbeAnnotation <- function(organism,
   genes <- cleanupAnnotation(genes)
 
   return(genes)
+}
+
+
+## Each methylation probe's own chromosome, from its array manifest.
+## annotate_methylomics() keeps the gene annotation's `chr` (the gene's
+## cytoband), which is empty for a probe outside a single gene - a third of a
+## 450K array, two thirds of EPIC v2 - although its `pos` is the manifest's for
+## every probe. The manifest's "chr16" goes in instead, in the same build as
+## `pos` (hg19 for 450K/EPIC, hg38 for EPIC v2); the gene columns are untouched.
+methyl_manifest_chr <- function(genes, meth_type) {
+  if (is.null(genes)) return(NULL)
+  ## The manifest rows annotate_methylomics() read, EPIC v2 replicates
+  ## collapsed to bare ids the same way (internal to playbase.epigenetics).
+  manifest <- get("methyl_annotation", envir = asNamespace("playbase.epigenetics"))(meth_type)
+  genes$chr <- as.character(manifest$chr[match(rownames(genes), rownames(manifest))])
+  genes
 }
 
 
@@ -1122,6 +1140,25 @@ getOrtholog <- function(symbols, organism, target_species,
                         ortho.methods = c("homologene","gprofiler","babelgene",
                           "gprofiler2","uppercase"),
                         verbose = 1) {
+
+  ## A human gene's human ortholog is itself. Without this the whole
+  ## orthogene/gprofiler machinery runs hsapiens -> hsapiens, which is slow
+  ## (tens of seconds on an array-sized feature set) and lossy. Uppercased
+  ## to match the convention the rest of the pipeline assumes (pgx-init.R).
+  if (identical(normalizeOrganism(organism), "Homo sapiens") &&
+        identical(normalizeOrganism(target_species), "Homo sapiens")) {
+    if (verbose > 0) {
+      message("[getOrtholog] human -> human; orthologs are the symbols themselves")
+    }
+    up <- toupper(symbols)
+    return(data.frame(
+      symbol = symbols,
+      ortholog = up,
+      orthologs = up,
+      description = NA_character_,
+      source = ifelse(is.na(up), NA_character_, "identity")
+    ))
+  }
 
   ## try also clean symbols
   symbols[is.na(symbols)] <- "NA"

@@ -594,7 +594,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   ## pgxinfo and allFC OK, but sigdb not upto date
   if (update.sigdb && length(pgx.missing) == 0 && length(pgx.delete) == 0 &&
     (length(h5.missing) || length(tsne.missing))) {
-    allFC <- fread.csv(allfc.file, row.names = 1, check.names = FALSE)
+    allFC <- playbase.ingest::fread.csv(allfc.file, row.names = 1, check.names = FALSE)
     allFC <- as.matrix(allFC)
     if (length(h5.missing)) {
       if (verbose) message("[updateDatasetFolder] missing sigdb. Creating new sigdb file.")
@@ -615,7 +615,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
   ## Reread allFC file. Before we only read the header.
   if (!force && file.exists(allfc.file)) {
-    allFC <- fread.csv(allfc.file, row.names = 1, check.names = FALSE)
+    allFC <- playbase.ingest::fread.csv(allfc.file, row.names = 1, check.names = FALSE)
     allFC <- as.matrix(allFC)
     colnames(allFC) <- gsub("[\"\']", "", colnames(allFC)) ## safety
     if (ncol(allFC) == 0) allFC <- NULL
@@ -884,7 +884,7 @@ pgxinfo.delete <- function(pgx.dir, pgxname, purge.h5 = FALSE) {
     allfc.pgx <- gsub("^\\[|\\].*", "", colnames(allFC))
     del <- which(allfc.pgx == pgxname)
     if (length(del)) {
-      allFC <- fread.csv(allfc.file, row.names = 1, check.names = FALSE)
+      allFC <- playbase.ingest::fread.csv(allfc.file, row.names = 1, check.names = FALSE)
       allFC <- allFC[, -del, drop = FALSE]
       allFC <- round(allFC, digits = 4)
       AA <- data.frame(rownames = rownames(allFC), allFC, check.names = FALSE)

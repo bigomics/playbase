@@ -94,7 +94,7 @@ e.g. `c(gx = "limma", px = "no_batch_correct")`.}
 
 \item{remove.xy.probes}{Logical. Only activated when datatype=="methylomics". Remove X- and Y-linked CpG probes.}
 
-\item{meth_type}{Type of array: 450K array or EPIC array}
+\item{meth_type}{Type of array: 450K array, EPIC array or EPIC v2 array}
 
 \item{auto.scale}{Logical indicating whether to automatically scale/center genes. Default is TRUE.}
 

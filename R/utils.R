@@ -462,3 +462,41 @@ iconv2utf8 <- function(s) {
 iconv2ascii <- function(s) {
   iconv(s, to = "ascii//TRANSLIT", sub = "")
 }
+
+
+## Methylation-array code lives in the separate playbase.epigenetics package,
+## declared in Suggests rather than Imports: playbase is the general back end
+## and must install and run without the minfi/wateRmelon/karyoploteR/Illumina-
+## annotation stack, which is only ever needed for methylomics datasets.
+## Call this at the top of every methylomics branch, then reach the functions
+## as playbase.epigenetics::fun(). Internal guard, not exported.
+require_epigenetics <- function() {
+  if (!requireNamespace("playbase.epigenetics", quietly = TRUE)) {
+    stop(
+      "methylomics data requires the 'playbase.epigenetics' package, which is not installed. ",
+      "Install it with: remotes::install_github('bigomics/playbase-epigenetics')",
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
+## EPIC v2 design suffix, carried by every v2 probe id: strand (T/B),
+## converted or opposite strand (C/O), Infinium type (1/2) and replicate
+## number (cg00000029_TC21, cg06373096_TC110). Same pattern as
+## playbase.epigenetics' EPICV2_SUFFIX.
+EPICV2_SUFFIX <- "_[TB][CO][12][0-9]+$"
+
+## Collapses EPIC v2 replicate probes to one bare cg id each through
+## playbase.epigenetics, the single place the replicate choice is made.
+.pgx_collapse_epicv2 <- function(X) {
+  require_epigenetics()
+  if (!exists("collapse_epicv2_replicates", envir = asNamespace("playbase.epigenetics"))) {
+    stop(
+      "EPIC v2 probe ids need playbase.epigenetics::collapse_epicv2_replicates(); ",
+      "the installed playbase.epigenetics is too old.",
+      call. = FALSE
+    )
+  }
+  playbase.epigenetics::collapse_epicv2_replicates(X)
+}

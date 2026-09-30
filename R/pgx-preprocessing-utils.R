@@ -284,23 +284,3 @@
   metadata
 }
 
-# Composes an analysis-row collapse into the source-row alignment.
-# Member names must identify current X rows without ambiguity.
-# A collapsed row retains the union of every contributing source group.
-.pgx_collapse_preprocess_rows <- function(metadata, current_names, members) {
-  if (anyDuplicated(current_names)) {
-    stop(
-      "[preprocess metadata] current row names must be unique",
-      call. = FALSE
-    )
-  }
-  member_names <- strsplit(as.character(members), ";", fixed = TRUE)
-  current_groups <- lapply(member_names, match, table = current_names)
-  if (anyNA(unlist(current_groups, use.names = FALSE))) {
-    stop(
-      "[preprocess metadata] collapsed rows contain unknown members",
-      call. = FALSE
-    )
-  }
-  .pgx_group_preprocess_rows(metadata, current_groups)
-}
