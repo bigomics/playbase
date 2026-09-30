@@ -103,7 +103,6 @@ Imports:
     pcaMethods,
     PCSF,
     plaid,
-    playbase.epigenetics,
     playbase.ingest,
     playbase.preprocess,
     playdata,
