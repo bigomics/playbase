@@ -51,6 +51,17 @@ if(imports.start > 1) {
 ## Remotes only say where to fetch a package; it must still be declared in
 ## Imports, or R CMD INSTALL/check and install_deps() never see the dependency.
 pkg.imports <- sort(union(pkg$imports, names(pkg$remotes)))
+
+## A package already declared in Suggests stays there, even when R/ calls it as
+## pkg::fun() behind requireNamespace(). playbase.epigenetics is the case: it
+## Imports playbase itself, so listing it in Imports too makes a dependency
+## cycle and R CMD INSTALL refuses playbase ("dependency 'playbase.epigenetics'
+## is not available").
+suggests <- read.dcf(desc.file, fields = "Suggests")[1, 1]
+if (!is.na(suggests)) {
+    suggests <- trimws(sub("\\(.*", "", strsplit(suggests, ",")[[1]]))
+    pkg.imports <- setdiff(pkg.imports, suggests)
+}
 new.desc <- c(new.desc, "Imports:")
 new.desc <- c(new.desc, paste0("    ", pkg.imports, ","))
 
