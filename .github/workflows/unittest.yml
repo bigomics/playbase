@@ -62,8 +62,10 @@ jobs:
       -
         name: Build OPG docker
         id: build-opg-docker
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
-          docker build --pull --build-arg DOCKER_TAG="$DOCKER_TAG" -t "$TEST_TAG" -f ./.github/workflows/unittest/Dockerfile .
+          docker build --pull --secret id=gh_pat,env=GH_PAT --build-arg DOCKER_TAG="$DOCKER_TAG" -t "$TEST_TAG" -f ./.github/workflows/unittest/Dockerfile .
       # - 
       #   name: Setup upterm session
       #   uses: lhotari/action-upterm@v1

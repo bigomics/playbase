@@ -569,13 +569,6 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
 }
 
 
-#' @export
-shortstring <- function(s, n) {
-  s <- as.character(s)
-  ifelse(nchar(s) <= n, s, paste0(substring(s, 1, n), "..."))
-}
-
-
 ## ======================================================================
 ## ======================================================================
 ## ======================================================================

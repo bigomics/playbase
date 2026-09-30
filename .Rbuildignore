@@ -11,4 +11,6 @@
 ^\.agents_context$
 (^|/)\..*
 ^experiments$
+^scripts$
+^data-raw$
 ^tests/testthat/_s.*$

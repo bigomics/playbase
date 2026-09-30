@@ -72,3 +72,22 @@ test_that("removed preprocessing compatibility names stay absent", {
   )]
   expect_identical(present, character())
 })
+
+## Completed ingest namespace boundary: readers and input checks live in
+## playbase.ingest, and playbase reaches them through `playbase.ingest::`.
+
+test_that("playbase neither exports nor defines ingest implementations", {
+  leaf_exports <- getNamespaceExports("playbase.ingest")
+  expect_identical(
+    intersect(leaf_exports, getNamespaceExports("playbase")),
+    character()
+  )
+  defined <- leaf_exports[vapply(
+    leaf_exports,
+    exists,
+    logical(1),
+    envir = asNamespace("playbase"),
+    inherits = FALSE
+  )]
+  expect_identical(defined, character())
+})

@@ -195,18 +195,6 @@ test_that("add_opacity adds opacity correctly", {
 #'
 
 
-#' Test for trimsame
-#'
-#'
-
-#' Test for trimsame.ends
-#'
-#'
-
-#' Test for trimsame0
-#'
-#'
-
 #' Test for dbg.BAK
 #'
 #'
@@ -216,43 +204,6 @@ test_that("add_opacity adds opacity correctly", {
 #'
 
 #' Test for read.csv3
-#'
-#'
-
-#' Test for read.as_matrix.SAVE
-#'
-#'
-
-#' Test for read.as_matrix
-test_that("read.as_matrix reads file as matrix", {
-  # Create temp file
-  tmp <- tempfile()
-  writeLines(c(",1,2,3", "gene1,1,2,3", "gene2,4,5,6"), tmp)
-
-  # Expected matrix
-  expected <- matrix(c(1, 2, 3, 4, 5, 6),
-    ncol = 3, byrow = TRUE,
-    dimnames = list(c("gene1", "gene2"), NULL)
-  )
-  colnames(expected) <- c(1, 2, 3)
-  # Test function
-  result <- playbase::read.as_matrix(tmp, as.char = FALSE)
-
-  # Check class
-  expect_equal(class(result), c("matrix", "array"))
-
-  # Check dimensions
-  expect_equal(dim(result), dim(expected))
-
-  # Check values
-  expect_equal(result, expected)
-
-  # Clean up
-  unlink(tmp)
-})
-
-
-#' Test for fread.csv
 #'
 #'
 

@@ -17,20 +17,12 @@ hclust_graph(g, k = NULL, mc.cores = 2)
 A matrix with hierarchical clustering assignments for nodes.
 }
 \description{
-Performs hierarchical clustering on a graph using iterative Louvain clustering.
+Retained for backward compatibility. Delegates to \code{\link{hclustGraph}},
+which is the maintained implementation.
 }
 \details{
 Hierarchical Clustering of Graph
 
-This function takes an igraph graph object \code{g} and performs hierarchical clustering to detect communities.
-It uses iterative Louvain clustering, optimizing modularity at each level of the hierarchy.
-
-At each iteration, it runs Louvain clustering on the communities from the previous level.
-This splits up the communities into smaller sub-communities in a hierarchical fashion.
-
-The number of levels \code{k} can be specified, otherwise it iterates until convergence.
-Parallel processing with \code{mc.cores} is used to speed up the computations.
-
-The algorithm returns a matrix containing the hierarchical clustering assignments for each node.
-The columns represent the clustering at each level of the hierarchy.
+This is a thin wrapper around \code{\link{hclustGraph}}, kept as an exported
+alias since it is part of the public API. New code should call \code{hclustGraph} directly.
 }
