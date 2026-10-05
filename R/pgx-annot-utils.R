@@ -122,7 +122,7 @@ uniprot2gene <- function(uniprots, organism) {
 strip_postfix <- function(s) {
   stripFUN <- function(s) {
     #sub(paste0("[._].*$|[-][0-9.]+$"), "", s)
-    sub(paste0("[.][0-9]+$"), "", s) 
+    sub(paste0("[-.][0-9]+$"), "", s) 
   }
   ss <- strsplit(s, split = ";")
   ss <- lapply(ss, function(s) stripFUN(s))
@@ -136,7 +136,7 @@ strip_postfix <- function(s) {
 #'
 strip_prefix <- function(s) {
   stripFUN <- function(s) {
-    sub("^[a-zA-Z]+:", "", s)
+    sub("^[a-zA-Z0-9]+:", "", s)
   }
   ss <- strsplit(s, split = ";")
   ss <- lapply(ss, function(s) stripFUN(s))
@@ -161,9 +161,9 @@ strip_prefix <- function(s) {
   probes[is.na(probes)] <- ""
   ## strip multiple probes. retain only first
   probes <- sub("[;].*", "", probes)
-  ## strip away anything prefix before a 'colon'
+  ## strip away any prefix before a 'colon'
   probes <- sub(".*[:]", "", probes)
-  ## strip away anything postfix after a 'dot' or 'dash'
+  ## strip away any postfix after a 'dot' or 'dash' (mostly isoforms)
   probes <- sub(paste0("[-.].*"), "", probes)
   ## strip away anything postfix after 'underscore' if *not* refseq
   is.refseq <- grepl("^[NXW][MRPCGTWZ]_",probes)
