@@ -166,6 +166,7 @@ Imports:
     tools,
     torch,
     umap,
+    UniProt.ws,
     utils,
     uwot,
     vioplot,
