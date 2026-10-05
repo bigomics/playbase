@@ -157,14 +157,19 @@ strip_prefix <- function(s) {
 #' Cleanup probe names from postfixes or version numbers. Retains
 #' prefix needed for multi-omics.
 #'
-.clean_probe_names <- function(probes, sep = ".-") {
+.clean_probe_names <- function(probes) {
   probes0 <- probes
   probes <- trimws(probes)  
   probes[is.na(probes)] <- ""
-  ## strip multiple probes
+  ## strip multiple probes. retain only first
   probes <- sub("[;].*", "", probes)
+  ## strip away anything prefix befor a 'colon' 
+  probes <- sub(".*[:]", "", probes)
   ## strip away anything postfix after a 'dot' or 'underscore'
-  probes <- sub(paste0("[", sep, "].*"), "", probes)
+  probes <- sub(paste0("[-.].*"), "", probes)
+  ## strip away anything postfix after 'underscore' if *not* refseq
+  is.refseq <- grepl("^[NXW][MRPCGTWZ]_",probes)
+  probes <- ifelse(is.refseq, probes, sub("_.*", "", probes))
   names(probes) <- probes0
   return(probes)
 }
@@ -195,7 +200,7 @@ match_probe_names <- function(probes, orgdb, probe_type = NULL) {
   if (sum(is.na(new.probes))) {
     jj <- which(is.na(new.probes))
     new.probes[jj] <- probes[jj]
-    jj.probes <- .clean_probe_names(probes[jj], sep = ".-")
+    jj.probes <- .clean_probe_names(probes[jj])
     ii <- match(toupper(tsub(jj.probes)), toupper(tsub(all.keys)))
     if (any(!is.na(ii))) {
       k <- which(!is.na(ii))
@@ -750,11 +755,13 @@ detect_probetype.GPROFILER <- function(organism, probes, nprobe = 1000,
   if (length(probes) > nprobe) {
     probes <- sample(probes, nprobe)
   }
-  probesx <- gsub(";.*|_.*|.*:","",probes)
-  probes <- c(probes, probesx)
+
+  probes0 <- probes
+  probes1 <- .clean_probe_names(probes)
+  probesx <- unique(c(probes0, probes1))
   gp.out <- tryCatch(
   {
-    gprofiler2::gconvert(probes, organism = gp.organism, target = "UNIPROT_GN_ACC")
+    gprofiler2::gconvert(probesx, organism = gp.organism, target = "UNIPROT_GN_ACC")
   },
   error = function(e) {
     return(NULL)

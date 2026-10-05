@@ -686,7 +686,7 @@ getGeneAnnotation.GPROFILER <- function(
   ii <- which(is.na(out$name))
   length(ii)
   if(length(ii)) {
-    clean.probes <- .clean_probe_names(probes[ii], sep='.-') 
+    clean.probes <- .clean_probe_names(probes[ii]) 
     names(clean.probes) <- probes[ii]
     out2 <- try(orthogene::map_genes(
       genes = clean.probes,
