@@ -462,3 +462,21 @@ iconv2utf8 <- function(s) {
 iconv2ascii <- function(s) {
   iconv(s, to = "ascii//TRANSLIT", sub = "")
 }
+
+
+## Methylation-array code lives in the separate playbase.epigenetics package,
+## declared in Suggests rather than Imports: playbase is the general back end
+## and must install and run without the minfi/wateRmelon/karyoploteR/Illumina-
+## annotation stack, which is only ever needed for methylomics datasets.
+## Call this at the top of every methylomics branch, then reach the functions
+## as playbase.epigenetics::fun(). Internal guard, not exported.
+require_epigenetics <- function() {
+  if (!requireNamespace("playbase.epigenetics", quietly = TRUE)) {
+    stop(
+      "methylomics data requires the 'playbase.epigenetics' package, which is not installed. ",
+      "Install it with: remotes::install_github('bigomics/playbase-epigenetics')",
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}

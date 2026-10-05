@@ -1623,6 +1623,7 @@ rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
 #' Map any feature identifier to other feature column. Warning does
 #' not retain original match order or length. Default mapping to rownames.
 #'
+#' @export
 map_probes <- function(annot, genes, column = NULL, ignore.case = FALSE,
                        target = "rownames") {
   ## check probe name, short probe name or gene name for match
