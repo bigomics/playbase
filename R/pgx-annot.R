@@ -443,13 +443,11 @@ getGeneAnnotation.ANNOTHUB <- function(
       annot <- data.frame(feature = probes, symbol = "")
       annot <- cleanupAnnotation(annot)
       annot$symbol <- NA
-      annot$gene_title <- NA      
+      annot$gene_title <- NA
       annot$human_ortholog <- NULL
       annot$human_orthologs <- NULL
       annot$ortholog <- NULL
-      annot$orthologs <- NULL     
-      annot$human_ortholog <- NULL
-      annot$human_orthologs <- NULL     
+      annot$orthologs <- NULL
       return(annot)
     }
   }
@@ -686,7 +684,7 @@ getGeneAnnotation.GPROFILER <- function(
   ii <- which(is.na(out$name))
   length(ii)
   if(length(ii)) {
-    clean.probes <- .clean_probe_names(probes[ii]) 
+    clean.probes <- .clean_probe_names(probes[ii])
     names(clean.probes) <- probes[ii]
     out2 <- try(orthogene::map_genes(
       genes = clean.probes,
@@ -776,12 +774,18 @@ getGeneAnnotation.UNIPROT <- function(
   probe_type = NULL,
   verbose = TRUE
 ) {
+  if (!requireNamespace("UniProt.ws", quietly = TRUE)) {
+    message("[getGeneAnnotation.UNIPROT] UniProt.ws not installed; skipping")
+    return(NULL)
+  }
   if (verbose) message("[getGeneAnnotation.UNIPROT] Retrieving gene annotation...")
 
   probes[is.na(probes) | probes == ""] <- "NA"
   probes0 <- make_unique(probes)
+  ## strip isoform suffix (e.g. P04637-2), common in proteomics data
+  query <- sub("-[0-9]+$", "", probes)
 
-  if (is.null(probe_type)) probe_type <- detect_probetype.UNIPROT(probes)
+  if (is.null(probe_type)) probe_type <- detect_probetype.UNIPROT(query)
   if (is.na(probe_type)) {
     message("[getGeneAnnotation.UNIPROT] could not detect probe type; skipping")
     return(NULL)
@@ -793,7 +797,7 @@ getGeneAnnotation.UNIPROT <- function(
     from = probe_type,
     to = "UniProtKB",
     columns = cols,
-    query = unique(probes),
+    query = unique(query),
     verbose = FALSE,
     paginate = TRUE,
     pageSize = 500L
@@ -805,11 +809,17 @@ getGeneAnnotation.UNIPROT <- function(
   }
 
   ## keep only hits matching organism (mapUniProt has no taxId filter,
-  ## so a symbol/gene name can come back for the wrong species)
+  ## so a symbol/gene name can come back for the wrong species). Match
+  ## on every word so "Canis familiaris" matches "Canis lupus familiaris".
   organism <- normalizeOrganism(organism)
   if (!is.null(organism) && "Organism" %in% colnames(map)) {
-    keep <- grepl(organism, map$Organism, fixed = TRUE) | !nzchar(map$Organism)
-    if (any(keep)) map <- map[keep, , drop = FALSE]
+    words <- strsplit(organism, "[ _]+")[[1]]
+    keep <- Reduce(`&`, lapply(words, grepl, x = map$Organism, fixed = TRUE))
+    map <- map[keep | !nzchar(map$Organism), , drop = FALSE]
+    if (nrow(map) == 0) {
+      message("[getGeneAnnotation.UNIPROT] *WARNING* no hits for organism ", organism)
+      return(NULL)
+    }
   }
 
   ## collapse multiple hits per query key into one ";"-joined row
@@ -822,9 +832,9 @@ getGeneAnnotation.UNIPROT <- function(
 
   genes <- data.frame(
     feature = probes,
-    symbol = agg$Gene.Names..primary.[match(probes, agg$From)],
-    uniprot = agg$Entry[match(probes, agg$From)],
-    gene_title = agg$Protein.names[match(probes, agg$From)],
+    symbol = agg$Gene.Names..primary.[match(query, agg$From)],
+    uniprot = agg$Entry[match(query, agg$From)],
+    gene_title = agg$Protein.names[match(query, agg$From)],
     chr = NA,
     source = "UniProt.ws",
     stringsAsFactors = FALSE
@@ -1664,6 +1674,10 @@ getExampleFeatures.GPROFILER <- function(organism, n) {
 #' package and no g:Profiler entry. Last-resort fallback: pulls a random
 #' sample of that organism's UniProt.ws keys directly.
 getExampleFeatures.UNIPROT <- function(organism, n) {
+  if (!requireNamespace("UniProt.ws", quietly = TRUE)) {
+    message("[getExampleFeatures.UNIPROT] UniProt.ws not installed; skipping")
+    return(NULL)
+  }
   dbg("[getExampleFeatures.UNIPROT] 1: organism = ", organism)
   ## Prefer the taxonomy ID from our own species table: it's exact and
   ## sidesteps species_name strings (e.g. "Cricetulus barabensis_griseus")

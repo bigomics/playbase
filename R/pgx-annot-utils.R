@@ -85,8 +85,6 @@ normalizeOrganism <- function(organism) {
   if (grepl("canis.*familiaris|^dog$", org_lower)) {
     return("Canis familiaris")
   }
-
-
   organism
 }
 
@@ -163,9 +161,9 @@ strip_prefix <- function(s) {
   probes[is.na(probes)] <- ""
   ## strip multiple probes. retain only first
   probes <- sub("[;].*", "", probes)
-  ## strip away anything prefix befor a 'colon' 
+  ## strip away anything prefix before a 'colon'
   probes <- sub(".*[:]", "", probes)
-  ## strip away anything postfix after a 'dot' or 'underscore'
+  ## strip away anything postfix after a 'dot' or 'dash'
   probes <- sub(paste0("[-.].*"), "", probes)
   ## strip away anything postfix after 'underscore' if *not* refseq
   is.refseq <- grepl("^[NXW][MRPCGTWZ]_",probes)
@@ -414,8 +412,10 @@ collapse_by_humansymbol <- function(obj, annot) {
   if (is.null(species) || is.na(species) || !nzchar(species)) return(NULL)
   spt <- playbase::SPECIES_TABLE[,c("species_name","ah_species","gprofiler_species")]
   idx <- which(apply(spt,1, function(s) species %in% s))
-  if(length(idx)==0) return(NULL)
-  playbase::SPECIES_TABLE[idx,"gprofiler_id"]
+  id <- playbase::SPECIES_TABLE[idx,"gprofiler_id"]
+  id <- id[!is.na(id) & nzchar(id)]
+  if(length(id)==0) return(NULL)
+  id[1]
 }
 
 #'
