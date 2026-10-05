@@ -595,11 +595,15 @@ compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
     X <- readRDS(file = file.path(cmap.dir, ref))
     xdrugs <- gsub("[@_].*$", "", colnames(X))
 
+    ## drug annotation (drug, moa, target) for this database
+    db <- sub("-.*", "", ref)
+    annot0 <- utils::read.csv(file.path(cmap.dir, paste0(db, "-drugs.csv")))
+
     out1 <- pgx.computeDrugEnrichment(
       pgx = pgx,
       X = X,
       xdrugs = xdrugs,
-      drug_info = NULL,
+      drug_info = annot0,
       methods = c("GSEA", "cor"),
       nmin = 10,
       nprune = 1000,
@@ -607,27 +611,7 @@ compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
     )
 
     if (!is.null(out1)) {
-      ## attach annotation
-      db <- sub("-.*", "", ref)
-      annot0 <- utils::read.csv(file.path(cmap.dir, paste0(db, "-drugs.csv")))
-      rownames(annot0) <- annot0$drug
-      annot0 <- annot0[match(rownames(out1[["GSEA"]]$X), rownames(annot0)), ]
-      rownames(annot0) <- rownames(out1[["GSEA"]]$X)
-
-      s1 <- names(ref.db)[i]
-      if("GSEA" %in% names(out1)) {
-        pgx$drugs[[s1]] <- out1[["GSEA"]]
-      } else if(all(c("X","Q","P","size") %in% names(out1)) ) {
-        pgx$drugs[[s1]][["X"]] <- out1[["X"]]
-        pgx$drugs[[s1]][["Q"]] <- out1[["Q"]]
-        pgx$drugs[[s1]][["P"]] <- out1[["P"]]
-        pgx$drugs[[s1]][["size"]] <- out1[["size"]]
-      } else {
-        stop("[compute_drugActivityEnrichment] FATAL ERROR. could not find X, Q, P, size")
-      }
-      pgx$drugs[[s1]][["annot"]] <- annot0[, c("moa", "target")]
-      pgx$drugs[[s1]][["clust"]] <- out1[["clust"]]
-      pgx$drugs[[s1]][["stats"]] <- out1[["stats"]]
+      pgx$drugs[[names(ref.db)[i]]] <- out1
     }
   } ## end of for rr
 

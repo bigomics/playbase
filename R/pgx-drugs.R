@@ -105,6 +105,8 @@ pgx.computeDrugEnrichment <- function(pgx, X = NULL, xdrugs = NULL,
       message("[pgx.computeDrugEnrichment] ERROR: drug_info must have columns: drug, moa, target")
       return(NULL)
     }
+    drug_info <- drug_info[!duplicated(drug_info$drug), , drop = FALSE]
+    rownames(drug_info) <- drug_info$drug
     message("[pgx.computeDrugEnrichment] using provided MoA annotation")
   }
   drug_info <- drug_info[, c("drug", "moa", "target")]
@@ -119,8 +121,8 @@ pgx.computeDrugEnrichment <- function(pgx, X = NULL, xdrugs = NULL,
   
   ## Compute 2D UMAP positions for drug profiles (required by CMAP scatter plot)
   clust <- NULL
-  sel_drugs <- rownames(enr$X)
-  xsel_idx <- match(sel_drugs, xdrugs)
+  sel_profiles <- rownames(enr$stats)
+  xsel_idx <- match(sel_profiles, colnames(X))
   xsel_idx <- xsel_idx[!is.na(xsel_idx)]
   if (length(xsel_idx) >= 5) {
     cX <- X[gg, xsel_idx, drop = FALSE]
@@ -173,12 +175,11 @@ pgx.update_drugs_results <- function(pgx) {
     return(pgx)
   }
 
-  if(is.null(pgx$drugs[[1]]$moa)) {
-    dbg("[pgx.update_drugs_results] updating MOA enrichment...")
-    for(db in names(pgx$drugs)) {
-      res <- pgx$drugs[[db]]
-      pgx$drugs[[db]][['moa']] <- metaLINCS::computeMoaEnrichment(res) 
-    }
+  for(db in names(pgx$drugs)) {
+    if(!is.null(pgx$drugs[[db]]$moa)) next
+    dbg("[pgx.update_drugs_results] updating MOA enrichment for ", db)
+    res <- pgx$drugs[[db]]
+    pgx$drugs[[db]][['moa']] <- metaLINCS::computeMoaEnrichment(res)
   }
   
   return(pgx)
