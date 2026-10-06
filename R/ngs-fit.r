@@ -274,34 +274,28 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     } else {
       compare_output <- outputs[[1]]
     }
-    test_names <- unique(sub("\\..*", "", colnames(custom)))
-    test_names <- test_names[match(names(compare_output$tables), test_names)]
+    ## One table per comparison of the fit, matched by exact column name and
+    ## re-indexed to the fit's own rows. The table may list features in any
+    ## order, hold features the fit filtered out, or lack some; a comparison
+    ## it does not cover is left empty rather than stopping the fit.
+    rows <- rownames(compare_output$tables[[1]])
+    idx <- match(rows, rownames(custom))
+    column <- function(name) {
+      if (!name %in% colnames(custom)) {
+        return(rep(NA_real_, length(rows)))
+      }
+      as.numeric(custom[idx, name])
+    }
     custom_tables <- list()
-    for (test in test_names) {
-      logFC_col <- paste0(test, ".logFC")
-      pval_col <- paste0(test, ".P.Value")
-      adjp_col <- paste0(test, ".adj.P.Val")
-      test_df <- data.frame(
-        logFC = custom[, logFC_col],
-        P.Value = custom[, pval_col],
-        adj.P.Val = custom[, adjp_col]
+    for (test in names(compare_output$tables)) {
+      custom_tables[[test]] <- data.frame(
+        logFC = column(paste0(test, ".logFC")),
+        P.Value = column(paste0(test, ".P.Value")),
+        adj.P.Val = column(paste0(test, ".adj.P.Val")),
+        row.names = rows
       )
-      rownames(test_df) <- rownames(custom)
-      custom_tables[[test]] <- test_df
     }
     custom <- custom_tables
-    missing_rows <- rownames(compare_output$tables[[1]])[which(!rownames(compare_output$tables[[1]]) %in% rownames(custom[[1]]))]
-    if (length(missing_rows) > 0) {
-      missing_data <- matrix(NA,
-        nrow = length(missing_rows),
-        ncol = ncol(custom[[1]]),
-        dimnames = list(missing_rows, colnames(custom[[1]]))
-      )
-      for (test in names(custom)) {
-        custom[[test]] <- rbind(custom[[test]], missing_data)
-        custom[[test]] <- custom[[test]][rownames(compare_output$tables[[1]]), ]
-      }
-    }
     outputs[[custom.name]]$tables <- custom
     timings[["custom"]] <- system.time(0)
   }

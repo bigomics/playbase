@@ -54,6 +54,38 @@ test_that("compute_testGenes returns correct number of genes", {
   expect_equal(sum_vals, expected_vals, tolerance = 0.1)
 })
 
+#' Custom fold changes land on their own features
+test_that("compute_testGenes aligns a custom table to the fit's features", {
+  pgx <- make_compute_test_genes_pgx()
+  contr.matrix <- playbase::makeContrastsFromLabelMatrix(pgx$contrasts)
+  contr.matrix <- sign(contr.matrix)
+  sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
+  contr.matrix <- contr.matrix[, sel, drop = FALSE]
+  k1 <- colnames(contr.matrix)[1]
+
+  ## Every feature in reverse order, plus rows the dataset does not have:
+  ## the table the old merge stored on the wrong features or crashed on.
+  features <- c(rev(rownames(pgx$X)), "NOT_A_FEATURE")
+  n <- length(features)
+  custom <- cbind(seq_len(n), rep(0.01, n), rep(0.05, n))
+  dimnames(custom) <- list(features, paste0(k1, c(".logFC", ".P.Value", ".adj.P.Val")))
+
+  suppressWarnings(
+    test_genes <- playbase::compute_testGenes(
+      pgx, contr.matrix,
+      test.methods = "ttest.welch",
+      custom_fc = custom
+    )
+  )
+
+  fc <- test_genes$gx.meta$meta[[k1]]$fc[, "custom"]
+  expect_equal(as.numeric(fc), as.numeric(custom[rownames(test_genes$gx.meta$meta[[k1]]), 1]))
+  ## A comparison the table does not cover is left empty, not fatal.
+  for (k in setdiff(colnames(contr.matrix), k1)) {
+    expect_true(all(is.na(test_genes$gx.meta$meta[[k]]$fc[, "custom"])))
+  }
+})
+
 #' Test for compute_testGenesSingleOmics
 test_that("compute_testGenesSingleOmics runs without errors", {
   # Call mock data
