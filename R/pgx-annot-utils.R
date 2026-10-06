@@ -155,7 +155,7 @@ strip_prefix <- function(s) {
 #' Cleanup probe names from postfixes or version numbers. Retains
 #' prefix needed for multi-omics.
 #'
-.clean_probe_names <- function(probes) {
+.clean_probe_names <- function(probes, sep="-.", sep2="_") {
   probes0 <- probes
   probes <- trimws(probes)  
   probes[is.na(probes)] <- ""
@@ -164,10 +164,10 @@ strip_prefix <- function(s) {
   ## strip away any prefix before a 'colon'
   probes <- sub(".*[:]", "", probes)
   ## strip away any postfix after a 'dot' or 'dash' (mostly isoforms)
-  probes <- sub(paste0("[-.].*"), "", probes)
+  probes <- sub(paste0("[",sep,"].*"), "", probes)
   ## strip away anything postfix after 'underscore' if *not* refseq
   is.refseq <- grepl("^[NXW][MRPCGTWZ]_",probes)
-  probes <- ifelse(is.refseq, probes, sub("_.*", "", probes))
+  probes <- ifelse(is.refseq, probes, sub(paste0(sep2,".*"), "", probes))
   names(probes) <- probes0
   return(probes)
 }
@@ -895,7 +895,7 @@ check_species_probetype <- function(
       db <- mx.check_mapping(probes, check.first = TRUE)
       table(db)
       if (!all(is.na(db))) {
-        mx.type <- names(which.max(table(db[!is.na(db)])))
+        mx.type <- paste(names(table(db[!is.na(db)])),collapse="+")
       }
     }
     for (s in test_species) ptype[[s]] <- mx.type
