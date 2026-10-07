@@ -144,6 +144,13 @@ compute_testGenes <- function(pgx,
   ## upload option that set pgx$dma to "Differentially methylated regions" was
   ## removed for overwriting pgx$counts/X/genes with a gene-level matrix.)
 
+  ## A custom fold-change table is keyed by the uploaded counts' feature IDs,
+  ## but pgx.createPGX may have renamed X's rows (protein groups reordered,
+  ## phospho residues annotated, convert.hugo's "<id>_<symbol>"). Every X row
+  ## keeps the pgx$counts row it came from, so translate the table's IDs
+  ## through that alignment; a row already named like X is left as it is.
+  custom_fc <- .custom_fc_to_x_rows(custom_fc, pgx)
+
   ## Run methods
   message("[compute_testGenes] start fitting... ")
   gx.meta <- ngs.fitContrastsWithAllMethods(
@@ -182,4 +189,18 @@ compute_testGenes <- function(pgx,
   message("[compute_testGenes] done!")
 
   return(pgx)
+}
+
+
+## Renames a custom fold-change table's rows from source (pgx$counts) IDs to
+## the processed X row names they became, using the preprocessing alignment.
+.custom_fc_to_x_rows <- function(custom_fc, pgx) {
+  rows <- pgx$settings$preprocess$alignment$rows
+  if (is.null(custom_fc) || is.null(rows) || length(rows) != nrow(pgx$X)) {
+    return(custom_fc)
+  }
+  source_ids <- rownames(pgx$counts)[.pgx_first_source_rows(pgx$settings$preprocess)]
+  hit <- match(rownames(custom_fc), source_ids)
+  rownames(custom_fc)[!is.na(hit)] <- rownames(pgx$X)[hit[!is.na(hit)]]
+  custom_fc
 }

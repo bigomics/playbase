@@ -86,6 +86,37 @@ test_that("compute_testGenes aligns a custom table to the fit's features", {
   }
 })
 
+#' Custom fold changes follow createPGX's renaming of features
+test_that("compute_testGenes maps a custom table keyed by uploaded IDs", {
+  pgx <- make_compute_test_genes_pgx()
+  contr.matrix <- playbase::makeContrastsFromLabelMatrix(pgx$contrasts)
+  contr.matrix <- sign(contr.matrix)
+  sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
+  contr.matrix <- contr.matrix[, sel, drop = FALSE]
+  k1 <- colnames(contr.matrix)[1]
+
+  ## convert.hugo-style rename: X's rows change, pgx$counts keeps the uploaded
+  ## IDs, and the user's table uses the uploaded IDs.
+  uploaded <- rownames(pgx$X)
+  rownames(pgx$X) <- paste0(uploaded, "_SYM")
+  n <- length(uploaded)
+  custom <- cbind(seq_len(n), rep(0.01, n), rep(0.05, n))
+  dimnames(custom) <- list(uploaded, paste0(k1, c(".logFC", ".P.Value", ".adj.P.Val")))
+
+  suppressWarnings(
+    test_genes <- playbase::compute_testGenes(
+      pgx, contr.matrix,
+      test.methods = "ttest.welch",
+      custom_fc = custom[rev(seq_len(n)), , drop = FALSE]
+    )
+  )
+
+  meta <- test_genes$gx.meta$meta[[k1]]
+  fc <- meta$fc[, "custom"]
+  expect_false(anyNA(fc))
+  expect_equal(as.numeric(fc), as.numeric(custom[sub("_SYM$", "", rownames(meta)), 1]))
+})
+
 #' Test for compute_testGenesSingleOmics
 test_that("compute_testGenesSingleOmics runs without errors", {
   # Call mock data
