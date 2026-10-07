@@ -115,6 +115,25 @@ test_that("compute_testGenes maps a custom table keyed by uploaded IDs", {
   fc <- meta$fc[, "custom"]
   expect_false(anyNA(fc))
   expect_equal(as.numeric(fc), as.numeric(custom[sub("_SYM$", "", rownames(meta)), 1]))
+
+  ## Rows filtered out of X (as max.genes does) keep the remaining rows'
+  ## alignment, so the mapping still lands on the right features.
+  keep <- seq(11, nrow(pgx$X))
+  pgx$X <- pgx$X[keep, , drop = FALSE]
+  pgx$settings$preprocess <- .pgx_subset_preprocess_rows(pgx$settings$preprocess, keep)
+  suppressWarnings(
+    filtered <- playbase::compute_testGenes(
+      pgx, contr.matrix,
+      test.methods = "ttest.welch",
+      custom_fc = custom
+    )
+  )
+  meta <- filtered$gx.meta$meta[[k1]]
+  expect_equal(nrow(meta), length(keep))
+  expect_equal(
+    as.numeric(meta$fc[, "custom"]),
+    as.numeric(custom[sub("_SYM$", "", rownames(meta)), 1])
+  )
 })
 
 #' Test for compute_testGenesSingleOmics

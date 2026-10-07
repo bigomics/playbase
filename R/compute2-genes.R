@@ -195,8 +195,15 @@ compute_testGenes <- function(pgx,
 ## Renames a custom fold-change table's rows from source (pgx$counts) IDs to
 ## the processed X row names they became, using the preprocessing alignment.
 .custom_fc_to_x_rows <- function(custom_fc, pgx) {
+  if (is.null(custom_fc)) {
+    return(custom_fc)
+  }
   rows <- pgx$settings$preprocess$alignment$rows
-  if (is.null(custom_fc) || is.null(rows) || length(rows) != nrow(pgx$X)) {
+  if (is.null(rows) || length(rows) != nrow(pgx$X)) {
+    message(
+      "[compute_testGenes] no source-row alignment for X; matching the custom ",
+      "fold-change table on X's row names as they are"
+    )
     return(custom_fc)
   }
   source_ids <- rownames(pgx$counts)[.pgx_first_source_rows(pgx$settings$preprocess)]
