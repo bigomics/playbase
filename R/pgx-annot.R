@@ -257,8 +257,10 @@ getGeneAnnotation <- function(
         if (length(new_cols) > 0) {
           for (col in new_cols) annot[[col]] <- NA
         }
-        mm <- merge_annot_table(annot[missing, ], missing_annot)
-        annot[missing, ] <- mm[, colnames(annot)]
+        jj <- which(!is.na(missing_annot$symbol))
+        kk <- which(missing)[jj]
+        mm <- merge_annot_table(annot[kk, ], missing_annot[jj,])
+        annot[kk, ] <- mm[, colnames(annot)]
         missing <- is.na(annot$symbol) | annot$symbol == ""
       }
     }
@@ -623,7 +625,6 @@ getGeneAnnotation.ANNOTHUB <- function(
   genes <- genes[, annot.cols]
   new.names <- c(
     "feature", "symbol", "uniprot", "gene_title",
-    ## "gene_biotype", "map", "chr", "pos", "tx_len", "source"
     "chr", "source"
   )
   colnames(genes) <- new.names

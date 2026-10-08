@@ -621,6 +621,11 @@ detect_probetype <- function(organism, probes, datatype = NULL,
   }
 
   if(is.null(ptype) || is.na(ptype)) {
+    probesx <- head(probes, nprobe)
+    ptype <- detect_probetype.UNIPROT(probes = probesx) 
+  }
+
+  if(is.null(ptype) || is.na(ptype)) {
     return(NA)  ## expects NA for fail
   }
   return(ptype)
@@ -676,6 +681,7 @@ detect_probetype.ANNOTHUB <- function(organism, probes, orgdb = NULL,
     keys = AnnotationDbi::keys(orgdb, "ENTREZID"),
     keytype = "ENTREZID",
     columns = intersect(c("SYMBOL", "GENENAME"), keytypes)
+    #columns = keytypes
   )
   org_symbols <- NULL
   org_genenames <- NULL
@@ -749,9 +755,9 @@ detect_probetype.ANNOTHUB <- function(organism, probes, orgdb = NULL,
 #' Detect/validate features with gprofiler
 #'
 detect_probetype.GPROFILER <- function(organism, probes, nprobe = 1000,
+                                       min.ratio = 0.10,
                                        datatype = NULL, verbose = TRUE) {
   gp.organism <- .map_gprofiler_id(organism)    
-
   if (length(probes) > nprobe) {
     probes <- sample(probes, nprobe)
   }
@@ -767,6 +773,11 @@ detect_probetype.GPROFILER <- function(organism, probes, nprobe = 1000,
     return(NULL)
   }
   )
+  if(is.null(gp.out) || nrow(gp.out)==0) return(NULL)
+
+  ratio <- mean(probesx %in% gp.out$input)
+  if(ratio < min.ratio) return(NULL)
+
   return("GPROFILER2")
 }
 
@@ -779,6 +790,10 @@ allSpecies <- function(col = "species_name") {
   col <- intersect(col, colnames(M))[1]
   if(length(col)==0) return(NULL)
   species <- as.character(M[, col])
+  if(col == "display_name") {
+    species <- sub("Cricetulus.*griseus", "Chinese hamster", species, ignore.case=TRUE)
+    ##species <- sub("Homo sapiens", "Human", species, ignore.case=TRUE)
+  }
   names(species) <- M[, "taxonomyid"]
   species
 }

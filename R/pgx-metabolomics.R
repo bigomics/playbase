@@ -12,6 +12,11 @@ mx.ping_refmet <- function() {
   !("try-error" %in% class(out))
 }
 
+mx.clean_probe_names <- function(probes) {
+  ## metabolomics has often dash/minus in names
+  .clean_probe_names(probes, sep=".", sep2="_")
+}
+
 #' Check metabolite mapping in databases. For each probe return
 #' matched database or NA if not found.
 #'
@@ -26,7 +31,7 @@ mx.check_mapping <- function(probes,
     message("WARNING: RefMet server is not alive")
     all.db <- setdiff(all.db, "refmet")
   }
-  clean.probes <- .clean_probe_names(probes, sep=".", sep2="_")
+  clean.probes <- mx.clean_probe_names(probes)
 
   db = "refmet"
   for (db in all.db) {
