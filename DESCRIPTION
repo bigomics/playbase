@@ -9,7 +9,7 @@ Description: More about what it does (maybe more than one line)
 License: Dual Commercial and Non-Commercial
 Encoding: UTF-8
 LazyData: true
-Suggests: 
+Suggests:
     playbase.epigenetics,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
@@ -165,6 +165,7 @@ Imports:
     tools,
     torch,
     umap,
+    UniProt.ws,
     utils,
     uwot,
     vioplot,
