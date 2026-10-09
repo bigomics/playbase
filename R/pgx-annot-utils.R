@@ -122,7 +122,9 @@ uniprot2gene <- function(uniprots, organism) {
 strip_postfix <- function(s) {
   stripFUN <- function(s) {
     #sub(paste0("[._].*$|[-][0-9.]+$"), "", s)
-    sub(paste0("[-.][0-9]+$"), "", s) 
+    s <- sub("[.][0-9]+$", "", s)
+    ## strip '-N' isoform only from UniProt accessions (keeps NKX2-1, KRTAP4-11)
+    sub("^([OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2})-[0-9]+$", "\\1", s)
   }
   ss <- strsplit(s, split = ";")
   ss <- lapply(ss, function(s) stripFUN(s))
