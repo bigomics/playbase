@@ -87,7 +87,7 @@ vignettes/*.pdf
 Renviron
 Renviron.site
 .Rprofile
-Rprofile
+#Rprofile
 
 # pkgdown site
 docs/
