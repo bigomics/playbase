@@ -323,6 +323,11 @@ solvePCSF <- function(X, fx, ppi, labels = NULL, ntop = 250, ncomp = 3,
   if (!is.null(labels)) names(labels) <- rownames(X)
 
   ppi.genes <- unique(c(ppi$from, ppi$to))
+  ## candidate pool before the PPI filter and ntop cut, kept for omitted-node reporting
+  candidates <- data.frame(
+    id = names(fx), prize = abs(fx), in_ppi = names(fx) %in% ppi.genes,
+    stringsAsFactors = FALSE
+  )
   ppi.ratio <- mean(names(fx) %in% ppi.genes)
   ppi.num <- sum(names(fx) %in% ppi.genes)
   if (ppi.ratio < 0.10 || ppi.num < 10) {
@@ -408,6 +413,7 @@ solvePCSF <- function(X, fx, ppi, labels = NULL, ntop = 250, ncomp = 3,
     sel.kk <- head(order(-cmp$csize), ncomp)
   }
   pcsf <- igraph::subgraph(pcsf, cmp$membership %in% sel.kk)
+  igraph::graph_attr(pcsf, "pcsf_candidates") <- candidates
 
   class(pcsf) <- c("PCSF", "igraph")
   return(pcsf)
