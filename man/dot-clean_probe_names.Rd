@@ -5,7 +5,7 @@
 \title{Cleanup probe names from postfixes or version numbers. Retains
 prefix needed for multi-omics.}
 \usage{
-.clean_probe_names(probes, sep = ".-")
+.clean_probe_names(probes, sep = "-.", sep2 = "_")
 }
 \description{
 Cleanup probe names from postfixes or version numbers. Retains

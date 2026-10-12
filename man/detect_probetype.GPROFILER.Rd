@@ -8,6 +8,7 @@ detect_probetype.GPROFILER(
   organism,
   probes,
   nprobe = 1000,
+  min.ratio = 0.1,
   datatype = NULL,
   verbose = TRUE
 )

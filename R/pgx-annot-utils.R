@@ -122,7 +122,9 @@ uniprot2gene <- function(uniprots, organism) {
 strip_postfix <- function(s) {
   stripFUN <- function(s) {
     #sub(paste0("[._].*$|[-][0-9.]+$"), "", s)
-    sub(paste0("[.][0-9]+$"), "", s) 
+    s <- sub("[.][0-9]+$", "", s)
+    ## strip '-N' isoform only from UniProt accessions (keeps NKX2-1, KRTAP4-11)
+    sub("^([OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2})-[0-9]+$", "\\1", s)
   }
   ss <- strsplit(s, split = ";")
   ss <- lapply(ss, function(s) stripFUN(s))
@@ -136,7 +138,7 @@ strip_postfix <- function(s) {
 #'
 strip_prefix <- function(s) {
   stripFUN <- function(s) {
-    sub("^[a-zA-Z]+:", "", s)
+    sub("^[a-zA-Z0-9]+:", "", s)
   }
   ss <- strsplit(s, split = ";")
   ss <- lapply(ss, function(s) stripFUN(s))
@@ -155,14 +157,19 @@ strip_prefix <- function(s) {
 #' Cleanup probe names from postfixes or version numbers. Retains
 #' prefix needed for multi-omics.
 #'
-.clean_probe_names <- function(probes, sep = ".-") {
+.clean_probe_names <- function(probes, sep="-.", sep2="_") {
   probes0 <- probes
   probes <- trimws(probes)  
   probes[is.na(probes)] <- ""
-  ## strip multiple probes
+  ## strip multiple probes. retain only first
   probes <- sub("[;].*", "", probes)
-  ## strip away anything postfix after a 'dot' or 'underscore'
-  probes <- sub(paste0("[", sep, "].*"), "", probes)
+  ## strip away any prefix before a 'colon'
+  probes <- sub(".*[:]", "", probes)
+  ## strip away any postfix after a 'dot' or 'dash' (mostly isoforms)
+  probes <- sub(paste0("[",sep,"].*"), "", probes)
+  ## strip away anything postfix after 'underscore' if *not* refseq
+  is.refseq <- grepl("^[NXW][MRPCGTWZ]_",probes)
+  probes <- ifelse(is.refseq, probes, sub(paste0(sep2,".*"), "", probes))
   names(probes) <- probes0
   return(probes)
 }
@@ -193,7 +200,7 @@ match_probe_names <- function(probes, orgdb, probe_type = NULL) {
   if (sum(is.na(new.probes))) {
     jj <- which(is.na(new.probes))
     new.probes[jj] <- probes[jj]
-    jj.probes <- .clean_probe_names(probes[jj], sep = ".-")
+    jj.probes <- .clean_probe_names(probes[jj])
     ii <- match(toupper(tsub(jj.probes)), toupper(tsub(all.keys)))
     if (any(!is.na(ii))) {
       k <- which(!is.na(ii))
@@ -402,14 +409,30 @@ collapse_by_humansymbol <- function(obj, annot) {
   map.obj
 }
 
+
+.map_gprofiler_id.SPECIES_TABLE <- function(species) {
+  if (is.null(species) || is.na(species) || !nzchar(species)) return(NULL)
+  spt <- playbase::SPECIES_TABLE[,c("species_name","ah_species","gprofiler_species")]
+  idx <- which(apply(spt,1, function(s) species %in% s))
+  id <- playbase::SPECIES_TABLE[idx,"gprofiler_id"]
+  id <- id[!is.na(id) & nzchar(id)]
+  if(length(id)==0) return(NULL)
+  id[1]
+}
+
 #'
 #' 
 .map_gprofiler_id <- function(species) {
 
   if (is.null(species) || is.na(species) || !nzchar(species)) return(NULL)
 
+  ## first try SPECIES_TABLE
+  id <- .map_gprofiler_id.SPECIES_TABLE(species) 
+  if(!is.null(id)) return(id)
+  
+  ## get full list of supported gprofiler organisms
   orgs <- jsonlite::fromJSON("https://biit.cs.ut.ee/gprofiler/api/util/organisms_list")
-
+  
   ## exact match
   exact.species <- paste0("^",species,"$")
   i <- which(
@@ -600,6 +623,11 @@ detect_probetype <- function(organism, probes, datatype = NULL,
   }
 
   if(is.null(ptype) || is.na(ptype)) {
+    probesx <- head(probes, nprobe)
+    ptype <- detect_probetype.UNIPROT(probes = probesx) 
+  }
+
+  if(is.null(ptype) || is.na(ptype)) {
     return(NA)  ## expects NA for fail
   }
   return(ptype)
@@ -655,6 +683,7 @@ detect_probetype.ANNOTHUB <- function(organism, probes, orgdb = NULL,
     keys = AnnotationDbi::keys(orgdb, "ENTREZID"),
     keytype = "ENTREZID",
     columns = intersect(c("SYMBOL", "GENENAME"), keytypes)
+    #columns = keytypes
   )
   org_symbols <- NULL
   org_genenames <- NULL
@@ -728,22 +757,29 @@ detect_probetype.ANNOTHUB <- function(organism, probes, orgdb = NULL,
 #' Detect/validate features with gprofiler
 #'
 detect_probetype.GPROFILER <- function(organism, probes, nprobe = 1000,
+                                       min.ratio = 0.10,
                                        datatype = NULL, verbose = TRUE) {
   gp.organism <- .map_gprofiler_id(organism)    
-
   if (length(probes) > nprobe) {
     probes <- sample(probes, nprobe)
   }
-  probesx <- gsub(";.*|_.*|.*:","",probes)
-  probes <- c(probes, probesx)
+
+  probes0 <- probes
+  probes1 <- .clean_probe_names(probes)
+  probesx <- unique(c(probes0, probes1))
   gp.out <- tryCatch(
   {
-    gprofiler2::gconvert(probes, organism = gp.organism, target = "UNIPROT_GN_ACC")
+    gprofiler2::gconvert(probesx, organism = gp.organism, target = "UNIPROT_GN_ACC")
   },
   error = function(e) {
     return(NULL)
   }
   )
+  if(is.null(gp.out) || nrow(gp.out)==0) return(NULL)
+
+  ratio <- mean(probesx %in% gp.out$input)
+  if(ratio < min.ratio) return(NULL)
+
   return("GPROFILER2")
 }
 
@@ -756,6 +792,10 @@ allSpecies <- function(col = "species_name") {
   col <- intersect(col, colnames(M))[1]
   if(length(col)==0) return(NULL)
   species <- as.character(M[, col])
+  if(col == "display_name") {
+    species <- sub("Cricetulus.*griseus", "Chinese hamster", species, ignore.case=TRUE)
+    ##species <- sub("Homo sapiens", "Human", species, ignore.case=TRUE)
+  }
   names(species) <- M[, "taxonomyid"]
   species
 }
@@ -872,7 +912,7 @@ check_species_probetype <- function(
       db <- mx.check_mapping(probes, check.first = TRUE)
       table(db)
       if (!all(is.na(db))) {
-        mx.type <- names(which.max(table(db[!is.na(db)])))
+        mx.type <- paste(names(table(db[!is.na(db)])),collapse="+")
       }
     }
     for (s in test_species) ptype[[s]] <- mx.type
