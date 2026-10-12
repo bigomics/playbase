@@ -506,7 +506,6 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
     }
 
     xdrugs <- gsub("[_@].*$", "", colnames(X))
-    ndrugs <- length(table(xdrugs))
     is.drug <- grepl("activity|drug|ChemPert", f, ignore.case = TRUE)
 
     out1 <- NULL
@@ -514,6 +513,7 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
       pgx = pgx,
       X = X,
       xdrugs = xdrugs,
+      drug_info = NULL,
       methods = c("GSEA", "cor"),
       nmin = 10,
       nprune = 1000,
@@ -526,29 +526,37 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
     }
 
     ## --------------- attach annotation
-    annot0 <- NULL
-    if (is.drug) {
-      annot0 <- playdata::L1000_REPURPOSING_DRUGS
-      annot0$drug <- annot0$pert_iname
-      rownames(annot0) <- annot0$pert_iname
+    if("annot" %in% names(out1)) {
+      annot0 <- out1$annot
     } else {
-      ## gene perturbation OE/LIG/SH
-      dd <- rownames(out1[["GSEA"]]$X)
-      d1 <- dd
-      d2 <- sub("-.*", "", dd)
-      annot0 <- data.frame(drug = dd, moa = d1, target = d2)
-      rownames(annot0) <- dd
+      annot0 <- NULL
+      if (is.drug) {
+        annot0 <- playdata::L1000_REPURPOSING_DRUGS
+        annot0$drug <- annot0$pert_iname
+        rownames(annot0) <- annot0$pert_iname
+      } else {
+        ## gene perturbation OE/LIG/SH
+        dd <- rownames(out1[["GSEA"]]$X)
+        d1 <- dd
+        d2 <- sub("-.*", "", dd)
+        annot0 <- data.frame(drug = dd, moa = d1, target = d2)
+        rownames(annot0) <- dd
+      }
+      annot0 <- annot0[match(rownames(out1[["GSEA"]]$X), rownames(annot0)), ]
+      annot0 <- annot0[, c("drug", "moa", "target")]
+      rownames(annot0) <- rownames(out1[["GSEA"]]$X)
     }
-
-    annot0 <- annot0[match(rownames(out1[["GSEA"]]$X), rownames(annot0)), ]
-    rownames(annot0) <- rownames(out1[["GSEA"]]$X)
-
+    
     ## --------------- attach results to object
     db <- names(ref.db)[i]
-    pgx$drugs[[db]] <- out1[["GSEA"]]
-    pgx$drugs[[db]][["annot"]] <- annot0[, c("drug", "moa", "target")]
-    pgx$drugs[[db]][["clust"]] <- out1[["clust"]]
-    pgx$drugs[[db]][["stats"]] <- out1[["stats"]]
+    pgx$drugs[[db]] <- out1
+    if("GSEA" %in% names(out1)) {
+      pgx$drugs[[db]][["X"]] <- out1[["GSEA"]][["X"]]
+      pgx$drugs[[db]][["Q"]] <- out1[["GSEA"]][["Q"]]
+      pgx$drugs[[db]][["P"]] <- out1[["GSEA"]][["P"]]
+      pgx$drugs[[db]][["size"]] <- out1[["GSEA"]][["size"]]
+      pgx$drugs[[db]][["GSEA"]] <- NULL
+    }
   }
 
   return(pgx)
@@ -587,10 +595,15 @@ compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
     X <- readRDS(file = file.path(cmap.dir, ref))
     xdrugs <- gsub("[@_].*$", "", colnames(X))
 
+    ## drug annotation (drug, moa, target) for this database
+    db <- sub("-.*", "", ref)
+    annot0 <- utils::read.csv(file.path(cmap.dir, paste0(db, "-drugs.csv")))
+
     out1 <- pgx.computeDrugEnrichment(
       pgx = pgx,
       X = X,
       xdrugs = xdrugs,
+      drug_info = annot0,
       methods = c("GSEA", "cor"),
       nmin = 10,
       nprune = 1000,
@@ -598,18 +611,7 @@ compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
     )
 
     if (!is.null(out1)) {
-      ## attach annotation
-      db <- sub("-.*", "", ref)
-      annot0 <- utils::read.csv(file.path(cmap.dir, paste0(db, "-drugs.csv")))
-      rownames(annot0) <- annot0$drug
-      annot0 <- annot0[match(rownames(out1[["GSEA"]]$X), rownames(annot0)), ]
-      rownames(annot0) <- rownames(out1[["GSEA"]]$X)
-
-      s1 <- names(ref.db)[i]
-      pgx$drugs[[s1]] <- out1[["GSEA"]]
-      pgx$drugs[[s1]][["annot"]] <- annot0[, c("moa", "target")]
-      pgx$drugs[[s1]][["clust"]] <- out1[["clust"]]
-      pgx$drugs[[s1]][["stats"]] <- out1[["stats"]]
+      pgx$drugs[[names(ref.db)[i]]] <- out1
     }
   } ## end of for rr
 
