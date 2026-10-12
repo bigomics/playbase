@@ -76,9 +76,9 @@ getProbeAnnotation <- function(organism,
 
   # organism can be a vector (multi-species): all() keeps a mixed table from
   # being treated as unknown
-  unknown.organism <- all(tolower(organism) %in% c("no organism", "custom", "unkown"))
-  unknown.datatype <- (datatype %in% c("custom", "unkown"))
-  unknown.probetype <- (probetype %in% c("custom", "unkown"))
+  unknown.organism <- all(tolower(organism) %in% c("no organism", "custom", "unknown"))
+  unknown.datatype <- (datatype %in% c("custom", "unknown"))
+  unknown.probetype <- (probetype %in% c("custom", "unknown"))
   annot.unknown <- unknown.organism || unknown.datatype || unknown.probetype
   organism <- normalizeOrganism(organism)
   

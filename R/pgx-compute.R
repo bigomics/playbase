@@ -613,8 +613,8 @@ pgx.createPGX <- function(counts,
 
     ## If no organism, no custom annotation table and no custom geneset,
     ## then create empty GMT
-    unknown.organism <- (species[i] %in% c("No organism", "custom", "unkown"))
-    unknown.datatype <- (pgx0$datatype %in% c("custom", "unkown"))
+    unknown.organism <- (species[i] %in% c("No organism", "custom", "unknown"))
+    unknown.datatype <- (pgx0$datatype %in% c("custom", "unknown"))
     no3 <- unknown.organism && is.null(annot_table) && is.null(custom.geneset)
     if (no3 || unknown.datatype || !add.gmt) {
       message("[pgx.createPGX] WARNING: empty GMT matrix. No gene sets for ", species[i])
