@@ -4,10 +4,6 @@
 #'
 #'
 
-#' Test for gx.PCAcomponents
-#'
-#'
-
 #' Test for gx.imagemap
 #'
 #'

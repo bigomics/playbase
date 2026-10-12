@@ -9,14 +9,14 @@ pgx.survivalVariableImportance(
   X,
   time,
   status,
-  methods = c("glmnet", "randomforest", "boruta", "xgboost", "pls")
+  methods = c("glmnet", "randomforest", "xgboost", "pls")
 )
 
 pgx.variableImportance(
   X,
   y,
   methods = c("glmnet", "randomforest", "xgboost", "splsda", "correlation", "ftest",
-    "boruta", CARET.METHODS)[1:6],
+    CARET.METHODS)[1:6],
   scale = TRUE,
   reduce = 1000,
   resample = 0,
@@ -30,7 +30,7 @@ pgx.variableImportance(
 
 \item{status}{Vector indicating event (1) or censoring (0)}
 
-\item{methods}{Methods for computing variable importance. Options are "glmnet", "randomforest", "boruta", "xgboost", "pls".}
+\item{methods}{Methods for computing variable importance. Options are "glmnet", "randomforest", "xgboost", "pls".}
 
 \item{y}{Multiclass factor response variable. Contains the class
 labels for each sample}
@@ -49,7 +49,6 @@ The following methods can be selected via the \code{methods} parameter:
 \itemize{
 \item glmnet: Absolute value of coefficients from elastic net Cox model
 \item randomForest: Variable importance from random survival forest
-\item boruta: Boruta variable selection algorithm
 \item xgboost: Importance scores from XGBoost survival model
 \item pls: Absolute coefficients from partial least squares Cox model
 }

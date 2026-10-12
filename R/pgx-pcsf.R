@@ -772,11 +772,6 @@ visplot.PCSF <- function(
     visNet <- visNet %>% visNetwork::visHierarchicalLayout(direction = "UD")
   }
 
-  #  visNet <- visNet %>%
-  #    visNetwork::visPhysics(enabled = physics) %>%
-  #    visNetwork::visOptions(highlightNearest = list(enabled = TRUE, degree = 2)) %>%
-  #    visNetwork::visLegend(width = 0.05, useGroups = TRUE, position = "right")
-
   visNet
 }
 
@@ -878,7 +873,7 @@ pgx.getPCSFcentrality <- function(pgx, contrast, pcsf, level = "gene",
       match.sum <- apply(pgx$genes, 2, function(a) sum(ft %in% a))
     }
     ii <- match(ft, pgx$genes[, which.max(match.sum)])
-    aa <- pgx$genes[ii, c("feature", "symbol", "human_ortholog", "gene_title")]
+    aa <- pgx$genes[ii, c("feature", "symbol", "ortholog", "gene_title")]
   }
   if (level == "geneset") {
     aa <- data.frame(geneset = rownames(M))

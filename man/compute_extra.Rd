@@ -7,7 +7,7 @@
 compute_extra(
   pgx,
   extra = c("meta.go", "infer", "deconv", "drugs", "connectivity", "wordcloud", "wgcna",
-    "mofa"),
+    "wgcna_mox", "mofa"),
   sigdb = NULL,
   pgx.dir = "./data",
   libx.dir = "./libx",

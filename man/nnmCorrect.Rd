@@ -55,5 +55,6 @@ This function performs batch correction using the following steps:
 
 }
 \seealso{
-\code{\link[limma]{removeBatchEffect}} for the batch correction method used.
+\code{\link[NPM]{NPmatch}} for the underlying, actively maintained implementation.
+\code{\link[limma]{removeBatchEffect}} for the batch correction method used internally.
 }

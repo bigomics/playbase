@@ -12,6 +12,11 @@ mx.ping_refmet <- function() {
   !("try-error" %in% class(out))
 }
 
+mx.clean_probe_names <- function(probes) {
+  ## metabolomics has often dash/minus in names
+  .clean_probe_names(probes, sep=".", sep2="_")
+}
+
 #' Check metabolite mapping in databases. For each probe return
 #' matched database or NA if not found.
 #'
@@ -26,8 +31,11 @@ mx.check_mapping <- function(probes,
     message("WARNING: RefMet server is not alive")
     all.db <- setdiff(all.db, "refmet")
   }
+  clean.probes <- mx.clean_probe_names(probes)
 
+  db = "refmet"
   for (db in all.db) {
+
     message("trying db: ", db)
     if (check.first) {
       jj <- which(src == "")
@@ -36,14 +44,31 @@ mx.check_mapping <- function(probes,
     }
     if (length(jj)) {
       annot <- getMetaboliteAnnotation(probes[jj], db = db)
-      ii <- which(!is.na(annot$source))
-      jj <- jj[ii]
-      src[jj] <- paste0(src[jj], "+", annot$source[ii])
+      ii <- which(!is.na(annot$source) & !annot$source %in% c("","-",NA))
+      if(length(ii)) {
+        jj <- jj[ii]
+        src[jj] <- paste0(src[jj], "+", annot$source[ii])
+      }
     }
+
+    ## retry with clean probes
+    if (check.first) {
+      jj <- which(src == "")
+    } else {
+      jj <- 1:length(probes)
+    }
+    if (length(jj)) {
+      annot <- getMetaboliteAnnotation(clean.probes[jj], db = db)
+      ii <- which(!is.na(annot$source) & !annot$source %in% c("","-",NA))
+      if(length(ii)) {
+        jj <- jj[ii]
+        src[jj] <- paste0(src[jj], "+", annot$source[ii])
+      }
+    }
+    
   }
-  src
   src <- sub("^[+]", "", src) ## remove plus sign at beginning
-  src[which(src == "")] <- NA
+  src[which(src %in% c("","-"))] <- NA
   src
 }
 
@@ -53,7 +78,7 @@ mx.check_mapping <- function(probes,
 mx.detect_probetype <- function(probes, min.match = 0.2) {
   aa <- playdata::METABOLITE_ID
   probes <- setdiff(probes, c("", "-", NA))
-  probes <- gsub("^[a-zA-Z]+:|[_.-].*", "", probes) ## strip any pre and postfix
+  probes <- gsub("^[a-zA-Z]+:|[_.].*", "", probes) ## strip any pre and postfix
   probes <- gsub("chebi:|chebi", "", probes, ignore.case = TRUE)
   match <- apply(aa, 2, function(s) mean(probes %in% s))
 
@@ -412,7 +437,7 @@ getMetaboliteAnnotation <- function(probes,
   df <- data.frame(
     feature = probes,
     symbol = rep(NA, length(probes)),
-    human_ortholog = rep(NA, length(probes)),
+    ortholog = rep(NA, length(probes)),
     gene_title = metadata$name,
     gene_alias = metadata$name, ## save original
     source = metadata$source,
@@ -451,7 +476,7 @@ getMetaboliteAnnotation <- function(probes,
   ## but if CHEBI not exists any other ID. If no ID exists we fill
   ## with '{feature}'
   df$symbol <- idtable$mapping_ID
-  df$human_ortholog <- df$HMDB_ID ## human?
+  df$ortholog <- df$HMDB_ID ## human?
 
   ## Fill empty symbols with something. Many lipids are not mapped to
   ## our standard ChEBI id.
@@ -541,14 +566,6 @@ getMetaboliteAnnotation <- function(probes,
 
   rownames(df) <- NULL
   return(df)
-}
-
-mx.formula2chebi <- function(f, prefix = TRUE) {
-  meta <- playdata::METABOLITE_METADATA
-  ii <- match(f, meta[, "formula"])
-  chebi <- meta[ii, "ID"]
-  if (prefix) chebi <- paste("CHEBI:", chebi) ## chebi
-  chebi
 }
 
 #' This uses different databases to create a ID mapping table for
@@ -846,25 +863,6 @@ extend_metabolite_sets2 <- function(M, ppi, add = TRUE, postfix = "(extended)", 
 ## ==================== LIPIDOMICS ======================================
 ## ======================================================================
 
-
-## detectLipidID <- function(id, min.match=0.5) {
-##   if(mean(grepl("^HMDB",id,ignore.case=TRUE)) > min.match) return("HMDB")
-##   if(mean(grepl("^CHEBI",id,ignore.case=TRUE)) > min.match) return("CHEBI")
-##   if(mean(grepl("^RM",id,ignore.case=TRUE)) > min.match) return("RefMet")
-##   if(mean(grepl("^LM",id,ignore.case=TRUE)) > min.match) return("LIPID_MAPS")
-##   if(mean(grepl("^C[0-9]+",id,ignore.case=TRUE)) > min.match) return("KEGG")
-##   if(mean(grepl("^[A-Z].*[0-9]+[:][0-9]+", id)) > min.match) return("LION")
-##   ## try with
-##   MX <- apply(playdata::METABOLITE_ID, 2, function(s) sub("[A-Za-z]+","",s))
-##   idx <- gsub("^[A-Za-z]+[:]*","",id)
-##   nmatch <- apply(MX[,-1], 2, function(x) mean(idx %in% x))
-##   if(max(nmatch,na.rm=TRUE) > min.match) {
-##     max.id <- names(which.max(nmatch))
-##     message("matched METABOLITE_ID column: ", max.id)
-##     return(max.id)
-##   }
-##   return("unknown")
-## }
 
 #' Two-pass annotation of lipids using RefMet and rgoslin. This is a
 #' two-pass approach where missing annotations are retried using
@@ -1205,48 +1203,6 @@ ramp.annotate_metabolites <- function(id) {
 }
 
 
-#' This function maps rownames of matrix M to corresponding symbol as
-#' given in annotation dataframe 'annot'. This is for example useful
-#' if M is a sparse geneset matrix with non-standard identifiers as
-#' rownames and we want to convert to specific symbols as defined by
-#' the annotation dataframe 'annot'.
-#'
-#' NOTE. This is *not* exactly the same as rename_by2 because it tests
-#' any row entries in annotation table for match, not just the
-#' max.matching column.
-#'
-map2symbol <- function(M, annot, new_id = "symbol") {
-  if (!new_id %in% colnames(annot)) stop("new_id not in annot")
-  id.cols <- c("feature", "symbol", "gene_name", grep("_ID$", colnames(annot), value = TRUE))
-  id.cols
-  idmat <- as.matrix(annot[, id.cols])
-  symbol.gmt <- apply(idmat, 1, function(m) unique(m), simplify = FALSE)
-  symbol.gmt <- lapply(symbol.gmt, function(m) setdiff(m, c("-", "", NA)))
-  symbol.gmt <- lapply(symbol.gmt, function(m) sub("^[A-Za-z]+:", "", m))
-  symbol.gmt <- lapply(symbol.gmt, function(m) unique(m))
-  names(symbol.gmt) <- annot[, new_id]
-
-  symbol.map <- lapply(names(symbol.gmt), function(i) cbind(symbol.gmt[[i]], i))
-  symbol.map <- symbol.map[sapply(symbol.map, ncol) == 2]
-  symbol.map <- do.call(rbind, symbol.map)
-
-  id <- rownames(M)
-  idx <- sub("^[A-Za-z]+:", "", id)
-  names(idx) <- id
-  jj <- match(idx, symbol.map[, 1])
-  ii <- which(!is.na(jj))
-  if (length(ii) == 0) {
-    message("WARNING: no synonyms match input probes")
-    return(NULL)
-  }
-  M1 <- M[ii, , drop = FALSE]
-  matched.symbol <- symbol.map[jj[ii], 2]
-  rownames(M1) <- matched.symbol
-  # M1 <- M1[, Matrix::colSums(M1!=0)>0, drop=FALSE]
-  return(M1)
-}
-
-
 #' This adds some 'gene sets' based on the species class of the lipids
 #' according to the annotation table.
 #'
@@ -1271,7 +1227,7 @@ mx.create_metabolite_sets <- function(annot, gmin = 0, metmin = 5,
   if (TRUE) {
     M <- Matrix::t(playdata::MSETxMETABOLITE)
     annot2 <- cbind(annot, annot.symbol = ANNOT_SYMBOL)
-    M1 <- map2symbol(M, annot2, new_id = "annot.symbol")
+    M1 <- mat.map2symbol(M, annot2, new_id = "annot.symbol")
     if (!is.null(M1) && nrow(M1) && ncol(M1)) {
       gmt1 <- mat2gmt(M1)
       names(gmt1) <- sub("^METABOLITE:", "METABOLITE_PATHWAY:", names(gmt1))

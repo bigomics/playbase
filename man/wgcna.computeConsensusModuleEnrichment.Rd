@@ -18,3 +18,6 @@ wgcna.computeConsensusModuleEnrichment(
 Compute consensus enrichment by calculating overlapping enriched
 terms.
 }
+\seealso{
+WGCNAplus::computeConsensusModuleEnrichment
+}

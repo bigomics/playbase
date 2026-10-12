@@ -2,7 +2,8 @@
 % Please edit documentation in R/pgx-functions.R
 \name{computeFeatureScore}
 \alias{computeFeatureScore}
-\title{Compute feature scores}
+\title{Map any feature identifier to other feature column. Retain original
+match order. Default mapping to rownames.}
 \usage{
 computeFeatureScore(X, Y, features)
 }

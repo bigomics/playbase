@@ -17,9 +17,10 @@
 #' @export
 compute_extra <- function(pgx, extra = c(
                             "meta.go", "infer", "deconv", "drugs", ## "graph",
-                            "connectivity", "wordcloud", "wgcna", "mofa"
+                            "connectivity", "wordcloud", "wgcna", "wgcna_mox", "mofa"
                           ), sigdb = NULL, pgx.dir = "./data", libx.dir = "./libx",
-                          user_input_dir = getwd()) {
+                          user_input_dir = getwd()
+                          ) {
   timings <- c()
 
   if (length(extra) == 0) {
@@ -37,8 +38,10 @@ compute_extra <- function(pgx, extra = c(
 
   rna.counts <- pgx$counts
 
-  # If working on non-human species, use homologs
-  if (!all(is.na(pgx$genes$human_ortholog))) {
+  # If working on non-human species, use homologs. The reference sets
+  # used below (deconvolution signatures, cell-cycle/gender markers)
+  # are human-keyed, so bridge via human_ortholog specifically.
+  if (!is.null(pgx$genes$human_ortholog) && !all(is.na(pgx$genes$human_ortholog))) {
     rownames(rna.counts) <- probe2symbol(rownames(rna.counts), pgx$genes, query = "human_ortholog")
   }
 
@@ -237,8 +240,7 @@ compute_extra <- function(pgx, extra = c(
       tryCatch(
         {
           pgx$wgcna <- pgx.wgcna(
-            pgx,
-            ai_model = NULL ## no AI by default (yet)
+            pgx
           )
         },
         error = function(e) {
@@ -249,6 +251,40 @@ compute_extra <- function(pgx, extra = c(
       )
     })
     timings <- rbind(timings, c("wgcna", tt))
+  }
+
+  if ("wgcna_mox" %in% extra && isTRUE(pgx$datatype %in% c("multi-omics", "multiomics"))) {
+    info("[compute_extra] Computing multi-omics WGCNA...")
+    tt <- system.time({
+      tryCatch(
+        {
+          pgx$wgcna_mox <- wgcna.compute_multiomics(
+            dataX = mofa.split_data(pgx$X),
+            samples = pgx$samples,
+            contrasts = pgx$contrasts,
+            annot = pgx$genes,
+            GMT = pgx$GMT,
+            experiment = pgx$description,
+            power = NULL,
+            ngenes = 2000,
+            deepsplit = 2,
+            minmodsize = 10,
+            minKME = 0.3,
+            compute.enrichment = TRUE,
+            add.gsets = FALSE,
+            add.pheno = FALSE,
+            do.consensus = FALSE
+          )
+        },
+        error = function(e) {
+          message("[ERROR_WGCNA_MOX] FATAL: ", as.character(e))
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_WGCNA_MOX"))
+          return(NULL)
+        }
+      )
+    })
+    timings <- rbind(timings, c("wgcna_mox", tt))
+    info("[compute_extra] multi-omics WGCNA done")
   }
 
   if ("mofa" %in% extra) {
@@ -384,17 +420,19 @@ compute_deconvolution <- function(pgx, rna.counts = pgx$counts, full = FALSE) {
 #' @export
 compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
     
+  # normalizeOrganism accepts both "Human" and "Homo sapiens"; the species
+  # column may hold either depending on where it came from
   if (!is.null(pgx$organism)) {
-    is.human <- any(tolower(pgx$organism) == "human")
+    is.human <- any(normalizeOrganism(pgx$organism) == "Homo sapiens")
   } else {
-    is.human <- any(tolower(pgx.getOrganism(pgx)) == "human")
+    is.human <- any(normalizeOrganism(pgx.getOrganism(pgx)) == "Homo sapiens")
   }
 
   if (is.human) {
-    
+
     species <- unique(pgx$genes$species)
     jj <- 1:nrow(pgx$counts)
-    if (length(species) > 1) jj <- which(tolower(pgx$genes$species) == "human") 
+    if (length(species) > 1) jj <- which(normalizeOrganism(pgx$genes$species) == "Homo sapiens")
     rna.counts <- rna.counts[jj, , drop = FALSE]
     
     message("estimating cell cycle (using Seurat)...")
@@ -468,13 +506,13 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
     message("[compute_drugActivityEnrichment] computing activity CMAP for ", f)
     X <- ref.db[[i]]
     if (!pgx$organism %in% c("Human", "human")) {
+      ## L1000/CMAP reference profiles are human gene symbols
       rowid <- data.table::chmatch(rownames(X), pgx$genes$human_ortholog, nomatch = NA)
       rownames(X) <- pgx$genes$human_ortholog[rowid]
       X <- X[!is.na(rowid), , drop = FALSE]
     }
 
     xdrugs <- gsub("[_@].*$", "", colnames(X))
-    ndrugs <- length(table(xdrugs))
     is.drug <- grepl("activity|drug|ChemPert", f, ignore.case = TRUE)
 
     out1 <- NULL
@@ -482,6 +520,7 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
       pgx = pgx,
       X = X,
       xdrugs = xdrugs,
+      drug_info = NULL,
       methods = c("GSEA", "cor"),
       nmin = 10,
       nprune = 1000,
@@ -494,29 +533,37 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
     }
 
     ## --------------- attach annotation
-    annot0 <- NULL
-    if (is.drug) {
-      annot0 <- playdata::L1000_REPURPOSING_DRUGS
-      annot0$drug <- annot0$pert_iname
-      rownames(annot0) <- annot0$pert_iname
+    if("annot" %in% names(out1)) {
+      annot0 <- out1$annot
     } else {
-      ## gene perturbation OE/LIG/SH
-      dd <- rownames(out1[["GSEA"]]$X)
-      d1 <- dd
-      d2 <- sub("-.*", "", dd)
-      annot0 <- data.frame(drug = dd, moa = d1, target = d2)
-      rownames(annot0) <- dd
+      annot0 <- NULL
+      if (is.drug) {
+        annot0 <- playdata::L1000_REPURPOSING_DRUGS
+        annot0$drug <- annot0$pert_iname
+        rownames(annot0) <- annot0$pert_iname
+      } else {
+        ## gene perturbation OE/LIG/SH
+        dd <- rownames(out1[["GSEA"]]$X)
+        d1 <- dd
+        d2 <- sub("-.*", "", dd)
+        annot0 <- data.frame(drug = dd, moa = d1, target = d2)
+        rownames(annot0) <- dd
+      }
+      annot0 <- annot0[match(rownames(out1[["GSEA"]]$X), rownames(annot0)), ]
+      annot0 <- annot0[, c("drug", "moa", "target")]
+      rownames(annot0) <- rownames(out1[["GSEA"]]$X)
     }
-
-    annot0 <- annot0[match(rownames(out1[["GSEA"]]$X), rownames(annot0)), ]
-    rownames(annot0) <- rownames(out1[["GSEA"]]$X)
-
+    
     ## --------------- attach results to object
     db <- names(ref.db)[i]
-    pgx$drugs[[db]] <- out1[["GSEA"]]
-    pgx$drugs[[db]][["annot"]] <- annot0[, c("drug", "moa", "target")]
-    pgx$drugs[[db]][["clust"]] <- out1[["clust"]]
-    pgx$drugs[[db]][["stats"]] <- out1[["stats"]]
+    pgx$drugs[[db]] <- out1
+    if("GSEA" %in% names(out1)) {
+      pgx$drugs[[db]][["X"]] <- out1[["GSEA"]][["X"]]
+      pgx$drugs[[db]][["Q"]] <- out1[["GSEA"]][["Q"]]
+      pgx$drugs[[db]][["P"]] <- out1[["GSEA"]][["P"]]
+      pgx$drugs[[db]][["size"]] <- out1[["GSEA"]][["size"]]
+      pgx$drugs[[db]][["GSEA"]] <- NULL
+    }
   }
 
   return(pgx)
@@ -555,10 +602,15 @@ compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
     X <- readRDS(file = file.path(cmap.dir, ref))
     xdrugs <- gsub("[@_].*$", "", colnames(X))
 
+    ## drug annotation (drug, moa, target) for this database
+    db <- sub("-.*", "", ref)
+    annot0 <- utils::read.csv(file.path(cmap.dir, paste0(db, "-drugs.csv")))
+
     out1 <- pgx.computeDrugEnrichment(
       pgx = pgx,
       X = X,
       xdrugs = xdrugs,
+      drug_info = annot0,
       methods = c("GSEA", "cor"),
       nmin = 10,
       nprune = 1000,
@@ -566,18 +618,7 @@ compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
     )
 
     if (!is.null(out1)) {
-      ## attach annotation
-      db <- sub("-.*", "", ref)
-      annot0 <- utils::read.csv(file.path(cmap.dir, paste0(db, "-drugs.csv")))
-      rownames(annot0) <- annot0$drug
-      annot0 <- annot0[match(rownames(out1[["GSEA"]]$X), rownames(annot0)), ]
-      rownames(annot0) <- rownames(out1[["GSEA"]]$X)
-
-      s1 <- names(ref.db)[i]
-      pgx$drugs[[s1]] <- out1[["GSEA"]]
-      pgx$drugs[[s1]][["annot"]] <- annot0[, c("moa", "target")]
-      pgx$drugs[[s1]][["clust"]] <- out1[["clust"]]
-      pgx$drugs[[s1]][["stats"]] <- out1[["stats"]]
+      pgx$drugs[[names(ref.db)[i]]] <- out1
     }
   } ## end of for rr
 

@@ -32,7 +32,7 @@
 #' # TODO
 #' }
 #' @export
-pgx.initialize <- function(pgx) {
+pgx.initialize <- function(pgx, progress=NULL) {
   ## ---------------------------------------------------------------------
   ## This function must be called after creation of a PGX object
   ## and include some cleaning up and updating some internal
@@ -53,17 +53,38 @@ pgx.initialize <- function(pgx) {
     return(NULL)
   }
 
+  ## Backward compatibility: legacy objects (created before ortholog
+  ## became species-configurable) only have a 'human_ortholog[s]'
+  ## column, always mapped against human. Populate the new
+  ## 'ortholog[s]' column from it -- target species was implicitly
+  ## always Human for those objects -- WITHOUT discarding
+  ## human_ortholog[s]: the two columns now coexist by design.
+  ## 'ortholog' tracks whatever species the user picked at compute
+  ## time; 'human_ortholog' stays a guaranteed-human bridge for
+  ## resources that are themselves human-keyed (default genesets,
+  ## TileDB, GO/pathway lookups, etc). This must run before anything
+  ## below reads pgx$genes$ortholog, otherwise legacy objects look
+  ## like they have no ortholog column at all (empty families,
+  ## spurious re-lookup).
+  if ("human_ortholog" %in% colnames(pgx$genes) && !"ortholog" %in% colnames(pgx$genes)) {
+    pgx$genes$ortholog <- pgx$genes$human_ortholog
+  }
+  if ("human_orthologs" %in% colnames(pgx$genes) && !"orthologs" %in% colnames(pgx$genes)) {
+    pgx$genes$orthologs <- pgx$genes$human_orthologs
+  }
+
   if (is.null(pgx$version)) {
     # this is needed in case the species is human, and we dont have the
     # homolog column or if we have an old pgx which will ensure consistency
     # between old and new pgx
     pgx$genes$gene_name <- as.character(pgx$genes$gene_name)
     pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
-    pgx$genes$human_ortholog <- toupper(as.character(pgx$genes$gene_name))
+    pgx$genes$ortholog <- toupper(as.character(pgx$genes$gene_name))
+    pgx$genes$human_ortholog <- pgx$genes$ortholog
     pgx$genes$feature <- as.character(rownames(pgx$genes))
     pgx$genes$symbol <- pgx$genes$gene_name
     col_order <- c(
-      "feature", "symbol", "human_ortholog",
+      "feature", "symbol", "ortholog", "human_ortholog",
       "gene_title", "gene_name", colnames(pgx$genes)
     )
     col_order <- col_order[!duplicated(col_order)]
@@ -189,29 +210,54 @@ pgx.initialize <- function(pgx) {
   ## -----------------------------------------------------------------------------
   ## intersect and filter gene families (convert species to human gene sets)
   ## -----------------------------------------------------------------------------
-  # Here we use the homologs when available, instead of gene_name
+  if (is.null(pgx$organism)) {
+    pgx$organism <- pgx.getOrganism(pgx)
+  }
+
+  ## Legacy objects (created before ortholog_species was configurable)
+  ## don't have this field. Their ortholog column was always computed
+  ## against human, so default it to "Human" rather than leaving it NULL.
+  if (is.null(pgx$ortholog_species)) {
+    pgx$ortholog_species <- "Human"
+  }
+
+  # Check if human_ortholog is empty, if it is
+  # 1) run getHumanOrtholog (maybe it failed on pgx.compute bc server was unreachable)
+  # 2) if still empty, grab the symbols toUpper
+  # playdata::FAMILIES (and other human-keyed resources) are matched
+  # against human_ortholog specifically, not the species-configurable
+  # ortholog column.
+  if (is.null(pgx$genes$human_ortholog) ||
+        all(is.na(pgx$genes$human_ortholog)) || all(pgx$genes$human_ortholog == "")) {
+    ortho <- getHumanOrtholog(pgx$organism, pgx$genes$symbol)
+    genes_ho <- ortho$ortholog
+    if (all(is.na(genes_ho))) {
+      pgx$genes$human_ortholog <- toupper(pgx$genes$symbol)
+    } else {
+      pgx$genes$human_ortholog <- genes_ho
+      pgx$genes$human_orthologs <- ortho$orthologs
+      pgx$genes <- cleanupAnnotation(pgx$genes)
+    }
+  }
+
+  ## 'ortholog' (the user-chosen ortholog_species target) should
+  ## already be populated at compute time. If it's still missing or
+  ## empty (very old objects, or datatypes without ortholog lookup),
+  ## fall back to human_ortholog -- target species was implicitly
+  ## Human for those.
+  if (is.null(pgx$genes$ortholog) ||
+        all(is.na(pgx$genes$ortholog)) || all(pgx$genes$ortholog == "")) {
+    pgx$genes$ortholog <- pgx$genes$human_ortholog
+  }
+
+  # Here we use the human ortholog when available, instead of
+  # gene_name -- playdata::FAMILIES is human-keyed.
   genes <- ifelse(!is.na(pgx$genes$human_ortholog),
     pgx$genes$human_ortholog,
     pgx$genes$gene_name
   )
 
-  if (is.null(pgx$organism)) {
-    pgx$organism <- pgx.getOrganism(pgx)
-  }
-
-  # Check if human ortholog is empty, if it is
-  # 1) run getHumanOrtholog (maybe it failed on pgx.compute bc server was unreachable)
-  # 2) if still empty, grag the symbols toUpper
-  if (all(is.na(pgx$genes$human_ortholog)) || all(pgx$genes$human_ortholog == "")) {
-    genes_ho <- getHumanOrtholog(pgx$organism, pgx$genes$symbol)$human
-    if (all(is.na(genes_ho))) {
-      pgx$genes$human_ortholog <- toupper(pgx$genes$symbol)
-    } else {
-      pgx$genes$human_ortholog <- genes_ho
-      pgx$genes <- cleanupAnnotation(pgx$genes)
-    }
-  }
-
+  # multispecies: organism is a vector, so test with any()
   if (any(pgx$organism %in% c("Human", "human")) | !is.null(pgx$version)) {
     pgx$families <- lapply(playdata::FAMILIES, function(x) {
       intersect(x, genes)
@@ -301,31 +347,34 @@ pgx.initialize <- function(pgx) {
   }
 
   ## -----------------------------------------------------------------------------
-  ## Keep compatible with OLD formats
+  ## Update other results slots
   ## -----------------------------------------------------------------------------
-  message("[pgx.initialize] Keep compatible OLD formats...")
-  if (any(c("mono", "combo") %in% names(pgx$drugs))) {
-    dd <- pgx$drugs[["mono"]]
-    aa1 <- pgx$drugs[["annot"]]
-    if (is.null(aa1)) {
-      aa1 <- playdata::L1000_REPURPOSING_DRUGS
-      aa1$drug <- aa1$pert_iname
-      rownames(aa1) <- aa1$pert_iname
+  if(!is.null(pgx$drugs)) {
+    message("[pgx.initialize] Updating drug/cmap results...")    
+    if (any(c("mono", "combo") %in% names(pgx$drugs))) {
+      dd <- pgx$drugs[["mono"]]
+      aa1 <- pgx$drugs[["annot"]]
+      if (is.null(aa1)) {
+        aa1 <- playdata::L1000_REPURPOSING_DRUGS
+        aa1$drug <- aa1$pert_iname
+        rownames(aa1) <- aa1$pert_iname
+      }
+      dd[["annot"]] <- aa1
+      pgx$drugs[["activity/L1000"]] <- dd
+      if ("combo" %in% names(pgx$drugs)) {
+        dd2 <- pgx$drugs[["combo"]]
+        combo <- rownames(dd2$X)
+        aa2 <- pgx.createComboDrugAnnot(combo, aa1)
+        dd2[["annot"]] <- aa2
+        pgx$drugs[["activity-combo/L1000"]] <- dd2
+      }
+      pgx$drugs$mono <- NULL
+      pgx$drugs$annot <- NULL
+      pgx$drugs$combo <- NULL
     }
-    dd[["annot"]] <- aa1
-    pgx$drugs[["activity/L1000"]] <- dd
-    if ("combo" %in% names(pgx$drugs)) {
-      dd2 <- pgx$drugs[["combo"]]
-      combo <- rownames(dd2$X)
-      aa2 <- pgx.createComboDrugAnnot(combo, aa1)
-      dd2[["annot"]] <- aa2
-      pgx$drugs[["activity-combo/L1000"]] <- dd2
-    }
-    pgx$drugs$mono <- NULL
-    pgx$drugs$annot <- NULL
-    pgx$drugs$combo <- NULL
+    pgx <- pgx.update_drugs_results(pgx)
   }
-
+  
   ## ----------------------------------------------------------------
   ## Must haves
   ## ----------------------------------------------------------------

@@ -4,14 +4,7 @@
 \alias{wgcna.init}
 \title{Init/update function}
 \usage{
-wgcna.init(
-  wgcna,
-  llm = NULL,
-  img_model = NULL,
-  annot = NULL,
-  sv.tom = 40,
-  progress = NULL
-)
+wgcna.init(wgcna, annot = NULL, sv.tom = 40, progress = NULL)
 }
 \description{
 Init/update function

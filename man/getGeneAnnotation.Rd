@@ -2,17 +2,20 @@
 % Please edit documentation in R/pgx-annot.R
 \name{getGeneAnnotation}
 \alias{getGeneAnnotation}
-\title{Get gene annotation data using annothub or orthogene.}
+\title{Get feature annotation (for RNAseq and proteomics) data using annothub
+or gprofiler.}
 \usage{
 getGeneAnnotation(
   organism,
   probes,
   is.phospho = FALSE,
   use.ah = NULL,
-  verbose = TRUE,
-  methods = c("annothub", "gprofiler")
+  methods = c("annothub", "gprofiler", "uniprot"),
+  ortholog_species = "Human",
+  verbose = TRUE
 )
 }
 \description{
-Get gene annotation data using annothub or orthogene.
+Get feature annotation (for RNAseq and proteomics) data using annothub
+or gprofiler.
 }

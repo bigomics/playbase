@@ -4,7 +4,7 @@
 \alias{pgx.initialize}
 \title{Initialize and validate a PGX object}
 \usage{
-pgx.initialize(pgx)
+pgx.initialize(pgx, progress = NULL)
 }
 \arguments{
 \item{pgx}{A PGX object to initialize.}

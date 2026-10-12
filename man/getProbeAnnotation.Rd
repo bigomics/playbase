@@ -11,6 +11,7 @@ getProbeAnnotation(
   datatype,
   meth_type = NULL,
   probetype = "",
+  ortholog_species = "Human",
   annot_table = NULL
 )
 }

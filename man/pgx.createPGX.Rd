@@ -23,6 +23,7 @@ pgx.createPGX(
   description = "No description provided.",
   metadata = NULL,
   X = NULL,
+  preprocess = NULL,
   norm_method = "CPM",
   is.logx = NULL,
   dotimeseries = FALSE,
@@ -44,6 +45,9 @@ pgx.createPGX(
   remove.xxl = TRUE,
   remove.outliers = TRUE,
   add.gmt = TRUE,
+  ortholog_species = "Human",
+  include_default_gmt = TRUE,
+  species_go = NULL,
   settings = list(),
   sc_compute_settings = list()
 )
@@ -63,6 +67,11 @@ for the gene annotation table and the probe to symbol conversion.}
 \item{max.genesets}{Maximum number of gene sets to test. Default is 5000.}
 
 \item{X}{(Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.}
+
+\item{preprocess}{(Optional) Named list of preprocessing options. If provided and
+`X` is NULL, `X` is built from `counts` via [pgx.preprocess()] (normalization,
+imputation, missingness filter, outlier removal) instead of a plain log2 transform.
+This is how the Shiny upload flow and the compute endpoint obtain identical `X`.}
 
 \item{is.logx}{Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.}
 

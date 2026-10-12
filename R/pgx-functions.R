@@ -3,14 +3,6 @@
 ## Copyright (c) 2018-2026 BigOmics Analytics SA. All rights reserved.
 ##
 
-#' @export
-is.multiomics <- function(pgx) {
-  t1 <- t2 <- TRUE
-  if (!is.null(pgx$datatype)) t1 <- (pgx$datatype %in% c("multiomics", "multi-omics"))
-  t2 <- all(grepl("[:]", rownames(pgx$X)))
-  t1 || t2
-}
-
 #' Default merge by columns (cbind) with shared features on
 #' rows. Features are union of input matrices.
 #'
@@ -1106,29 +1098,6 @@ pgx.getOrganism <- function(pgx, capitalise = FALSE) {
 }
 
 
-## #' @title Get Levels of Group Variables
-## #' @description This function retrieves the levels of group variables in a data frame.
-## #' @param Y A data frame containing the data to be analyzed.
-## #' @details The function takes a data frame `Y` as input and searches for
-## #' columns that represent group variables. Group variables are identified as
-## #' columns that have a name that does not contain "title", "name", "sample", or
-## #' "patient" and have a majority of non-unique values.
-## #' Numeric columns are excluded from the search.
-## #' The levels of the identified group variables are then extracted and returned as a character vector.
-## #' @return A character vector representing the levels of the group variables in the input data frame.
-## #' @export
-## getLevels <- function(Y) {
-##   yy <- Y[, grep("title|name|sample|patient", colnames(Y), invert = TRUE), drop = FALSE] ## NEED RETHINK!!!!
-##   is.grpvar <- apply(yy, 2, function(y) max(table(y)) > 1,na.rm=TRUE)
-##   is.numeric <- apply(yy, 2, function(y) (length(table(y)) / length(y)) > 0.5)
-##   is.grpvar <- is.grpvar & !is.numeric
-##   yy <- yy[, is.grpvar, drop = FALSE]
-##   levels <- lapply(1:ncol(yy), function(i) unique(paste0(colnames(yy)[i], "=", yy[, i])))
-##   levels <- sort(unlist(levels))
-##   return(levels)
-## }
-
-
 #' @title Select samples from selected levels
 #'
 #' @description Selects rows from a data frame corresponding to selected factor levels.
@@ -1608,7 +1577,6 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   return(counts)
 }
 
-
 #' @export
 rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
   if (!all(rownames(counts) %in% rownames(annot_table))) {
@@ -1628,7 +1596,7 @@ rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
   # Guard against NA
   if (is.null(symbol) || all(is.na(symbol))) {
     gene.col <- head(intersect(
-      c("symbol", "gene_name", "human_ortholog"),
+      c("symbol", "gene_name", "human_ortholog", "ortholog"),
       colnames(annot_table)
     ), 1)
     if (length(gene.col) == 0) gene.col <- 1
@@ -1653,7 +1621,7 @@ rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
 
 
 #' Map any feature identifier to other feature column. Warning does
-#' not retain original match order. Default mapping to rownames.
+#' not retain original match order or length. Default mapping to rownames.
 #'
 #' @export
 map_probes <- function(annot, genes, column = NULL, ignore.case = FALSE,
@@ -1674,34 +1642,133 @@ map_probes <- function(annot, genes, column = NULL, ignore.case = FALSE,
     }
     ii <- which(annot[, column] %in% genes)
   }
-  annot[ii, target]
+  unique(annot[ii, target])
 }
+
+#' This function maps rownames of matrix M to corresponding symbol as
+#' given in annotation dataframe 'annot'. This is for example useful
+#' if M is a sparse geneset matrix with non-standard identifiers as
+#' rownames and we want to convert to specific symbols as defined by
+#' the annotation dataframe 'annot'.
+#'
+#' NOTE. This is *not* exactly the same as rename_by2 because it tests
+#' any row entries in annotation table for match, not just the
+#' max.matching column.
+#'
+mat.map2symbol <- function(M, annot, new_id = "symbol") {
+  if (!new_id %in% colnames(annot)) stop("new_id not in annot")
+  id.cols <- c("feature", "symbol", "gene_name", grep("_ID$", colnames(annot), value = TRUE))
+  id.cols
+  idmat <- as.matrix(annot[, id.cols])
+  symbol.gmt <- apply(idmat, 1, function(m) unique(m), simplify = FALSE)
+  symbol.gmt <- lapply(symbol.gmt, function(m) setdiff(m, c("-", "", NA)))
+  symbol.gmt <- lapply(symbol.gmt, function(m) sub("^[A-Za-z]+:", "", m))
+  symbol.gmt <- lapply(symbol.gmt, function(m) unique(m))
+  names(symbol.gmt) <- annot[, new_id]
+
+  symbol.map <- lapply(names(symbol.gmt), function(i) cbind(symbol.gmt[[i]], i))
+  symbol.map <- symbol.map[sapply(symbol.map, ncol) == 2]
+  symbol.map <- do.call(rbind, symbol.map)
+
+  id <- rownames(M)
+  idx <- sub("^[A-Za-z]+:", "", id)
+  names(idx) <- id
+  jj <- match(idx, symbol.map[, 1])
+  ii <- which(!is.na(jj))
+  if (length(ii) == 0) {
+    message("WARNING: no synonyms match input probes")
+    return(NULL)
+  }
+  M1 <- M[ii, , drop = FALSE]
+  matched.symbol <- symbol.map[jj[ii], 2]
+  rownames(M1) <- matched.symbol
+  # M1 <- M1[, Matrix::colSums(M1!=0)>0, drop=FALSE]
+  return(M1)
+}
+
+#' Map any feature identifier to other feature column. Warning does
+#' not retain original match order or length. Default mapping to
+#' symbol. Searches all columns of annot for matching.
+#'
+map2symbol <- function(annot, genes, target = "symbol", column = NULL,
+                       ignore.case = TRUE,  na.rm = TRUE) {
+  ## new_id="symbol";na.rm=TRUE;unique=TRUE;keep.prefix=FALSE
+
+  ## add rownames and extra columns
+  annot$rownames <- rownames(annot)
+  annot$rownames2 <- sub("^[A-Za-z]+:", "", rownames(annot)) ## strip prefix
+
+  ## handle old style annot without symbol column
+  if (target == "symbol" && !"symbol" %in% colnames(annot) &&
+    "gene_name" %in% colnames(annot)) {
+    target <- "gene_name"
+  }
+
+  ## iterative matching of probes. can match multiple columns.
+  idx <- rep(NA, length(genes))
+  names(idx) <- genes
+  probe_match <- apply(annot, 2, function(x) { sum(genes %in% x) })
+  probe_match <- probe_match[ which(probe_match > 0) ]
+  match.cols <- names(sort(probe_match, decreasing = TRUE))
+  ##match.cols <- head(match.cols,1)
+  match.cols  
+  k <- match.cols[1]
+  for (k in match.cols) {
+    ## from_id <- names(which.max(probe_match))
+    from <- annot[, k]
+    ii <- which(is.na(idx))
+    if(ignore.case) {
+      jj <- match( tolower(genes[ii]), tolower(from))
+    } else {
+      jj <- match(genes[ii], from)
+    }
+    if (any(!is.na(jj))) {
+      mm <- which(!is.na(jj))
+      kk <- ii[mm]
+      if(length(kk)) idx[kk] <- jj[mm]
+    }
+    if (sum(is.na(idx)) == 0) break
+  }
+
+  ## bail out if no match at all
+  if (all(is.na(idx))) {
+    na.genes <- rep(NA, length(genes))
+    return(na.genes)
+  }
+
+  ## create matched counts/data table
+  new.name <- annot[idx, target]
+  if(na.rm) new.name <- setdiff( new.name, c("",NA))
+  
+  return(new.name)
+}
+
+
 
 #' Map any feature identifier to other feature column. Retain original
 #' match order. Default mapping to rownames.
 #'
-#' @export
-match_probes <- function(annot, genes, column = NULL, ignore.case = FALSE,
-                         target = "rownames") {
-  ## check probe name, short probe name or gene name for match
-  annot <- cbind(annot, rownames = rownames(annot))
-  if (ignore.case) {
-    if (is.null(column)) {
-      column <- which.max(apply(annot, 2, function(x) {
-        sum(toupper(genes) %in% toupper(x), na.rm = TRUE)
-      }))
-    }
-    ii <- match(toupper(genes), toupper(annot[, column]))
-  } else {
-    if (is.null(column)) {
-      column <- which.max(apply(annot, 2, function(x) sum(genes %in% x, na.rm = TRUE)))
-    }
-    ii <- match(genes, annot[, column])
-  }
-  jj <- genes %in% c(NA, "NA", "", "-", "---")
-  if (length(jj)) ii[jj] <- NA
-  annot[ii, target]
-}
+## match_probes <- function(annot, genes, column = NULL, ignore.case = FALSE,
+##                          target = "rownames") {
+##   ## check probe name, short probe name or gene name for match
+##   annot <- cbind(annot, rownames = rownames(annot))
+##   if (ignore.case) {
+##     if (is.null(column)) {
+##       column <- which.max(apply(annot, 2, function(x) {
+##         sum(toupper(genes) %in% toupper(x), na.rm = TRUE)
+##       }))
+##     }
+##     ii <- match(toupper(genes), toupper(annot[, column]))
+##   } else {
+##     if (is.null(column)) {
+##       column <- which.max(apply(annot, 2, function(x) sum(genes %in% x, na.rm = TRUE)))
+##     }
+##     ii <- match(genes, annot[, column])
+##   }
+##   jj <- genes %in% c(NA, "NA", "", "-", "---")
+##   if (length(jj)) ii[jj] <- NA
+##   annot[ii, target]
+## }
 
 #' Compute feature scores
 #'
@@ -2176,7 +2243,7 @@ psort <- function(x, p.col = NULL) {
 #' @return A data frame representing the tidied input data.
 #'
 #' @export
-tidy.dataframe <- function(Y) {
+tidy_dataframe <- function(Y) {
   Y <- Y[, which(colMeans(is.na(Y)) < 1), drop = FALSE]
   Y <- apply(Y, 2, function(x) sub("^NA$", NA, x)) ## all characters
   Y <- Y[, which(colMeans(is.na(Y)) < 1), drop = FALSE]
@@ -2215,7 +2282,7 @@ tidy.dataframe <- function(Y) {
 #' param.class(A)
 #' }
 #' @export
-param.class <- function(A) sapply(tidy.dataframe(A), class)
+param.class <- function(A) sapply(tidy_dataframe(A), class)
 
 
 #' @describeIn isanumber The function tests if the input \code{x} is of numeric type.
@@ -2295,7 +2362,7 @@ expandAnnotationMatrix <- function(A) {
 #' @export
 expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = TRUE) {
   ## get expanded annotation matrix
-  a1 <- tidy.dataframe(M)
+  a1 <- tidy_dataframe(M)
   nlevel <- apply(a1, 2, function(x) length(setdiff(unique(x), NA)))
   nterms <- colSums(!is.na(a1))
   nratio <- nlevel / nterms

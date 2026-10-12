@@ -24,14 +24,6 @@ pgx.load <- function(file, verbose = 0) {
 }
 
 
-#' @describeIn pgx.save deprecated version to save pgx/ngs file.
-#' @export
-ngs.save <- function(ngs, file, update.date = TRUE, light = TRUE, system = FALSE) {
-  message("WARNING: ngs.save() is deprecated. please use pgx.save()")
-  pgx.save(ngs, file = file, update.date = update.date, light = light, system = system)
-}
-
-
 #' Save PGX object to file
 #'
 #' @title Save PGX Object

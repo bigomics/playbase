@@ -23,3 +23,6 @@ wgcna.computeModuleEnrichment(
 Compute enrichment of each WGCNA module using various
 methods. Handles single-type and multi-omics WGCNA objects.
 }
+\seealso{
+WGCNAplus::computeModuleEnrichment
+}

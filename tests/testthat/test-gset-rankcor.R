@@ -21,13 +21,3 @@ test_that("gset.rankcor constant rho", {
   expect_equal(mean(result$rho), 0, tolerance = 1)
 })
 
-# ' Test for gx.nnmcorrect.SAVE
-# ' deprecated?
-# x <- matrix(rnorm(100 * 30), 100, 30)
-# y <- gl(3, 10)
-# test_that("gx.nnmcorrect.SAVE returns a matrix of proper dim", {
-#   xcorr <- playbase::gx.nnmcorrect.SAVE(x, y)
-
-#   expect_type(xcorr, "double")
-#   expect_equal(dim(xcorr), dim(x))
-# })
