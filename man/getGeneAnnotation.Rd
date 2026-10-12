@@ -10,7 +10,7 @@ getGeneAnnotation(
   probes,
   is.phospho = FALSE,
   use.ah = NULL,
-  methods = c("annothub", "gprofiler"),
+  methods = c("annothub", "gprofiler", "uniprot"),
   ortholog_species = "Human",
   verbose = TRUE
 )
