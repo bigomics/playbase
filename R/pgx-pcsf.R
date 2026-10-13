@@ -323,9 +323,10 @@ solvePCSF <- function(X, fx, ppi, labels = NULL, ntop = 250, ncomp = 3,
   if (!is.null(labels)) names(labels) <- rownames(X)
 
   ppi.genes <- unique(c(ppi$from, ppi$to))
-  ## candidate pool before the PPI filter and ntop cut, kept for omitted-node reporting
+  ## candidate pool (signed fx, prize = |fx|) before the PPI filter and ntop cut, kept for omitted-node reporting
   candidates <- data.frame(
-    id = names(fx), prize = abs(fx), in_ppi = names(fx) %in% ppi.genes,
+    id = names(fx), fx = unname(fx), prize = abs(fx),
+    in_ppi = names(fx) %in% ppi.genes,
     stringsAsFactors = FALSE
   )
   ppi.ratio <- mean(names(fx) %in% ppi.genes)
