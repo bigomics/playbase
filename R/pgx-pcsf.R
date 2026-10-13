@@ -182,6 +182,11 @@ pgx.computePCSF <- function(pgx, contrast, datatypes = NULL,
     igraph::V(pcsf)$rho <- rx[vname]
     igraph::V(pcsf)$foldchange <- fx[vname]
   }
+  ## the candidate pool gets the same fold change, so omitted nodes report it too
+  cand <- igraph::graph_attr(pcsf, "pcsf_candidates")
+  fc <- if (!is.null(contrast)) F[, contrast] else sqrt(rowMeans(F**2, na.rm = TRUE))
+  cand$foldchange <- unname(fc[cand$id])
+  igraph::graph_attr(pcsf, "pcsf_candidates") <- cand
 
   return(pcsf)
 }
@@ -313,6 +318,11 @@ pgx.computePCSF_gset <- function(pgx, contrast,
     igraph::V(pcsf)$rho <- rx[vname]
     igraph::V(pcsf)$foldchange <- fx[vname]
   }
+  ## the candidate pool gets the same fold change, so omitted nodes report it too
+  cand <- igraph::graph_attr(pcsf, "pcsf_candidates")
+  fc <- if (!is.null(contrast)) F[, contrast] else sqrt(rowMeans(F**2, na.rm = TRUE))
+  cand$foldchange <- unname(fc[cand$id])
+  igraph::graph_attr(pcsf, "pcsf_candidates") <- cand
 
   return(pcsf)
 }
