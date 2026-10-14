@@ -532,7 +532,7 @@ pgx.createPGX <- function(counts,
   pgx$probe_type <- probe_type
 
   message("[createPGX] annotating genes")
-  pgx$genes <- getProbeAnnotation(
+  pgx$genes <- playbase.annotation::pgx.annotate(
     organism = pgx$organism,
     probes = rownames(pgx$counts),
     datatype = pgx$datatype,
@@ -540,7 +540,7 @@ pgx.createPGX <- function(counts,
     probetype = pgx$probe_type,
     ortholog_species = pgx$ortholog_species,    
     annot_table = annot_table
-  )
+  )$genes
 
   ## Array and genome build, so consumers never re-guess them from probe ids.
   ## 450K and EPIC annotate against hg19, EPIC v2 against hg38.

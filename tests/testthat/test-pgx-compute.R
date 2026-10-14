@@ -751,12 +751,15 @@ test_that("methylomics EPIC v2 ids are collapsed and array/genome recorded", {
       rownames(X) <- unique(bare)
       X
     },
-    getProbeAnnotation = function(probes, meth_type, ...) {
-      annotated <<- meth_type
-      data.frame(feature = probes, symbol = probes, row.names = probes)
-    },
     compute_cellcycle_gender = function(pgx) pgx,
     .package = "playbase"
+  )
+  local_mocked_bindings(
+    pgx.annotate = function(probes, meth_type, ...) {
+      annotated <<- meth_type
+      list(genes = data.frame(feature = probes, symbol = probes, row.names = probes))
+    },
+    .package = "playbase.annotation"
   )
 
   pgx <- suppressMessages(playbase::pgx.createPGX(
