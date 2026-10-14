@@ -9,78 +9,13 @@
 ## ================================================================================
 
 
+#' Get annotation info for one feature of a PGX object
+#'
+#' Forwards to `playbase.annotation::pgx.getFeatureInfo()`.
+#'
 #' @export
 pgx.getFeatureInfo <- function(pgx, feature) {
-  if (is.null(feature) || length(feature) == 0) {
-    return(NULL)
-  }
-  if (is.na(feature) || feature == "") {
-    return(NULL)
-  }
-
-  annot <- as.list(pgx$genes[feature, ])
-  names(annot) <- sub("uniprot", "protein", names(annot))
-  annot$gene_name <- NULL
-  annot$chr <- NULL
-  annot$pos <- NULL
-  annot$tx_len <- NULL
-
-  datatype <- pgx$datatype
-  if (pgx$datatype == "multi-omics") {
-    ## dtype <- c("mx"="metabolomics","px"="proteomics","gx"="transcriptomics")
-    datatype <- ifelse(grepl("^mx:|metabolomics", feature), "metabolomics", datatype)
-  }
-
-  if (!"protein" %in% names(annot) && datatype != "metabolomics") {
-    annot[["protein"]] <- gene2uniprot(annot$symbol, pgx$organism)
-  }
-
-  ## GENE_SUMMARY is keyed on human gene symbols, so look up via the
-  ## guaranteed-human ortholog column, not the species-configurable one.
-  if (!is.null(annot$human_ortholog) && annot$human_ortholog %in% names(playdata::GENE_SUMMARY)) {
-    annot.summary <- playdata::GENE_SUMMARY[annot$human_ortholog]
-    annot.summary <- gsub("Publication Note.*|##.*", "", annot.summary)
-    annot[["summary"]] <- annot.summary
-  }
-
-  if (datatype == "metabolomics") {
-    annot <- getMetaboliteInfo(
-      organism = pgx$organism,
-      id = annot$symbol,
-      info = annot
-    )
-  } else {
-    annot <- info.add_hyperlinks(
-      annot, feature, datatype,
-      nm.symbol = "symbol",
-      nm.prot = "protein",
-      ## the GeneCards link built here only resolves for human symbols
-      nm.ortholog = "human_ortholog",
-      as.link = TRUE, add.summary = FALSE
-    )
-  }
-
-  if (!is.null(annot)) {
-    annot <- annot[!duplicated(names(annot))]
-    ## reorder
-    nn1 <- intersect(
-      c(
-        "gene_symbol", "organism", "name", "map_location",
-        "uniprot", "databases", "summary", names(annot)
-      ),
-      names(annot)
-    )
-    nn2 <- setdiff(names(annot), nn1)
-    annot <- annot[c(nn1, nn2)]
-    names(annot) <- sub("gene_symbol", "symbol", names(annot))
-    names(annot) <- sub("uniprot", "protein", names(annot))
-    names(annot) <- sub("map_location", "genome location", names(annot))
-  } else {
-    annot <- list()
-    annot$summary <- "(no info available)"
-  }
-
-  return(annot)
+  playbase.annotation::pgx.getFeatureInfo(pgx = pgx, feature = feature)
 }
 
 #' Retrieve gene information from different databases (AnnotHub,

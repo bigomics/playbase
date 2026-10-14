@@ -62,6 +62,8 @@ ngs.getGeneAnnotation <- function(...) {
 
 #' Get probetype annotation for organism and datatype. For multi-omics
 #' probe names must be prefixed with data type.
+#'
+#' Forwards to `playbase.annotation::getProbeAnnotation()`.
 #' @export
 getProbeAnnotation <- function(organism,
                                probes,
@@ -70,117 +72,15 @@ getProbeAnnotation <- function(organism,
                                probetype = "",
                                ortholog_species = "Human",
                                annot_table = NULL) {
-  if (is.null(datatype)) datatype <- "unknown"
-  if (is.null(probetype)) probetype <- "unknown"
-  if (is.null(ortholog_species)) ortholog_species <- "Human"
-
-  unknown.organism <- (tolower(organism) %in% c("no organism", "custom", "unkown"))
-  unknown.datatype <- (datatype %in% c("custom", "unkown"))
-  unknown.probetype <- (probetype %in% c("custom", "unkown"))
-  annot.unknown <- unknown.organism || unknown.datatype || unknown.probetype
-  organism <- normalizeOrganism(organism)
-  
-  if (datatype == "methylomics") {
-    require_epigenetics()
-    ## NB: || not |. `!NULL %in% x` is logical(0), which makes `if` throw.
-    if (is.null(meth_type) || !meth_type %in% c("450K array", "EPIC array", "EPIC v2 array")) {
-      meth_type <- "450K array"
-    }
-    genes <- playbase.epigenetics::annotate_methylomics(organism, probes, meth_type = meth_type)
-    return(methyl_manifest_chr(genes, meth_type))
-  }
-
-  ## clean probe names
-  probes <- trimws(probes)
-  probes[probes == "" | is.na(probes)] <- "NA"
-  probes0 <- make_unique(probes) ## make unique but do not clean
-  if (!is.null(annot_table)) {
-    rownames(annot_table) <- make_unique(rownames(annot_table))
-  }
-
-  ## only first feature (warning: can make probe not unique). This
-  ## assumes semicolumn is NEVER used for single feature names. 
-  probes <- sub("[;].*","",probes) ## only first probe
-  probes <- make_unique(probes)
-  
-  genes <- NULL
-  if (annot.unknown) {
-    # annotation table is mandatory for 'No organism' (until server side
-    # can handle missing genesets)
-    info("[getProbeAnnotation] annotating with custom annotation")
-    genes <- getCustomAnnotation2(probes0, annot_table)
-  } else if (datatype == "metabolomics") {
-    mx.check <- mx.check_mapping(
-      probes,
-      all.db = c("playdata", "annothub", "refmet"), check.first = TRUE
-    )
-    mx.check <- mean(!is.na(mx.check)) > 0.01
-    if (mx.check) {
-      genes <- getMetaboliteAnnotation(
-        probes,
-        extra_annot = TRUE,
-        annot_table = annot_table
-      )
-    } else {
-      ## Fallback on custom
-      dbg("[getProbeAnnotation] WARNING: not able to map metabolomics probes")
-    }
-  } else if (datatype == "lipidomics") {
-    genes <- getLipidAnnotation(
-      probes,
-      extra_annot = TRUE,
-      annot_table = annot_table
-    )
-  } else if (datatype == "multi-omics") {
-    genes <- getMultiOmicsProbeAnnotation(
-      organism = organism,
-      probes = probes,
-      ortholog_species = ortholog_species      
-    )
-  } else {
-    if (datatype == "proteomics") {
-      is.phospho <- annotate_phospho_residue(probes, detect.only = TRUE)
-    } else {
-      is.phospho <- FALSE
-    }
-
-    genes <- getGeneAnnotation(
-      organism = organism,
-      probes = probes,
-      ortholog_species = ortholog_species,
-      is.phospho = is.phospho
-    )
-  }
-
-  ## final fallback is genes==NULL
-  if (is.null(genes)) {
-    dbg("[getProbeAnnotation] WARNING: fallback to UNKNOWN probes")
-    genes <- getCustomAnnotation(probes0, custom_annot = NULL)
-  }
-
-  ## if annot_table is provided we (priority) override our annotation
-  ## and append any extra columns.
-  if (!is.null(genes) && !is.null(annot_table)) {
-    dbg("[getProbeAnnotation] merging custom annotation table")
-    ## colnames(annot_table) <- sub("^ortholog$", "ortholog",
-    ##   colnames(annot_table),
-    ##   ignore.case = TRUE
-    ## )
-    colnames(annot_table) <- sub("^Symbol$|^gene$|^gene_name$", "symbol",
-      colnames(annot_table),
-      ignore.case = TRUE
-    )
-    kk <- match(rownames(genes), rownames(annot_table))
-    annot_table <- annot_table[kk,]
-    rownames(annot_table) <- rownames(genes)
-    genes <- merge_annot_table(genes, annot_table, priority = 2)
-  }
-
-  genes <- genes[match(probes, genes$feature), ]
-  rownames(genes) <- probes0
-  genes <- cleanupAnnotation(genes)
-
-  return(genes)
+  playbase.annotation::getProbeAnnotation(
+    organism = organism,
+    probes = probes,
+    datatype = datatype,
+    meth_type = meth_type,
+    probetype = probetype,
+    ortholog_species = ortholog_species,
+    annot_table = annot_table
+  )
 }
 
 
@@ -1116,18 +1016,19 @@ ORTHOLOG_BATCH_SIZE = 1500
 #'   aggregation of multiple methods. This package needs internet
 #'   connection.
 #'
+#' @description Forwards to `playbase.annotation::getHumanOrtholog()`.
+#'
 #' @export
 getHumanOrtholog <- function(organism, symbols,
                              ortho.methods = c("homologene","gprofiler","babelgene",
                                "gprofiler2","uppercase"),
                              verbose = 1) {
-  df <- getOrtholog(
-    symbols = symbols,
+  playbase.annotation::getHumanOrtholog(
     organism = organism,
-    target_species = "Human",
+    symbols = symbols,
     ortho.methods = ortho.methods,
-    verbose = verbose)
-  df
+    verbose = verbose
+  )
 }
 
 

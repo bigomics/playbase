@@ -13,6 +13,5 @@ check_species_probetype(
 )
 }
 \description{
-Automatically detects species by trying to detect probetype from
-list of test_species. Warning. bit slow.
+Forwards to `playbase.annotation::check_species_probetype()`.
 }

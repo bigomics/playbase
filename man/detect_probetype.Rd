@@ -13,5 +13,5 @@ detect_probetype(
 )
 }
 \description{
-Detect probe type from probe set
+Forwards to `playbase.annotation::detect_probetype()`.
 }

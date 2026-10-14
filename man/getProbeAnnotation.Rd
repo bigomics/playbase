@@ -16,6 +16,5 @@ getProbeAnnotation(
 )
 }
 \description{
-Get probetype annotation for organism and datatype. For multi-omics
-probe names must be prefixed with data type.
+Forwards to `playbase.annotation::getProbeAnnotation()`.
 }

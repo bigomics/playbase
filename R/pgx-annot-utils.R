@@ -584,51 +584,17 @@ go.merge_duplicates <- function(gmt) {
 }
 
 #' @title Detect probe type from probe set
+#' @description Forwards to `playbase.annotation::detect_probetype()`.
 #' @export
 detect_probetype <- function(organism, probes, datatype = NULL, 
                              nprobe = 1000, verbose = FALSE) {
-
-  organism <- normalizeOrganism(organism)
-
-  if (is.null(datatype) && all(grepl("[:]", probes))) {
-    dbg("[detect_probetype] datatype is multi-omics?")
-    datatype <- "multi-omics"
-  }
-
-  if (!is.null(datatype) && datatype %in% c("metabolomics","lipidomics")) {
-    probe_type <- mx.detect_probetype(probes)
-    return(probe_type)
-  }
-
-  if (!is.null(datatype) && datatype == "multi-omics") {
-    mx.probes <- sub("^mx:", "", grep("^mx:", probes, value = TRUE))
-    px.probes <- sub("^px:", "", grep("^px:", probes, value = TRUE))
-    gx.probes <- sub("^gx:", "", grep("^gx:", probes, value = TRUE))
-    gx.probe_types <- px.probe_types <- mx.probe_types <- NA
-    if (length(gx.probes)) gx.probe_types <- detect_probetype(organism, gx.probes)
-    if (length(px.probes)) px.probe_types <- detect_probetype(organism, px.probes)
-    if (length(mx.probes)) mx.probe_types <- mx.detect_probetype(mx.probes)
-    probe_type <- c(gx = gx.probe_types, px = px.probe_types, mx = mx.probe_types)
-    dtypes <- sort(unique(sub(":.*", "", probes)))
-    probe_type <- probe_type[dtypes]
-    return(probe_type)
-  }
-
-  ptype <- detect_probetype.ANNOTHUB(
-    organism = organism, probes = probes, orgdb = NULL,
-    nprobe = nprobe, use.ah = NULL, datatype = datatype,
-    verbose = verbose) 
-
-  if(is.null(ptype) || is.na(ptype)) {
-    ptype <- detect_probetype.GPROFILER(
-      organism = organism, probes = probes, nprobe = nprobe,
-      datatype = datatype, verbose = verbose) 
-  }
-
-  if(is.null(ptype) || is.na(ptype)) {
-    return(NA)  ## expects NA for fail
-  }
-  return(ptype)
+  playbase.annotation::detect_probetype(
+    organism = organism,
+    probes = probes,
+    datatype = datatype,
+    nprobe = nprobe,
+    verbose = verbose
+  )
 }
 
 #' @title Detect probe type from probe set
@@ -863,60 +829,20 @@ check_probetype <- function(organism, probes, verbose=1) {
 #' Automatically detects species by trying to detect probetype from
 #' list of test_species. Warning. bit slow.
 #'
+#' Forwards to `playbase.annotation::check_species_probetype()`.
+#'
 #' @export
 check_species_probetype <- function(
   probes,
   test_species = c("Human", "Mouse", "Rat"),
   datatype = NULL, annot.cols = NULL
 ) {
-  ## No check if custom
-  custom_datatype <- !is.null(datatype) && tolower(datatype) %in% c("custom", "unknown", "")
-  custom_organism <- any(tolower(test_species) %in% c("custom", "unknown", "no organism"))
-
-  if (custom_datatype || custom_organism) {
-    out <- rep("custom", length(test_species))
-    names(out) <- test_species
-    return(as.list(out))
-  }
-
-  probes <- unique(.clean_probe_names(probes))
-  ## report possible probetype per organism
-  ptype <- vector("list", length(test_species))
-  names(ptype) <- test_species
-  if (datatype == "metabolomics") {
-    mx.type <- NA
-    if (!is.null(annot.cols)) {
-      mx.ids <- toupper(colnames(playdata::METABOLITE_ID)[-1])
-      mx.ids <- c(mx.ids, paste0(mx.ids, "_ID"))
-      has.id <- any(toupper(annot.cols) %in% mx.ids)
-      if (has.id) {
-        ids <- intersect(toupper(annot.cols), mx.ids)
-        mx.type <- ids[1]
-      }
-    }
-    if (all(is.na(mx.type))) {
-      db <- mx.check_mapping(probes, check.first = TRUE)
-      table(db)
-      if (!all(is.na(db))) {
-        mx.type <- names(which.max(table(db[!is.na(db)])))
-      }
-    }
-    for (s in test_species) ptype[[s]] <- mx.type
-  } else {
-    s <- "Human"
-    for (s in test_species) {
-      ptype[[s]] <- detect_probetype(
-        organism = s,
-        probes = probes,
-        datatype = datatype,
-        verbose = FALSE
-      )
-    }
-  }
-
-  ## remove NA
-  ptype <- ptype[!sapply(ptype, function(p) all(is.na(p)))]
-  return(ptype)
+  playbase.annotation::check_species_probetype(
+    probes = probes,
+    test_species = test_species,
+    datatype = datatype,
+    annot.cols = annot.cols
+  )
 }
 
 #' Annotate phosphosite with residue symbol. Feature names must be of
