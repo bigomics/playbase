@@ -5,7 +5,7 @@
 
 #' Fit Contrasts with All Gene Set Enrichment Methods
 #'
-#' This function fits contrasts using multiple gene set enrichment methods, such as fisher, ssgsea, gsva, spearman, camera, fry, gsea.permPH, gsea.permGS, gseaPR, and fgsea.
+#' This function fits contrasts using multiple gene set enrichment methods, such as fisher, ssgsea, gsva, spearman, camera, fry, gsea.permPH, gsea.permGS, gseaPR, fgsea, and globaltest.
 #'
 #' @param gmt The gene set matrix.
 #' @param X The gene expression matrix.
@@ -31,7 +31,8 @@ gset.fitContrastsWithAllMethods <- function(gmt,
                                             use.replaid = FALSE,
                                             batch.correct = TRUE) {
   ALL.GENESET.METHODS <- c(
-    "fisher", "ssgsea", "gsva", "spearman", "camera", "fry", "fgsea"
+    "fisher", "ssgsea", "gsva", "spearman", "camera", "fry", "fgsea",
+    "globaltest"
   )
 
   timings <- c()
@@ -325,6 +326,34 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       output <- output[, c("NES", "pval", "padj", "size", "leadingEdge")]
       colnames(output) <- c("score", "p.value", "q.value", "SIZE", "LEADING GENES")
       res[["fgsea"]] <- output
+    }
+
+    ## Goeman's global test (as in MetaboAnalyst's QEA): self-contained, so it
+    ## keeps its power on small sets and short feature lists (metabolomics),
+    ## where the rank-based methods have little to rank. It is non-directional,
+    ## so the score takes its sign from the members' mean difference, as
+    ## camera's does from its Direction.
+    if ("globaltest" %in% method) {
+      sets <- lapply(gmt, intersect, rownames(xx))
+      sets <- sets[lengths(sets) > 0]
+      tt <- system.time(
+        gt <- globaltest::gt(yy, t(xx), subsets = sets, model = "logistic")
+      )
+      timings <- rbind(timings, c("globaltest", tt))
+      pv <- globaltest::result(gt)[names(sets), "p-value"]
+      dx <- rowMeans(xx[, yy == 1, drop = FALSE], na.rm = TRUE) -
+        rowMeans(xx[, yy == 0, drop = FALSE], na.rm = TRUE)
+      dir <- sign(sapply(sets, function(s) mean(dx[s], na.rm = TRUE)))
+      output <- data.frame(
+        score = dir * -log10(pv),
+        p.value = pv,
+        q.value = stats::p.adjust(pv, method = "BH"),
+        SIZE = lengths(sets),
+        row.names = names(sets)
+      )
+      output <- output[match(names(gmt), rownames(output)), ]
+      rownames(output) <- names(gmt)
+      res[["globaltest"]] <- output
     }
 
     res2 <- list(results = res, timings = timings)
