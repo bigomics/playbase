@@ -13,6 +13,8 @@
 #'
 #' Forwards to `playbase.annotation::pgx.getFeatureInfo()`.
 #'
+#' @param pgx A pgx object.
+#' @param feature One feature id (row name of `pgx$genes`).
 #' @export
 pgx.getFeatureInfo <- function(pgx, feature) {
   playbase.annotation::pgx.getFeatureInfo(pgx = pgx, feature = feature)

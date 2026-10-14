@@ -6,6 +6,11 @@
 \usage{
 pgx.getFeatureInfo(pgx, feature)
 }
+\arguments{
+\item{pgx}{A pgx object.}
+
+\item{feature}{One feature id (row name of `pgx$genes`).}
+}
 \description{
 Forwards to `playbase.annotation::pgx.getFeatureInfo()`.
 }
