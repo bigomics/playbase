@@ -40,5 +40,5 @@ gset.fitContrastsWithAllMethods(
 A list containing the results of the gene set enrichment analyses for each method.
 }
 \description{
-This function fits contrasts using multiple gene set enrichment methods, such as fisher, ssgsea, gsva, spearman, camera, fry, gsea.permPH, gsea.permGS, gseaPR, and fgsea.
+This function fits contrasts using multiple gene set enrichment methods, such as fisher, ssgsea, gsva, spearman, camera, fry, gsea.permPH, gsea.permGS, gseaPR, fgsea, and globaltest.
 }
