@@ -182,6 +182,11 @@ pgx.computePCSF <- function(pgx, contrast, datatypes = NULL,
     igraph::V(pcsf)$rho <- rx[vname]
     igraph::V(pcsf)$foldchange <- fx[vname]
   }
+  ## the candidate pool gets the same fold change, so omitted nodes report it too
+  cand <- igraph::graph_attr(pcsf, "pcsf_candidates")
+  fc <- if (!is.null(contrast)) F[, contrast] else sqrt(rowMeans(F**2, na.rm = TRUE))
+  cand$foldchange <- unname(fc[cand$id])
+  igraph::graph_attr(pcsf, "pcsf_candidates") <- cand
 
   return(pcsf)
 }
@@ -313,6 +318,11 @@ pgx.computePCSF_gset <- function(pgx, contrast,
     igraph::V(pcsf)$rho <- rx[vname]
     igraph::V(pcsf)$foldchange <- fx[vname]
   }
+  ## the candidate pool gets the same fold change, so omitted nodes report it too
+  cand <- igraph::graph_attr(pcsf, "pcsf_candidates")
+  fc <- if (!is.null(contrast)) F[, contrast] else sqrt(rowMeans(F**2, na.rm = TRUE))
+  cand$foldchange <- unname(fc[cand$id])
+  igraph::graph_attr(pcsf, "pcsf_candidates") <- cand
 
   return(pcsf)
 }
@@ -323,6 +333,12 @@ solvePCSF <- function(X, fx, ppi, labels = NULL, ntop = 250, ncomp = 3,
   if (!is.null(labels)) names(labels) <- rownames(X)
 
   ppi.genes <- unique(c(ppi$from, ppi$to))
+  ## candidate pool (signed fx, prize = |fx|) before the PPI filter and ntop cut, kept for omitted-node reporting
+  candidates <- data.frame(
+    id = names(fx), fx = unname(fx), prize = abs(fx),
+    in_ppi = names(fx) %in% ppi.genes,
+    stringsAsFactors = FALSE
+  )
   ppi.ratio <- mean(names(fx) %in% ppi.genes)
   ppi.num <- sum(names(fx) %in% ppi.genes)
   if (ppi.ratio < 0.10 || ppi.num < 10) {
@@ -408,6 +424,7 @@ solvePCSF <- function(X, fx, ppi, labels = NULL, ntop = 250, ncomp = 3,
     sel.kk <- head(order(-cmp$csize), ncomp)
   }
   pcsf <- igraph::subgraph(pcsf, cmp$membership %in% sel.kk)
+  igraph::graph_attr(pcsf, "pcsf_candidates") <- candidates
 
   class(pcsf) <- c("PCSF", "igraph")
   return(pcsf)
