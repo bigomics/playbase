@@ -24,3 +24,8 @@ test_that("detect_probetype gives the playbase.annotation result", {
     playbase.annotation::detect_probetype("Human", probes)
   )
 })
+
+test_that("mx.convert_probe detects the probe type through playbase.annotation", {
+  probes <- c("8874", "15903")
+  expect_identical(mx.convert_probe(probes), mx.convert_probe(probes, "ChEBI"))
+})
