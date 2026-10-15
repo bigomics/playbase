@@ -250,11 +250,39 @@ test_that("pgx.compute_biomarkers is reproducible and keeps the legacy shape", {
   expect_identical(rownames(res$X), top)
   expect_identical(names(res$y), colnames(res$X))
   expect_s3_class(res$rf, "rpart")
+  ## one method: its tree is the consensus tree, shared rather than regrown
+  expect_identical(names(res$trees), c("consensus", "xgboost"))
+  expect_identical(res$trees$consensus, res$rf)
+  expect_identical(res$trees$xgboost, res$rf)
   expect_identical(unname(res$rank[top, "consensus"]), 1:10)
   expect_identical(rownames(res$stability$frequency), top)
   expect_identical(res$single_auc$feature, top)
   expect_identical(sum(res$class_counts), length(res$y))
   expect_false(is.null(res$cv))
+})
+
+test_that("pgx.compute_biomarkers grows one tree per ranking, on its own panel", {
+  pgx <- outlier_pgx()
+  run <- function() {
+    suppressMessages(playbase::pgx.compute_biomarkers(
+      pgx, "activated",
+      methods = c("correlation", "ftest"), resampling = "fast", top_n = 10,
+      validate = FALSE
+    ))
+  }
+  res <- run()
+  expect_true(identical(run(), res)) ## base identical(), not waldo
+  expect_true(identical(withr::with_options(list(mc.cores = 2L), run()), res))
+
+  expect_identical(names(res$trees), c("consensus", "correlation", "ftest"))
+  expect_identical(res$trees$consensus, res$rf)
+  for (ranking in names(res$trees)) {
+    tree <- res$trees[[ranking]]
+    expect_s3_class(tree, "rpart")
+    panel <- rownames(res$rank)[order(res$rank[, ranking])][1:10]
+    expect_identical(unname(tree$orig.names), panel, label = ranking)
+    expect_identical(environment(tree$terms), baseenv(), label = ranking)
+  }
 })
 
 test_that("pgx.compute_biomarkers refuses a class under 3 samples", {

@@ -51,7 +51,9 @@ order (the first \code{top_n} rows are the consensus panel):
 \item{R}{features x methods rank percentiles, the legacy importance matrix.}
 \item{y}{named phenotype vector of the samples used.}
 \item{X}{features x samples expression.}
-\item{rf}{rpart decision tree on the consensus panel.}
+\item{rf}{rpart decision tree on the consensus panel, as \code{trees$consensus}.}
+\item{trees}{named list of rpart decision trees, \code{consensus} and one per
+  method, each grown on that ranking's top \code{top_n} features.}
 \item{pipeline}{\code{"v2"}.}
 \item{methods}{the methods run.}
 \item{params}{resampling, B, repeats, n_perm, seed and top_n.}
@@ -82,7 +84,8 @@ Steps, in order:
 \enumerate{
   \item Selection on all samples. Each method's scores become rank
     percentiles; the consensus is their rank product (geometric mean of
-    ranks). The decision tree is grown on the consensus top features.
+    ranks). A decision tree is grown on the consensus top features and on
+    each method's.
   \item Stability: selection on B stratified 80\% subsamples (a stratified
     bootstrap when a class is too small), giving per-feature selection
     frequency in the top \code{top_n}, rank median and IQR, and the Nogueira

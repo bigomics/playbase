@@ -577,7 +577,8 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
 #' \enumerate{
 #'   \item Selection on all samples. Each method's scores become rank
 #'     percentiles; the consensus is their rank product (geometric mean of
-#'     ranks). The decision tree is grown on the consensus top features.
+#'     ranks). A decision tree is grown on the consensus top features and on
+#'     each method's.
 #'   \item Stability: selection on B stratified 80\% subsamples (a stratified
 #'     bootstrap when a class is too small), giving per-feature selection
 #'     frequency in the top \code{top_n}, rank median and IQR, and the Nogueira
@@ -602,7 +603,9 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
 #' \item{R}{features x methods rank percentiles, the legacy importance matrix.}
 #' \item{y}{named phenotype vector of the samples used.}
 #' \item{X}{features x samples expression.}
-#' \item{rf}{rpart decision tree on the consensus panel.}
+#' \item{rf}{rpart decision tree on the consensus panel, as \code{trees$consensus}.}
+#' \item{trees}{named list of rpart decision trees, \code{consensus} and one per
+#'   method, each grown on that ranking's top \code{top_n} features.}
 #' \item{pipeline}{\code{"v2"}.}
 #' \item{methods}{the methods run.}
 #' \item{params}{resampling, B, repeats, n_perm, seed and top_n.}
@@ -673,11 +676,23 @@ pgx.compute_biomarkers <- function(pgx, pheno, methods = "xgboost",
   selection <- biomarker_select(X, y, methods)
   keep <- rownames(X)[order(selection$rank[, "consensus"])]
   keep <- keep[rowSums(selection$rank[keep, , drop = FALSE] <= top_n) > 0]
-  panel <- utils::head(keep, top_n)
-  rf <- makePartitionTree(X[panel, , drop = FALSE], prep$y, add.splits = 0)
-  ## the formula would otherwise carry the builder's frame, data included, into
-  ## the payload and make two equal runs non-identical()
-  environment(rf$terms) <- baseenv()
+  grow_tree <- function(panel) {
+    tree <- makePartitionTree(X[panel, , drop = FALSE], prep$y, add.splits = 0)
+    ## the formula would otherwise carry the builder's frame, data included,
+    ## into the payload and make two equal runs non-identical()
+    environment(tree$terms) <- baseenv()
+    tree
+  }
+  ## one tree per ranking, grown serially in a fixed order; a single method's
+  ## consensus is that method's ranking, so its tree is shared, not regrown
+  trees <- list(consensus = grow_tree(utils::head(keep, top_n)))
+  for (method in methods) {
+    trees[[method]] <- if (length(methods) == 1L) {
+      trees$consensus
+    } else {
+      grow_tree(utils::head(keep[order(selection$rank[keep, method])], top_n))
+    }
+  }
 
   stability <- biomarker_stability(X, y, methods, params$B, top_n = top_n, seed = seed, progress = tick)
   by_feature <- c("frequency", "rank_median", "rank_iqr_lo", "rank_iqr_hi")
@@ -692,7 +707,8 @@ pgx.compute_biomarkers <- function(pgx, pheno, methods = "xgboost",
     R = selection$S[keep, , drop = FALSE],
     y = prep$y,
     X = X[keep, , drop = FALSE],
-    rf = rf,
+    rf = trees$consensus,
+    trees = trees,
     pipeline = "v2",
     methods = methods,
     params = params,
