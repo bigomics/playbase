@@ -86,3 +86,45 @@ test_that("pgx.compute_importance(multiomics = 1) honours select_samples", {
   expect_setequal(names(imp$y), keep)
   expect_identical(colnames(imp$X), names(imp$y))
 })
+
+## Seeded snapshot of the whole result, recorded before the data preparation
+## moved into `.biomarker_prepare()` (pgx-biomarkers.R). Every random draw in
+## the function -- the augmentation `sample()`, the `rnorm()` noise, the
+## cv.glmnet folds, randomForest and rpart's cross-validation -- comes from R's
+## RNG and runs serially, so one explicit seed and RNG kind fix the result. The
+## tree is reduced to its structure; the rpart object also holds a call and
+## terms that say nothing about behaviour. Recorded on macOS: xgboost, glmnet
+## and randomForest builds can rank ties differently elsewhere, so CI skips it.
+
+test_that("pgx.compute_importance output is unchanged (seeded snapshot)", {
+  skip_on_ci()
+  pgx <- outlier_pgx()
+
+  grDevices::pdf(NULL)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  withr::local_seed(
+    2024,
+    .rng_kind = "Mersenne-Twister",
+    .rng_normal_kind = "Inversion",
+    .rng_sample_kind = "Rejection"
+  )
+  suppressMessages(utils::capture.output(
+    imp <- playbase::pgx.compute_importance(pgx, pheno = "activated", nfeatures = 20)
+  ))
+
+  expect_named(imp, c("R", "y", "X", "rf"))
+  expect_snapshot_value(
+    list(
+      R = imp$R,
+      y = imp$y,
+      X = imp$X,
+      rf = list(
+        frame = imp$rf$frame[, c("var", "n", "wt", "dev", "yval")],
+        splits = imp$rf$splits,
+        orig.names = imp$rf$orig.names
+      )
+    ),
+    style = "deparse",
+    tolerance = 1e-6
+  )
+})

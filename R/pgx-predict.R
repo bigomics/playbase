@@ -28,97 +28,27 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     multiomics <- 2
   }
 
-  ft <- ifelse(is.null(filter_features), "<all>", filter_features)
-  sel <- select_features
-
-  if (!(pheno %in% colnames(pgx$samples))) {
-    message("ERROR. pheno not in pgx$samples")
+  prep <- .biomarker_prepare(
+    pgx, pheno,
+    level = level,
+    filter_features = filter_features,
+    select_features = select_features,
+    select_samples = select_samples,
+    nfeatures = nfeatures
+  )
+  if (is.null(prep)) {
     return(NULL)
   }
-
-  ## WARNING. this converts any phenotype to discrete
-  ## A phenotype is only ever read next to an expression profile -- `X` is
-  ## subset by names(y) below -- so `y` is defined on pgx$X's samples. Outlier
-  ## removal may have cut those below the upload pgx$samples spans (D-24).
-  ss <- intersect(rownames(pgx$samples), colnames(pgx$X))
-  y <- as.character(pgx$samples[ss, pheno])
-  names(y) <- ss
-  if (!is.null(select_samples)) {
-    y <- y[names(y) %in% select_samples]
-  }
-  y <- y[!is.na(y)]
-
-  if (length(unique(y)) < 2) {
-    message("[pgx.compute_importance] Less than 2 phenotype levels after sample filtering. Returning NULL.")
-    return(NULL)
-  }
-  if (length(y) < 4) {
-    message("[pgx.compute_importance] Not enough samples after filtering (n=", length(y), "). Returning NULL.")
-    return(NULL)
-  }
-
-  ## -------------------------------------------
-  ## select features
-  ## -------------------------------------------
-  if (FALSE && level == "geneset") {
-    X <- pgx$gsetX ## NB: this will augment
-    if (any(is.na(X))) {
-      X <- X[complete.cases(X), , drop = FALSE]
-    }
-  } else {
-    X <- pgx$X ## NB: this will augment
-    if (any(is.na(X))) {
-      X <- .pgx_impute_svd2(X)
-    }
-  }
-
-  ## ----------- filter with selected features
-  info("[pgx.compute_importance] Filtering features...")
-
-  is.family <- (ft %in% c(names(pgx$families), names(playdata::iGSETS)))
-  if (ft == "<custom>" && !is.null(sel) && length(sel) > 0) {
-    ## ------------- filter with user selection
-    if (sel[1] != "") {
-      features <- playbase::filterProbes(pgx$genes, sel)
-      pp <- which(rownames(X) %in% features)
-      X <- X[pp, , drop = FALSE]
-    }
-  } else if (is.family) {
-    pp <- rownames(X)
-    if (ft == "<all>") {
-      pp <- rownames(X)
-    } else if (ft %in% names(pgx$families)) {
-      gg <- pgx$families[[ft]]
-      pp <- filterProbes(pgx$genes, gg)
-    } else if (ft %in% names(playdata::iGSETS)) {
-      gg <- unlist(playdata::getGSETS(ft))
-      pp <- filterProbes(pgx$genes, gg)
-    }
-    pp <- intersect(pp, rownames(X))
-    X <- X[pp, , drop = FALSE]
-  }
-
-  if (nrow(X) == 0) {
-    message("[pgx.compute_importance] No features remaining after filtering. Returning NULL.")
-    return(NULL)
-  }
-
-  ## ----------- restrict to top SD -----------
-  is.multiomics <- (pgx$datatype == "multi-omics")
-  if (is.multiomics) {
-    X <- mofa.topSD(X, 10 * nfeatures) ## top 100
-  } else {
-    sdx <- matrixStats::rowSds(X, na.rm = TRUE)
-    X <- head(X[order(-sdx), , drop = FALSE], 10 * nfeatures) ## top 100
-  }
+  X <- prep$X
+  y <- prep$y
 
   ## ----------------------------------------
   ## augment
   ## ----------------------------------------
   ## Keep the phenotype as it stands before augmentation. It is the only copy
-  ## that carries all of the work above -- the discretisation, the cut to
-  ## pgx$X's samples, select_samples and the NA drop -- and the single-pass
-  ## MOFA branch below puts it back.
+  ## that carries all of .biomarker_prepare()'s work -- the discretisation, the
+  ## cut to pgx$X's samples, select_samples and the NA drop -- and the
+  ## single-pass MOFA branch below puts it back.
   y0 <- y
 
   ## augment to at least 100 samples per level :)
