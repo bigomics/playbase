@@ -138,6 +138,28 @@ test_that("biomarker_stability is reproducible and finds a planted signal", {
   expect_true(identical(run(), res)) ## base identical(), not waldo
 })
 
+test_that("biomarker_stability does not count 0-score ties as selected", {
+  ## pure noise, rows in SD order as the driver screens them: sparse methods
+  ## score most features exactly 0, and those ties rank by row. Were they
+  ## counted, the highest-SD rows would fill every round's top 50.
+  for (seed in 1:2) {
+    fx <- signal_fixture(15, 500, seed = seed)
+    X <- fx$X[order(-matrixStats::rowSds(fx$X)), ]
+    stability <- function(method) {
+      playbase:::biomarker_stability(X, fx$y, method, B = 10, top_n = 50, seed = seed)
+    }
+    baseline <- stability("correlation")$index[["correlation"]]
+    for (method in c("xgboost", "elastic_net", "splsda")) {
+      res <- stability(method)
+      label <- paste(method, "seed", seed)
+      expect_lte(res$index[[method]], baseline + 0.15, label = label)
+      ## not the run of top-SD rows that tie-breaking would select every round
+      expect_lte(sum(res$frequency[1:50, method] == 1), 3, label = label)
+      expect_identical(res$frequency[, method], res$frequency[, "consensus"], label = label)
+    }
+  }
+})
+
 test_that("biomarker_stability falls back to a bootstrap for a tiny class", {
   fx <- signal_fixture(2, 30, signal = 3)
   res <- playbase:::biomarker_stability(fx$X, fx$y, "correlation", B = 3, top_n = 5, seed = 1)
@@ -196,6 +218,53 @@ test_that("biomarker_cv validates a planted signal on held-out samples", {
   expect_named(cv$metrics, c(
     "method", "k", "sensitivity", "specificity", "balanced_accuracy", "ppv", "npv"
   ))
+})
+
+test_that("biomarker_cv confusion counts are integers adding up to each class", {
+  ## largest remainders: the row (0.2, 1.6, 1.6, 1.6) of a class of 5 rounds
+  ## to (0, 2, 2, 1), where rounding then fixing the diagonal gave -1
+  row <- matrix(c(0.2, 1.6, 1.6, 1.6), 1)
+  expect_identical(playbase:::.biomarker_round_rows(row), matrix(c(0L, 2L, 2L, 1L), 1))
+
+  withr::local_seed(3)
+  y <- factor(rep(c("a", "b", "c"), c(7, 9, 5)))
+  X <- matrix(stats::rnorm(30 * length(y)), 30, dimnames = list(paste0("gene", 1:30), paste0("s", seq_along(y))))
+  cv <- playbase:::biomarker_cv(X, y, "correlation", k_grid = 5, repeats = 20, n_perm = 0, seed = 1)
+  expect_type(cv$confusion$count, "integer")
+  expect_true(all(cv$confusion$count >= 0))
+  sums <- with(cv$confusion, tapply(count, list(method, truth), sum))
+  expect_identical(sums["consensus", ], c(a = 7L, b = 9L, c = 5L))
+  expect_identical(sums["correlation", ], c(a = 7L, b = 9L, c = 5L))
+})
+
+test_that("the consensus is validated on the consensus top k, refitted by every method", {
+  fx <- signal_fixture(10, 30, signal = 2)
+  ## a fixed ranking with three different top-5 panels: correlation genes
+  ## 1-5, ftest 6-10, consensus 11-15
+  ranking <- cbind(correlation = 1:30, ftest = c(6:10, 1:5, 11:30), consensus = c(6:15, 1:5, 16:30))
+  rownames(ranking) <- rownames(fx$X)
+  panels <- character()
+  spy <- lapply(playbase:::BIOMARKER_METHODS, function(m) {
+    fit_predict <- m$fit_predict
+    m$fit_predict <- function(Xtr, ytr, Xte) {
+      panels <<- c(panels, paste(rownames(Xtr), collapse = ","))
+      fit_predict(Xtr, ytr, Xte)
+    }
+    m
+  })
+  local_mocked_bindings(BIOMARKER_METHODS = spy, .package = "playbase")
+  genes <- function(i) paste0("gene", i, collapse = ",")
+
+  withr::local_seed(1)
+  playbase:::.biomarker_cv_pass(fx$X, fx$y, c("correlation", "ftest"), 5L, 5L, ranking)
+  ## per fold: each method on its own panel, then both on the consensus panel
+  expect_identical(panels, rep(c(genes(1:5), genes(6:10), genes(11:15), genes(11:15)), 5))
+
+  ## one method is its own consensus: not refitted
+  panels <- character()
+  pass <- playbase:::.biomarker_cv_pass(fx$X, fx$y, "correlation", 5L, 5L, ranking[, c("correlation", "consensus")])
+  expect_identical(panels, rep(genes(1:5), 5))
+  expect_identical(pass$prob[, , "consensus", ], pass$prob[, , "correlation", ])
 })
 
 test_that("biomarker_cv on three classes reports macro AUC and argmax calls", {
@@ -259,6 +328,22 @@ test_that("pgx.compute_biomarkers is reproducible and keeps the legacy shape", {
   expect_identical(res$single_auc$feature, top)
   expect_identical(sum(res$class_counts), length(res$y))
   expect_false(is.null(res$cv))
+  expect_identical(res$cv$null_k, 10L)
+  expect_identical(unique(res$cv$null$k), 10L)
+
+  ## rounds carry their own seeds, so the core count does not matter
+  skip_on_os("windows")
+  expect_true(identical(withr::with_options(list(mc.cores = 2L), run()), res))
+})
+
+test_that("pgx.compute_biomarkers runs at the largest seed", {
+  ## per-round seeds wrap into R's integer range instead of overflowing
+  res <- suppressMessages(playbase::pgx.compute_biomarkers(
+    outlier_pgx(), "activated",
+    resampling = "fast", top_n = 10, seed = .Machine$integer.max
+  ))
+  expect_identical(res$params$seed, .Machine$integer.max)
+  expect_false(is.null(res$cv))
 })
 
 test_that("pgx.compute_biomarkers grows one tree per ranking, on its own panel", {
@@ -297,6 +382,28 @@ test_that("pgx.compute_biomarkers refuses a class under 3 samples", {
     class = "biomarker_small_class"
   )
   expect_identical(err$class_counts[["notact"]], 2L)
+})
+
+test_that("pgx.compute_biomarkers refuses fewer than 5 features", {
+  pgx <- outlier_pgx()
+  pgx$X <- pgx$X[1:4, ]
+  err <- expect_error(
+    suppressMessages(playbase::pgx.compute_biomarkers(pgx, "activated")),
+    class = "biomarker_too_few_features"
+  )
+  expect_identical(err$n_features, 4L)
+})
+
+test_that("pgx.compute_biomarkers drops samples with an empty phenotype", {
+  pgx <- outlier_pgx()
+  blank <- colnames(pgx$X)[1:2]
+  pgx$samples[blank, "activated"] <- ""
+  res <- suppressMessages(playbase::pgx.compute_biomarkers(
+    pgx, "activated", resampling = "fast", top_n = 10L, validate = FALSE
+  ))
+  expect_false(any(blank %in% names(res$y)))
+  expect_setequal(names(res$class_counts), c("act", "notact"))
+  expect_identical(sum(res$class_counts), length(res$y))
 })
 
 test_that("pgx.compute_biomarkers scores only the selected samples", {

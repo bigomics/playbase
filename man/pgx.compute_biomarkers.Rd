@@ -20,7 +20,8 @@ pgx.compute_biomarkers(
 \item{pgx}{A pgx object.}
 
 \item{pheno}{Column of \code{pgx$samples} to predict. It is discretised as
-in \code{pgx.compute_importance()}.}
+in \code{pgx.compute_importance()}; samples whose value is \code{NA} or
+\code{""} are dropped.}
 
 \item{methods}{Selection methods: any of \code{"xgboost"},
 \code{"elastic_net"}, \code{"random_forest"}, \code{"splsda"},
@@ -64,14 +65,17 @@ order (the first \code{top_n} rows are the consensus panel):
 \item{stability}{B, bootstrap, and features x (methods, consensus)
   frequency, rank_median, rank_iqr_lo, rank_iqr_hi; index per column.}
 \item{cv}{\code{NULL} unless \code{validate}: folds, repeats, n_perm,
-  k_grid, positive_class, and data frames auc, roc (two classes only),
-  confusion, metrics and null.}
+  k_grid, null_k (the null's panel size), positive_class, and data frames
+  auc, roc (two classes only), confusion (integer mean counts per repeat,
+  each row adding up to its class size), metrics and null.}
 \item{single_auc}{data frame of feature, all-sample AUC and the class the
   feature is highest in (descriptive, not validated).}
 \item{playbase_version}{package version.}
 
-An error of class \code{biomarker_small_class} is raised when a class has
-fewer than 3 samples.
+An error of class \code{biomarker_small_class} (carrying
+\code{class_counts}) is raised when a class has fewer than 3 samples, and
+one of class \code{biomarker_too_few_features} (carrying
+\code{n_features}) when fewer than 5 features remain after filtering.
 }
 \description{
 Selects biomarkers for a discrete phenotype with one or more
@@ -88,18 +92,26 @@ Steps, in order:
     each method's.
   \item Stability: selection on B stratified 80\% subsamples (a stratified
     bootstrap when a class is too small), giving per-feature selection
-    frequency in the top \code{top_n}, rank median and IQR, and the Nogueira
-    stability index.
+    frequency, rank median and IQR, and the Nogueira stability index. A
+    feature counts as selected in a round when it ranks in the top
+    \code{top_n} and its raw score is above 0 (for the consensus, in any
+    method): sparse methods score most features exactly 0, and their rank
+    among those ties only reflects SD order. Ranks are reported unchanged.
   \item Validation: repeated stratified K-fold CV, K = min(5, smallest class),
     with selection and fitting inside each training fold at panel sizes
-    5, 10, 20 and 50. Two-class calls use a Youden threshold chosen on the
-    training fold; multiclass calls take the most probable class. The
-    consensus predicts by the mean of the methods' probabilities. Labels are
-    permuted to give a null AUC at panel size 10.
+    5, 10, 20 and 50. Each method is fitted on its own top k. The consensus
+    validates the consensus top k: every method is refitted on it and the
+    consensus predicts by the mean of their probabilities (a single method
+    is its own consensus). Two-class calls use a Youden threshold chosen on
+    the training fold; multiclass calls take the most probable class. Labels
+    are permuted to give a null AUC at panel size 10 (\code{cv$null_k}),
+    with the same definitions.
 }
 Rounds run under \code{parallel::mclapply} with
 \code{getOption("mc.cores", 1)} cores, each with its own seed, so results do
-not depend on the core count. The caller's RNG kind is restored on exit.
+not depend on the core count. Stability rounds, CV repeats and permutations
+draw seeds from separate ranges, wrapped into R's integer range, so any
+seed in [0, 2^31 - 1] works. The caller's RNG kind is restored on exit.
 Multi-omics MOFA importance is not supported here; see
 \code{pgx.compute_importance()}.
 }

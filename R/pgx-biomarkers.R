@@ -10,12 +10,14 @@
 
 # Phenotype, sample filter, imputation, feature filter and top-SD cut shared by
 # pgx.compute_importance() and the biomarker pipeline. Returns NULL (with a
-# message) when too few classes, samples or features remain.
+# message) when too few classes, samples or features remain. drop_empty also
+# drops samples whose phenotype is "" (the legacy path keeps them as a class).
 .biomarker_prepare <- function(pgx, pheno, level = "genes",
                                filter_features = NULL,
                                select_features = NULL,
                                select_samples = NULL,
-                               nfeatures = 50) {
+                               nfeatures = 50,
+                               drop_empty = FALSE) {
   ft <- ifelse(is.null(filter_features), "<all>", filter_features)
   sel <- select_features
 
@@ -35,6 +37,7 @@
     y <- y[names(y) %in% select_samples]
   }
   y <- y[!is.na(y)]
+  if (drop_empty) y <- y[y != ""]
 
   if (length(unique(y)) < 2) {
     message("[pgx.compute_importance] Less than 2 phenotype levels after sample filtering. Returning NULL.")
@@ -300,23 +303,30 @@ BIOMARKER_METHODS <- list(
 # rank percentile (features x methods, in (0, 1], higher is better); the
 # consensus is the rank product (geometric mean of the methods' ranks) as a
 # percentile; rank holds integer ranks, 1 = best, for methods and consensus.
+# scored (same columns as rank) is TRUE where the raw score is above 0, for
+# the consensus in any method: sparse methods (xgboost, elastic net, sPLS-DA)
+# score most features exactly 0, and those ties rank by row, i.e. by SD.
 biomarker_select <- function(X, y, methods) {
   y <- as.factor(y)
   d <- nrow(X)
-  S <- vapply(methods, function(m) {
-    score <- BIOMARKER_METHODS[[m]]$importance(X, y)
-    rank(score[rownames(X)]) / d
+  scores <- vapply(methods, function(m) {
+    BIOMARKER_METHODS[[m]]$importance(X, y)[rownames(X)]
   }, numeric(d))
-  S <- matrix(S, d, dimnames = list(rownames(X), methods))
+  scores <- matrix(scores, d, dimnames = list(rownames(X), methods))
+  S <- scores
+  S[] <- apply(scores, 2, rank) / d
   product <- exp(rowMeans(log(d + 1 - d * S)))
   consensus <- rank(-product) / d
   rank <- apply(-cbind(S, consensus = consensus), 2, rank, ties.method = "first")
-  list(S = S, consensus = consensus, rank = rank)
+  scored <- cbind(scores > 0, consensus = rowSums(scores > 0) > 0)
+  list(S = S, consensus = consensus, rank = rank, scored = scored)
 }
 
 # Selection on B stratified subsamples (frac of each class, or a stratified
-# bootstrap when that leaves a class under 2): how often each feature reaches
-# the top_n, its rank median and IQR, and the Nogueira index of the top_n sets.
+# bootstrap when that leaves a class under 2): how often each feature is
+# selected, its rank median and IQR, and the Nogueira index of the selections.
+# A feature is selected in a round when it ranks in the top_n and is scored
+# (biomarker_select), so a 0 score never counts however it ranks.
 biomarker_stability <- function(X, y, methods, B, frac = 0.8, top_n, seed,
                                 progress = NULL) {
   y <- as.factor(y)
@@ -324,12 +334,14 @@ biomarker_stability <- function(X, y, methods, B, frac = 0.8, top_n, seed,
   size <- floor(frac * lengths(by_class))
   bootstrap <- any(size < 2)
   if (bootstrap) size <- lengths(by_class)
-  ranks <- .biomarker_rounds(B, seed, function(b) {
+  rounds <- .biomarker_rounds(B, seed, function(b) {
     idx <- unlist(Map(function(i, n) i[sample.int(length(i), n, replace = bootstrap)], by_class, size))
-    biomarker_select(X[, idx, drop = FALSE], y[idx], methods)$rank
+    selection <- biomarker_select(X[, idx, drop = FALSE], y[idx], methods)
+    list(rank = selection$rank, selected = selection$rank <= top_n & selection$scored)
   }, "Stability round", progress)
-  ranks <- simplify2array(ranks) ## features x (methods + consensus) x rounds
-  in_top <- ranks <= min(top_n, nrow(X))
+  ## features x (methods + consensus) x rounds
+  ranks <- simplify2array(lapply(rounds, `[[`, "rank"))
+  in_top <- simplify2array(lapply(rounds, `[[`, "selected"))
   list(
     B = B,
     bootstrap = bootstrap,
@@ -341,12 +353,13 @@ biomarker_stability <- function(X, y, methods, B, frac = 0.8, top_n, seed,
   )
 }
 
-# Nogueira et al. (2018) stability of fixed-size selections (features x rounds,
-# logical): 1 when every round picks the same set, about 0 for random sets.
+# Nogueira et al. (2018) stability of selections (features x rounds, logical;
+# sizes may vary): 1 when every round picks the same set, about 0 for random
+# sets. NA when the rounds select nothing or everything.
 .biomarker_nogueira <- function(selected) {
   d <- nrow(selected)
   k <- mean(colSums(selected))
-  if (k >= d) {
+  if (k == 0 || k >= d) {
     return(NA_real_)
   }
   p <- rowMeans(selected)
@@ -354,15 +367,16 @@ biomarker_stability <- function(X, y, methods, B, frac = 0.8, top_n, seed,
   1 - mean(variance) / (k / d * (1 - k / d))
 }
 
-# Runs fun(i) for i in 1..n, each under set.seed(seed + i), in batches of
-# getOption("mc.cores") forks, so results depend on neither scheduling nor
-# core count. progress(message) is called from this process per finished round.
+# Runs fun(i) for i in 1..n, each under its own seed, seed + i wrapped into
+# R's integer range, in batches of getOption("mc.cores") forks, so results
+# depend on neither scheduling nor core count. progress(message) is called
+# from this process per finished round.
 .biomarker_rounds <- function(n, seed, fun, label, progress = NULL) {
   cores <- getOption("mc.cores", 1L)
   out <- vector("list", n)
   for (batch in split(seq_len(n), ceiling(seq_len(n) / cores))) {
     out[batch] <- parallel::mclapply(batch, function(i) {
-      set.seed(seed + i)
+      set.seed(as.integer((as.numeric(seed) + i) %% .Machine$integer.max))
       fun(i)
     }, mc.cores = cores)
     failed <- Filter(function(x) inherits(x, "try-error"), out[batch])
@@ -375,7 +389,9 @@ biomarker_stability <- function(X, y, methods, B, frac = 0.8, top_n, seed,
 # Repeated stratified K-fold CV with selection and fitting inside each training
 # fold, at each panel size k; then n_perm label permutations of one repeat at
 # null_k. Set select_in_fold = FALSE only to measure selection leakage: it
-# selects once on all samples, which inflates the AUC.
+# selects once on all samples, which inflates the AUC. CV repeats draw their
+# seeds from seed + 1e6 and permutations from seed + 2e6, apart from the
+# stability rounds' seed + i.
 biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
                          repeats, n_perm, seed, null_k = 10L,
                          select_in_fold = TRUE, progress = NULL) {
@@ -384,10 +400,10 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
   k_grid <- unique(pmin(as.integer(k_grid), nrow(X)))
   null_k <- min(as.integer(null_k), nrow(X))
   ranking <- if (!select_in_fold) biomarker_select(X, y, methods)$rank
-  passes <- .biomarker_rounds(repeats, seed, function(r) {
+  passes <- .biomarker_rounds(repeats, seed + 1e6, function(r) {
     .biomarker_cv_pass(X, y, methods, k_grid, K, ranking)
   }, "Cross-validation repeat", progress)
-  null_passes <- .biomarker_rounds(n_perm, seed + repeats, function(p) {
+  null_passes <- .biomarker_rounds(n_perm, seed + 2e6, function(p) {
     yp <- stats::setNames(sample(y), names(y))
     list(y = yp, pass = .biomarker_cv_pass(X, yp, methods, null_k, K, ranking))
   }, "Permutation", progress)
@@ -418,10 +434,7 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
     })) / repeats
   }
   confusion <- per_cell(function(m, k) {
-    mean_counts <- confusion_of(m, k)
-    counts <- round(mean_counts)
-    ## rounding may break a row sum; the diagonal takes the difference
-    diag(counts) <- diag(counts) + rowSums(mean_counts) - rowSums(counts)
+    counts <- .biomarker_round_rows(confusion_of(m, k))
     data.frame(method = m, k = as.integer(k), as.data.frame(counts, responseName = "count", stringsAsFactors = FALSE))
   })
   metrics <- per_cell(function(m, k) {
@@ -435,15 +448,30 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
   }
 
   list(
-    folds = K, repeats = repeats, n_perm = n_perm, k_grid = k_grid,
+    folds = K, repeats = repeats, n_perm = n_perm, k_grid = k_grid, null_k = null_k,
     positive_class = if (binary) levels(y)[1] else NA_character_,
     auc = auc, roc = roc, confusion = confusion, metrics = metrics, null = null
   )
 }
 
+# Rounds each row of a table to integers that keep the row's (integer) sum:
+# rows are rounded down, and the units lost go to the largest remainders.
+.biomarker_round_rows <- function(x) {
+  counts <- floor(x)
+  for (i in seq_len(nrow(x))) {
+    short <- round(sum(x[i, ]) - sum(counts[i, ]))
+    up <- order(counts[i, ] - x[i, ])[seq_len(short)]
+    counts[i, up] <- counts[i, up] + 1
+  }
+  storage.mode(counts) <- "integer"
+  counts
+}
+
 # One stratified K-fold pass: held-out probabilities (samples x classes x
 # (methods + consensus) x k) and class calls (level index) for every sample.
-# A method's panel is its top k; the consensus is the soft vote of the methods.
+# A method's panel is its top k. The consensus panel is the consensus top k:
+# every method refits on it and the consensus is their soft vote (mean
+# probability). One method is its own consensus and is not refitted.
 .biomarker_cv_pass <- function(X, y, methods, k_grid, K, ranking = NULL) {
   folds <- .biomarker_folds(y, K)
   cols <- c(methods, "consensus")
@@ -455,13 +483,19 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
     train <- folds != f
     rank <- ranking
     if (is.null(rank)) rank <- biomarker_select(X[, train, drop = FALSE], y[train], methods)$rank
+    ## predict every sample: training rows set the threshold, held-out rows are kept
+    fit_predict <- function(m, panel) {
+      BIOMARKER_METHODS[[m]]$fit_predict(X[panel, train, drop = FALSE], y[train], X[panel, , drop = FALSE])
+    }
     for (k in dims[[4]]) {
-      ## predict every sample: training rows set the threshold, held-out rows are kept
-      p <- lapply(methods, function(m) {
-        panel <- rank[, m] <= as.integer(k)
-        BIOMARKER_METHODS[[m]]$fit_predict(X[panel, train, drop = FALSE], y[train], X[panel, , drop = FALSE])
-      })
-      p <- c(p, list(Reduce(`+`, p) / length(p)))
+      p <- lapply(methods, function(m) fit_predict(m, rank[, m] <= as.integer(k)))
+      consensus <- if (length(methods) == 1L) {
+        p[[1]]
+      } else {
+        panel <- rank[, "consensus"] <= as.integer(k)
+        Reduce(`+`, lapply(methods, fit_predict, panel)) / length(methods)
+      }
+      p <- c(p, list(consensus))
       for (j in seq_along(cols)) {
         prob[!train, , j, k] <- p[[j]][!train, ]
         call[!train, j, k] <- .biomarker_call(p[[j]][train, , drop = FALSE], y[train], p[[j]][!train, , drop = FALSE])
@@ -557,7 +591,8 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
 #'
 #' @param pgx A pgx object.
 #' @param pheno Column of \code{pgx$samples} to predict. It is discretised as
-#'   in \code{pgx.compute_importance()}.
+#'   in \code{pgx.compute_importance()}; samples whose value is \code{NA} or
+#'   \code{""} are dropped.
 #' @param methods Selection methods: any of \code{"xgboost"},
 #'   \code{"elastic_net"}, \code{"random_forest"}, \code{"splsda"},
 #'   \code{"correlation"} and \code{"ftest"}.
@@ -581,18 +616,26 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
 #'     each method's.
 #'   \item Stability: selection on B stratified 80\% subsamples (a stratified
 #'     bootstrap when a class is too small), giving per-feature selection
-#'     frequency in the top \code{top_n}, rank median and IQR, and the Nogueira
-#'     stability index.
+#'     frequency, rank median and IQR, and the Nogueira stability index. A
+#'     feature counts as selected in a round when it ranks in the top
+#'     \code{top_n} and its raw score is above 0 (for the consensus, in any
+#'     method): sparse methods score most features exactly 0, and their rank
+#'     among those ties only reflects SD order. Ranks are reported unchanged.
 #'   \item Validation: repeated stratified K-fold CV, K = min(5, smallest class),
 #'     with selection and fitting inside each training fold at panel sizes
-#'     5, 10, 20 and 50. Two-class calls use a Youden threshold chosen on the
-#'     training fold; multiclass calls take the most probable class. The
-#'     consensus predicts by the mean of the methods' probabilities. Labels are
-#'     permuted to give a null AUC at panel size 10.
+#'     5, 10, 20 and 50. Each method is fitted on its own top k. The consensus
+#'     validates the consensus top k: every method is refitted on it and the
+#'     consensus predicts by the mean of their probabilities (a single method
+#'     is its own consensus). Two-class calls use a Youden threshold chosen on
+#'     the training fold; multiclass calls take the most probable class. Labels
+#'     are permuted to give a null AUC at panel size 10 (\code{cv$null_k}),
+#'     with the same definitions.
 #' }
 #' Rounds run under \code{parallel::mclapply} with
 #' \code{getOption("mc.cores", 1)} cores, each with its own seed, so results do
-#' not depend on the core count. The caller's RNG kind is restored on exit.
+#' not depend on the core count. Stability rounds, CV repeats and permutations
+#' draw seeds from separate ranges, wrapped into R's integer range, so any
+#' seed in [0, 2^31 - 1] works. The caller's RNG kind is restored on exit.
 #' Multi-omics MOFA importance is not supported here; see
 #' \code{pgx.compute_importance()}.
 #'
@@ -616,14 +659,17 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
 #' \item{stability}{B, bootstrap, and features x (methods, consensus)
 #'   frequency, rank_median, rank_iqr_lo, rank_iqr_hi; index per column.}
 #' \item{cv}{\code{NULL} unless \code{validate}: folds, repeats, n_perm,
-#'   k_grid, positive_class, and data frames auc, roc (two classes only),
-#'   confusion, metrics and null.}
+#'   k_grid, null_k (the null's panel size), positive_class, and data frames
+#'   auc, roc (two classes only), confusion (integer mean counts per repeat,
+#'   each row adding up to its class size), metrics and null.}
 #' \item{single_auc}{data frame of feature, all-sample AUC and the class the
 #'   feature is highest in (descriptive, not validated).}
 #' \item{playbase_version}{package version.}
 #'
-#' An error of class \code{biomarker_small_class} is raised when a class has
-#' fewer than 3 samples.
+#' An error of class \code{biomarker_small_class} (carrying
+#' \code{class_counts}) is raised when a class has fewer than 3 samples, and
+#' one of class \code{biomarker_too_few_features} (carrying
+#' \code{n_features}) when fewer than 5 features remain after filtering.
 #'
 #' @export
 pgx.compute_biomarkers <- function(pgx, pheno, methods = "xgboost",
@@ -632,9 +678,18 @@ pgx.compute_biomarkers <- function(pgx, pheno, methods = "xgboost",
                                    validate = TRUE, progress = NULL) {
   methods <- match.arg(methods, names(BIOMARKER_METHODS), several.ok = TRUE)
   resampling <- match.arg(resampling)
-  prep <- .biomarker_prepare(pgx, pheno, nfeatures = top_n, ...)
+  prep <- .biomarker_prepare(pgx, pheno, nfeatures = top_n, drop_empty = TRUE, ...)
   if (is.null(prep)) {
     return(NULL)
+  }
+  if (nrow(prep$X) < 5) {
+    stop(errorCondition(
+      paste0(
+        "At least 5 features are needed to select biomarkers; ",
+        nrow(prep$X), " remain after filtering"
+      ),
+      class = "biomarker_too_few_features", n_features = nrow(prep$X)
+    ))
   }
   small <- prep$class_counts < 3
   if (any(small)) {
