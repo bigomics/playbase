@@ -654,7 +654,9 @@ pgx.compute_biomarkers <- function(pgx, pheno, methods = "xgboost",
     resampling = resampling, B = preset[1], repeats = preset[2], n_perm = preset[3],
     seed = seed, top_n = top_n
   )
-  X <- prep$X
+  ## prepare cuts y to select_samples but keeps X's columns, as
+  ## pgx.compute_importance aligns them itself afterwards
+  X <- prep$X[, names(prep$y), drop = FALSE]
   y <- factor(prep$y)
 
   step <- 0

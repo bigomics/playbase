@@ -270,3 +270,17 @@ test_that("pgx.compute_biomarkers refuses a class under 3 samples", {
   )
   expect_identical(err$class_counts[["notact"]], 2L)
 })
+
+test_that("pgx.compute_biomarkers scores only the selected samples", {
+  pgx <- outlier_pgx()
+  y <- pgx$samples[colnames(pgx$X), "activated"]
+  keep <- c(
+    utils::head(colnames(pgx$X)[y == "act"], 4),
+    utils::head(colnames(pgx$X)[y == "notact"], 4)
+  )
+  res <- suppressMessages(playbase::pgx.compute_biomarkers(
+    pgx, "activated", select_samples = keep, resampling = "fast", top_n = 10L
+  ))
+  expect_setequal(colnames(res$X), keep)
+  expect_identical(colnames(res$X), names(res$y))
+})
