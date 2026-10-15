@@ -318,7 +318,8 @@ biomarker_select <- function(X, y, methods) {
   product <- exp(rowMeans(log(d + 1 - d * S)))
   consensus <- rank(-product) / d
   rank <- apply(-cbind(S, consensus = consensus), 2, rank, ties.method = "first")
-  scored <- cbind(scores > 0, consensus = rowSums(scores > 0) > 0)
+  scored <- !is.na(scores) & scores > 0 ## an F-test can give NA on a constant row
+  scored <- cbind(scored, consensus = rowSums(scored) > 0)
   list(S = S, consensus = consensus, rank = rank, scored = scored)
 }
 
