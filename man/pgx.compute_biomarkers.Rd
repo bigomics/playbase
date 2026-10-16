@@ -8,7 +8,7 @@ pgx.compute_biomarkers(
   pgx,
   pheno,
   methods = "xgboost",
-  resampling = c("standard", "fast", "thorough"),
+  resampling = c("balanced", "fast", "thorough"),
   seed = 42L,
   top_n = 50L,
   ...,
@@ -27,9 +27,9 @@ in \code{pgx.compute_importance()}; samples whose value is \code{NA} or
 \code{"elastic_net"}, \code{"random_forest"}, \code{"splsda"},
 \code{"correlation"} and \code{"ftest"}.}
 
-\item{resampling}{\code{"standard"}, \code{"fast"} or \code{"thorough"}:
-(stability rounds, CV repeats, permutations) of (50, 10, 20), (10, 2, 5)
-and (200, 20, 100).}
+\item{resampling}{\code{"balanced"}, \code{"fast"} or \code{"thorough"}:
+(stability rounds, CV repeats, permutations) of (25, 5, 10), (5, 2, 3)
+and (100, 10, 50).}
 
 \item{seed}{Integer seed.}
 

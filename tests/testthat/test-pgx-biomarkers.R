@@ -308,9 +308,9 @@ test_that("pgx.compute_biomarkers is reproducible and keeps the legacy shape", {
 
   expect_identical(res$pipeline, "v2")
   expect_identical(res$methods, "xgboost")
-  expect_identical(res$params[c("B", "repeats", "n_perm")], list(B = 10L, repeats = 2L, n_perm = 5L))
-  expect_length(calls, 10 + 2 + 5)
-  expect_identical(utils::tail(calls, 1), "100 Permutation 5/5")
+  expect_identical(res$params[c("B", "repeats", "n_perm")], list(B = 5L, repeats = 2L, n_perm = 3L))
+  expect_length(calls, 5 + 2 + 3)
+  expect_identical(utils::tail(calls, 1), "100 Permutation 3/3")
 
   ## legacy readers: R, X and y over the panel, ordered by consensus
   top <- rownames(res$R)
