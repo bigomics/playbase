@@ -92,6 +92,7 @@ Imports:
     nipalsMCIA,
     NNLM,
     omicsai,
+    omicspgx (>= 0.3.23),
     org.Hs.eg.db,
     org.Mm.eg.db,
     org.Pf.plasmo.db,

@@ -222,6 +222,9 @@ pgx.createPGX <- function(counts,
                           species_go = NULL,
                           settings = list(),
                           sc_compute_settings = list()) {
+  prov <- .pb_libx_provenance("createPGX")
+  on.exit(prov$close())
+
   message("[pgx.createPGX]===========================================")
   message("[pgx.createPGX]=========== pgx.createPGX =================")
   message("[pgx.createPGX]===========================================")
@@ -482,7 +485,6 @@ pgx.createPGX <- function(counts,
   ## add versions info
   versions <- list()
   versions$playbase_version <- packageVersion("playbase")
-  versions$playdata_version <- packageVersion("playdata")
 
   ## Reorder uniprots
   if (datatype == "proteomics") {
@@ -731,7 +733,7 @@ pgx.createPGX <- function(counts,
   message("[pgx.createPGX]======================================")
   message("\n\n")
 
-  return(pgx)
+  return(prov$stamp(pgx))
 }
 
 
@@ -793,6 +795,9 @@ pgx.computePGX <- function(pgx,
                            progress = NULL,
                            ai_features = NULL,
                            user_input_dir = getwd()) {
+  prov <- .pb_libx_provenance("computePGX")
+  on.exit(prov$close())
+
   message("[pgx.computePGX]===========================================")
   message("[pgx.computePGX]========== pgx.computePGX =================")
   message("[pgx.computePGX]===========================================")
@@ -850,7 +855,7 @@ pgx.computePGX <- function(pgx,
   ## sanity check
   if (NCOL(contr.matrix) == 0) {
     message("[pgx.computePGX] WARNING: FATAL ERROR. zero contrasts")
-    return(pgx)
+    return(prov$stamp(pgx))
   }
 
   ## select valid contrasts
@@ -1121,7 +1126,7 @@ pgx.computePGX <- function(pgx,
   }
 
   info("[pgx.computePGX] DONE")
-  return(pgx)
+  return(prov$stamp(pgx))
 }
 
 

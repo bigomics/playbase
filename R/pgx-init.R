@@ -226,7 +226,7 @@ pgx.initialize <- function(pgx, progress=NULL) {
   # Check if human_ortholog is empty, if it is
   # 1) run getHumanOrtholog (maybe it failed on pgx.compute bc server was unreachable)
   # 2) if still empty, grab the symbols toUpper
-  # playdata::FAMILIES (and other human-keyed resources) are matched
+  # The gene families (and other human-keyed resources) are matched
   # against human_ortholog specifically, not the species-configurable
   # ortholog column.
   if (is.null(pgx$genes$human_ortholog) ||
@@ -253,18 +253,19 @@ pgx.initialize <- function(pgx, progress=NULL) {
   }
 
   # Here we use the human ortholog when available, instead of
-  # gene_name -- playdata::FAMILIES is human-keyed.
+  # gene_name -- the gene families are human-keyed.
   genes <- ifelse(!is.na(pgx$genes$human_ortholog),
     pgx$genes$human_ortholog,
     pgx$genes$gene_name
   )
 
+  fam <- .pb_libx("families")
   if (pgx$organism %in% c("Human", "human") | !is.null(pgx$version)) {
-    pgx$families <- lapply(playdata::FAMILIES, function(x) {
+    pgx$families <- lapply(fam, function(x) {
       intersect(x, genes)
     })
   } else {
-    pgx$families <- lapply(playdata::FAMILIES, function(x, genes, annot_table) {
+    pgx$families <- lapply(fam, function(x, genes, annot_table) {
       x <- intersect(x, genes)
       x <- annot_table$symbol[match(x, annot_table$human_ortholog)]
       return(x)
@@ -356,7 +357,7 @@ pgx.initialize <- function(pgx, progress=NULL) {
       dd <- pgx$drugs[["mono"]]
       aa1 <- pgx$drugs[["annot"]]
       if (is.null(aa1)) {
-        aa1 <- playdata::L1000_REPURPOSING_DRUGS
+        aa1 <- .pb_libx("l1000_repurposing")
         aa1$drug <- aa1$pert_iname
         rownames(aa1) <- aa1$pert_iname
       }
