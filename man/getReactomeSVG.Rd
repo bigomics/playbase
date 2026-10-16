@@ -25,8 +25,8 @@ SVG file path (or image list when as.img), or NULL when unavailable.
 }
 \description{
 reactome.org's live exporter is Cloudflare-blocked for server-side requests,
-so the native diagram SVGs are shipped gzipped in playdata
-(inst/extdata/reactome-svg). The pathway is resolved to the diagram that
+so the native diagram SVGs are shipped gzipped in lib-x
+(annotation/pathways/reactome/svg). The pathway is resolved to the diagram that
 depicts it (sub-pathways -> nearest ancestor diagram), decompressed once from
-playdata, and cached on disk as a plain SVG.
+lib-x, and cached on disk as a plain SVG.
 }

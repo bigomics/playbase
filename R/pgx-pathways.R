@@ -28,20 +28,20 @@ getPathwayImage <- function(wp, val, sbgn.dir = NULL, as.img = FALSE) {
 
 #' Read the offline pathway -> diagram lookup table.
 #'
-#' Precomputed map (inst/extdata/reactome_diagram_map.tsv) from every human
+#' Precomputed map (lib-x annotation/pathways/reactome/diagram_map.tsv) from every human
 #' Reactome pathway to the id of the diagram that depicts it -- diagram-owning
 #' pathways map to themselves, sub-pathways to their nearest such ancestor. Built
 #' offline from ReactomePathwaysRelation.txt + humanPathwaysWithDiagrams.txt so
 #' no reactome.org call is needed at runtime.
 #'
-#' @return Named character vector: names are pathway ids, values are diagram ids.
+#' @return Named character vector: names are pathway ids, values are diagram ids;
+#'   empty when no lib-x release is set.
 reactomeDiagramMap <- function() {
-  f <- system.file("extdata", "reactome_diagram_map.tsv", package = "playdata")
-  if (!nzchar(f) || !file.exists(f)) {
+  if (is.null(omicspgx::libx_dir())) {
     return(stats::setNames(character(0), character(0)))
   }
   m <- utils::read.delim(
-    f,
+    .pb_libx("reactome_map"),
     header = FALSE, colClasses = "character",
     col.names = c("id", "diagram")
   )
@@ -86,10 +86,10 @@ reactomeDiagrams <- function() {
 #' Fetch a native Reactome diagram SVG.
 #'
 #' reactome.org's live exporter is Cloudflare-blocked for server-side requests,
-#' so the native diagram SVGs are shipped gzipped in playdata
-#' (inst/extdata/reactome-svg). The pathway is resolved to the diagram that
+#' so the native diagram SVGs are shipped gzipped in lib-x
+#' (annotation/pathways/reactome/svg). The pathway is resolved to the diagram that
 #' depicts it (sub-pathways -> nearest ancestor diagram), decompressed once from
-#' playdata, and cached on disk as a plain SVG.
+#' lib-x, and cached on disk as a plain SVG.
 #'
 #' @param wp Reactome pathway stable id.
 #' @param val Ignored (kept for call compatibility); native SVGs are not colored.
@@ -104,11 +104,8 @@ getReactomeSVG <- function(wp, val = NULL, as.img = FALSE,
     return(NULL)
   }
 
-  gz <- system.file(
-    "extdata", "reactome-svg", paste0(diagram.id, ".svg.gz"),
-    package = "playdata"
-  )
-  if (!nzchar(gz)) {
+  gz <- file.path(.pb_libx("reactome_dir"), paste0(diagram.id, ".svg.gz"))
+  if (!file.exists(gz)) {
     return(NULL)
   }
 

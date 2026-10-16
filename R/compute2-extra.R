@@ -358,22 +358,22 @@ compute_extra <- function(pgx, extra = c(
 #'
 #' @examples
 #' \dontrun{
-#' pgx <- playdata::GEIGER_PGX
+#' pgx <- omicspgx::libx_read("examples/GEIGER_PGX.rds")
 #' deconv <- compute_deconvolution(pgx)
 #' }
 #' @export
 compute_deconvolution <- function(pgx, rna.counts = .pgx_count_scale_matrix(pgx), full = FALSE) {
   ## list of reference matrices
   refmat <- list()
-  refmat[["Immune cell (LM22)"]] <- playdata::LM22
-  refmat[["Immune cell (ImmProt)"]] <- playdata::IMMPROT_SIGNATURE1000
-  refmat[["Immune cell (DICE)"]] <- playdata::DICE_SIGNATURE1000
-  refmat[["Immune cell (ImmunoStates)"]] <- playdata::IMMUNOSTATES_MATRIX
-  refmat[["Tissue (HPA)"]] <- playdata::RNA_TISSUE_MATRIX
-  refmat[["Tissue (GTEx)"]] <- playdata::GTEX_RNA_TISSUE_TPM
-  refmat[["Cell line (HPA)"]] <- playdata::HPA_RNA_CELLINE
-  refmat[["Cell line (CCLE)"]] <- playdata::CCLE_RNA_CELLINE
-  refmat[["Cancer type (CCLE)"]] <- playdata::CCLE_RNA_CANCERTYPE
+  refmat[["Immune cell (LM22)"]] <- .pb_libx("lm22")
+  refmat[["Immune cell (ImmProt)"]] <- .pb_libx("immprot_signature1000")
+  refmat[["Immune cell (DICE)"]] <- .pb_libx("dice_signature1000")
+  refmat[["Immune cell (ImmunoStates)"]] <- .pb_libx("immunostates_matrix")
+  refmat[["Tissue (HPA)"]] <- .pb_libx("rna_tissue_matrix")
+  refmat[["Tissue (GTEx)"]] <- .pb_libx("gtex_rna_tissue_tpm")
+  refmat[["Cell line (HPA)"]] <- .pb_libx("hpa_rna_celline")
+  refmat[["Cell line (CCLE)"]] <- .pb_libx("ccle_rna_celline")
+  refmat[["Cancer type (CCLE)"]] <- .pb_libx("ccle_rna_cancertype")
 
   ## list of methods to compute
   methods <- c("DCQ", "DeconRNAseq", "I-NNLS", "NNLM", "cor", "CIBERSORT", "EPIC")
@@ -526,31 +526,25 @@ compute_cellcycle_gender <- function(pgx, rna.counts = .pgx_count_scale_matrix(p
 #'
 #' This function performs drug activity enrichment analysis based on the input RNA expression data.
 #' It uses drug activity databases to compute enrichment scores and attach the results to the input object.
-#' The drug activity databases include L1000_ACTIVITYS_N20D1011 and L1000_GENE_PERTURBATION.
+#' The drug activity databases are the L1000 activity and gene perturbation files in
+#' \code{libx.dir}; without \code{libx.dir} the object is returned unchanged.
 #'
 #' @param pgx An object containing the input data for analysis.
 #' @param libx.dir The directory path where the drug activity databases are located.
-#'   This is required if calling the function compute_full_drugActivityEnrichment.
 #' @return An updated object with drug activity enrichment results.
 #' @export
 compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
-  ## -------------- drug enrichment
-  # get drug activity databases
-
-  if (is.null(libx.dir)) message("WARNING Need libx.dir for full drugActivityEnrichment")
-
-  if (!is.null(libx.dir) && dir.exists(libx.dir)) {
-    ## scan for extra connectivity reference files in libx
-    cmap.dir <- file.path(libx.dir, "cmap")
-    db.files <- dir(cmap.dir, pattern = "L1000-activity.*rds$|L1000-gene.*rds$")
-    ref.db <- lapply(db.files, function(f) readRDS(file.path(cmap.dir, f)))
-    names(ref.db) <- sub("-", "/", gsub("_.*", "", db.files))
-  } else {
-    ## get the default 'light' version of the drug CMAP
-    ref.db <- list(
-      "L1000/activity" = playdata::L1000_ACTIVITYS_N20D1011
-    )
+  if (is.null(libx.dir) || !dir.exists(libx.dir)) {
+    message("[compute_drugActivityEnrichment] WARNING: no libx.dir, skipping drug activity enrichment")
+    return(pgx)
   }
+
+  ## scan for connectivity reference files in libx
+  cmap.dir <- file.path(libx.dir, "cmap")
+  db.files <- dir(cmap.dir, pattern = "L1000-activity.*rds$|L1000-gene.*rds$")
+  ref.db <- lapply(db.files, function(f) readRDS(file.path(cmap.dir, f)))
+  names(ref.db) <- sub("-", "/", gsub("_.*", "", db.files))
+  repurposing <- NULL
 
   for (i in seq_along(ref.db)) {
     f <- names(ref.db)[i]
@@ -586,7 +580,8 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
     ## --------------- attach annotation
     annot0 <- NULL
     if (is.drug) {
-      annot0 <- playdata::L1000_REPURPOSING_DRUGS
+      if (is.null(repurposing)) repurposing <- .pb_libx("l1000_repurposing")
+      annot0 <- repurposing
       annot0$drug <- annot0$pert_iname
       rownames(annot0) <- annot0$pert_iname
     } else {

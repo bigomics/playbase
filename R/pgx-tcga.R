@@ -84,7 +84,7 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
   ## Read the survival data
   if (verbose) message("[pgx.testTCGAsurvival] reading TCGA survival data...")
 
-  surv <- playdata::RTCGA_SURVIVAL
+  surv <- .pb_libx("rtcga_survival")
   surv$months <- round(surv$times / 365 * 12, 2)
   surv$status <- surv$patient.vital_status
 

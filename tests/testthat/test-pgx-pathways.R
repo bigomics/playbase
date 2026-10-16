@@ -172,3 +172,22 @@ test_that("wikipath (classic) works correctly", {
     expect_true(file.exists(result)) # Ensure the returned path exists
   })
 })
+
+test_that("getReactomeSVG serves the lib-x diagram, resolving sub-pathways", {
+  skip_if(is.null(omicspgx::libx_dir()))
+  svg <- getReactomeSVG("R-HSA-1059683", cache.dir = tempfile("reactome-svg"))
+  expect_equal(basename(svg), paste0(reactomeDiagramId("R-HSA-1059683"), ".svg"))
+  expect_gt(file.info(svg)$size, 0)
+})
+
+test_that("getReactomeSVG returns NULL without a lib-x release", {
+  old.opt <- options(omicspgx.libx_dir = NULL)
+  old.env <- Sys.getenv("LIBX_DIR")
+  on.exit({
+    options(old.opt)
+    Sys.setenv(LIBX_DIR = old.env)
+  })
+  Sys.setenv(LIBX_DIR = "")
+  expect_length(reactomeDiagrams(), 0)
+  expect_null(getReactomeSVG("R-HSA-73843"))
+})

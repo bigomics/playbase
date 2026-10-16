@@ -6,7 +6,7 @@
 \usage{
 pgx.computeDrugEnrichment(
   pgx,
-  X = NULL,
+  X,
   xdrugs = NULL,
   drug_info = NULL,
   methods = c("GSEA", "cor"),
@@ -16,7 +16,7 @@ pgx.computeDrugEnrichment(
 )
 }
 \arguments{
-\item{X}{Numeric gene expression matrix}
+\item{X}{Drug profile matrix, genes in rows and profiles in columns. Required.}
 
 \item{methods}{Methods for enrichment (rank, gsea)}
 

@@ -7,10 +7,11 @@
 reactomeDiagramMap()
 }
 \value{
-Named character vector: names are pathway ids, values are diagram ids.
+Named character vector: names are pathway ids, values are diagram ids;
+  empty when no lib-x release is set.
 }
 \description{
-Precomputed map (inst/extdata/reactome_diagram_map.tsv) from every human
+Precomputed map (lib-x annotation/pathways/reactome/diagram_map.tsv) from every human
 Reactome pathway to the id of the diagram that depicts it -- diagram-owning
 pathways map to themselves, sub-pathways to their nearest such ancestor. Built
 offline from ReactomePathwaysRelation.txt + humanPathwaysWithDiagrams.txt so

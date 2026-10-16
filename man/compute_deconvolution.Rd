@@ -27,7 +27,7 @@ and methods. It estimates the abundance of different cell types or tissue compon
 }
 \examples{
 \dontrun{
-pgx <- playdata::GEIGER_PGX
+pgx <- omicspgx::libx_read("examples/GEIGER_PGX.rds")
 deconv <- compute_deconvolution(pgx)
 }
 }

@@ -109,7 +109,7 @@ pgx.computePCSF <- function(pgx, contrast, datatypes = NULL,
       }
       if ("GRAPHITE" %in% ppi) {
         message("adding GRAPHITE PPI...")
-        ppix <- rbind(ppix, playdata::GRAPHITE_PPI)
+        ppix <- rbind(ppix, .pb_libx("graphite_ppi"))
       }
     } else {
       stop("invalid PPI")
@@ -491,7 +491,7 @@ plotPCSF <- function(pcsf,
   up_down <- c("down", "up")[1 + 1 * (sign(color.fx) > 0)]
   dtype <- igraph::V(pcsf)$type
   igraph::V(pcsf)$group <- paste0(dtype, "_", up_down)
-  bluered <- playdata::BLUERED(7)
+  bluered <- BLUERED(7)
   bluered <- adjustcolor(bluered, alpha.f = node_alpha)
   groups <- sort(setdiff(igraph::V(pcsf)$group, c(NA)))
   ngroups <- length(groups)
