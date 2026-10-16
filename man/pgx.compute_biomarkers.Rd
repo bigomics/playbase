@@ -28,7 +28,7 @@ in \code{pgx.compute_importance()}; samples whose value is \code{NA} or
 \code{"correlation"} and \code{"ftest"}.}
 
 \item{resampling}{\code{"balanced"}, \code{"fast"} or \code{"thorough"}:
-(stability rounds, CV repeats, permutations) of (25, 5, 10), (5, 2, 3)
+(stability rounds, CV repeats, permutations) of (25, 5, 10), (10, 2, 5)
 and (100, 10, 50).}
 
 \item{seed}{Integer seed.}

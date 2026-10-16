@@ -598,7 +598,7 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
 #'   \code{"elastic_net"}, \code{"random_forest"}, \code{"splsda"},
 #'   \code{"correlation"} and \code{"ftest"}.
 #' @param resampling \code{"balanced"}, \code{"fast"} or \code{"thorough"}:
-#'   (stability rounds, CV repeats, permutations) of (25, 5, 10), (5, 2, 3)
+#'   (stability rounds, CV repeats, permutations) of (25, 5, 10), (10, 2, 5)
 #'   and (100, 10, 50).
 #' @param seed Integer seed.
 #' @param top_n Number of biomarkers to report. Ten times as many features,
@@ -708,7 +708,7 @@ pgx.compute_biomarkers <- function(pgx, pheno, methods = "xgboost",
   RNGkind("L'Ecuyer-CMRG")
   set.seed(seed)
 
-  preset <- list(fast = c(5L, 2L, 3L), balanced = c(25L, 5L, 10L), thorough = c(100L, 10L, 50L))[[resampling]]
+  preset <- list(fast = c(10L, 2L, 5L), balanced = c(25L, 5L, 10L), thorough = c(100L, 10L, 50L))[[resampling]]
   params <- list(
     resampling = resampling, B = preset[1], repeats = preset[2], n_perm = preset[3],
     seed = seed, top_n = top_n
