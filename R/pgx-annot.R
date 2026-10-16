@@ -71,8 +71,8 @@ getProbeAnnotation <- function(organism,
                                ortholog_species = "Human",
                                annot_table = NULL) {
   if (is.null(datatype)) datatype <- "unknown"
-  if (is.null(probetype)) probetype <- "unknown"
   if (is.null(ortholog_species)) ortholog_species <- "Human"
+  if (is.null(probetype)) probetype <- "unknown"
 
   # organism can be a vector (multi-species): all() keeps a mixed table from
   # being treated as unknown
@@ -212,9 +212,16 @@ getProbeAnnotation <- function(organism,
   cols <- unique(unlist(lapply(annot.list, colnames), use.names = FALSE))
   for (i in seq_along(annot.list)) {
     for (a in setdiff(cols, colnames(annot.list[[i]]))) annot.list[[i]][[a]] <- NA
+    annot.list[[i]] <- annot.list[[i]][,cols]
   }
 
-  return(do.call(rbind, annot.list))
+  # collapse and align to input probes. Note: watch out for duplicated
+  # probe names!
+  names(annot.list) <- NULL
+  annot <- do.call(rbind, annot.list)
+  annot <- annot[match(probes, annot$feature),] 
+  
+  return(annot)
 }
 
 
@@ -1558,8 +1565,7 @@ getMultiOmicsProbeAnnotation <- function(organism, probes, ortholog_species) {
     ## matching.
     ptype <- detect_probetype(organism, probes)
     mtype <- mx.detect_probetype(probes)
-    dbg("[getMultiOmicsProbeAnnotation] ptype =", ptype)
-    dbg("[getMultiOmicsProbeAnnotation] mtype =", mtype)
+
     gx.types <- c(
       "SYMBOL", "ENSEMBL", "ACCNUM", "GENENAME",
       "MGI", "TAIR", "ENSEMBLTRANS", "REFSEQ", "ENTREZID"
@@ -1733,7 +1739,7 @@ getExampleFeatures.UNIPROT <- function(organism, n) {
     message("[getExampleFeatures.UNIPROT] UniProt.ws not installed; skipping")
     return(NULL)
   }
-  dbg("[getExampleFeatures.UNIPROT] 1: organism = ", organism)
+
   ## Prefer the taxonomy ID from our own species table: it's exact and
   ## sidesteps species_name strings (e.g. "Cricetulus barabensis_griseus")
   ## that don't match UniProt's own species names for pattern search.
@@ -1742,7 +1748,6 @@ getExampleFeatures.UNIPROT <- function(organism, n) {
   taxid <- taxid[!is.na(taxid)]
   if (length(taxid) == 0) {
     organism <- normalizeOrganism(organism)
-    dbg("[getExampleFeatures.UNIPROT] 2: organism = ", organism)
     sp <- try(UniProt.ws::availableUniprotSpecies(pattern = organism), silent = TRUE)
     if (inherits(sp, "try-error") || is.null(sp) || nrow(sp) == 0) {
       message("[getExampleFeatures.UNIPROT] unknown species")
