@@ -141,7 +141,7 @@ compute_testGenesets <- function(pgx,
   ## -------------------------------------------------------
 
   gset.size <- Matrix::colSums(pgx$GMT != 0)
-  gset.size.raw <- playdata::GSET_SIZE
+  gset.size.raw <- .pb_libx("gset_size")
 
   # combine standard genesets with custom genesets size vector
   if (!is.null(custom.geneset$gmt)) {
@@ -238,7 +238,7 @@ createSparseGenesetMatrix <- function(
   filter_genes = TRUE
 ) {
   # WARNING #
-  # This function is used in playbase and playdata to generate curated GMT. Do not change it without testing it in both packages to ensure reproducibility.
+  # This function is used to generate the curated GMT. Do not change it without testing that the curated GMT is reproduced.
 
   if (is.null(all_genes)) {
     all_genes <- unique(unlist(gmt.all))

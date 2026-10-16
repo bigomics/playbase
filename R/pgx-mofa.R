@@ -1694,7 +1694,7 @@ mofa.predict <- function(mofa, newdata) {
 #'
 #' @export
 mofa.splitByGeneRole <- function(X) {
-  G <- playdata::GSETxGENE
+  G <- .pb_libx("gsetxgene")
   lig <- grep("^LIG", rownames(G), value = TRUE)
   lig.targets <- names(which(Matrix::colSums(G[lig, ]) > 0))
   lig <- unique(gsub("^[a-zA_Z]+:|[ ].*", "", lig))
@@ -1832,7 +1832,7 @@ mofa.exampledata <- function(dataset = "geiger", ntop = 2000,
   }
 
   if (dataset == "tf") {
-    pgx <- playdata::GEIGER_PGX
+    pgx <- .pb_libx("geiger_pgx")
     X <- pgx$X
     data <- mofa.splitByGeneRole(pgx$X)
     samples <- pgx$samples
@@ -2777,7 +2777,7 @@ lasagna.create_model <- function(data, pheno = "pheno", ntop = 1000, nc = 20,
     xtypes
     has.mx <- ("mx" %in% xtypes)
     has.px <- any(c("gx", "px") %in% xtypes)
-    GRAPHITE_PPI <- try(playdata::GRAPHITE_PPI, silent = TRUE)
+    GRAPHITE_PPI <- try(.pb_libx("graphite_ppi"), silent = TRUE)
     has.ppi <- !("try-error" %in% class(GRAPHITE_PPI))
     if (has.mx && has.px && has.ppi) {
       message("using GRAPHITE PPI structure for pruning metabolite interactions")

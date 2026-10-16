@@ -75,7 +75,8 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
   ## ----------- filter with selected features
   info("[pgx.compute_importance] Filtering features...")
 
-  is.family <- (ft %in% c(names(pgx$families), names(playdata::iGSETS)))
+  gset_names <- names(.pb_libx("igsets"))
+  is.family <- (ft %in% c(names(pgx$families), gset_names))
   if (ft == "<custom>" && !is.null(sel) && length(sel) > 0) {
     ## ------------- filter with user selection
     if (sel[1] != "") {
@@ -90,8 +91,8 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     } else if (ft %in% names(pgx$families)) {
       gg <- pgx$families[[ft]]
       pp <- filterProbes(pgx$genes, gg)
-    } else if (ft %in% names(playdata::iGSETS)) {
-      gg <- unlist(playdata::getGSETS(ft))
+    } else if (ft %in% gset_names) {
+      gg <- unlist(getGSETS(ft))
       pp <- filterProbes(pgx$genes, gg)
     }
     pp <- intersect(pp, rownames(X))

@@ -566,7 +566,7 @@ annotate_phospho_residue <- function(features, detect.only = FALSE) {
   positions <- gsub(".*[_][A-Za-z]?|[.].*", "", features)
   positions <- strsplit(positions, split = "[;/,]")
 
-  P <- playdata::PHOSPHOSITE
+  P <- .pb_libx("phosphosite")
   prot.match <- mean(uniprot %in% P$UniProt, na.rm = TRUE)
   pos.match <- mean(positions %in% P$Position, na.rm = TRUE)
   is_phospho <- (valid_name && prot.match > 0.50 && pos.match > 0.50)

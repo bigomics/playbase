@@ -17,7 +17,7 @@ mx.ping_refmet <- function() {
 #' @export
 convert_probe_to_chebi <- function(probes, probe_type = NULL) {
   message("WARNING: deprecated. please use mx.convert_probe()")
-  annot <- playdata::METABOLITE_ID
+  annot <- .pb_libx("metabolite_id")
   valid_probe_types <- colnames(annot)
   # for id that are "", set it to na
   probes[probes == ""] <- NA
@@ -49,20 +49,21 @@ convert_probe_to_chebi <- function(probes, probe_type = NULL) {
   return(chebi_ids)
 }
 
-#' Convert IDs to CHEBI using internal playdata annotation table. Can
+#' Convert IDs to CHEBI using the lib-x metabolite annotation table. Can
 #' handle different target columns.
 #'
 #' @export
 mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
   # for id that are "", set it to na
   probes[probes == ""] <- NA
+  annot <- .pb_libx("metabolite_id")
   ## probes <- sub("[ _.-].*","",probes)  ## strip any postfix??? Not good for lipid names
   if (is.null(probe_type)) {
-    ## map the package probe type to a playdata::METABOLITE_ID column
+    ## map the package probe type to a lib-x metabolite annotation column
     ptype <- playbase.annotation::detect_probetype(
       organism = NULL, probes = probes, datatype = "metabolomics"
     )
-    cols <- colnames(playdata::METABOLITE_ID)
+    cols <- colnames(annot)
     probe_type <- if (ptype %in% "NAME") "RefMet" else cols[match(toupper(ptype), toupper(cols))]
   }
   if (is.null(probe_type) || is.na(probe_type)) {
@@ -75,7 +76,6 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
     probes <- gsub("[^0-9]", "", probes)
   }
   # check that probetype is valid
-  annot <- playdata::METABOLITE_ID
   if (probe_type == "RefMet") {
     ## if probe_type is 'long name' we convert first to ChEBI using
     ## the RefMet server, if the server is alive.
@@ -117,7 +117,7 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
 extend_metabolite_sets <- function(M, ppi, add = TRUE, postfix = "(extended)",
                                    maxcost = 0.33) {
   ## get metabolite-metabolite edges from GRAPHITE
-  ## ppi <- playdata::GRAPHITE_PPI
+  ## ppi <- .pb_libx("graphite_ppi")
   ppi[, 1] <- ifelse(grepl("CHEBI", ppi[, 1]), ppi[, 1], paste0("SYMBOL:", ppi[, 1]))
   ppi[, 2] <- ifelse(grepl("CHEBI", ppi[, 2]), ppi[, 2], paste0("SYMBOL:", ppi[, 2]))
   sel <- which(grepl("CHEBI", ppi[, 1]) & grepl("CHEBI", ppi[, 2]) & ppi[, 3] <= maxcost)

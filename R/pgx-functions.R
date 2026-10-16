@@ -938,13 +938,13 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
   families <- list()
   families[["<all>"]] <- genes ## X is sorted
 
-  gmt.kea <- playbase.ingest::read.gmt(playdata::get_file("kinase_substrates_kea.gmt"))
-  gmt.chea <- playbase.ingest::read.gmt(playdata::get_file("tf_targets_chea.gmt"))
+  gmt.kea <- playbase.ingest::read.gmt(.pb_libx("gmt_kea"))
+  gmt.chea <- playbase.ingest::read.gmt(.pb_libx("gmt_chea"))
   families[["Kinases (KEA)"]] <- names(gmt.kea)
   families[["Transcription factors (ChEA)"]] <- names(gmt.chea)
 
   ## Read standard HGNC gene families (www.genefamilies.org)
-  gmt.hgnc <- playbase.ingest::read.gmt(playdata::get_file("hgnc_genefamilies_EDITED.gmt"))
+  gmt.hgnc <- playbase.ingest::read.gmt(.pb_libx("gmt_hgnc"))
 
   gmt.hgnc.size <- sapply(gmt.hgnc, length)
   gmt.hgnc <- gmt.hgnc[which(gmt.hgnc.size >= 50 & gmt.hgnc.size <= 1000)]
@@ -1017,7 +1017,8 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
 #' @return A list containing the extracted gene set collections.
 #'
 #' @export
-pgx.getGeneSetCollections <- function(gsets = rownames(playdata::GSETxGENE)) {
+pgx.getGeneSetCollections <- function(gsets = NULL) {
+  if (is.null(gsets)) gsets <- rownames(.pb_libx("gsetxgene"))
   ## determine main collections from gene set prefixes
   if (is.null(gsets) || length(gsets) == 0) {
     return(list())
@@ -2004,12 +2005,12 @@ cor.pvalue <- function(x, n) 2 * stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0
 #'
 #' @export
 getGSETS_playbase <- function(gsets = NULL, pattern = NULL) {
-  if (is.null(gsets)) gsets <- names(playdata::iGSETS)
+  all_gsets <- names(.pb_libx("igsets"))
+  if (is.null(gsets)) gsets <- all_gsets
   if (!is.null(pattern)) {
     gsets <- grep(pattern, gsets, value = TRUE)
   }
-  gsets <- intersect(gsets, names(playdata::iGSETS))
-  lapply(playdata::iGSETS[gsets], function(idx) playdata::GSET_GENES[idx])
+  getGSETS(intersect(gsets, all_gsets))
 }
 
 #' Normalize Matrix by Row

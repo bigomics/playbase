@@ -10,9 +10,9 @@
 #'
 #' @export
 pgx.getFeatureSets <- function(pgx, min.size = 1) {
-  ## Get default classification from gene families. playdata::FAMILIES
-  ## is human-keyed.
-  ftclass <- lapply(playdata::FAMILIES, function(x) {
+  ## Get default classification from the lib-x gene families, which
+  ## are human-keyed.
+  ftclass <- lapply(.pb_libx("families"), function(x) {
     map_probes(pgx$genes, x, column = "human_ortholog", target = "rownames")
   })
 

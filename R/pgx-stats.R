@@ -283,14 +283,14 @@ stats.enrichment <- function(F, pattern = "^go|pathway") {
   if (NCOL(F) == 1 && !"Matrix" %in% class(F)) {
     F <- cbind(F)
   }
-  is.symbol <- (mean(rownames(F) %in% colnames(playdata::GSETxGENE)) > 0.2)
+  gmt <- .pb_libx("gsetxgene")
+  is.symbol <- (mean(rownames(F) %in% colnames(gmt)) > 0.2)
   if (!is.symbol) {
     stop("features are not SYMBOL")
     return(NULL)
   }
-  gmt <- playdata::GSETxGENE
   if (!is.null(pattern)) {
-    sel <- grep(pattern, rownames(playdata::GSETxGENE), value = TRUE, ignore.case = TRUE)
+    sel <- grep(pattern, rownames(gmt), value = TRUE, ignore.case = TRUE)
     gmt <- gmt[sel, ]
   }
   gsa <- gset.rankcor(F, Matrix::t(gmt), compute.p = TRUE)
@@ -328,14 +328,15 @@ stats.numsig <- function(X, y, lfc = 1, q = 0.05, set.na = NULL,
   names(fc0) <- toupper(names(fc0))
 
   ## Gene sets
-  is.symbol <- (mean(names(fc0) %in% colnames(playdata::GSETxGENE)) > 0.2)
+  gmt <- .pb_libx("gsetxgene")
+  is.symbol <- (mean(names(fc0) %in% colnames(gmt)) > 0.2)
   sig.gsets <- c()
   gsa <- list(rho = NULL, p.value = NULL, q.value = NULL)
   if (is.symbol) {
-    sel <- grep("^go|pathway|geo_human", rownames(playdata::GSETxGENE),
+    sel <- grep("^go|pathway|geo_human", rownames(gmt),
       value = TRUE, ignore.case = TRUE
     )
-    gmt <- playdata::GSETxGENE[sel, ]
+    gmt <- gmt[sel, ]
 
     if (gs.method == "rankcor") {
       gsa <- gset.rankcor(cbind(fc0), Matrix::t(gmt), compute.p = TRUE)

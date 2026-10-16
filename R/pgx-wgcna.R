@@ -160,7 +160,7 @@ pgx.wgcna <- function(
 
     ## We augment pgx$GMT with original GSETxGENE to get better results
     ## for all modules.
-    GMT0 <- getPlaydataGMT()
+    GMT0 <- getLegacyGMT()
     GMT0 <- rename_by2(GMT0, pgx$genes, "symbol")
     GMT <- merge_sparse_matrix(pgx$GMT, GMT0)
 
@@ -206,10 +206,16 @@ pgx.wgcna <- function(
 }
 
 
-#' Combined GSETxGENE/MSETxMETABOLITE geneset matrix from playdata
-#' @seealso WGCNAplus::getPlaydataGMT
-getPlaydataGMT <- function() {
-  WGCNAplus::getPlaydataGMT()
+#' Combined gene x geneset matrix of the curated legacy gene sets (lib-x)
+#'
+#' The lib-x GSETxGENE and MSETxMETABOLITE matrices, transposed and merged,
+#' with the metabolite ids stripped of their prefix. Same matrix as the
+#' WGCNAplus default, read from lib-x.
+getLegacyGMT <- function() {
+  G1 <- Matrix::t(.pb_libx("gsetxgene"))
+  G2 <- Matrix::t(.pb_libx("msetxmetabolite"))
+  rownames(G2) <- sub(".*:", "", rownames(G2))
+  merge_sparse_matrix(G1, G2)
 }
 
 #' Core WGCNA computation (lower-level workhorse called by \code{\link{pgx.wgcna}})
@@ -407,8 +413,8 @@ wgcna.init <- function(wgcna, annot = NULL,
 #' Core multi-omics WGCNA computation (wraps WGCNAplus::computeWGCNA_multiomics)
 #'
 #' WGCNAplus's version differs from this one in three ways that are
-#' preserved here: (1) it does not auto-load the default playdata geneset
-#' matrix when \code{GMT} is \code{NULL} (it silently disables enrichment
+#' preserved here: (1) it does not auto-load the curated legacy gene sets
+#' (lib-x) when \code{GMT} is \code{NULL} (it silently disables enrichment
 #' instead), (2) it does not truncate \code{names(dataX)} to two letters,
 #' and (3) it returns a \code{report} field instead of an \code{annot}
 #' field. \code{report} generation is disabled here to keep behavior and
@@ -440,12 +446,12 @@ wgcna.compute_multiomics <- function(dataX,
                                      experiment = "",
                                      verbose = 1,
                                      progress = NULL) {
-  ## default-load the playdata GMT when needed (WGCNAplus does not do this)
+  ## default-load the curated legacy gene sets (lib-x) when needed (WGCNAplus does not do this)
   if (!is.null(annot) && !is.null(GMT)) {
     GMT <- rename_by2(GMT, annot, "symbol")
   }
   if (add.gsets || compute.enrichment) {
-    GMT0 <- getPlaydataGMT()
+    GMT0 <- getLegacyGMT()
     if (!is.null(annot)) GMT0 <- rename_by2(GMT0, annot, "symbol")
     if (!is.null(GMT)) {
       GMT <- merge_sparse_matrix(GMT, GMT0)
@@ -741,7 +747,7 @@ wgcna.getModuleCrossGenes <- function(wgcna, ref = NULL, ngenes = 100,
 #' defaults to \code{summary=TRUE}, which triggers an AI-based module
 #' annotation call - disabled here to keep behavior unchanged; (2) it only
 #' computes enrichment when \code{GMT} is explicitly supplied, whereas this
-#' function auto-loads the default playdata GMT when enrichment is
+#' function auto-loads the curated legacy gene sets (lib-x) when enrichment is
 #' requested; (3) it never calls the \code{progress} callback.
 #' @seealso WGCNAplus::runConsensusWGCNA
 #' @export
@@ -771,7 +777,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
   if (!is.null(progress)) progress$inc(0.1, "Computing layers...")
 
   if (compute.enrichment) {
-    GMT0 <- getPlaydataGMT()
+    GMT0 <- getLegacyGMT()
     GMT <- if (!is.null(GMT)) merge_sparse_matrix(GMT, GMT0) else GMT0
   }
 
@@ -931,7 +937,7 @@ wgcna.computeConsensusModuleEnrichment <- function(cons,
 #' Run WGCNA module preservation analysis across a list of expression matrices
 #'
 #' WGCNAplus::runPreservationWGCNA() only computes enrichment when GMT is
-#' explicitly supplied; this function auto-loads the default playdata GMT
+#' explicitly supplied; this function auto-loads the curated legacy gene sets (lib-x)
 #' (renamed via the annotation's "human_ortholog" column, since the
 #' default genesets are human-keyed) when enrichment is requested.
 #' @seealso WGCNAplus::runPreservationWGCNA
@@ -951,7 +957,7 @@ wgcna.runPreservationWGCNA <- function(exprList,
                                        GMT = NULL,
                                        gset.methods = c("fisher", "gsetcor", "xcor")) {
   if (compute.enrichment) {
-    GMT0 <- getPlaydataGMT()
+    GMT0 <- getLegacyGMT()
     if (!is.null(annot)) GMT0 <- rename_by2(GMT0, annot, "human_ortholog")
     GMT <- if (!is.null(GMT)) merge_sparse_matrix(GMT, GMT0) else GMT0
   }

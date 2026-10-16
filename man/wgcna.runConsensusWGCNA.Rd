@@ -35,7 +35,7 @@ WGCNAplus::runConsensusWGCNA() differs in ways preserved here: (1) it
 defaults to \code{summary=TRUE}, which triggers an AI-based module
 annotation call - disabled here to keep behavior unchanged; (2) it only
 computes enrichment when \code{GMT} is explicitly supplied, whereas this
-function auto-loads the default playdata GMT when enrichment is
+function auto-loads the curated legacy gene sets (lib-x) when enrichment is
 requested; (3) it never calls the \code{progress} callback.
 }
 \seealso{

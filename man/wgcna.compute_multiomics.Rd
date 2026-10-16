@@ -35,8 +35,8 @@ wgcna.compute_multiomics(
 }
 \description{
 WGCNAplus's version differs from this one in three ways that are
-preserved here: (1) it does not auto-load the default playdata geneset
-matrix when \code{GMT} is \code{NULL} (it silently disables enrichment
+preserved here: (1) it does not auto-load the curated legacy gene sets
+(lib-x) when \code{GMT} is \code{NULL} (it silently disables enrichment
 instead), (2) it does not truncate \code{names(dataX)} to two letters,
 and (3) it returns a \code{report} field instead of an \code{annot}
 field. \code{report} generation is disabled here to keep behavior and
