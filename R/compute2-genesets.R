@@ -141,16 +141,7 @@ compute_testGenesets <- function(pgx,
   ## -------------------------------------------------------
 
   gset.size <- Matrix::colSums(pgx$GMT != 0)
-  gset.size.raw <- .pb_libx("gset_size")
-
-  # combine standard genesets with custom genesets size vector
-  if (!is.null(custom.geneset$gmt)) {
-    gset.size.raw <- c(gset.size.raw, custom.geneset$info$GSET_SIZE)
-  }
-
-  gset.idx <- match(names(gset.size), names(gset.size.raw))
-  gset.size.raw <- gset.size.raw[gset.idx]
-  names(gset.size.raw) <- names(gset.size)
+  gset.size.raw <- gset_size_raw(pgx, custom.geneset, gset.size)
   gset.fraction <- gset.size / gset.size.raw
 
   pgx$gset.meta$info <- data.frame(
@@ -171,6 +162,34 @@ compute_testGenesets <- function(pgx,
   remove(X, Y, G, gmt)
   gc()
   return(pgx)
+}
+
+
+#' Raw (pre-filtering) gene-set sizes, in the order of `gset.size`
+#'
+#' Uses `pgx$gset.catalog$n_members` when the slot exists, otherwise the legacy
+#' size vector matched by set name.
+#'
+#' @noRd
+gset_size_raw <- function(pgx, custom.geneset, gset.size) {
+  if (!is.null(pgx$gset.catalog)) {
+    catalog <- pgx$gset.catalog
+    size.raw <- catalog$n_members[match(names(gset.size), catalog$name)]
+    names(size.raw) <- names(gset.size)
+    return(size.raw)
+  }
+
+  gset.size.raw <- .pb_libx("gset_size")
+
+  # combine standard genesets with custom genesets size vector
+  if (!is.null(custom.geneset$gmt)) {
+    gset.size.raw <- c(gset.size.raw, custom.geneset$info$GSET_SIZE)
+  }
+
+  gset.idx <- match(names(gset.size), names(gset.size.raw))
+  gset.size.raw <- gset.size.raw[gset.idx]
+  names(gset.size.raw) <- names(gset.size)
+  gset.size.raw
 }
 
 
