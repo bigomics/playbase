@@ -69,23 +69,17 @@ merge_annot_table <- function(df, df2, priority = 1) {
 #'
 #' @export
 normalizeOrganism <- function(organism) {
-  if (is.null(organism) || is.na(organism)) {
-    return(organism)
+  if (is.null(organism)) return(organism)
+  # organism can be a vector (multi-species), so loop over elements
+  out <- organism
+  ol <- tolower(organism)
+  for (i in which(!is.na(ol))) {
+    if (ol[i] == "human") out[i] <- "Homo sapiens"
+    else if (ol[i] == "mouse") out[i] <- "Mus musculus"
+    else if (ol[i] == "rat") out[i] <- "Rattus norvegicus"
+    else if (grepl("canis.*familiaris|^dog$", ol[i])) out[i] <- "Canis familiaris"
   }
-  org_lower <- tolower(organism)
-  if (org_lower == "human") {
-    return("Homo sapiens")
-  }
-  if (org_lower == "mouse") {
-    return("Mus musculus")
-  }
-  if (org_lower == "rat") {
-    return("Rattus norvegicus")
-  }
-  if (grepl("canis.*familiaris|^dog$", org_lower)) {
-    return("Canis familiaris")
-  }
-  organism
+  out
 }
 
 #' @export
