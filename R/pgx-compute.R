@@ -1139,14 +1139,21 @@ pgx.add_GMT <- function(pgx,
                         custom.geneset = NULL,
                         max.genesets = 20000,
                         include_default_gmt = TRUE,
-                        include_iea = TRUE, species_go = NULL) {
+                        include_iea = TRUE, species_go = NULL,
+                        collections = NULL, tags = NULL, tag_relation = "context",
+                        size = c(10, 400), route = "per_species") {
   playbase.annotation::pgx.addGMT(
     pgx = pgx,
     custom.geneset = custom.geneset,
     max.genesets = max.genesets,
     include_default_gmt = include_default_gmt,
     include_iea = include_iea,
-    species_go = species_go
+    species_go = species_go,
+    collections = collections,
+    tags = tags,
+    tag_relation = tag_relation,
+    size = size,
+    route = route
   )
 }
 
