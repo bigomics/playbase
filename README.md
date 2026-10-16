@@ -27,6 +27,8 @@ You can install the development version of playbase from
 devtools::install_github("bigomics/playbase")
 ```
 
+Reference data is read from a lib-x release directory, set via the `LIBX_DIR` environment variable.
+
 ## Data upload
 
 The first step in any OmicsPlayground analysis is to upload data which
