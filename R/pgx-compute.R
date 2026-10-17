@@ -154,6 +154,12 @@ pgx.createFromFiles <- function(counts.file,
 #' @param only.proteincoding Logical indicating whether to keep only protein-coding genes. Default is TRUE.
 #' @param custom.geneset Custom gene sets to test, as a named list with gmt and info elements.
 #' @param max.genesets Maximum number of gene sets to test. Default is 5000.
+#' @param annot_lock (Optional) Annotation lock, as returned by
+#'   [playbase.annotation::an.readLock()]. Gene sets are built from its
+#'   selection and `versions` records its `lock_sha256`, `lock_status` and
+#'   the selection digest. A stale lock (`lock_status` "stale") is never
+#'   refused. NULL (default) builds gene sets as before and sets
+#'   `lock_status` to "none".
 #'
 #' @details
 #' pgx.createPGX creates a pgx object with the following slots:
@@ -185,6 +191,7 @@ pgx.createPGX <- function(counts,
                           organism,
                           custom.geneset = NULL,
                           annot_table = NULL,
+                          annot_lock = NULL,
                           max.genesets = 5000,
                           name = "Data set",
                           datatype = "RNA-seq",
@@ -708,7 +715,7 @@ pgx.createPGX <- function(counts,
   if (no3 || unknown.datatype || !add.gmt) {
     message("[pgx.createPGX] WARNING: empty GMT matrix. No gene sets. ")
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
-  } else {
+  } else if (is.null(annot_lock)) {
     pgx <- pgx.add_GMT(
       pgx = pgx,
       custom.geneset = custom.geneset,
@@ -716,6 +723,35 @@ pgx.createPGX <- function(counts,
       include_default_gmt = include_default_gmt,
       species_go = species_go
     )
+  } else {
+    ## explicit mode: the gene sets selected in the lock
+    g <- annot_lock$genesets
+    pgx <- pgx.add_GMT(
+      pgx = pgx,
+      custom.geneset = custom.geneset,
+      max.genesets = max.genesets,
+      include_default_gmt = include_default_gmt,
+      species_go = species_go,
+      collections = as.character(g$collections),
+      tags = g$tags,
+      tag_relation = g$tag_relation,
+      size = g$size
+    )
+  }
+
+  ## Record the annotation lock. A stale lock is used as is, never refused.
+  if (is.null(annot_lock)) {
+    pgx$versions$lock_status <- "none"
+  } else {
+    digest <- attr(pgx$gset.catalog, "digest")
+    if (!identical(digest, annot_lock$genesets$selection_digest)) {
+      ## membership can shrink after preprocessing: a note, not an error
+      pgx$versions$geneset_selection_note <-
+        "gene-set selection differs from the lock (features changed after preprocessing)"
+    }
+    pgx$versions$annot_lock_sha256 <- annot_lock$lock_sha256
+    pgx$versions$lock_status <- attr(annot_lock, "lock_status") %||% "ok"
+    pgx$versions$geneset_selection_digest <- digest
   }
 
   ## --------------------------------

@@ -13,6 +13,7 @@ pgx.createPGX(
   organism,
   custom.geneset = NULL,
   annot_table = NULL,
+  annot_lock = NULL,
   max.genesets = 5000,
   name = "Data set",
   datatype = "RNA-seq",
@@ -63,6 +64,13 @@ pgx.createPGX(
 for the gene annotation table and the probe to symbol conversion.}
 
 \item{custom.geneset}{Custom gene sets to test, as a named list with gmt and info elements.}
+
+\item{annot_lock}{(Optional) Annotation lock, as returned by
+[playbase.annotation::an.readLock()]. Gene sets are built from its
+selection and `versions` records its `lock_sha256`, `lock_status` and
+the selection digest. A stale lock (`lock_status` "stale") is never
+refused. NULL (default) builds gene sets as before and sets
+`lock_status` to "none".}
 
 \item{max.genesets}{Maximum number of gene sets to test. Default is 5000.}
 

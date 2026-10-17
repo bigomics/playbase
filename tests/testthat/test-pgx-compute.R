@@ -775,3 +775,112 @@ test_that("methylomics EPIC v2 ids are collapsed and array/genome recorded", {
   expect_identical(annotated, "EPIC v2 array")
   expect_identical(pgx$meth, list(array = "EPIC v2 array", genome = "hg38"))
 })
+
+## Annotation lock. The fixture rows become human symbols so the gene-set
+## step runs; locks select no collection, which needs no featuresets.
+
+make_symbol_fixture <- function() {
+  fixture <- make_pgx_fixture()
+  rownames(fixture$counts) <- head(
+    AnnotationDbi::keys(org.Hs.eg.db::org.Hs.eg.db, "SYMBOL"),
+    nrow(fixture$counts)
+  )
+  fixture
+}
+
+## Cell-cycle inference warns on so few genes; that noise is not tested here.
+create_symbol_pgx <- function(fixture, ...) {
+  suppressWarnings(suppressMessages(playbase::pgx.createPGX(
+    counts = fixture$counts,
+    samples = fixture$samples,
+    contrasts = fixture$contrasts,
+    organism = "Human",
+    datatype = "RNA-seq",
+    filter.genes = FALSE,
+    only.known = FALSE,
+    only.proteincoding = FALSE,
+    ...
+  )))
+}
+
+lock_layers <- data.frame(
+  layer = "counts",
+  file_sha256 = strrep("0", 64),
+  parser_version = "1"
+)
+
+## The lock of the fixture's preview, as JSON, written once per run.
+lock_cache <- new.env()
+symbol_lock_json <- function(fixture) {
+  if (is.null(lock_cache$json)) {
+    preview <- suppressMessages(playbase.annotation::an.annotatePreview(
+      list(counts = rownames(fixture$counts)), "Human", "transcriptomics"
+    ))
+    lock_cache$json <- playbase.annotation::an.writeLock(
+      preview,
+      list(genesets = list(collections = character())),
+      lock_layers
+    )
+  }
+  lock_cache$json
+}
+
+read_symbol_lock <- function(fixture, layers = lock_layers) {
+  playbase.annotation::an.readLock(
+    symbol_lock_json(fixture),
+    list(layers = layers, libx_dir = omicspgx::libx_dir(), packages = NULL)
+  )
+}
+
+test_that("annot_lock = NULL leaves genes and gene sets unchanged", {
+  skip_if(is.null(omicspgx::libx_dir()))
+  fixture <- make_symbol_fixture()
+  default <- create_symbol_pgx(fixture)
+  unlocked <- create_symbol_pgx(fixture, annot_lock = NULL)
+
+  expect_identical(unlocked$versions$lock_status, "none")
+  expect_null(unlocked$versions$annot_lock_sha256)
+  expect_identical(unlocked$genes, default$genes)
+  expect_identical(unlocked$GMT, default$GMT)
+})
+
+test_that("a matching lock is recorded as ok with its sha256", {
+  skip_if(is.null(omicspgx::libx_dir()))
+  fixture <- make_symbol_fixture()
+  lock <- expect_no_warning(read_symbol_lock(fixture))
+  pgx <- create_symbol_pgx(fixture, annot_lock = lock)
+
+  expect_identical(pgx$versions$lock_status, "ok")
+  expect_identical(pgx$versions$annot_lock_sha256, lock$lock_sha256)
+  expect_match(pgx$versions$annot_lock_sha256, "^[0-9a-f]{64}$")
+  expect_identical(
+    pgx$versions$geneset_selection_digest,
+    lock$genesets$selection_digest
+  )
+  expect_null(pgx$versions$geneset_selection_note)
+})
+
+test_that("a stale lock still computes and is recorded as stale", {
+  skip_if(is.null(omicspgx::libx_dir()))
+  fixture <- make_symbol_fixture()
+  changed <- transform(lock_layers, file_sha256 = strrep("1", 64))
+  expect_warning(
+    lock <- read_symbol_lock(fixture, changed),
+    class = "annot_lock_stale"
+  )
+  pgx <- create_symbol_pgx(fixture, annot_lock = lock)
+
+  expect_identical(pgx$versions$lock_status, "stale")
+  expect_identical(pgx$versions$annot_lock_sha256, lock$lock_sha256)
+  expect_false(is.null(pgx$X))
+})
+
+test_that("a lock without collections gives no gene sets, random or not", {
+  skip_if(is.null(omicspgx::libx_dir()))
+  fixture <- make_symbol_fixture()
+  lock <- read_symbol_lock(fixture)
+  pgx <- create_symbol_pgx(fixture, annot_lock = lock)
+
+  expect_identical(ncol(pgx$GMT), 0L)
+  expect_false(any(grepl("^TEST:", colnames(pgx$GMT))))
+})
