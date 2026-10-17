@@ -798,7 +798,6 @@ visplot.PCSF <- function(
 #'   pgx.computePCSF. To be called from plotPCSF.
 #'
 #' @return NULL
-#' @param x
 #'
 plotPCSF.IGRAPH <- function(net, fx = NULL, vertex.cex = 1,
                             color.fx = fx, vertex.alpha = 1,
