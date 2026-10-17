@@ -5,6 +5,16 @@
 * `is.xxl()` and `mofa.log1s()` removed from the public API. Both were exported
   but had zero known callers in `playbase`, `omicsplayground`, or `omicspgx`.
   If you depended on either, they are gone — there is no replacement.
+* Azimuth is no longer a dependency. `pgx.runAzimuth()` is replaced by
+  `pgx.predictCellTypes(counts, organism, reference)`, which maps cells onto
+  the same Azimuth reference atlases with Seurat directly and converts gene IDs
+  to human symbols with `getProbeAnnotation()`. It now stops on failure instead
+  of returning `NULL`. This drops 24 packages (~1.2 GB, including the hg38
+  BSgenome and EnsDb.Hsapiens.v86) and the compiler they needed.
+* `pgx.createPGX()` and `pgx.createSingleCellPGX()`: argument `azimuth_ref` is
+  renamed `celltype_ref`.
+* `glmGamPoi` and `SeuratObject` are now declared in Imports. Both were used
+  directly but only installed because Azimuth pulled them in.
 
 ## Preprocessing extraction (in progress)
 
