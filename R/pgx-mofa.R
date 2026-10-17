@@ -2777,10 +2777,10 @@ lasagna.create_model <- function(data, pheno = "pheno", ntop = 1000, nc = 20,
     xtypes
     has.mx <- ("mx" %in% xtypes)
     has.px <- any(c("gx", "px") %in% xtypes)
-    GRAPHITE_PPI <- try(.pb_libx("graphite_ppi"), silent = TRUE)
-    has.ppi <- !("try-error" %in% class(GRAPHITE_PPI))
+    has.ppi <- omicspgx::libx_has(.pb_LIBX_PATHS[["graphite_ppi"]])
     if (has.mx && has.px && has.ppi) {
       message("using GRAPHITE PPI structure for pruning metabolite interactions")
+      GRAPHITE_PPI <- .pb_libx("graphite_ppi")
       GRAPHITE_PPI[, 1] <- paste0("px:", GRAPHITE_PPI[, 1])
       GRAPHITE_PPI[, 2] <- paste0("px:", GRAPHITE_PPI[, 2])
       GRAPHITE_PPI[, 1] <- sub("px:CHEBI:", "mx:", GRAPHITE_PPI[, 1])

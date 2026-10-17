@@ -121,24 +121,20 @@ compute_extra <- function(pgx, extra = c(
     })
     timings <- rbind(timings, c("drugs", tt))
 
-    if (!is.null(libx.dir)) {
-      message(">>> Computing drug sensitivity enrichment...")
-      tt <- system.time({
-        pgx <- tryCatch(
-          {
-            compute_drugSensitivityEnrichment(pgx, libx.dir)
-          },
-          error = function(e) {
-            message("[ERROR_DRUG_SENSITIVITY] FATAL: ", as.character(e))
-            write(as.character(e), file = paste0(user_input_dir, "/ERROR_DRUG_SENSITIVITY"))
-            return(pgx)
-          }
-        )
-      })
-      timings <- rbind(timings, c("drugs-sx", tt))
-    } else {
-      message(">>> Skipping drug sensitivity enrichment (no libx.dir)...")
-    }
+    message(">>> Computing drug sensitivity enrichment...")
+    tt <- system.time({
+      pgx <- tryCatch(
+        {
+          compute_drugSensitivityEnrichment(pgx, libx.dir)
+        },
+        error = function(e) {
+          message("[ERROR_DRUG_SENSITIVITY] FATAL: ", as.character(e))
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_DRUG_SENSITIVITY"))
+          return(pgx)
+        }
+      )
+    })
+    timings <- rbind(timings, c("drugs-sx", tt))
     message("<<< done!")
   }
 
@@ -526,24 +522,19 @@ compute_cellcycle_gender <- function(pgx, rna.counts = .pgx_count_scale_matrix(p
 #'
 #' This function performs drug activity enrichment analysis based on the input RNA expression data.
 #' It uses drug activity databases to compute enrichment scores and attach the results to the input object.
-#' The drug activity databases are the L1000 activity and gene perturbation files in
-#' \code{libx.dir}; without \code{libx.dir} the object is returned unchanged.
+#' The drug activity databases are the CMAP activity and gene perturbation
+#' files under \code{cmap/} of the lib-x release.
 #'
 #' @param pgx An object containing the input data for analysis.
-#' @param libx.dir The directory path where the drug activity databases are located.
+#' @param libx.dir The lib-x release directory. NULL (default) uses the
+#'   configured release (\code{LIBX_DIR} or \code{options(omicspgx.libx_dir)});
+#'   without a release the function errors.
 #' @return An updated object with drug activity enrichment results.
 #' @export
 compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
-  if (is.null(libx.dir) || !dir.exists(libx.dir)) {
-    message("[compute_drugActivityEnrichment] WARNING: no libx.dir, skipping drug activity enrichment")
-    return(pgx)
-  }
-
-  ## scan for connectivity reference files in libx
-  cmap.dir <- file.path(libx.dir, "cmap")
-  db.files <- dir(cmap.dir, pattern = "L1000-activity.*rds$|L1000-gene.*rds$")
-  ref.db <- lapply(db.files, function(f) readRDS(file.path(cmap.dir, f)))
-  names(ref.db) <- sub("-", "/", gsub("_.*", "", db.files))
+  libx.dir <- .pb_libx_release(libx.dir)
+  ref.db <- .pb_libx_assets("^cmap/L[0-9]+-(activity|gene).*rds$", libx.dir)
+  names(ref.db) <- sub("-", "/", gsub("_.*", "", names(ref.db)))
   repurposing <- NULL
 
   for (i in seq_along(ref.db)) {
@@ -580,7 +571,7 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
     ## --------------- attach annotation
     annot0 <- NULL
     if (is.drug) {
-      if (is.null(repurposing)) repurposing <- .pb_libx("l1000_repurposing")
+      if (is.null(repurposing)) repurposing <- .pb_libx("l1000_repurposing", libx.dir)
       annot0 <- repurposing
       annot0$drug <- annot0$pert_iname
       rownames(annot0) <- annot0$pert_iname
@@ -612,32 +603,29 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
 #'
 #' This function performs drug sensitivity enrichment analysis based on the input RNA expression data.
 #' It uses drug sensitivity databases to compute enrichment scores and attach the results to the input object.
-#' The drug sensitivity databases are located in the specified directory (libx.dir).
+#' The drug sensitivity databases are the sensitivity files under
+#' \code{cmap/} of the lib-x release.
 #'
 #' @param pgx An object containing the input data for analysis.
-#' @param libx.dir The directory path where the drug sensitivity databases are located.
+#' @param libx.dir The lib-x release directory. NULL (default) uses the
+#'   configured release (\code{LIBX_DIR} or \code{options(omicspgx.libx_dir)});
+#'   without a release the function errors.
 #' @return An updated object with drug sensitivity enrichment results.
 #' @export
 compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
-  if (is.null(libx.dir) || !dir.exists(libx.dir)) {
-    return(pgx)
-  }
-
-  cmap.dir <- file.path(libx.dir, "cmap")
-  ref.db <- dir(cmap.dir, pattern = "sensitivity.*rds$")
+  libx.dir <- .pb_libx_release(libx.dir)
+  ref.db <- .pb_libx_assets("^cmap/[^/]*sensitivity.*rds$", libx.dir)
   if (length(ref.db) == 0) {
     message("[compute_drugSensitivityEnrichment] Warning:: missing drug sensitivity database")
     return(pgx)
   }
-  names(ref.db) <- sub("-", "/", gsub("_.*", "", ref.db))
+  files <- names(ref.db)
+  names(ref.db) <- sub("-", "/", gsub("_.*", "", files))
 
-  ref.db
-  ref <- ref.db[1]
   for (i in seq_along(ref.db)) {
-    # i=2
-    ref <- ref.db[i]
+    ref <- files[i]
     message("[compute_drugSensitivityEnrichment] computing sensitivity CMAP for ", ref)
-    X <- readRDS(file = file.path(cmap.dir, ref))
+    X <- ref.db[[i]]
     xdrugs <- gsub("[@_].*$", "", colnames(X))
 
     out1 <- pgx.computeDrugEnrichment(
@@ -653,7 +641,7 @@ compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
     if (!is.null(out1)) {
       ## attach annotation
       db <- sub("-.*", "", ref)
-      annot0 <- utils::read.csv(file.path(cmap.dir, paste0(db, "-drugs.csv")))
+      annot0 <- utils::read.csv(omicspgx::libx_path(paste0("cmap/", db, "-drugs.csv"), dir = libx.dir))
       rownames(annot0) <- annot0$drug
       annot0 <- annot0[match(rownames(out1[["GSEA"]]$X), rownames(annot0)), ]
       rownames(annot0) <- rownames(out1[["GSEA"]]$X)

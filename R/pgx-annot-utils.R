@@ -561,7 +561,11 @@ check_species_probetype <- function(
 #' @export
 annotate_phospho_residue <- function(features, detect.only = FALSE) {
   valid_name <- mean(grepl("[_][A-Z]?[0-9]+", features), na.rm = TRUE) > 0.9
-  valid_name
+  ## Only 'uniprot_position' names are checked against the lib-x
+  ## phosphosite table; detection without that table finds no phosphosites.
+  if (!valid_name || (detect.only && !omicspgx::libx_has(.pb_LIBX_PATHS[["phosphosite"]]))) {
+    return(if (detect.only) FALSE else features)
+  }
   uniprot <- sub("[_].*", "", features)
   positions <- gsub(".*[_][A-Za-z]?|[.].*", "", features)
   positions <- strsplit(positions, split = "[;/,]")
@@ -569,8 +573,7 @@ annotate_phospho_residue <- function(features, detect.only = FALSE) {
   P <- .pb_libx("phosphosite")
   prot.match <- mean(uniprot %in% P$UniProt, na.rm = TRUE)
   pos.match <- mean(positions %in% P$Position, na.rm = TRUE)
-  is_phospho <- (valid_name && prot.match > 0.50 && pos.match > 0.50)
-  is_phospho
+  is_phospho <- (prot.match > 0.50 && pos.match > 0.50)
 
   if (detect.only) {
     return(is_phospho)

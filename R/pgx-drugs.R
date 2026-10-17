@@ -6,7 +6,8 @@
 
 #' @title Compute drug enrichment from expression data
 #'
-#' @param X Drug profile matrix, genes in rows and profiles in columns. Required.
+#' @param X Drug profile matrix, genes in rows and profiles in columns. NULL
+#'   (default) uses the CMAP drug activity matrix of the configured lib-x release.
 #' @param drugs Character vector of drug names
 #' @param nmin Minimum number of genes per drug set
 #' @param methods Methods for enrichment (rank, gsea)
@@ -26,7 +27,7 @@
 #' containing the enrichment results for each drug.
 #'
 #' @export
-pgx.computeDrugEnrichment <- function(pgx, X, xdrugs = NULL,
+pgx.computeDrugEnrichment <- function(pgx, X = NULL, xdrugs = NULL,
                                       drug_info = NULL,
                                       methods = c("GSEA", "cor"), ## deprecated
                                       nmin = 15, nprune = 250, contrast = NULL) {
@@ -39,7 +40,7 @@ pgx.computeDrugEnrichment <- function(pgx, X, xdrugs = NULL,
   }
 
   if (is.null(X)) {
-    stop("[pgx.computeDrugEnrichment] X is required")
+    X <- .pb_libx_assets("^cmap/L[0-9]+-activity.*rds$", .pb_libx_release())[[1]]
   }
   if(is.null(xdrugs)) {
     xdrugs <- gsub("[_@].*$", "", colnames(X))

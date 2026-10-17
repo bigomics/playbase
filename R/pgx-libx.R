@@ -40,20 +40,39 @@
   gmt_hgnc = "featuresets/raw/playdata/hgnc_genefamilies_EDITED.gmt"
 )
 
-## Reads the lib-x object `name` (a name of .pb_LIBX_PATHS). Tables and .rds
-## files come back as R objects, .tsv and .gmt files as paths, `reactome_dir`
-## as the svg directory and `l1000_repurposing` as the drug annotation
-## data.frame. Errors when no lib-x release is set or the release lacks it.
-.pb_libx <- function(name) {
+## Reads the lib-x object `name` (a name of .pb_LIBX_PATHS) from the release
+## `dir`. Tables and .rds files come back as R objects, .tsv and .gmt files as
+## paths, `reactome_dir` as the svg directory and `l1000_repurposing` as the
+## drug annotation data.frame. Errors when no lib-x release is set or the
+## release lacks it.
+.pb_libx <- function(name, dir = omicspgx::libx_dir()) {
   if (!is.character(name) || length(name) != 1L || !name %in% names(.pb_LIBX_PATHS)) {
     stop("[.pb_libx] unknown lib-x name: ", paste(name, collapse = ", "))
   }
   path <- .pb_LIBX_PATHS[[name]]
   switch(name,
-    reactome_dir = omicspgx::libx_path(path),
-    l1000_repurposing = utils::read.csv(omicspgx::libx_read(path), sep = "\t", comment.char = "#"),
-    omicspgx::libx_read(path)
+    reactome_dir = omicspgx::libx_path(path, dir = dir),
+    l1000_repurposing = utils::read.csv(omicspgx::libx_read(path, dir = dir), sep = "\t", comment.char = "#"),
+    omicspgx::libx_read(path, dir = dir)
   )
+}
+
+## The lib-x release directory `dir`, or the configured release when `dir` is
+## NULL (see omicspgx::libx_dir). Errors when there is none or `dir` is not a
+## lib-x release.
+.pb_libx_release <- function(dir = NULL) {
+  dir <- omicspgx::libx_dir(dir %||% omicspgx::libx_dir())
+  if (is.null(dir)) {
+    stop("no lib-x release: pass libx.dir, or set LIBX_DIR or options(omicspgx.libx_dir)")
+  }
+  dir
+}
+
+## Reads the assets of the lib-x release `dir` whose paths match `pattern`,
+## named by file name.
+.pb_libx_assets <- function(pattern, dir) {
+  paths <- grep(pattern, omicspgx::libx_manifest(dir)$path, value = TRUE)
+  stats::setNames(lapply(paths, omicspgx::libx_read, dir = dir), basename(paths))
 }
 
 ## Opens a lib-x provenance context labelled `op_id`. The returned `stamp(pgx)`

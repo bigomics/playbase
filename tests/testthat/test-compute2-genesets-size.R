@@ -43,3 +43,18 @@ test_that("without a catalog the legacy size vector is used", {
   out <- gset_size_raw(pgx, custom, gset.size)
   expect_equal(out, c("A:set1" = 5, "B:set2" = 6, "C:set3" = 9))
 })
+
+test_that("same-name sets take the first set's size, as their GMT columns do", {
+  gmt <- make_gmt()
+  colnames(gmt)[2] <- "A:set1"
+  catalog <- data.frame(
+    name = colnames(gmt), set_uid = c("u1", "u2", "u3"),
+    n_members = c(10L, 20L, 30L)
+  )
+  ## compute_testGenesets subsets the GMT by set name
+  pgx <- list(GMT = gmt[, colnames(gmt)], gset.catalog = catalog)
+  gset.size <- Matrix::colSums(pgx$GMT != 0)
+  expect_equal(unname(gset.size), c(3, 3, 3))
+  out <- gset_size_raw(pgx, list(), gset.size)
+  expect_equal(unname(out), c(10L, 10L, 30L))
+})

@@ -6,7 +6,7 @@
 \usage{
 pgx.computeDrugEnrichment(
   pgx,
-  X,
+  X = NULL,
   xdrugs = NULL,
   drug_info = NULL,
   methods = c("GSEA", "cor"),
@@ -16,7 +16,8 @@ pgx.computeDrugEnrichment(
 )
 }
 \arguments{
-\item{X}{Drug profile matrix, genes in rows and profiles in columns. Required.}
+\item{X}{Drug profile matrix, genes in rows and profiles in columns. NULL
+(default) uses the CMAP drug activity matrix of the configured lib-x release.}
 
 \item{methods}{Methods for enrichment (rank, gsea)}
 

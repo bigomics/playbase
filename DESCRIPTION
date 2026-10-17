@@ -169,6 +169,7 @@ Remotes:
     KEGG.db=url::https://bioconductor.org/packages/3.11/data/annotation/src/contrib/KEGG.db_3.2.4.tar.gz,
     org.Pf.plasmo.db=url::https://bioconductor.org/packages/3.14/data/annotation/src/contrib/org.Pf.plasmo.db_3.14.0.tar.gz,
     PCSF=url::https://github.com/bigomics/PCSF/archive/HEAD.zip,
+    bigomics/omicspgx,
     bigomics/playbase.annotation,
     bigomics/playbase.preprocess,
     infercnv=url::https://github.com/broadinstitute/infercnv/archive/refs/tags/infercnv-v1.3.3.zip,

@@ -86,3 +86,38 @@ test_that("a second stamp keeps the release and appends the assets", {
   expect_identical(other$versions$libx_manifest_sha256, "mr1")
   expect_identical(other$versions$reference_source, "mixed")
 })
+
+test_that("phosphosite detection needs no lib-x release", {
+  withr::local_options(omicspgx.libx_dir = "")
+  expect_false(annotate_phospho_residue(c("P04637_S15", "P38398_T20"), detect.only = TRUE))
+  expect_false(annotate_phospho_residue(c("TP53", "BRCA1"), detect.only = TRUE))
+  expect_identical(annotate_phospho_residue(c("TP53", "BRCA1")), c("TP53", "BRCA1"))
+})
+
+test_that("drug enrichment without a lib-x release errors instead of skipping", {
+  withr::local_options(omicspgx.libx_dir = "")
+  expect_error(compute_drugActivityEnrichment(list()), "no lib-x release")
+  expect_error(compute_drugSensitivityEnrichment(list()), "no lib-x release")
+})
+
+test_that("pgx.computeDrugEnrichment keeps its X = NULL default", {
+  expect_null(formals(pgx.computeDrugEnrichment)$X)
+})
+
+test_that("a NULL lib-x directory resolves to the configured release", {
+  skip_if(is.null(omicspgx::libx_dir()))
+  expect_identical(.pb_libx_release(NULL), omicspgx::libx_dir())
+  expect_error(.pb_libx_release(tempdir()), class = "pgx_error_libx_bad_release")
+})
+
+test_that("assets read by pattern are recorded in the provenance", {
+  skip_if(is.null(omicspgx::libx_dir()))
+  dir <- omicspgx::libx_dir()
+  omicspgx::libx_provenance_begin("test")
+  assets <- .pb_libx_assets("^refmat/LM22\\.rds$", dir)
+  prov <- omicspgx::libx_provenance_end()
+  expect_named(assets, "LM22.rds")
+  expect_identical(assets[[1]], .pb_libx("lm22"))
+  expect_identical(prov$assets$path, "refmat/LM22.rds")
+  expect_identical(prov$reference_source, "libx")
+})

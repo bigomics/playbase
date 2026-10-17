@@ -777,7 +777,7 @@ test_that("methylomics EPIC v2 ids are collapsed and array/genome recorded", {
 })
 
 ## Annotation lock. The fixture rows become human symbols so the gene-set
-## step runs; locks select no collection, which needs no featuresets.
+## step runs; locks select no collection unless a test chooses one.
 
 make_symbol_fixture <- function() {
   fixture <- make_pgx_fixture()
@@ -809,25 +809,26 @@ lock_layers <- data.frame(
   parser_version = "1"
 )
 
-## The lock of the fixture's preview, as JSON, written once per run.
+## The fixture's preview, computed once per run, and its lock for the gene-set
+## choices `genesets`, as JSON.
 lock_cache <- new.env()
-symbol_lock_json <- function(fixture) {
-  if (is.null(lock_cache$json)) {
-    preview <- suppressMessages(playbase.annotation::an.annotatePreview(
+symbol_lock_json <- function(fixture, genesets) {
+  if (is.null(lock_cache$preview)) {
+    lock_cache$preview <- suppressMessages(playbase.annotation::an.annotatePreview(
       list(counts = rownames(fixture$counts)), "Human", "transcriptomics"
     ))
-    lock_cache$json <- playbase.annotation::an.writeLock(
-      preview,
-      list(genesets = list(collections = character())),
-      lock_layers
-    )
   }
-  lock_cache$json
+  playbase.annotation::an.writeLock(
+    lock_cache$preview,
+    list(genesets = genesets),
+    lock_layers
+  )
 }
 
-read_symbol_lock <- function(fixture, layers = lock_layers) {
+read_symbol_lock <- function(fixture, layers = lock_layers,
+                             genesets = list(collections = character())) {
   playbase.annotation::an.readLock(
-    symbol_lock_json(fixture),
+    symbol_lock_json(fixture, genesets),
     list(layers = layers, libx_dir = omicspgx::libx_dir(), packages = NULL)
   )
 }
@@ -858,6 +859,32 @@ test_that("a matching lock is recorded as ok with its sha256", {
     lock$genesets$selection_digest
   )
   expect_null(pgx$versions$geneset_selection_note)
+})
+
+test_that("a lock selecting a collection builds the gene sets the preview selected", {
+  skip_if(is.null(omicspgx::libx_dir()))
+  fixture <- make_symbol_fixture()
+  lock <- read_symbol_lock(fixture, genesets = list(collections = "HALLMARK", size = c(1, 400)))
+  pgx <- create_symbol_pgx(fixture, annot_lock = lock)
+
+  expect_gt(ncol(pgx$GMT), 0)
+  expect_identical(unique(pgx$gset.catalog$collection), "HALLMARK")
+  expect_identical(
+    pgx$versions$geneset_selection_digest,
+    lock$genesets$selection_digest
+  )
+  expect_null(pgx$versions$geneset_selection_note)
+})
+
+test_that("a lock that builds no gene sets is recorded as not applied", {
+  skip_if(is.null(omicspgx::libx_dir()))
+  fixture <- make_symbol_fixture()
+  lock <- read_symbol_lock(fixture)
+  pgx <- create_symbol_pgx(fixture, annot_lock = lock, add.gmt = FALSE)
+
+  expect_identical(pgx$versions$lock_status, "ok")
+  expect_identical(pgx$versions$annot_lock_sha256, lock$lock_sha256)
+  expect_match(pgx$versions$geneset_selection_note, "not applied")
 })
 
 test_that("a stale lock still computes and is recorded as stale", {

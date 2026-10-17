@@ -2,12 +2,18 @@
 % Please edit documentation in R/pgx-wgcna.R
 \name{getLegacyGMT}
 \alias{getLegacyGMT}
+\alias{getPlaydataGMT}
 \title{Combined gene x geneset matrix of the curated legacy gene sets (lib-x)}
 \usage{
 getLegacyGMT()
+
+getPlaydataGMT()
 }
 \description{
 The lib-x GSETxGENE and MSETxMETABOLITE matrices, transposed and merged,
 with the metabolite ids stripped of their prefix. Same matrix as the
 WGCNAplus default, read from lib-x.
+}
+\details{
+\code{getPlaydataGMT()} is the former name and stays as an alias.
 }

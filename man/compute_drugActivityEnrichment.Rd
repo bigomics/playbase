@@ -9,7 +9,9 @@ compute_drugActivityEnrichment(pgx, libx.dir = NULL)
 \arguments{
 \item{pgx}{An object containing the input data for analysis.}
 
-\item{libx.dir}{The directory path where the drug activity databases are located.}
+\item{libx.dir}{The lib-x release directory. NULL (default) uses the
+configured release (\code{LIBX_DIR} or \code{options(omicspgx.libx_dir)});
+without a release the function errors.}
 }
 \value{
 An updated object with drug activity enrichment results.
@@ -17,6 +19,6 @@ An updated object with drug activity enrichment results.
 \description{
 This function performs drug activity enrichment analysis based on the input RNA expression data.
 It uses drug activity databases to compute enrichment scores and attach the results to the input object.
-The drug activity databases are the L1000 activity and gene perturbation files in
-\code{libx.dir}; without \code{libx.dir} the object is returned unchanged.
+The drug activity databases are the CMAP activity and gene perturbation
+files under \code{cmap/} of the lib-x release.
 }

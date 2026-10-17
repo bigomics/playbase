@@ -9,7 +9,9 @@ compute_drugSensitivityEnrichment(pgx, libx.dir = NULL)
 \arguments{
 \item{pgx}{An object containing the input data for analysis.}
 
-\item{libx.dir}{The directory path where the drug sensitivity databases are located.}
+\item{libx.dir}{The lib-x release directory. NULL (default) uses the
+configured release (\code{LIBX_DIR} or \code{options(omicspgx.libx_dir)});
+without a release the function errors.}
 }
 \value{
 An updated object with drug sensitivity enrichment results.
@@ -17,5 +19,6 @@ An updated object with drug sensitivity enrichment results.
 \description{
 This function performs drug sensitivity enrichment analysis based on the input RNA expression data.
 It uses drug sensitivity databases to compute enrichment scores and attach the results to the input object.
-The drug sensitivity databases are located in the specified directory (libx.dir).
+The drug sensitivity databases are the sensitivity files under
+\code{cmap/} of the lib-x release.
 }

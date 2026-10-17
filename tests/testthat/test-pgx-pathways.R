@@ -2,8 +2,23 @@ is_ci <- function() {
   Sys.getenv("CI") == "true"
 }
 
+## TRUE when PathBank serves a diagram for `pb`; it sometimes answers with an
+## empty SVG document.
+pathbank_serves <- function(pb) {
+  url <- paste0("https://www.pathbank.org/view/", pb, "/download?type=simple_large_font_vector_image")
+  destfile <- tempfile(fileext = ".svg")
+  tryCatch(
+    {
+      utils::download.file(url, destfile, quiet = TRUE)
+      length(xml2::xml_children(xml2::read_xml(destfile))) > 0
+    },
+    error = function(e) FALSE
+  )
+}
+
 test_that("pathbankview works correctly", {
   skip_if(is_ci(), "Skipping PathBank tests in CI environment (GitHub Actions randomyl fails to download SVGs)")
+  skip_if_not(pathbank_serves("SMP0080852"), "PathBank serves no diagram for SMP0080852")
 
   # Test 1: Valid PathBank ID and coloring node
   test_that("Valid PathBank ID with coloring", {
