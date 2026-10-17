@@ -9,20 +9,20 @@ pgx.predictCellTypes(counts, organism, reference = "pbmcref", k.weight = 20)
 \arguments{
 \item{counts}{Raw counts (genes x cells), dense or sparse.}
 
-\item{organism}{Organism of \code{counts}, e.g. \code{pgx$organism}.}
+\item{organism}{Organism of `counts`, e.g. `pgx$organism`.}
 
 \item{reference}{Name of the reference atlas.}
 
 \item{k.weight}{Number of neighbours used to weight anchors.}
 }
 \value{
-data.frame with one row per cell and one \verb{predicted.<level>}
-column per annotation level of the reference.
+data.frame with one row per cell and one `predicted.<level>`
+  column per annotation level of the reference.
 }
 \description{
 Maps each cell onto a Seurat reference atlas (the
-Azimuth references distributed as SeuratData packages, e.g.
-"pbmcref" or "tonsilref") and transfers the atlas annotations.
-Gene IDs are first converted to human symbols, the namespace of
-the atlases.
+  Azimuth references distributed as SeuratData packages, e.g.
+  "pbmcref" or "tonsilref") and transfers the atlas annotations.
+  Gene IDs are first converted to human symbols, the namespace of
+  the atlases.
 }
