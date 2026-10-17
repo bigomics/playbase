@@ -21,7 +21,14 @@ compute_extra(
 
 \item{sigdb}{A character vector specifying the path to the sigdb-.h5 files for connectivity scores.}
 
-\item{libx.dir}{The directory where the sigdb-.h5 files are located.}
+\item{libx.dir}{The lib-x release directory (it holds \code{manifest.tsv}).
+The drug steps read their CMAP references from it and the connectivity
+step adds its \code{sigdb/*.h5} files. NULL, or a folder that is not a
+lib-x release, uses the configured release (\code{LIBX_DIR} or
+\code{options(omicspgx.libx_dir)}). Without any release the drug steps
+fail and write \code{ERROR_DRUG_ACTIVITY} and \code{ERROR_DRUG_SENSITIVITY}
+to \code{user_input_dir}; connectivity uses only the \code{pgx.dir} and
+\code{sigdb} files.}
 }
 \value{
 An updated object with additional analysis results.

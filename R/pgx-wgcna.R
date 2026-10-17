@@ -218,10 +218,6 @@ getLegacyGMT <- function() {
   merge_sparse_matrix(G1, G2)
 }
 
-#' @rdname getLegacyGMT
-#' @details \code{getPlaydataGMT()} is the former name and stays as an alias.
-getPlaydataGMT <- function() getLegacyGMT()
-
 #' Core WGCNA computation (lower-level workhorse called by \code{\link{pgx.wgcna}})
 #' @param X Gene expression matrix (genes x samples).
 #' @param samples Sample metadata data.frame.

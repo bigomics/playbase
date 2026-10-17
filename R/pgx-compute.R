@@ -260,7 +260,7 @@ pgx.createPGX <- function(counts,
       sc_compute_settings = sc_compute_settings
     )
     if (!is.null(annot_lock)) pgx <- pgx.applyAnnotLock(pgx, annot_lock, add.gmt = FALSE)
-    return(pgx)
+    return(prov$stamp(pgx))
   }
 
   ## -------------------------------------------------------------------
@@ -1146,7 +1146,8 @@ pgx.computePGX <- function(pgx,
 
 ## Builds the gene sets of `pgx` with pgx.add_GMT(pgx, ...) when `add.gmt`
 ## and records the annotation lock in pgx$versions. A lock replaces the
-## default gene-set selection by its own (explicit mode); it is recorded with
+## default gene-set selection by its own (explicit mode), with the restricted
+## collections when it shows them, as the preview does. It is recorded with
 ## its sha256, its status and the digest of the selection built from it. A
 ## stale lock is used as is, never refused. A lock that built no gene sets
 ## (`add.gmt` FALSE) is still recorded, with a note saying so. Without a lock
@@ -1160,7 +1161,8 @@ pgx.applyAnnotLock <- function(pgx, annot_lock, add.gmt = TRUE, ...) {
       collections = as.character(g$collections),
       tags = g$tags,
       tag_relation = g$tag_relation,
-      size = g$size
+      size = g$size,
+      include_restricted = isTRUE(g$show_restricted)
     )
   }
 
@@ -1182,16 +1184,24 @@ pgx.applyAnnotLock <- function(pgx, annot_lock, add.gmt = TRUE, ...) {
   pgx
 }
 
-## Forwards to playbase.annotation::pgx.addGMT().
+## Forwards to playbase.annotation::pgx.addGMT(). `include_restricted` keeps
+## the restricted and unestablished collections in explicit mode; it is
+## forwarded only to a playbase.annotation whose pgx.addGMT takes it.
 pgx.add_GMT <- function(pgx,
                         custom.geneset = NULL,
                         max.genesets = 20000,
                         include_default_gmt = TRUE,
                         include_iea = TRUE, species_go = NULL,
                         collections = NULL, tags = NULL, tag_relation = "context",
-                        size = c(10, 400), route = "per_species") {
-  playbase.annotation::pgx.addGMT(
-    pgx = pgx,
+                        size = c(10, 400), route = "per_species",
+                        include_restricted = FALSE) {
+  addGMT <- playbase.annotation::pgx.addGMT
+  restricted <- if ("include_restricted" %in% names(formals(addGMT))) {
+    list(include_restricted = include_restricted)
+  }
+  ## pgx goes in as a symbol so an error's call does not deparse the object
+  do.call(addGMT, c(list(
+    pgx = quote(pgx),
     custom.geneset = custom.geneset,
     max.genesets = max.genesets,
     include_default_gmt = include_default_gmt,
@@ -1202,7 +1212,7 @@ pgx.add_GMT <- function(pgx,
     tag_relation = tag_relation,
     size = size,
     route = route
-  )
+  ), restricted))
 }
 
 

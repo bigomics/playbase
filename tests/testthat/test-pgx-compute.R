@@ -256,7 +256,9 @@ test_that("single-cell construction remains independent of the leaf", {
     preprocess = list(unknown_option = TRUE)
   ))
 
-  expect_identical(pgx, list(route = "single-cell"))
+  expect_identical(pgx$route, "single-cell")
+  ## stamped like every other exit of createPGX
+  expect_s3_class(pgx$versions$libx_assets, "data.frame")
 })
 
 test_that("pgx.createPGX preserves counts and persists final metadata", {
@@ -900,6 +902,33 @@ test_that("a stale lock still computes and is recorded as stale", {
   expect_identical(pgx$versions$lock_status, "stale")
   expect_identical(pgx$versions$annot_lock_sha256, lock$lock_sha256)
   expect_false(is.null(pgx$X))
+})
+
+test_that("a lock that shows restricted collections selects them at compute", {
+  seen <- list()
+  local_mocked_bindings(
+    pgx.addGMT = function(pgx, ..., include_restricted = FALSE) {
+      seen[[length(seen) + 1L]] <<- include_restricted
+      pgx
+    },
+    .package = "playbase.annotation"
+  )
+  lock <- function(show) list(genesets = list(collections = "TF_TRANSFAC", show_restricted = show))
+  pgx.applyAnnotLock(list(), lock(TRUE))
+  pgx.applyAnnotLock(list(), lock(FALSE))
+  pgx.applyAnnotLock(list(), NULL)
+  expect_identical(seen, list(TRUE, FALSE, FALSE))
+})
+
+test_that("pgx.add_GMT leaves include_restricted out for a pgx.addGMT without it", {
+  local_mocked_bindings(
+    pgx.addGMT = function(pgx, ...) {
+      stopifnot(!"include_restricted" %in% names(list(...)))
+      pgx
+    },
+    .package = "playbase.annotation"
+  )
+  expect_identical(pgx.add_GMT(list(a = 1), include_restricted = TRUE), list(a = 1))
 })
 
 test_that("a lock without collections gives no gene sets, random or not", {

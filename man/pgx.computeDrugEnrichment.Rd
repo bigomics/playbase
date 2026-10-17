@@ -17,7 +17,8 @@ pgx.computeDrugEnrichment(
 }
 \arguments{
 \item{X}{Drug profile matrix, genes in rows and profiles in columns. NULL
-(default) uses the CMAP drug activity matrix of the configured lib-x release.}
+(default) uses the L1000 drug activity matrix
+(\code{cmap/L1000-activity_n10d5263.rds}) of the configured lib-x release.}
 
 \item{methods}{Methods for enrichment (rank, gsea)}
 

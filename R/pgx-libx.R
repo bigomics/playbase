@@ -34,6 +34,7 @@
   ccle_rna_cancertype = "refmat/CCLE_RNA_CANCERTYPE.rds",
   reactome_dir = "annotation/pathways/reactome/svg/",
   reactome_map = "annotation/pathways/reactome/diagram_map.tsv",
+  l1000_activity = "cmap/L1000-activity_n10d5263.rds",
   l1000_repurposing = "cmap/L1000_repurposing_drugs.txt",
   gmt_kea = "featuresets/raw/playdata/kinase_substrates_kea.gmt",
   gmt_chea = "featuresets/raw/playdata/tf_targets_chea.gmt",

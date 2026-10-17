@@ -12,7 +12,14 @@
 #' @param pgx An object containing the input data for analysis.
 #' @param extra A character vector specifying which additional analyses to perform.
 #' @param sigdb A character vector specifying the path to the sigdb-.h5 files for connectivity scores.
-#' @param libx.dir The directory where the sigdb-.h5 files are located.
+#' @param libx.dir The lib-x release directory (it holds \code{manifest.tsv}).
+#'   The drug steps read their CMAP references from it and the connectivity
+#'   step adds its \code{sigdb/*.h5} files. NULL, or a folder that is not a
+#'   lib-x release, uses the configured release (\code{LIBX_DIR} or
+#'   \code{options(omicspgx.libx_dir)}). Without any release the drug steps
+#'   fail and write \code{ERROR_DRUG_ACTIVITY} and \code{ERROR_DRUG_SENSITIVITY}
+#'   to \code{user_input_dir}; connectivity uses only the \code{pgx.dir} and
+#'   \code{sigdb} files.
 #' @return An updated object with additional analysis results.
 #' @export
 compute_extra <- function(pgx, extra = c(
@@ -31,7 +38,9 @@ compute_extra <- function(pgx, extra = c(
   }
 
   if (!is.null(pgx.dir) && !dir.exists(pgx.dir)) pgx.dir <- NULL
-  if (!is.null(libx.dir) && !dir.exists(libx.dir)) libx.dir <- NULL
+  ## a folder that is not a lib-x release gives way to the configured release
+  if (!is.null(libx.dir) && !file.exists(file.path(libx.dir, "manifest.tsv"))) libx.dir <- NULL
+  libx.dir <- libx.dir %||% omicspgx::libx_dir()
 
   message("[pgx.computePGX: compute_extra] pgx.dir = ", pgx.dir)
   message("[pgx.computePGX: compute_extra] libx.dir = ", libx.dir)
@@ -187,15 +196,9 @@ compute_extra <- function(pgx, extra = c(
           sigdb <- c(sigdb, user.sigdb)
         }
         if (!is.null(libx.dir)) {
-          libx.sigdb <- dir(file.path(libx.dir, "sigdb"),
-            pattern = "h5$",
-            full.names = TRUE
-          )
-          ## do not follow symlinks because they can just be old names/aliases
-          is.symlink <- (Sys.readlink(libx.sigdb) != "")
-          libx.sigdb <- libx.sigdb[!is.symlink]
-          libx.sigdb
-          sigdb <- c(sigdb, libx.sigdb)
+          libx.sigdb <- grep("^sigdb/[^/]+\\.h5$", omicspgx::libx_manifest(libx.dir)$path, value = TRUE)
+          libx.sigdb <- Filter(function(f) omicspgx::libx_has(f, libx.dir), libx.sigdb)
+          sigdb <- c(sigdb, vapply(libx.sigdb, omicspgx::libx_path, "", dir = libx.dir, USE.NAMES = FALSE))
         }
       }
 

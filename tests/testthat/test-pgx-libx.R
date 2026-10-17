@@ -104,6 +104,49 @@ test_that("pgx.computeDrugEnrichment keeps its X = NULL default", {
   expect_null(formals(pgx.computeDrugEnrichment)$X)
 })
 
+test_that("the default drug matrix is one named asset, missing with a typed error", {
+  withr::local_options(omicspgx.libx_dir = "")
+  expect_error(
+    pgx.computeDrugEnrichment(list(gx.meta = list(), genes = data.frame())),
+    class = "pgx_error_libx_missing_asset"
+  )
+  skip_if_not(nzchar(Sys.getenv("LIBX_DIR")))
+  man <- omicspgx::libx_manifest(Sys.getenv("LIBX_DIR"))
+  expect_true(.pb_LIBX_PATHS[["l1000_activity"]] %in% man$path)
+})
+
+test_that("compute_extra takes sigdb from the lib-x release, never a plain folder", {
+  release <- withr::local_tempdir()
+  dir.create(file.path(release, "sigdb"))
+  file.create(file.path(release, "sigdb", "sigdb-a.h5"))
+  writeLines(
+    paste("publish", strrep("0", 64), "0", "sigdb/sigdb-a.h5", sep = "\t"),
+    file.path(release, "manifest.tsv")
+  )
+  legacy <- withr::local_tempdir()
+  dir.create(file.path(legacy, "sigdb"))
+  file.create(file.path(legacy, "sigdb", "sigdb-old.h5"))
+  scored <- character()
+  testthat::local_mocked_bindings(
+    pgx.computeConnectivityScores = function(pgx, db, ...) {
+      scored <<- c(scored, basename(db))
+      NULL
+    },
+    .package = "playbase"
+  )
+  run <- function(libx.dir) {
+    suppressMessages(compute_extra(list(),
+      extra = "connectivity", pgx.dir = NULL,
+      libx.dir = libx.dir, user_input_dir = tempdir()
+    ))
+  }
+
+  withr::local_options(omicspgx.libx_dir = release)
+  run(release)
+  run(legacy) # not a release: the configured one is used
+  expect_identical(scored, c("sigdb-a.h5", "sigdb-a.h5"))
+})
+
 test_that("a NULL lib-x directory resolves to the configured release", {
   skip_if(is.null(omicspgx::libx_dir()))
   expect_identical(.pb_libx_release(NULL), omicspgx::libx_dir())
