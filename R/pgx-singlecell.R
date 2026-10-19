@@ -648,9 +648,11 @@ pgx.predictCellTypes <- function(counts, organism, reference = "pbmcref",
   ## the reference's own gene names: human symbols are left as they are
   ## (the atlases use older symbols that annotation would update).
   annot <- getProbeAnnotation(organism, probes = rownames(counts), datatype = "scRNA-seq")
-  converted <- rename_by2(counts, annot, new_id = "human_ortholog")
-  if (sum(rownames(converted) %in% rownames(ref)) > sum(rownames(counts) %in% rownames(ref))) {
-    counts <- converted
+  if ("human_ortholog" %in% colnames(annot)) {
+    converted <- rename_by2(counts, annot, new_id = "human_ortholog")
+    if (sum(rownames(converted) %in% rownames(ref)) > sum(rownames(counts) %in% rownames(ref))) {
+      counts <- converted
+    }
   }
   obj <- pgx.justSeuratObject(counts, samples = NULL)
 
