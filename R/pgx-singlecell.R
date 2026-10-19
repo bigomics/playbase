@@ -627,8 +627,8 @@ seurat.integrate <- function(obj,
 #' @description Maps each cell onto a Seurat reference atlas (the
 #'   Azimuth references distributed as SeuratData packages, e.g.
 #'   "pbmcref" or "tonsilref") and transfers the atlas annotations.
-#'   Gene IDs are first converted to human symbols, the namespace of
-#'   the atlases.
+#'   Gene IDs are converted to human symbols, the namespace of the
+#'   atlases, unless they already match the reference better as they are.
 #'
 #' @param counts Raw counts (genes x cells), dense or sparse.
 #' @param organism Organism of `counts`, e.g. `pgx$organism`.
@@ -643,8 +643,15 @@ pgx.predictCellTypes <- function(counts, organism, reference = "pbmcref",
   options(future.globals.maxSize = 4 * 1024^4)
 
   ref <- .load_celltype_reference(reference)
+
+  ## Like Azimuth, convert gene IDs only when that brings them closer to
+  ## the reference's own gene names: human symbols are left as they are
+  ## (the atlases use older symbols that annotation would update).
   annot <- getProbeAnnotation(organism, probes = rownames(counts), datatype = "scRNA-seq")
-  counts <- .counts_to_human_symbols(counts, annot)
+  converted <- rename_by2(counts, annot, new_id = "human_ortholog")
+  if (sum(rownames(converted) %in% rownames(ref)) > sum(rownames(counts) %in% rownames(ref))) {
+    counts <- converted
+  }
   obj <- pgx.justSeuratObject(counts, samples = NULL)
 
   dims <- seq_len(as.double(ref@neighbors$refdr.annoy.neighbors@alg.info$ndim))
@@ -712,31 +719,6 @@ pgx.predictCellTypes <- function(counts, organism, reference = "pbmcref",
   SeuratObject::Loadings(dr, projected = FALSE) <- ld
   ref[["refDR"]] <- dr
   ref
-}
-
-## Rename count rows to human gene symbols using a getProbeAnnotation()
-## table (rows in the order of counts). Rows without a symbol keep their
-## name, so counts already in human symbols pass through.
-.counts_to_human_symbols <- function(counts, annot) {
-  stopifnot(nrow(annot) == nrow(counts))
-  col <- head(intersect(c("human_ortholog", "symbol"), colnames(annot)), 1)
-  if (length(col) == 0) {
-    stop("[pgx.predictCellTypes] could not map genes to human symbols")
-  }
-  symbol <- annot[[col]]
-  symbol[symbol %in% c(NA, "", "-", "---", "NA")] <- NA
-  symbol <- ifelse(is.na(symbol), rownames(counts), symbol)
-  .sum_rows_by(counts, symbol)
-}
-
-## Sum rows of a (sparse) counts matrix sharing an id. Summing, not
-## averaging, keeps counts integer for SCTransform.
-.sum_rows_by <- function(counts, ids) {
-  f <- factor(ids, levels = unique(ids))
-  out <- Matrix::fac2sparse(f) %*% counts
-  out <- methods::as(out, "CsparseMatrix")
-  dimnames(out) <- list(levels(f), colnames(counts))
-  out
 }
 
 

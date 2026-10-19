@@ -7,9 +7,10 @@
   If you depended on either, they are gone — there is no replacement.
 * Azimuth is no longer a dependency. `pgx.runAzimuth()` is replaced by
   `pgx.predictCellTypes(counts, organism, reference)`, which maps cells onto
-  the same Azimuth reference atlases with Seurat directly and converts gene IDs
-  to human symbols with `getProbeAnnotation()`. It now stops on failure instead
-  of returning `NULL`. This drops 24 packages (~1.2 GB, including the hg38
+  the same Azimuth reference atlases with Seurat directly. Like Azimuth it
+  leaves human symbols as they are; other gene IDs (mouse, Ensembl) are
+  converted with `getProbeAnnotation()` and `rename_by2()`. It now stops on
+  failure instead of returning `NULL`. This drops 24 packages (~1.2 GB, including the hg38
   BSgenome and EnsDb.Hsapiens.v86) and the compiler they needed.
 * `pgx.createPGX()` and `pgx.createSingleCellPGX()`: argument `azimuth_ref` is
   renamed `celltype_ref`.

@@ -23,6 +23,6 @@ column per annotation level of the reference.
 Maps each cell onto a Seurat reference atlas (the
 Azimuth references distributed as SeuratData packages, e.g.
 "pbmcref" or "tonsilref") and transfers the atlas annotations.
-Gene IDs are first converted to human symbols, the namespace of
-the atlases.
+Gene IDs are converted to human symbols, the namespace of the
+atlases, unless they already match the reference better as they are.
 }
