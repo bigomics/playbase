@@ -622,31 +622,105 @@ seurat.integrate <- function(obj,
 }
 
 
+#' @title Predict cell types by mapping cells onto a reference atlas
+#'
+#' @description Maps each cell onto a Seurat reference atlas (the
+#'   Azimuth references distributed as SeuratData packages, e.g.
+#'   "pbmcref" or "tonsilref") and transfers the atlas annotations.
+#'   Gene IDs are converted to human symbols, the namespace of the
+#'   atlases, unless they already match the reference better as they are.
+#'
+#' @param counts Raw counts (genes x cells), dense or sparse.
+#' @param organism Organism of `counts`, e.g. `pgx$organism`.
+#' @param reference Name of the reference atlas.
+#' @param k.weight Number of neighbours used to weight anchors.
+#'
+#' @return data.frame with one row per cell and one `predicted.<level>`
+#'   column per annotation level of the reference.
 #' @export
-pgx.runAzimuth <- function(counts, k.weight = NULL, reference = NULL) {
+pgx.predictCellTypes <- function(counts, organism, reference = "pbmcref",
+                                 k.weight = 20) {
   options(future.globals.maxSize = 4 * 1024^4)
 
-  if (is.null(k.weight)) k.weight <- 20
-  if (is.null(reference)) reference <- "pbmcref"
+  ref <- .load_celltype_reference(reference)
 
-  message("[pgx.runAzimuth] k.weight = ", k.weight)
+  ## Like Azimuth, convert gene IDs only when that brings them closer to
+  ## the reference's own gene names: human symbols are left as they are
+  ## (the atlases use older symbols that annotation would update).
+  annot <- getProbeAnnotation(organism, probes = rownames(counts), datatype = "scRNA-seq")
+  if ("human_ortholog" %in% colnames(annot)) {
+    converted <- rename_by2(counts, annot, new_id = "human_ortholog")
+    if (sum(rownames(converted) %in% rownames(ref)) > sum(rownames(counts) %in% rownames(ref))) {
+      counts <- converted
+    }
+  }
   obj <- pgx.justSeuratObject(counts, samples = NULL)
 
-  obj1 <- try(Azimuth::RunAzimuth(
-    obj,
-    reference = reference,
+  dims <- seq_len(as.double(ref@neighbors$refdr.annoy.neighbors@alg.info$ndim))
+  levels <- grep("^(nCount|nFeature|ori)", colnames(ref[[]]),
+    value = TRUE, invert = TRUE
+  )
+
+  message("[pgx.predictCellTypes] mapping ", ncol(obj), " cells onto ", reference)
+  anchors <- Seurat::FindTransferAnchors(
+    reference = ref,
+    query = obj,
+    k.filter = NA,
+    reference.neighbors = "refdr.annoy.neighbors",
+    reference.assay = "refAssay",
+    reference.reduction = "refDR",
+    normalization.method = "SCT",
+    features = rownames(SeuratObject::Loadings(ref[["refDR"]])),
+    dims = dims,
+    n.trees = 20,
+    mapping.score.k = 100,
+    verbose = FALSE
+  )
+
+  refdata <- lapply(levels, function(x) ref[[x, drop = TRUE]])
+  names(refdata) <- levels
+  obj <- Seurat::TransferData(
+    reference = ref,
+    query = obj,
+    anchorset = anchors,
+    refdata = refdata,
+    dims = dims,
+    n.trees = 20,
     k.weight = k.weight,
     verbose = FALSE
-  ))
+  )
 
-  if ("try-error" %in% class(obj1)) {
-    dbg("[pgx.runAzimuth] Azimuth failed: ref.atlas might be incorrect.")
-    return(NULL)
+  obj[[]][, paste0("predicted.", levels), drop = FALSE]
+}
+
+## Azimuth reference atlases are data packages (<name>.SeuratData)
+## holding the Seurat map and its annoy index under azimuth/. They only
+## need SeuratObject; a missing one is installed from the SeuratData
+## repository.
+.load_celltype_reference <- function(reference) {
+  pkg <- paste0(tolower(reference), ".SeuratData")
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    message("[pgx.predictCellTypes] installing reference atlas ", pkg)
+    utils::install.packages(pkg, repos = "https://seurat.nygenome.org", type = "source")
+  }
+  path <- system.file("azimuth", package = pkg)
+  if (!nzchar(path)) {
+    stop("[pgx.predictCellTypes] reference atlas not available: ", reference)
   }
 
-  k1 <- !(colnames(obj1@meta.data) %in% colnames(obj@meta.data))
-  k2 <- !grepl("score$|refAssay$", colnames(obj1@meta.data))
-  return(obj1@meta.data[, (k1 & k2), drop = FALSE])
+  ref <- readRDS(file.path(path, "ref.Rds"))
+  ref[["refdr.annoy.neighbors"]] <- Seurat::LoadAnnoyIndex(
+    ref[["refdr.annoy.neighbors"]],
+    file = file.path(path, "idx.annoy")
+  )
+
+  ## loadings carry a stale key prefix; FindTransferAnchors matches on Key()
+  dr <- ref[["refDR"]]
+  ld <- SeuratObject::Loadings(dr, projected = FALSE)
+  colnames(ld) <- gsub("^[^_]*_", SeuratObject::Key(dr), colnames(ld))
+  SeuratObject::Loadings(dr, projected = FALSE) <- ld
+  ref[["refDR"]] <- dr
+  ref
 }
 
 
@@ -774,7 +848,7 @@ pgx.createSingleCellPGX <- function(counts,
                                     samples,
                                     contrasts,
                                     organism,
-                                    azimuth_ref,
+                                    celltype_ref,
                                     batch = NULL,
                                     sc_compute_settings = list()) {
   message("[pgx.createSingleCellPGX]==========================================")
@@ -799,11 +873,11 @@ pgx.createSingleCellPGX <- function(counts,
     stop("[createSingleCellPGX] FATAL: organism must be provided")
   }
 
-  if (is.null(azimuth_ref)) {
-    azimuth_ref <- "pbmcref"
-    message("[createSingleCellPGX] Azimuth ref. atlas not specified. Defaulting to pbmcref.")
+  if (is.null(celltype_ref)) {
+    celltype_ref <- "pbmcref"
+    message("[createSingleCellPGX] cell type reference not specified. Defaulting to pbmcref.")
   } else {
-    message("[createSingleCellPGX] Azimuth ref. atlas: ", azimuth_ref)
+    message("[createSingleCellPGX] cell type reference: ", celltype_ref)
   }
 
   sc_params <- names(sc_compute_settings)
@@ -813,18 +887,16 @@ pgx.createSingleCellPGX <- function(counts,
     sc_compute_settings <- list()
   }
 
-  message("[pgx.createSingleCellPGX] Azimuth reference atlas: ", azimuth_ref)
   message("[pgx.createSingleCellPGX] counts: ", nrow(counts), " genes x ", ncol(counts), " cells")
   library(Seurat) # DO NOT REMOVE THIS LINE (Azimuth fails if not sourcing Seurat)
 
-  azm <- pgx.runAzimuth(counts, reference = azimuth_ref)
-  message("[pgx.createSingleCellPGX] Azimuth done")
+  ct <- pgx.predictCellTypes(counts, organism = organism, reference = celltype_ref)
+  message("[pgx.createSingleCellPGX] cell type prediction done")
 
-  azm <- azm[, grep("predicted", colnames(azm))]
-  ntype <- apply(azm, 2, function(a) length(unique(a)))
+  ntype <- apply(ct, 2, function(a) length(unique(a)))
   sel <- ifelse(min(ntype) > 10, which.min(ntype), tail(which(ntype <= 10), 1))
   samples <- as.data.frame(samples)
-  samples$celltype <- azm[, sel]
+  samples$celltype <- ct[, sel]
 
   samplesx <- cbind(samples, contrasts)
 
@@ -924,7 +996,7 @@ pgx.createSingleCellPGX <- function(counts,
     max.genesets = 5000,
     name = "Data set",
     datatype = "scRNAseq", ## hack from scRNA-seq.
-    azimuth_ref = azimuth_ref,
+    celltype_ref = celltype_ref,
     probe_type = NULL,
     creator = "unknown",
     description = "No description provided.",
