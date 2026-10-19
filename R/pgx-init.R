@@ -79,7 +79,11 @@ pgx.initialize <- function(pgx, progress=NULL) {
     # between old and new pgx
     pgx$genes$gene_name <- as.character(pgx$genes$gene_name)
     pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
-    pgx$genes$ortholog <- toupper(as.character(pgx$genes$gene_name))
+    if (is.null(pgx$organism) || pgx$organism %in% c("Human", "Homo sapiens")) {
+      pgx$genes$ortholog <- as.character(pgx$genes$gene_name)
+    } else {
+      pgx$genes$ortholog <- getHumanOrtholog(pgx$organism, pgx$genes$gene_name)$ortholog
+    }
     pgx$genes$human_ortholog <- pgx$genes$ortholog
     pgx$genes$feature <- as.character(rownames(pgx$genes))
     pgx$genes$symbol <- pgx$genes$gene_name
@@ -225,7 +229,7 @@ pgx.initialize <- function(pgx, progress=NULL) {
 
   # Check if human_ortholog is empty, if it is
   # 1) run getHumanOrtholog (maybe it failed on pgx.compute bc server was unreachable)
-  # 2) if still empty, grab the symbols toUpper
+  # 2) if still empty, keep NA (no human ortholog found)
   # The gene families (and other human-keyed resources) are matched
   # against human_ortholog specifically, not the species-configurable
   # ortholog column.
@@ -234,7 +238,8 @@ pgx.initialize <- function(pgx, progress=NULL) {
     ortho <- getHumanOrtholog(pgx$organism, pgx$genes$symbol)
     genes_ho <- ortho$ortholog
     if (all(is.na(genes_ho))) {
-      pgx$genes$human_ortholog <- toupper(pgx$genes$symbol)
+      message("[pgx.initialize] no human ortholog found for organism: ", pgx$organism)
+      pgx$genes$human_ortholog <- genes_ho
     } else {
       pgx$genes$human_ortholog <- genes_ho
       pgx$genes$human_orthologs <- ortho$orthologs
