@@ -179,6 +179,10 @@ pgx.createFromFiles <- function(counts.file,
 #' - `total_counts`: Total counts per sample
 #' - `counts_multiplier`: Counts multiplier for each sample
 #' - `genes`: Gene annotation data.frame (initially NULL)
+#' - `versions$annotation_source`: Where `genes` came from: the source
+#'   [playbase.annotation::pgx.annotate()] reports for it when it reports one
+#'   (e.g. "annot_table" when `annot_table` was used as is), otherwise
+#'   "cascade" without `annot_table` and "annot_table_merged" with one.
 #' - `all_genes`: Full list of genes
 #' - `probe_type`: Probe type according to biomaRt classification(e.g. ensemble_id)
 #' - `GMT`: Gene set matrix
@@ -395,17 +399,23 @@ pgx.createPGX <- function(counts,
   )
   settings$preprocess <- preprocess.metadata
 
+  ## Every column reaches pgx.annotate, one row per counts row in counts order.
+  ## Duplicated counts rownames are made unique as pgx.annotate does: a
+  ## data.frame cannot hold them.
   if (!is.null(annot_table)) {
     message("[pgx.createPGX] dim(annot_table) = ", nrow(annot_table), " x ", ncol(annot_table))
-    ndiff <- sum(rownames(annot_table) != rownames(counts))
-    message("[pgx.createPGX] WARNING: annot_table has ", ndiff, " different rownames as counts")
     ndups <- sum(duplicated(rownames(annot_table)))
     message("[pgx.createPGX] annot_table has ", ndups, " duplicated rows")
-    if (nrow(annot_table) != nrow(counts)) {
-      message("[pgx.createPGX] WARNING: annot_table has different nrows. forcing dimensions.")
+    ids <- make_unique(rownames(counts))
+    if (!identical(rownames(annot_table), ids)) {
+      ndiff <- sum(!rownames(counts) %in% rownames(annot_table))
+      message("[pgx.createPGX] WARNING: annot_table has ", ndiff, " different rownames as counts")
+      if (nrow(annot_table) != nrow(counts)) {
+        message("[pgx.createPGX] WARNING: annot_table has different nrows. forcing dimensions.")
+      }
       ii <- match(rownames(counts), rownames(annot_table))
-      annot_table <- annot_table[ii, ]
-      rownames(annot_table) <- rownames(counts)
+      annot_table <- annot_table[ii, , drop = FALSE]
+      rownames(annot_table) <- ids
     }
   }
 
@@ -551,6 +561,8 @@ pgx.createPGX <- function(counts,
     ortholog_species = pgx$ortholog_species,    
     annot_table = annot_table
   )$genes
+  pgx$versions$annotation_source <- attr(pgx$genes, "annotation_source") %||%
+    (if (is.null(annot_table)) "cascade" else "annot_table_merged")
 
   ## Array and genome build, so consumers never re-guess them from probe ids.
   ## 450K and EPIC annotate against hg19, EPIC v2 against hg38.

@@ -146,6 +146,10 @@ pgx.createPGX creates a pgx object with the following slots:
 - `total_counts`: Total counts per sample
 - `counts_multiplier`: Counts multiplier for each sample
 - `genes`: Gene annotation data.frame (initially NULL)
+- `versions$annotation_source`: Where `genes` came from: the source
+  [playbase.annotation::pgx.annotate()] reports for it when it reports one
+  (e.g. "annot_table" when `annot_table` was used as is), otherwise
+  "cascade" without `annot_table` and "annot_table_merged" with one.
 - `all_genes`: Full list of genes
 - `probe_type`: Probe type according to biomaRt classification(e.g. ensemble_id)
 - `GMT`: Gene set matrix

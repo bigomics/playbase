@@ -940,3 +940,73 @@ test_that("a lock without collections gives no gene sets, random or not", {
   expect_identical(ncol(pgx$GMT), 0L)
   expect_false(any(grepl("^TEST:", colnames(pgx$GMT))))
 })
+
+## Annotation table. createPGX on the symbol fixture with pgx.annotate
+## wrapped; returns the pgx and the annot_table that reached pgx.annotate.
+## `source`, when given, is set on the genes table as the annotation package
+## sets it. `forward = FALSE` annotates without the table it received.
+create_annotated_pgx <- function(fixture, ..., source = NULL, forward = TRUE) {
+  real <- playbase.annotation::pgx.annotate
+  seen <- NULL
+  local_mocked_bindings(
+    pgx.annotate = function(..., annot_table = NULL) {
+      seen <<- annot_table
+      res <- real(..., annot_table = if (forward) annot_table)
+      if (!is.null(source)) attr(res$genes, "annotation_source") <- source
+      res
+    },
+    .package = "playbase.annotation"
+  )
+  pgx <- create_symbol_pgx(fixture, add.gmt = FALSE, ...)
+  list(pgx = pgx, annot_table = seen)
+}
+
+test_that("every annot_table column reaches pgx.annotate in counts order", {
+  skip_if(is.null(omicspgx::libx_dir()))
+  fixture <- make_symbol_fixture()
+  ids <- rownames(fixture$counts)
+  annot <- data.frame(
+    symbol = ids,
+    gene_title = paste("gene", ids),
+    chr = "1",
+    score = seq_along(ids),
+    row.names = ids
+  )
+  run <- create_annotated_pgx(fixture, annot_table = annot[rev(ids), ])
+
+  expect_identical(run$annot_table, annot)
+})
+
+test_that("a one-column annot_table reaches pgx.annotate as a table", {
+  skip_if(is.null(omicspgx::libx_dir()))
+  fixture <- make_symbol_fixture()
+  ids <- rownames(fixture$counts)
+  annot <- data.frame(symbol = ids, row.names = ids)
+  ## playbase.annotation 0.1.0 drops a one-column table to a vector when it
+  ## merges it, so the table is checked here and not forwarded.
+  run <- create_annotated_pgx(
+    fixture,
+    annot_table = annot[rev(ids), , drop = FALSE],
+    forward = FALSE
+  )
+
+  expect_identical(run$annot_table, annot)
+})
+
+test_that("without annot_table the annotation source is the cascade", {
+  skip_if(is.null(omicspgx::libx_dir()))
+  run <- create_annotated_pgx(make_symbol_fixture())
+
+  expect_null(run$annot_table)
+  expect_identical(run$pgx$versions$annotation_source, "cascade")
+})
+
+test_that("the annotation source pgx.annotate reports is recorded", {
+  skip_if(is.null(omicspgx::libx_dir()))
+  fixture <- make_symbol_fixture()
+  ids <- rownames(fixture$counts)
+  annot <- data.frame(symbol = ids, gene_title = paste("gene", ids), row.names = ids)
+  run <- create_annotated_pgx(fixture, annot_table = annot, source = "annot_table")
+
+  expect_identical(run$pgx$versions$annotation_source, "annot_table")
+})
