@@ -276,10 +276,12 @@ BIOMARKER_METHODS <- list(
 # characters found in feature ids.
 .biomarker_xgboost_names <- function(X) paste0("f", seq_len(nrow(X)))
 
+# One thread: a multi-threaded build starts an OpenMP pool that the
+# mclapply forks of .biomarker_rounds inherit dead and wait on forever.
 .biomarker_xgboost_data <- function(X, y = NULL) {
   x <- t(X)
   colnames(x) <- .biomarker_xgboost_names(X)
-  xgboost::xgb.DMatrix(x, label = if (!is.null(y)) as.integer(y) - 1L)
+  xgboost::xgb.DMatrix(x, label = if (!is.null(y)) as.integer(y) - 1L, nthread = 1)
 }
 
 # Boosted trees, on one thread so the fit is deterministic. Small cohorts
