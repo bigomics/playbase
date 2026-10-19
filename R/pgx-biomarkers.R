@@ -260,6 +260,11 @@ BIOMARKER_METHODS <- list(
 # Class probabilities from a .biomarker_glmnet() fit on the training samples.
 .biomarker_glmnet_predict <- function(Xtr, ytr, Xte, alpha) {
   ytr <- as.factor(ytr)
+  ## glmnet wants two columns; a constant one adds nothing to a lone feature
+  if (nrow(Xtr) == 1L) {
+    Xtr <- rbind(Xtr, 0)
+    Xte <- rbind(Xte, 0)
+  }
   net <- .biomarker_glmnet(Xtr, ytr, alpha)
   p <- stats::predict(net$fit, t(Xte), s = net$s, type = "response")
   ## binomial gives P(second level); multinomial a samples x classes x 1 array
@@ -277,10 +282,16 @@ BIOMARKER_METHODS <- list(
   xgboost::xgb.DMatrix(x, label = if (!is.null(y)) as.integer(y) - 1L)
 }
 
-# Boosted trees; one thread and no subsampling keep the fit deterministic.
+# Boosted trees, on one thread so the fit is deterministic. Small cohorts
+# would otherwise score a feature or two: a sample's hessian p(1 - p) is at
+# most 0.25, so the default min_child_weight of 1 stops a few dozen samples
+# after a split or two, and when one feature separates the classes every tree
+# splits on it. Each split therefore draws 30% of the features, from R's RNG
+# like every other draw here.
 .biomarker_xgboost <- function(X, y) {
   params <- list(
     booster = "gbtree", eta = 0.1, max_depth = 3, subsample = 1, nthread = 1,
+    min_child_weight = 0, colsample_bynode = 0.3,
     objective = if (nlevels(y) > 2) "multi:softprob" else "binary:logistic"
   )
   if (nlevels(y) > 2) params$num_class <- nlevels(y)
@@ -400,13 +411,13 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
   K <- min(folds, min(table(y)))
   k_grid <- unique(pmin(as.integer(k_grid), nrow(X)))
   null_k <- min(as.integer(null_k), nrow(X))
-  ranking <- if (!select_in_fold) biomarker_select(X, y, methods)$rank
+  selection <- if (!select_in_fold) biomarker_select(X, y, methods)
   passes <- .biomarker_rounds(repeats, seed + 1e6, function(r) {
-    .biomarker_cv_pass(X, y, methods, k_grid, K, ranking)
+    .biomarker_cv_pass(X, y, methods, k_grid, K, selection)
   }, "Cross-validation repeat", progress)
   null_passes <- .biomarker_rounds(n_perm, seed + 2e6, function(p) {
     yp <- stats::setNames(sample(y), names(y))
-    list(y = yp, pass = .biomarker_cv_pass(X, yp, methods, null_k, K, ranking))
+    list(y = yp, pass = .biomarker_cv_pass(X, yp, methods, null_k, K, selection))
   }, "Permutation", progress)
 
   binary <- nlevels(y) == 2
@@ -470,10 +481,12 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
 
 # One stratified K-fold pass: held-out probabilities (samples x classes x
 # (methods + consensus) x k) and class calls (level index) for every sample.
-# A method's panel is its top k. The consensus panel is the consensus top k:
-# every method refits on it and the consensus is their soft vote (mean
-# probability). One method is its own consensus and is not refitted.
-.biomarker_cv_pass <- function(X, y, methods, k_grid, K, ranking = NULL) {
+# A ranking's panel is its top k that it scored (biomarker_select), so it can
+# hold fewer than k. Each method fits its own panel; every method refits on
+# the consensus panel and the consensus is their soft vote (mean
+# probability). One method is its own consensus and is not refitted. An empty
+# panel predicts the training fold's class frequencies.
+.biomarker_cv_pass <- function(X, y, methods, k_grid, K, selection = NULL) {
   folds <- .biomarker_folds(y, K)
   cols <- c(methods, "consensus")
   dims <- list(names(y), levels(y), cols, as.character(k_grid))
@@ -482,18 +495,23 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
   call <- array(NA_integer_, size[-2], dims[-2])
   for (f in seq_len(K)) {
     train <- folds != f
-    rank <- ranking
-    if (is.null(rank)) rank <- biomarker_select(X[, train, drop = FALSE], y[train], methods)$rank
+    fold <- selection
+    if (is.null(fold)) fold <- biomarker_select(X[, train, drop = FALSE], y[train], methods)
+    panel_of <- function(column, k) fold$rank[, column] <= k & fold$scored[, column]
     ## predict every sample: training rows set the threshold, held-out rows are kept
     fit_predict <- function(m, panel) {
+      if (!any(panel)) {
+        prior <- table(y[train]) / sum(train)
+        return(matrix(prior, length(y), nlevels(y), byrow = TRUE, dimnames = list(names(y), levels(y))))
+      }
       BIOMARKER_METHODS[[m]]$fit_predict(X[panel, train, drop = FALSE], y[train], X[panel, , drop = FALSE])
     }
     for (k in dims[[4]]) {
-      p <- lapply(methods, function(m) fit_predict(m, rank[, m] <= as.integer(k)))
+      p <- lapply(methods, function(m) fit_predict(m, panel_of(m, as.integer(k))))
       consensus <- if (length(methods) == 1L) {
         p[[1]]
       } else {
-        panel <- rank[, "consensus"] <= as.integer(k)
+        panel <- panel_of("consensus", as.integer(k))
         Reduce(`+`, lapply(methods, fit_predict, panel)) / length(methods)
       }
       p <- c(p, list(consensus))
@@ -601,8 +619,8 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
 #'   (stability rounds, CV repeats, permutations) of (25, 5, 10), (10, 2, 5)
 #'   and (100, 10, 50).
 #' @param seed Integer seed.
-#' @param top_n Number of biomarkers to report. Ten times as many features,
-#'   by SD, are screened.
+#' @param top_n Most biomarkers to report per ranking. Ten times as many
+#'   features, by SD, are screened.
 #' @param ... Passed to the data preparation: \code{level},
 #'   \code{filter_features}, \code{select_features}, \code{select_samples}.
 #' @param validate Run the nested cross-validation and the permutation null.
@@ -613,24 +631,27 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
 #' \enumerate{
 #'   \item Selection on all samples. Each method's scores become rank
 #'     percentiles; the consensus is their rank product (geometric mean of
-#'     ranks). A decision tree is grown on the consensus top features and on
-#'     each method's.
+#'     ranks). A ranking's panel is its top \code{top_n} features whose raw
+#'     score is above 0 (for the consensus, in any method): sparse methods
+#'     score most features exactly 0, and their rank among those ties only
+#'     reflects SD order. A panel can therefore hold fewer than \code{top_n}.
+#'     A decision tree is grown on the consensus panel and on each method's.
 #'   \item Stability: selection on B stratified 80\% subsamples (a stratified
 #'     bootstrap when a class is too small), giving per-feature selection
 #'     frequency, rank median and IQR, and the Nogueira stability index. A
-#'     feature counts as selected in a round when it ranks in the top
-#'     \code{top_n} and its raw score is above 0 (for the consensus, in any
-#'     method): sparse methods score most features exactly 0, and their rank
-#'     among those ties only reflects SD order. Ranks are reported unchanged.
+#'     feature counts as selected in a round when it is in that round's panel.
+#'     Ranks are reported unchanged.
 #'   \item Validation: repeated stratified K-fold CV, K = min(5, smallest class),
 #'     with selection and fitting inside each training fold at panel sizes
-#'     5, 10, 20 and 50. Each method is fitted on its own top k. The consensus
-#'     validates the consensus top k: every method is refitted on it and the
-#'     consensus predicts by the mean of their probabilities (a single method
-#'     is its own consensus). Two-class calls use a Youden threshold chosen on
-#'     the training fold; multiclass calls take the most probable class. Labels
-#'     are permuted to give a null AUC at panel size 10 (\code{cv$null_k}),
-#'     with the same definitions.
+#'     5, 10, 20 and 50. A panel of size k is the fold's top k features that
+#'     the ranking scored, so it holds fewer when fewer scored; an empty one
+#'     predicts the training fold's class frequencies. Each method is fitted on
+#'     its own panel. The consensus validates the consensus panel: every method
+#'     is refitted on it and the consensus predicts by the mean of their
+#'     probabilities (a single method is its own consensus). Two-class calls
+#'     use a Youden threshold chosen on the training fold; multiclass calls take
+#'     the most probable class. Labels are permuted to give a null AUC at panel
+#'     size 10 (\code{cv$null_k}), with the same definitions.
 #' }
 #' Rounds run under \code{parallel::mclapply} with
 #' \code{getOption("mc.cores", 1)} cores, each with its own seed, so results do
@@ -642,14 +663,15 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
 #'
 #' @return \code{NULL} when too few classes, samples or features remain, as
 #' \code{pgx.compute_importance()}. Otherwise a list whose feature rows are
-#' the union of the consensus and each method's top \code{top_n}, in consensus
-#' order (the first \code{top_n} rows are the consensus panel):
+#' the union of the consensus and each method's panel, in consensus order (the
+#' first rows are the consensus panel):
 #' \item{R}{features x methods rank percentiles, the legacy importance matrix.}
 #' \item{y}{named phenotype vector of the samples used.}
 #' \item{X}{features x samples expression.}
 #' \item{rf}{rpart decision tree on the consensus panel, as \code{trees$consensus}.}
 #' \item{trees}{named list of rpart decision trees, \code{consensus} and one per
-#'   method, each grown on that ranking's top \code{top_n} features.}
+#'   method, each grown on that ranking's panel; \code{NULL} for a method that
+#'   scored no feature.}
 #' \item{pipeline}{\code{"v2"}.}
 #' \item{methods}{the methods run.}
 #' \item{params}{resampling, B, repeats, n_perm, seed and top_n.}
@@ -657,6 +679,9 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
 #' \item{n_features_screened}{features entering selection.}
 #' \item{consensus}{consensus rank percentile per feature.}
 #' \item{rank}{features x (methods, consensus) integer ranks, 1 = best.}
+#' \item{scored}{features x (methods, consensus), TRUE where the raw score is
+#'   above 0 (for the consensus, in any method). A ranking's panel is its rows
+#'   with \code{rank <= top_n} and \code{scored}.}
 #' \item{stability}{B, bootstrap, and features x (methods, consensus)
 #'   frequency, rank_median, rank_iqr_lo, rank_iqr_hi; index per column.}
 #' \item{cv}{\code{NULL} unless \code{validate}: folds, repeats, n_perm,
@@ -670,7 +695,9 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
 #' An error of class \code{biomarker_small_class} (carrying
 #' \code{class_counts}) is raised when a class has fewer than 3 samples, and
 #' one of class \code{biomarker_too_few_features} (carrying
-#' \code{n_features}) when fewer than 5 features remain after filtering.
+#' \code{n_features}) when fewer than 5 features remain after filtering, and
+#' one of class \code{biomarker_none_scored} when no method scores any
+#' feature.
 #'
 #' @export
 pgx.compute_biomarkers <- function(pgx, pheno, methods = "xgboost",
@@ -730,9 +757,24 @@ pgx.compute_biomarkers <- function(pgx, pheno, methods = "xgboost",
   ## the reported ranking and its tree come first, off the global seed, so the
   ## rounds below (each under its own seed) cannot shift them
   selection <- biomarker_select(X, y, methods)
+  if (!any(selection$scored)) {
+    stop(errorCondition(
+      "No method scored any feature, so there are no biomarkers to report",
+      class = "biomarker_none_scored"
+    ))
+  }
+  ## a ranking reports its top_n that it scored, as the stability step counts
+  in_panel <- selection$rank <= top_n & selection$scored
   keep <- rownames(X)[order(selection$rank[, "consensus"])]
-  keep <- keep[rowSums(selection$rank[keep, , drop = FALSE] <= top_n) > 0]
+  keep <- keep[rowSums(in_panel[keep, , drop = FALSE]) > 0]
+  panel_of <- function(column) {
+    panel <- keep[in_panel[keep, column]]
+    panel[order(selection$rank[panel, column])]
+  }
   grow_tree <- function(panel) {
+    if (!length(panel)) {
+      return(NULL)
+    }
     tree <- makePartitionTree(X[panel, , drop = FALSE], prep$y, add.splits = 0)
     ## the formula would otherwise carry the builder's frame, data included,
     ## into the payload and make two equal runs non-identical()
@@ -741,13 +783,9 @@ pgx.compute_biomarkers <- function(pgx, pheno, methods = "xgboost",
   }
   ## one tree per ranking, grown serially in a fixed order; a single method's
   ## consensus is that method's ranking, so its tree is shared, not regrown
-  trees <- list(consensus = grow_tree(utils::head(keep, top_n)))
+  trees <- list(consensus = grow_tree(panel_of("consensus")))
   for (method in methods) {
-    trees[[method]] <- if (length(methods) == 1L) {
-      trees$consensus
-    } else {
-      grow_tree(utils::head(keep[order(selection$rank[keep, method])], top_n))
-    }
+    trees[method] <- list(if (length(methods) == 1L) trees$consensus else grow_tree(panel_of(method)))
   }
 
   stability <- biomarker_stability(X, y, methods, params$B, top_n = top_n, seed = seed, progress = tick)
@@ -772,6 +810,7 @@ pgx.compute_biomarkers <- function(pgx, pheno, methods = "xgboost",
     n_features_screened = nrow(X),
     consensus = selection$consensus[keep],
     rank = selection$rank[keep, , drop = FALSE],
+    scored = selection$scored[keep, , drop = FALSE],
     stability = stability,
     cv = cv,
     single_auc = .biomarker_single_auc(X[keep, , drop = FALSE], y),

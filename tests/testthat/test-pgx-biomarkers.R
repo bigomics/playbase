@@ -103,6 +103,19 @@ signal_fixture <- function(n_per_class, n_features, signal = 0, n_class = 2, see
   list(X = X, y = y)
 }
 
+test_that("xgboost ranks many features on a small cohort", {
+  ## 9 per class and one feature splitting the classes: every tree used to
+  ## split on it alone, leaving the rest of the ranking to ties at 0
+  for (seed in 1:3) {
+    fx <- signal_fixture(9, 200, signal = 4, seed = seed)
+    withr::local_seed(42)
+    score <- methods$xgboost$importance(fx$X, fx$y)
+    label <- paste("seed", seed)
+    expect_gte(sum(score > 0), 20, label = label)
+    expect_setequal(names(sort(-score))[1:3], c("gene1", "gene2", "gene3"))
+  }
+})
+
 test_that("biomarker_select ranks by percentile and rank product", {
   fx <- signal_fixture(10, 40, signal = 3)
   withr::local_seed(1)
@@ -243,6 +256,7 @@ test_that("the consensus is validated on the consensus top k, refitted by every 
   ## 1-5, ftest 6-10, consensus 11-15
   ranking <- cbind(correlation = 1:30, ftest = c(6:10, 1:5, 11:30), consensus = c(6:15, 1:5, 16:30))
   rownames(ranking) <- rownames(fx$X)
+  selection <- list(rank = ranking, scored = ranking > 0)
   panels <- character()
   spy <- lapply(playbase:::BIOMARKER_METHODS, function(m) {
     fit_predict <- m$fit_predict
@@ -256,15 +270,45 @@ test_that("the consensus is validated on the consensus top k, refitted by every 
   genes <- function(i) paste0("gene", i, collapse = ",")
 
   withr::local_seed(1)
-  playbase:::.biomarker_cv_pass(fx$X, fx$y, c("correlation", "ftest"), 5L, 5L, ranking)
+  playbase:::.biomarker_cv_pass(fx$X, fx$y, c("correlation", "ftest"), 5L, 5L, selection)
   ## per fold: each method on its own panel, then both on the consensus panel
   expect_identical(panels, rep(c(genes(1:5), genes(6:10), genes(11:15), genes(11:15)), 5))
 
   ## one method is its own consensus: not refitted
   panels <- character()
-  pass <- playbase:::.biomarker_cv_pass(fx$X, fx$y, "correlation", 5L, 5L, ranking[, c("correlation", "consensus")])
+  one <- lapply(selection, function(m) m[, c("correlation", "consensus")])
+  pass <- playbase:::.biomarker_cv_pass(fx$X, fx$y, "correlation", 5L, 5L, one)
   expect_identical(panels, rep(genes(1:5), 5))
   expect_identical(pass$prob[, , "consensus", ], pass$prob[, , "correlation", ])
+})
+
+test_that("a validation panel holds only the features its ranking scored", {
+  fx <- signal_fixture(10, 30, signal = 2)
+  rank <- cbind(elastic_net = 1:30, consensus = 1:30)
+  rownames(rank) <- rownames(fx$X)
+  panels <- character()
+  spy <- lapply(playbase:::BIOMARKER_METHODS, function(m) {
+    fit_predict <- m$fit_predict
+    m$fit_predict <- function(Xtr, ytr, Xte) {
+      panels <<- c(panels, paste(rownames(Xtr), collapse = ","))
+      fit_predict(Xtr, ytr, Xte)
+    }
+    m
+  })
+  local_mocked_bindings(BIOMARKER_METHODS = spy, .package = "playbase")
+
+  ## one scored feature: k = 5 and k = 20 both fit on it alone, unpadded by
+  ## the unscored features ranked after it
+  withr::local_seed(1)
+  pass <- playbase:::.biomarker_cv_pass(fx$X, fx$y, "elastic_net", c(5L, 20L), 5L, list(rank = rank, scored = rank <= 1))
+  expect_identical(panels, rep("gene1", 10))
+  expect_true(all(is.finite(pass$prob)))
+
+  ## nothing scored: no fit, the training fold's class frequencies
+  panels <- character()
+  pass <- playbase:::.biomarker_cv_pass(fx$X, fx$y, "elastic_net", 5L, 5L, list(rank = rank, scored = rank < 0))
+  expect_length(panels, 0)
+  expect_equal(unique(as.vector(pass$prob)), 0.5)
 })
 
 test_that("biomarker_cv on three classes reports macro AUC and argmax calls", {
@@ -368,6 +412,39 @@ test_that("pgx.compute_biomarkers grows one tree per ranking, on its own panel",
     expect_identical(unname(tree$orig.names), panel, label = ranking)
     expect_identical(environment(tree$terms), baseenv(), label = ranking)
   }
+})
+
+test_that("pgx.compute_biomarkers reports only the features a ranking scored", {
+  ## xgboost and sPLS-DA leave most of the 500 screened features at 0, and
+  ## those ties rank by SD; sPLS-DA keeps 25 features on its one component.
+  ## mixOmics warns of a feature constant within a stability subsample.
+  res <- suppressWarnings(suppressMessages(playbase::pgx.compute_biomarkers(
+    outlier_pgx(), "activated",
+    methods = c("xgboost", "splsda"), resampling = "fast", top_n = 50L, validate = FALSE
+  )))
+  in_panel <- res$rank <= 50 & res$scored
+  expect_identical(dimnames(res$scored), dimnames(res$rank))
+  expect_true(all(rowSums(in_panel) > 0)) ## no row is filler
+  expect_identical(sum(in_panel[, "splsda"]), 25L)
+  expect_lt(sum(in_panel[, "xgboost"]), 50L)
+  expect_identical(rownames(res$stability$frequency), rownames(res$X))
+  ## the consensus panel leads, and each tree is grown on its own panel
+  expect_true(all(in_panel[seq_len(sum(in_panel[, "consensus"])), "consensus"]))
+  for (ranking in names(res$trees)) {
+    panel <- rownames(res$rank)[in_panel[, ranking]]
+    panel <- panel[order(res$rank[panel, ranking])]
+    expect_identical(unname(res$trees[[ranking]]$orig.names), panel, label = ranking)
+  }
+})
+
+test_that("pgx.compute_biomarkers refuses a run where no method scores", {
+  zero <- playbase:::BIOMARKER_METHODS
+  zero$correlation$importance <- function(X, y) stats::setNames(numeric(nrow(X)), rownames(X))
+  local_mocked_bindings(BIOMARKER_METHODS = zero, .package = "playbase")
+  expect_error(
+    suppressMessages(playbase::pgx.compute_biomarkers(outlier_pgx(), "activated", methods = "correlation")),
+    class = "biomarker_none_scored"
+  )
 })
 
 test_that("pgx.compute_biomarkers refuses a class under 3 samples", {

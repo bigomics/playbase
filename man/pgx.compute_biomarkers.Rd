@@ -33,8 +33,8 @@ and (100, 10, 50).}
 
 \item{seed}{Integer seed.}
 
-\item{top_n}{Number of biomarkers to report. Ten times as many features,
-by SD, are screened.}
+\item{top_n}{Most biomarkers to report per ranking. Ten times as many
+features, by SD, are screened.}
 
 \item{...}{Passed to the data preparation: \code{level},
 \code{filter_features}, \code{select_features}, \code{select_samples}.}
@@ -47,14 +47,15 @@ after every stability round, CV repeat and permutation.}
 \value{
 \code{NULL} when too few classes, samples or features remain, as
 \code{pgx.compute_importance()}. Otherwise a list whose feature rows are
-the union of the consensus and each method's top \code{top_n}, in consensus
-order (the first \code{top_n} rows are the consensus panel):
+the union of the consensus and each method's panel, in consensus order (the
+first rows are the consensus panel):
 \item{R}{features x methods rank percentiles, the legacy importance matrix.}
 \item{y}{named phenotype vector of the samples used.}
 \item{X}{features x samples expression.}
 \item{rf}{rpart decision tree on the consensus panel, as \code{trees$consensus}.}
 \item{trees}{named list of rpart decision trees, \code{consensus} and one per
-  method, each grown on that ranking's top \code{top_n} features.}
+  method, each grown on that ranking's panel; \code{NULL} for a method that
+  scored no feature.}
 \item{pipeline}{\code{"v2"}.}
 \item{methods}{the methods run.}
 \item{params}{resampling, B, repeats, n_perm, seed and top_n.}
@@ -62,6 +63,9 @@ order (the first \code{top_n} rows are the consensus panel):
 \item{n_features_screened}{features entering selection.}
 \item{consensus}{consensus rank percentile per feature.}
 \item{rank}{features x (methods, consensus) integer ranks, 1 = best.}
+\item{scored}{features x (methods, consensus), TRUE where the raw score is
+  above 0 (for the consensus, in any method). A ranking's panel is its rows
+  with \code{rank <= top_n} and \code{scored}.}
 \item{stability}{B, bootstrap, and features x (methods, consensus)
   frequency, rank_median, rank_iqr_lo, rank_iqr_hi; index per column.}
 \item{cv}{\code{NULL} unless \code{validate}: folds, repeats, n_perm,
@@ -75,7 +79,9 @@ order (the first \code{top_n} rows are the consensus panel):
 An error of class \code{biomarker_small_class} (carrying
 \code{class_counts}) is raised when a class has fewer than 3 samples, and
 one of class \code{biomarker_too_few_features} (carrying
-\code{n_features}) when fewer than 5 features remain after filtering.
+\code{n_features}) when fewer than 5 features remain after filtering, and
+one of class \code{biomarker_none_scored} when no method scores any
+feature.
 }
 \description{
 Selects biomarkers for a discrete phenotype with one or more
@@ -88,24 +94,27 @@ Steps, in order:
 \enumerate{
   \item Selection on all samples. Each method's scores become rank
     percentiles; the consensus is their rank product (geometric mean of
-    ranks). A decision tree is grown on the consensus top features and on
-    each method's.
+    ranks). A ranking's panel is its top \code{top_n} features whose raw
+    score is above 0 (for the consensus, in any method): sparse methods
+    score most features exactly 0, and their rank among those ties only
+    reflects SD order. A panel can therefore hold fewer than \code{top_n}.
+    A decision tree is grown on the consensus panel and on each method's.
   \item Stability: selection on B stratified 80\% subsamples (a stratified
     bootstrap when a class is too small), giving per-feature selection
     frequency, rank median and IQR, and the Nogueira stability index. A
-    feature counts as selected in a round when it ranks in the top
-    \code{top_n} and its raw score is above 0 (for the consensus, in any
-    method): sparse methods score most features exactly 0, and their rank
-    among those ties only reflects SD order. Ranks are reported unchanged.
+    feature counts as selected in a round when it is in that round's panel.
+    Ranks are reported unchanged.
   \item Validation: repeated stratified K-fold CV, K = min(5, smallest class),
     with selection and fitting inside each training fold at panel sizes
-    5, 10, 20 and 50. Each method is fitted on its own top k. The consensus
-    validates the consensus top k: every method is refitted on it and the
-    consensus predicts by the mean of their probabilities (a single method
-    is its own consensus). Two-class calls use a Youden threshold chosen on
-    the training fold; multiclass calls take the most probable class. Labels
-    are permuted to give a null AUC at panel size 10 (\code{cv$null_k}),
-    with the same definitions.
+    5, 10, 20 and 50. A panel of size k is the fold's top k features that
+    the ranking scored, so it holds fewer when fewer scored; an empty one
+    predicts the training fold's class frequencies. Each method is fitted on
+    its own panel. The consensus validates the consensus panel: every method
+    is refitted on it and the consensus predicts by the mean of their
+    probabilities (a single method is its own consensus). Two-class calls
+    use a Youden threshold chosen on the training fold; multiclass calls take
+    the most probable class. Labels are permuted to give a null AUC at panel
+    size 10 (\code{cv$null_k}), with the same definitions.
 }
 Rounds run under \code{parallel::mclapply} with
 \code{getOption("mc.cores", 1)} cores, each with its own seed, so results do
