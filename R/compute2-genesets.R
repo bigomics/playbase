@@ -11,7 +11,8 @@
 #' @param pgx A data object representing multi-omics data.
 #' @param custom.geneset Custom geneset object.
 #' @param test.methods Character vector with the methods to use for testing.
-#'  Currently supported: "gsva", "camera", "fgsea".
+#'  Currently supported: "fisher", "ssgsea", "gsva", "spearman", "camera",
+#'  "fry", "fgsea", "globaltest".
 #' @param remove.outputs Logical indicating whether to remove large outputs.
 #'
 #' @return The updated \code{pgx} object with computed test genesets.
@@ -46,7 +47,7 @@ compute_testGenesets <- function(pgx,
 
   ALL.GSET.METHODS <- c(
     "fisher", "ssgsea", "gsva", "spearman", "camera", "fry",
-    "fgsea", "gsea.permPH", "gsea.permGS", "gseaPR"
+    "fgsea", "gsea.permPH", "gsea.permGS", "gseaPR", "globaltest"
   )
 
   ## convert to gene list
@@ -97,6 +98,11 @@ compute_testGenesets <- function(pgx,
     )
   }
 
+  ## small panels: no top-100 padding of the fisher hit lists (mirrors
+  ## pgx.add_GMT)
+  is.mx <- grepl("metabolomics|lipidomics", pgx$datatype %||% "",
+    ignore.case = TRUE
+  )
   gset.meta <- gset.fitContrastsWithAllMethods(
     gmt = gmt,
     X = X1,
@@ -107,7 +113,8 @@ compute_testGenesets <- function(pgx,
     use.replaid = use.replaid,
     mc.threads = 1,
     mc.cores = NULL,
-    batch.correct = TRUE
+    batch.correct = TRUE,
+    fisher.pad = !is.mx
   )
 
   rownames(gset.meta$timings) <- paste("[test.genesets]", rownames(gset.meta$timings))

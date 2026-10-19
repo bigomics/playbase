@@ -33,6 +33,10 @@
 #' @param check.background A logical value indicating whether to check the presence of genes in
 #'                         the background set. Defaults to `TRUE`.
 #' @param report.genes A logical value indicating whether to report genes in genesets. Defaults to `FALSE`.
+#' @param both.directions If `TRUE` (default), a set needs `nmin` hits in both
+#'   the up and the down list to be tested. If `FALSE`, hits in one list are
+#'   enough, and the p- and q-values of the better direction are doubled
+#'   (Bonferroni for the choice).
 #'
 #' @export
 #'
@@ -43,7 +47,8 @@
 gset.fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
                          fdr = 0.05, mc = TRUE, sort.by = "p.value", nmin = 3, verbose = 1,
                          min.genes = 15, max.genes = 500, method = "fast.fisher",
-                         check.background = TRUE, report.genes = FALSE) {
+                         check.background = TRUE, report.genes = FALSE,
+                         both.directions = TRUE) {
   ft.up <- gset.fisher(
     genes = genes.up, genesets = genesets, background = background,
     fdr = 1, mc = mc, sort.by = sort.by, nmin = nmin, verbose = verbose,
@@ -56,12 +61,28 @@ gset.fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
     min.genes = min.genes, max.genes = max.genes, method = method,
     check.background = check.background, report.genes = report.genes
   )
-  ft.up <- ft.up[rownames(ft.dn), ]
-  ft.sign <- c(-1, 1)[1 + 1 * (ft.up$p.value < ft.dn$p.value)]
+  gs <- rownames(ft.dn)
+  if (!both.directions) gs <- union(rownames(ft.up), rownames(ft.dn))
+  ## match(), not ft.up[gs, ]: data.frame row names partial-match, so a set
+  ## missing from ft.up would take the row of a longer name it prefixes
+  ft.up <- ft.up[match(gs, rownames(ft.up)), ]
+  ft.dn <- ft.dn[match(gs, rownames(ft.dn)), ]
+  rownames(ft.up) <- rownames(ft.dn) <- gs
+  p.up <- ft.up$p.value
+  p.dn <- ft.dn$p.value
+  if (!both.directions) { ## an untested direction never wins
+    p.up[is.na(p.up)] <- Inf
+    p.dn[is.na(p.dn)] <- Inf
+  }
+  ft.sign <- c(-1, 1)[1 + 1 * (p.up < p.dn)]
   ft1 <- cbind(sign = ft.sign, ft.up)[which(ft.sign > 0), , drop = FALSE]
   ft2 <- cbind(sign = ft.sign, ft.dn)[which(ft.sign < 0), , drop = FALSE]
   ft.res <- rbind(ft1, ft2)
   ft.res$sign <- ft.res$sign * ft.res$odd.ratio
+  if (!both.directions) {
+    ft.res$p.value <- pmin(1, 2 * ft.res$p.value)
+    ft.res$q.value <- pmin(1, 2 * ft.res$q.value)
+  }
   ft.res <- ft.res[which(ft.res$q.value <= fdr), , drop = FALSE]
   head(ft.res)
   return(ft.res)

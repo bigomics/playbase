@@ -14,7 +14,8 @@ gset.fitContrastsWithAllMethods(
   mc.threads = 1,
   mc.cores = NULL,
   use.replaid = FALSE,
-  batch.correct = TRUE
+  batch.correct = TRUE,
+  fisher.pad = TRUE
 )
 }
 \arguments{
@@ -35,6 +36,13 @@ gset.fitContrastsWithAllMethods(
 \item{mc.cores}{The number of CPU cores to use for parallel computing.}
 
 \item{batch.correct}{Logical indicating whether to correct for batch effects.}
+
+\item{fisher.pad}{Logical. If \code{TRUE} (default), fisher pads the up and
+down hit lists to the top 100 features by logFC and needs 3 hits in both
+lists. Set \code{FALSE} for small panels (metabolomics, lipidomics), where
+100 per direction is most of the panel: no padding, each direction is
+tested on its own (Bonferroni x2 for keeping the better one), and a
+measured set with no hits gets p = 1 instead of NA.}
 }
 \value{
 A list containing the results of the gene set enrichment analyses for each method.

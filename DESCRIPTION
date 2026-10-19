@@ -55,7 +55,6 @@ Imports:
     ggtext,
     glasso,
     glmnet,
-    globaltest,
     glue,
     GO.db,
     gplots,

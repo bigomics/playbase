@@ -16,6 +16,12 @@
 #' @param mc.threads The number of threads to use for parallel computing.
 #' @param mc.cores The number of CPU cores to use for parallel computing.
 #' @param batch.correct Logical indicating whether to correct for batch effects.
+#' @param fisher.pad Logical. If \code{TRUE} (default), fisher pads the up and
+#'   down hit lists to the top 100 features by logFC and needs 3 hits in both
+#'   lists. Set \code{FALSE} for small panels (metabolomics, lipidomics), where
+#'   100 per direction is most of the panel: no padding, each direction is
+#'   tested on its own (Bonferroni x2 for keeping the better one), and a
+#'   measured set with no hits gets p = 1 instead of NA.
 #'
 #' @return A list containing the results of the gene set enrichment analyses for each method.
 #'
@@ -29,7 +35,8 @@ gset.fitContrastsWithAllMethods <- function(gmt,
                                             mc.threads = 1,
                                             mc.cores = NULL,
                                             use.replaid = FALSE,
-                                            batch.correct = TRUE) {
+                                            batch.correct = TRUE,
+                                            fisher.pad = TRUE) {
   ALL.GENESET.METHODS <- c(
     "fisher", "ssgsea", "gsva", "spearman", "camera", "fry", "fgsea",
     "globaltest"
@@ -241,11 +248,11 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       genes.dn <- rownames(limma0)[which.dn]
 
       ## Always take at least first 100.. (HACK??!!!)
-      if (length(genes.dn) < 100) {
+      if (fisher.pad && length(genes.dn) < 100) {
         genes.dn0 <- rownames(limma0)[order(limma0[, "logFC"])]
         genes.dn <- utils::head(unique(c(genes.dn, genes.dn0)), 100)
       }
-      if (length(genes.up) < 100) {
+      if (fisher.pad && length(genes.up) < 100) {
         genes.up0 <- rownames(limma0)[order(-limma0[, "logFC"])]
         genes.up <- utils::head(unique(c(genes.up, genes.up0)), 100)
       }
@@ -261,6 +268,8 @@ gset.fitContrastsWithAllMethods <- function(gmt,
           min.genes = 0,
           max.genes = 99999,
           report.genes = FALSE,
+          nmin = if (fisher.pad) 3 else 1,
+          both.directions = fisher.pad,
           verbose = 0
         )
       })
@@ -270,6 +279,15 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       rownames(output) <- names(gmt)
       output <- output[, c("sign", "p.value", "q.value", "odd.ratio", "overlap")]
       colnames(output) <- c("score", "p.value", "q.value", "odd.ratio", "overlap")
+      if (!fisher.pad) {
+        ## a measured set with no hits is "no enrichment", not unknown: under
+        ## max-p an NA would let the other methods decide alone
+        measured <- lengths(lapply(gmt, intersect, rownames(xx))) > 0
+        na <- is.na(output$p.value) & measured
+        output$p.value[na] <- 1
+        output$q.value[na] <- 1
+        output$score[na] <- 0
+      }
       res[["fisher"]] <- output
     }
 
@@ -330,29 +348,13 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
     ## Goeman's global test (as in MetaboAnalyst's QEA): self-contained, so it
     ## keeps its power on small sets and short feature lists (metabolomics),
-    ## where the rank-based methods have little to rank. It is non-directional,
-    ## so the score takes its sign from the members' mean difference, as
-    ## camera's does from its Direction.
+    ## where the rank-based methods have little to rank. Standardized, so
+    ## high-variance features do not dominate (same as gt on autoscaled data).
     if ("globaltest" %in% method) {
-      sets <- lapply(gmt, intersect, rownames(xx))
-      sets <- sets[lengths(sets) > 0]
       tt <- system.time(
-        gt <- globaltest::gt(yy, t(xx), subsets = sets, model = "logistic")
+        output <- gset.globaltest(xx, yy, gmt, standardize = TRUE)
       )
       timings <- rbind(timings, c("globaltest", tt))
-      pv <- globaltest::result(gt)[names(sets), "p-value"]
-      dx <- rowMeans(xx[, yy == 1, drop = FALSE], na.rm = TRUE) -
-        rowMeans(xx[, yy == 0, drop = FALSE], na.rm = TRUE)
-      dir <- sign(sapply(sets, function(s) mean(dx[s], na.rm = TRUE)))
-      output <- data.frame(
-        score = dir * -log10(pv),
-        p.value = pv,
-        q.value = stats::p.adjust(pv, method = "BH"),
-        SIZE = lengths(sets),
-        row.names = names(sets)
-      )
-      output <- output[match(names(gmt), rownames(output)), ]
-      rownames(output) <- names(gmt)
       res[["globaltest"]] <- output
     }
 
@@ -458,8 +460,11 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     pv <- P[[i]]
     qv <- Q[[i]]
     fc <- S[[i]]
-    meta.p <- apply(pv, 1, max, na.rm = TRUE) ## maximum p-statistic (simple & fast)
-    meta.q <- apply(qv, 1, max, na.rm = TRUE) ## maximum q-statistic (simple & fast)
+    ## maximum p/q-statistic (simple & fast); NA, not max() = -Inf, if no
+    ## method tested the set
+    rowmax <- function(x) if (all(is.na(x))) NA else max(x, na.rm = TRUE)
+    meta.p <- apply(pv, 1, rowmax)
+    meta.q <- apply(qv, 1, rowmax)
     ss.rank <- function(x) scale(sign(x) * rank(abs(x), na.last = "keep"), center = FALSE)
     if (nrow(S[[i]]) == 1) {
       meta.fx <- S[[i]]
