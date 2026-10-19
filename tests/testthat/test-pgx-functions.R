@@ -430,6 +430,31 @@ test_that("alias2hugo converts gene symbols", {
   expect_error(playbase::alias2hugo(gene0, org = "zz"))
 })
 
+test_that("alias2hugo maps mouse aliases on the lib-x OrgDb", {
+  skip_if(!nzchar(Sys.getenv("LIBX_DIR")))
+  skip_if(is.null(tryCatch(omicspgx::libx_orgdb("Mus musculus"), error = function(e) NULL)))
+
+  expect_equal(
+    playbase::alias2hugo(c("Cd19", "Trp53", "notagene"), org = "mm", na.orig = FALSE),
+    c("Cd19", "Trp53", NA)
+  )
+  ## "p53" is an alias of Trp53
+  expect_equal(playbase::alias2hugo(c("p53", NA), org = "mm"), c("Trp53", NA))
+  expect_equal(playbase::alias2hugo(c("Cd19", "Trp53", "Actb")), c("Cd19", "Trp53", "Actb"))
+})
+
+test_that("alias2hugo returns mouse input unmapped without lib-x", {
+  withr::local_envvar(LIBX_DIR = NA)
+  withr::local_options(omicspgx.libx_dir = NULL)
+  suppressWarnings(
+    expect_message(
+      result <- playbase::alias2hugo(c("Cd19"), org = "mm"),
+      "no mouse OrgDb"
+    )
+  )
+  expect_equal(result, "Cd19")
+})
+
 #' Test for breakstringBROKEN
 #'
 #'

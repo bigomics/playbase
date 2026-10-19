@@ -225,11 +225,11 @@ getOrgDb <- function(organism, use.ah = NULL) {
     if (organism == "Homo sapiens" && require("org.Hs.eg.db", quietly = TRUE)) {
       return(org.Hs.eg.db::org.Hs.eg.db)
     }
-    if (organism == "Mus musculus" && require("org.Mm.eg.db", quietly = TRUE)) {
-      return(org.Mm.eg.db::org.Mm.eg.db)
-    }
-    if (organism == "Rattus norvegicus" && require("org.Rn.eg.db", quietly = TRUE)) {
-      return(org.Rn.eg.db::org.Rn.eg.db)
+    if (organism %in% c("Mus musculus", "Rattus norvegicus")) {
+      db <- tryCatch(omicspgx::libx_orgdb(organism), error = function(e) NULL)
+      if (!is.null(db)) {
+        return(db)
+      }
     }
     if (organism == "Plasmodium falciparum" && require("org.Pf.plasmo.db", quietly = TRUE)) {
       return(org.Pf.plasmo.db::org.Pf.plasmo.db)

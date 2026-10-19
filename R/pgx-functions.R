@@ -1672,14 +1672,24 @@ extremeCorrelation <- function(query_sig, ref_set, n = 200) {
 #' }
 #' @export
 alias2hugo <- function(s, org = NULL, na.orig = TRUE) {
+  ## the mouse OrgDb comes from lib-x; without it nothing maps to mouse
+  db_mm <- NULL
+  mm.symbol <- character(0)
+  if (is.null(org) || org == "mm") {
+    db_mm <- tryCatch(omicspgx::libx_orgdb("Mus musculus"), error = function(e) NULL)
+    if (is.null(db_mm)) {
+      message("[alias2hugo] no mouse OrgDb from lib-x: mouse symbols are not mapped")
+    } else {
+      mm.symbol <- AnnotationDbi::keys(db_mm, "SYMBOL")
+    }
+  }
+
   ## determine if we deal with human or mouse
-  hs.symbol <- unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
-  mm.symbol <- unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
   if (is.null(org)) {
+    hs.symbol <- unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
     is.human <- mean(s %in% hs.symbol, na.rm = TRUE) >= mean(s %in% mm.symbol, na.rm = TRUE)
     org <- ifelse(is.human, "hs", "mm")
   }
-  org
 
   nna <- which(!is.na(s) & s != "" & s != " ")
   s1 <- trimws(s[nna])
@@ -1689,9 +1699,19 @@ alias2hugo <- function(s, org = NULL, na.orig = TRUE) {
       limma::alias2SymbolTable(s1, species = "Hs")
     )
   } else if (org == "mm") {
-    hugo <- suppressWarnings(
-      limma::alias2SymbolTable(s1, species = "Mm")
-    )
+    ## limma's rule: an official symbol stays, else the first alias hit
+    hugo <- ifelse(s1 %in% mm.symbol, s1, NA_character_)
+    alias <- if (!is.null(db_mm)) intersect(s1[is.na(hugo)], AnnotationDbi::keys(db_mm, "ALIAS"))
+    if (length(alias)) {
+      tab <- suppressMessages(AnnotationDbi::select(
+        db_mm,
+        keys = alias, keytype = "ALIAS", columns = "SYMBOL"
+      ))
+      tab <- tab[!is.na(tab$SYMBOL), ]
+      tab <- tab[!duplicated(tab$ALIAS), ]
+      jj <- which(is.na(hugo))
+      hugo[jj] <- tab$SYMBOL[match(s1[jj], tab$ALIAS)]
+    }
   } else {
     stop("[alias2hugo] invalid organism")
   }
