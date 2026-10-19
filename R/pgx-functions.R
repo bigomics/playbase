@@ -844,6 +844,36 @@ getHSGeneInfo <- function(gene, as.link = TRUE) {
 }
 
 
+## KEGG pathway names (id -> name) from lib-x, cached per release.
+.pb_kegg_cache <- new.env(parent = emptyenv())
+
+.pb_kegg_names <- function() {
+  release <- tryCatch(omicspgx::libx_dir(), error = function(e) NULL)
+  key <- if (is.null(release)) "none" else release
+  if (!is.null(.pb_kegg_cache[[key]])) {
+    return(.pb_kegg_cache[[key]])
+  }
+  tab <- if (!is.null(release)) {
+    tryCatch(
+      omicspgx::libx_read("annotation/pathways/kegg_names.parquet"),
+      error = function(e) NULL
+    )
+  }
+  if (is.null(tab)) {
+    if (!isTRUE(.pb_kegg_cache[["warned"]])) {
+      message("KEGG pathway names not available: no lib-x release or kegg_names asset")
+      .pb_kegg_cache[["warned"]] <- TRUE
+    }
+    return(character(0))
+  }
+  ## the dev asset names its columns path_id/path_name, the spec kegg_id/name
+  id.col <- intersect(c("kegg_id", "path_id"), colnames(tab))[1]
+  name.col <- intersect(c("name", "path_name"), colnames(tab))[1]
+  names.vec <- stats::setNames(as.character(tab[[name.col]]), as.character(tab[[id.col]]))
+  .pb_kegg_cache[[key]] <- names.vec
+  names.vec
+}
+
 getHSGeneInfo.eg <- function(eg, as.link = TRUE) {
   env.list <- c(
     "gene_symbol" = org.Hs.eg.db::org.Hs.egSYMBOL,
@@ -880,12 +910,14 @@ getHSGeneInfo.eg <- function(eg, as.link = TRUE) {
 
   ## create link to KEGG
   kegg.link <- "<a href='https://www.genome.jp/kegg-bin/show_pathway?map=hsaKEGGID&show_description=show' target='_blank'>KEGGNAME (KEGGID)</a>"
+  kegg.names <- .pb_kegg_names()
   for (i in 1:length(info[["KEGG"]])) {
     kegg.id <- info[["KEGG"]][[i]]
     kegg.id <- setdiff(kegg.id, NA)
     if (length(kegg.id) > 0) {
-      kegg.name <- AnnotationDbi::mget(kegg.id, envir = KEGG.db::KEGGPATHID2NAME, ifnotfound = NA)[[1]]
-      if (!is.na(kegg.name) && as.link) {
+      kegg.name <- unname(kegg.names[kegg.id[1]])
+      if (is.na(kegg.name)) kegg.name <- kegg.id[1]
+      if (as.link) {
         info[["KEGG"]][[i]] <- gsub("KEGGNAME", kegg.name, gsub("KEGGID", kegg.id, kegg.link))
       } else {
         info[["KEGG"]][[i]] <- kegg.name

@@ -578,3 +578,51 @@ test_that("cor.pvalue calculates p-values correctly", {
 #' Test for getGSETS_playbase.SAVE
 #'
 #'
+
+## KEGG pathway names from lib-x
+reset_kegg_cache <- function() {
+  cache <- playbase:::.pb_kegg_cache
+  rm(list = ls(cache, all.names = TRUE), envir = cache)
+}
+
+test_that("getHSGeneInfo.eg names KEGG pathways from lib-x", {
+  skip_if_not_installed("org.Hs.eg.db")
+  reset_kegg_cache()
+  withr::defer(reset_kegg_cache())
+  kegg.id <- AnnotationDbi::mget("1017", org.Hs.eg.db::org.Hs.egPATH)[[1]][1]
+  testthat::local_mocked_bindings(
+    libx_dir = function(...) "mock-release",
+    libx_read = function(...) {
+      data.frame(kegg_id = c(kegg.id, "99999"), name = c("Mock pathway", "Other"))
+    },
+    .package = "omicspgx"
+  )
+  info <- playbase:::getHSGeneInfo.eg("1017", as.link = FALSE)
+  expect_equal(info[["KEGG"]][[1]], "Mock pathway")
+  info <- playbase:::getHSGeneInfo.eg("1017", as.link = TRUE)
+  expect_match(info[["KEGG"]][[1]], "Mock pathway (", fixed = TRUE)
+})
+
+test_that("getHSGeneInfo.eg falls back to KEGG ids without a lib-x release", {
+  skip_if_not_installed("org.Hs.eg.db")
+  withr::local_envvar(LIBX_DIR = NA)
+  withr::local_options(omicspgx.libx_dir = NULL)
+  reset_kegg_cache()
+  withr::defer(reset_kegg_cache())
+  kegg.id <- AnnotationDbi::mget("1017", org.Hs.eg.db::org.Hs.egPATH)[[1]][1]
+  expect_message(
+    info <- playbase:::getHSGeneInfo.eg("1017", as.link = FALSE),
+    "KEGG pathway names not available"
+  )
+  expect_equal(info[["KEGG"]][[1]], kegg.id)
+})
+
+test_that(".pb_kegg_names reads the lib-x asset", {
+  skip_if(is.null(tryCatch(omicspgx::libx_dir(), error = function(e) NULL)))
+  reset_kegg_cache()
+  withr::defer(reset_kegg_cache())
+  names.vec <- suppressMessages(playbase:::.pb_kegg_names())
+  skip_if(length(names.vec) == 0, "kegg_names asset not in release")
+  expect_true(length(names.vec) > 0)
+  expect_false(is.null(names(names.vec)))
+})
