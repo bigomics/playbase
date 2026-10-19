@@ -222,8 +222,21 @@ getOrgDb <- function(organism, use.ah = NULL) {
   organism <- normalizeOrganism(organism)
 
   if (is.null(use.ah) || !use.ah) {
-    if (organism == "Homo sapiens" && require("org.Hs.eg.db", quietly = TRUE)) {
-      return(org.Hs.eg.db::org.Hs.eg.db)
+    if (organism == "Homo sapiens") {
+      db <- tryCatch(omicspgx::libx_orgdb("Homo sapiens"), error = function(e) NULL)
+      if (!is.null(db)) {
+        return(db)
+      }
+      if (requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
+        db <- org.Hs.eg.db::org.Hs.eg.db
+        usable <- tryCatch(
+          length(AnnotationDbi::keytypes(db)) > 0,
+          error = function(e) FALSE
+        )
+        if (usable) {
+          return(db)
+        }
+      }
     }
     if (organism %in% c("Mus musculus", "Rattus norvegicus")) {
       db <- tryCatch(omicspgx::libx_orgdb(organism), error = function(e) NULL)
