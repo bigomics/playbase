@@ -69,8 +69,11 @@ for the gene annotation table and the probe to symbol conversion.}
 [playbase.annotation::an.readLock()]. Gene sets are built from its
 selection and `versions` records its `lock_sha256`, `lock_status` and
 the selection digest. A stale lock (`lock_status` "stale") is never
-refused. NULL (default) builds gene sets as before and sets
-`lock_status` to "none".}
+refused. A selection that cannot be applied stops with an error of
+class `annot_selection_error` (fields `selection_digest`, `limit`):
+`annot_selection_release_missing` without a lib-x release,
+`annot_selection_over_limit` with more sets than `max.genesets`. NULL
+(default) builds gene sets as before and sets `lock_status` to "none".}
 
 \item{max.genesets}{Maximum number of gene sets to test. Default is 5000.}
 

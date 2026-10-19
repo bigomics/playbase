@@ -906,6 +906,7 @@ test_that("a stale lock still computes and is recorded as stale", {
 
 test_that("a lock that shows restricted collections selects them at compute", {
   seen <- list()
+  local_mocked_bindings(libx_dir = function() tempdir(), .package = "omicspgx")
   local_mocked_bindings(
     pgx.addGMT = function(pgx, ..., include_restricted = FALSE) {
       seen[[length(seen) + 1L]] <<- include_restricted
@@ -918,6 +919,70 @@ test_that("a lock that shows restricted collections selects them at compute", {
   pgx.applyAnnotLock(list(), lock(FALSE))
   pgx.applyAnnotLock(list(), NULL)
   expect_identical(seen, list(TRUE, FALSE, FALSE))
+})
+
+## Selection refusal. pgx.addGMT raises `class` when given collections (the
+## lock's explicit selection) and returns pgx otherwise (legacy path).
+mock_addGMT_raising <- function(class, env = parent.frame()) {
+  local_mocked_bindings(libx_dir = function() tempdir(), .package = "omicspgx", .env = env)
+  local_mocked_bindings(
+    pgx.addGMT = function(pgx, ..., collections = NULL) {
+      if (!is.null(collections)) stop(errorCondition("upstream", class = class))
+      pgx
+    },
+    .package = "playbase.annotation",
+    .env = env
+  )
+}
+selection_lock <- list(genesets = list(collections = "GO_BP", selection_digest = "abc123"))
+
+test_that("a lock without a lib-x release refuses with a classed error", {
+  mock_addGMT_raising("pgx_error_libx_missing_asset")
+  err <- expect_error(
+    pgx.applyAnnotLock(list(), selection_lock, max.genesets = 5000),
+    class = "annot_selection_release_missing"
+  )
+  expect_s3_class(err, "annot_selection_error")
+  expect_match(conditionMessage(err), "rerun the annotation step or compute without a selection")
+  expect_identical(err$selection_digest, "abc123")
+})
+
+test_that("a lock over max.genesets refuses with the limit", {
+  mock_addGMT_raising("geneset_library_too_large")
+  err <- expect_error(
+    pgx.applyAnnotLock(list(), selection_lock, max.genesets = 1234),
+    class = "annot_selection_over_limit"
+  )
+  expect_s3_class(err, "annot_selection_error")
+  expect_identical(err$limit, 1234)
+  expect_match(conditionMessage(err), "max.genesets \\(1234\\).*compute without a selection")
+})
+
+test_that("a lock refuses before the explicit path when no release is set", {
+  withr::local_envvar(LIBX_DIR = NA)
+  withr::local_options(omicspgx.libx_dir = NULL)
+  called <- FALSE
+  local_mocked_bindings(
+    pgx.addGMT = function(pgx, ...) {
+      called <<- TRUE
+      pgx
+    },
+    .package = "playbase.annotation"
+  )
+  expect_error(
+    pgx.applyAnnotLock(list(), selection_lock),
+    class = "annot_selection_release_missing"
+  )
+  expect_false(called)
+})
+
+test_that("without a lock the legacy path runs and nothing is refused", {
+  mock_addGMT_raising("geneset_library_too_large")
+  ## no release either: the legacy path does not ask for one
+  local_mocked_bindings(libx_dir = function() NULL, .package = "omicspgx")
+  pgx <- pgx.applyAnnotLock(list(a = 1), NULL, max.genesets = 5000)
+  expect_identical(pgx$versions$lock_status, "none")
+  expect_identical(pgx$a, 1)
 })
 
 test_that("pgx.add_GMT leaves include_restricted out for a pgx.addGMT without it", {

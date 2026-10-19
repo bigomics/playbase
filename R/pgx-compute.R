@@ -158,8 +158,11 @@ pgx.createFromFiles <- function(counts.file,
 #'   [playbase.annotation::an.readLock()]. Gene sets are built from its
 #'   selection and `versions` records its `lock_sha256`, `lock_status` and
 #'   the selection digest. A stale lock (`lock_status` "stale") is never
-#'   refused. NULL (default) builds gene sets as before and sets
-#'   `lock_status` to "none".
+#'   refused. A selection that cannot be applied stops with an error of
+#'   class `annot_selection_error` (fields `selection_digest`, `limit`):
+#'   `annot_selection_release_missing` without a lib-x release,
+#'   `annot_selection_over_limit` with more sets than `max.genesets`. NULL
+#'   (default) builds gene sets as before and sets `lock_status` to "none".
 #'
 #' @details
 #' pgx.createPGX creates a pgx object with the following slots:
@@ -1163,18 +1166,47 @@ pgx.computePGX <- function(pgx,
 ## its sha256, its status and the digest of the selection built from it. A
 ## stale lock is used as is, never refused. A lock that built no gene sets
 ## (`add.gmt` FALSE) is still recorded, with a note saying so. Without a lock
-## `lock_status` is "none".
+## `lock_status` is "none". A selection is a guarantee: without a lib-x
+## release, or with more sets than `max.genesets`, it stops with an
+## annot_selection_error instead of building other gene sets.
 pgx.applyAnnotLock <- function(pgx, annot_lock, add.gmt = TRUE, ...) {
   g <- annot_lock$genesets
   if (add.gmt && is.null(annot_lock)) {
     pgx <- pgx.add_GMT(pgx, ...)
   } else if (add.gmt) {
-    pgx <- pgx.add_GMT(pgx, ...,
-      collections = as.character(g$collections),
-      tags = g$tags,
-      tag_relation = g$tag_relation,
-      size = g$size,
-      include_restricted = isTRUE(g$show_restricted)
+    limit <- list(...)[["max.genesets"]] %||% NA
+    refuse <- function(class, cause) {
+      stop(structure(
+        class = c(class, "annot_selection_error", "error", "condition"),
+        list(
+          message = paste0(
+            "[pgx.createPGX] the gene-set selection cannot be applied: ", cause,
+            "; rerun the annotation step or compute without a selection"
+          ),
+          call = NULL,
+          selection_digest = g$selection_digest,
+          limit = limit
+        )
+      ))
+    }
+    no_release <- "no lib-x release is available"
+    if (is.null(tryCatch(omicspgx::libx_dir(), error = function(e) NULL))) {
+      refuse("annot_selection_release_missing", no_release)
+    }
+    pgx <- tryCatch(
+      pgx.add_GMT(pgx, ...,
+        collections = as.character(g$collections),
+        tags = g$tags,
+        tag_relation = g$tag_relation,
+        size = g$size,
+        include_restricted = isTRUE(g$show_restricted)
+      ),
+      pgx_error_libx_missing_asset = function(e) {
+        refuse("annot_selection_release_missing", no_release)
+      },
+      geneset_library_too_large = function(e) {
+        refuse("annot_selection_over_limit", paste0("it has more gene sets than max.genesets (", limit, ")"))
+      }
     )
   }
 
