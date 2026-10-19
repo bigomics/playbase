@@ -160,7 +160,7 @@ pgx.wgcna <- function(
 
     ## We augment pgx$GMT with original GSETxGENE to get better results
     ## for all modules.
-    GMT0 <- getLegacyGMT()
+    GMT0 <- WGCNAplus::getLibxGMT()
     GMT0 <- rename_by2(GMT0, pgx$genes, "symbol")
     GMT <- merge_sparse_matrix(pgx$GMT, GMT0)
 
@@ -205,18 +205,6 @@ pgx.wgcna <- function(
   return(wgcna)
 }
 
-
-#' Combined gene x geneset matrix of the curated legacy gene sets (lib-x)
-#'
-#' The lib-x GSETxGENE and MSETxMETABOLITE matrices, transposed and merged,
-#' with the metabolite ids stripped of their prefix. Same matrix as the
-#' WGCNAplus default, read from lib-x.
-getLegacyGMT <- function() {
-  G1 <- Matrix::t(.pb_libx("gsetxgene"))
-  G2 <- Matrix::t(.pb_libx("msetxmetabolite"))
-  rownames(G2) <- sub(".*:", "", rownames(G2))
-  merge_sparse_matrix(G1, G2)
-}
 
 #' Core WGCNA computation (lower-level workhorse called by \code{\link{pgx.wgcna}})
 #' @param X Gene expression matrix (genes x samples).
@@ -451,7 +439,7 @@ wgcna.compute_multiomics <- function(dataX,
     GMT <- rename_by2(GMT, annot, "symbol")
   }
   if (add.gsets || compute.enrichment) {
-    GMT0 <- getLegacyGMT()
+    GMT0 <- WGCNAplus::getLibxGMT()
     if (!is.null(annot)) GMT0 <- rename_by2(GMT0, annot, "symbol")
     if (!is.null(GMT)) {
       GMT <- merge_sparse_matrix(GMT, GMT0)
@@ -777,7 +765,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
   if (!is.null(progress)) progress$inc(0.1, "Computing layers...")
 
   if (compute.enrichment) {
-    GMT0 <- getLegacyGMT()
+    GMT0 <- WGCNAplus::getLibxGMT()
     GMT <- if (!is.null(GMT)) merge_sparse_matrix(GMT, GMT0) else GMT0
   }
 
@@ -957,7 +945,7 @@ wgcna.runPreservationWGCNA <- function(exprList,
                                        GMT = NULL,
                                        gset.methods = c("fisher", "gsetcor", "xcor")) {
   if (compute.enrichment) {
-    GMT0 <- getLegacyGMT()
+    GMT0 <- WGCNAplus::getLibxGMT()
     if (!is.null(annot)) GMT0 <- rename_by2(GMT0, annot, "human_ortholog")
     GMT <- if (!is.null(GMT)) merge_sparse_matrix(GMT, GMT0) else GMT0
   }

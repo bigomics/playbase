@@ -38,3 +38,28 @@ test_that("METABOLITE sets are kept as fallback when nothing matches the filter"
 test_that("filter = NULL is passed through untouched", {
   expect_null(.filter_passed_to_wgcnaplus("HALLMARK:APOPTOSIS", filter = NULL))
 })
+
+test_that("consensus WGCNA takes its reference sets from WGCNAplus::getLibxGMT", {
+  libx_gmt <- Matrix::sparseMatrix(
+    i = 1:2, j = c(1, 1), x = 1, dims = c(2, 1),
+    dimnames = list(c("A1BG", "A2M"), "MOCK:set1")
+  )
+  seen <- NULL
+  testthat::local_mocked_bindings(
+    getLibxGMT = function() libx_gmt,
+    runConsensusWGCNA = function(..., GMT) {
+      seen <<- GMT
+      NULL
+    },
+    .package = "WGCNAplus"
+  )
+  wgcna.runConsensusWGCNA(exprList = list(), phenoData = list(), compute.enrichment = TRUE)
+  expect_true("MOCK:set1" %in% colnames(seen))
+})
+
+test_that("WGCNAplus::getLibxGMT returns a non-empty genes x sets matrix", {
+  skip_if(is.null(tryCatch(omicspgx::libx_dir(), error = function(e) NULL)))
+  GMT <- WGCNAplus::getLibxGMT()
+  expect_true(nrow(GMT) > 0 && ncol(GMT) > 0)
+  expect_true(any(grepl("^[A-Za-z]", rownames(GMT))))
+})
