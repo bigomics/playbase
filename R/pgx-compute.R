@@ -967,7 +967,7 @@ pgx.computePGX <- function(pgx,
   )
   GENESETTEST.METHODS <- c(
     "fisher", "gsva", "ssgsea", "spearman",
-    "camera", "fry", "fgsea"
+    "camera", "fry", "fgsea", "globaltest"
   ) ## no GSEA, too slow...
 
   ## ------------------ gene level tests ---------------------

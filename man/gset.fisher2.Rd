@@ -18,7 +18,8 @@ gset.fisher2(
   max.genes = 500,
   method = "fast.fisher",
   check.background = TRUE,
-  report.genes = FALSE
+  report.genes = FALSE,
+  both.directions = TRUE
 )
 }
 \arguments{
@@ -54,6 +55,11 @@ using Monte Carlo simulation. Defaults to `TRUE`.}
 the background set. Defaults to `TRUE`.}
 
 \item{report.genes}{A logical value indicating whether to report genes in genesets. Defaults to `FALSE`.}
+
+\item{both.directions}{If `TRUE` (default), a set needs `nmin` hits in both
+the up and the down list to be tested. If `FALSE`, hits in one list are
+enough, and the p- and q-values of the better direction are doubled
+(Bonferroni for the choice).}
 }
 \value{
 A data frame containing the results of the Fisher's exact test. The data frame
