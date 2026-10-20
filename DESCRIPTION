@@ -99,7 +99,7 @@ Imports:
     pcaMethods,
     PCSF,
     plaid,
-    playbase.annotation,
+    playbase.annotation (>= 0.1.1),
     playbase.ingest,
     playbase.preprocess,
     plotly,
@@ -183,3 +183,4 @@ Remotes:
     metaLINCS=url::https://github.com/bigomics/metaLINCS/archive/HEAD.zip,
     NPM=url::https://github.com/bigomics/NPM/archive/HEAD.zip
 Config/roxygen2/version: 8.1.1
+RoxygenNote: 7.3.2

@@ -778,9 +778,7 @@ test_that("methylomics EPIC v2 ids are collapsed and array/genome recorded", {
   expect_identical(pgx$meth, list(array = "EPIC v2 array", genome = "hg38"))
 })
 
-## Annotation lock. The fixture rows become human symbols so the gene-set
-## step runs; locks select no collection unless a test chooses one.
-
+## Selection fixtures use human symbols so explicit gene-set mode can run.
 make_symbol_fixture <- function() {
   fixture <- make_pgx_fixture()
   rownames(fixture$counts) <- head(
@@ -805,106 +803,108 @@ create_symbol_pgx <- function(fixture, ...) {
   )))
 }
 
-lock_layers <- data.frame(
-  layer = "counts",
-  file_sha256 = strrep("0", 64),
-  parser_version = "1"
-)
-
-## The fixture's preview, computed once per run, and its lock for the gene-set
-## choices `genesets`, as JSON.
-lock_cache <- new.env()
-symbol_lock_json <- function(fixture, genesets) {
-  if (is.null(lock_cache$preview)) {
-    lock_cache$preview <- suppressMessages(playbase.annotation::an.annotatePreview(
-      list(counts = rownames(fixture$counts)), "Human", "transcriptomics"
-    ))
-  }
-  playbase.annotation::an.writeLock(
-    lock_cache$preview,
-    list(genesets = genesets),
-    lock_layers
+symbol_selection <- function(fixture, collections = character(), size = c(1, 400),
+                             show_restricted = FALSE, context = NULL) {
+  features <- data.frame(
+    taxid = 9606L, namespace = "SYMBOL", id = rownames(fixture$counts)
   )
+  selected <- playbase.annotation::an.selectGenesets(
+    features, 9606L, collections, size = size,
+    include_restricted = show_restricted
+  )
+  json <- playbase.annotation::an.writeSelection(
+    selected, collections = collections, size = size,
+    show_restricted = show_restricted, max_sets = 5000
+  )
+  path <- withr::local_tempfile(.local_envir = parent.frame(), fileext = ".json")
+  writeLines(as.character(json), path)
+  record <- playbase.annotation::an.readSelection(
+    path, context = context %||% list(libx_dir = omicspgx::libx_dir())
+  )
+  list(record = record, path = path, json = as.character(json))
 }
 
-read_symbol_lock <- function(fixture, layers = lock_layers,
-                             genesets = list(collections = character())) {
-  playbase.annotation::an.readLock(
-    symbol_lock_json(fixture, genesets),
-    list(layers = layers, libx_dir = omicspgx::libx_dir(), packages = NULL)
-  )
-}
-
-test_that("annot_lock = NULL leaves genes and gene sets unchanged", {
+test_that("annot_selection = NULL leaves genes and gene sets unchanged", {
   skip_if(is.null(omicspgx::libx_dir()))
   fixture <- make_symbol_fixture()
   default <- create_symbol_pgx(fixture)
-  unlocked <- create_symbol_pgx(fixture, annot_lock = NULL)
+  unselected <- create_symbol_pgx(fixture, annot_selection = NULL)
 
-  expect_identical(unlocked$versions$lock_status, "none")
-  expect_null(unlocked$versions$annot_lock_sha256)
-  expect_identical(unlocked$genes, default$genes)
-  expect_identical(unlocked$GMT, default$GMT)
+  expect_identical(unselected$versions$selection_status, "none")
+  expect_null(unselected$versions$selection_digest)
+  expect_identical(unselected$genes, default$genes)
+  expect_identical(unselected$GMT, default$GMT)
 })
 
-test_that("a matching lock is recorded as ok with its sha256", {
+test_that("a matching selection records its status and digest", {
   skip_if(is.null(omicspgx::libx_dir()))
   fixture <- make_symbol_fixture()
-  lock <- expect_no_warning(read_symbol_lock(fixture))
-  pgx <- create_symbol_pgx(fixture, annot_lock = lock)
+  selection <- expect_no_warning(symbol_selection(fixture))$record
+  pgx <- create_symbol_pgx(fixture, annot_selection = selection)
 
-  expect_identical(pgx$versions$lock_status, "ok")
-  expect_identical(pgx$versions$annot_lock_sha256, lock$lock_sha256)
-  expect_match(pgx$versions$annot_lock_sha256, "^[0-9a-f]{64}$")
+  expect_identical(pgx$versions$selection_status, "ok")
+  expect_identical(pgx$versions$selection_digest, selection$selection_digest)
+  expect_match(selection$selection_sha256, "^[0-9a-f]{64}$")
   expect_identical(
     pgx$versions$geneset_selection_digest,
-    lock$genesets$selection_digest
+    selection$selection_digest
   )
   expect_null(pgx$versions$geneset_selection_note)
 })
 
-test_that("a lock selecting a collection builds the gene sets the preview selected", {
+test_that("a selected collection builds the chosen gene sets", {
   skip_if(is.null(omicspgx::libx_dir()))
   fixture <- make_symbol_fixture()
-  lock <- read_symbol_lock(fixture, genesets = list(collections = "HALLMARK", size = c(1, 400)))
-  pgx <- create_symbol_pgx(fixture, annot_lock = lock)
+  selected <- symbol_selection(fixture, collections = "HALLMARK")
+  pgx <- create_symbol_pgx(fixture, annot_selection = selected$record)
 
   expect_gt(ncol(pgx$GMT), 0)
   expect_identical(unique(pgx$gset.catalog$collection), "HALLMARK")
-  expect_identical(
-    pgx$versions$geneset_selection_digest,
-    lock$genesets$selection_digest
-  )
+  expect_identical(pgx$versions$geneset_selection_digest,
+                   selected$record$selection_digest)
   expect_null(pgx$versions$geneset_selection_note)
 })
 
-test_that("a lock that builds no gene sets is recorded as not applied", {
+test_that("selection path and JSON build the same GMT as a record", {
   skip_if(is.null(omicspgx::libx_dir()))
   fixture <- make_symbol_fixture()
-  lock <- read_symbol_lock(fixture)
-  pgx <- create_symbol_pgx(fixture, annot_lock = lock, add.gmt = FALSE)
+  selected <- symbol_selection(fixture, collections = "HALLMARK")
+  record <- create_symbol_pgx(fixture, annot_selection = selected$record)
+  path <- create_symbol_pgx(fixture, annot_selection = selected$path)
+  json <- create_symbol_pgx(fixture, annot_selection = selected$json)
 
-  expect_identical(pgx$versions$lock_status, "ok")
-  expect_identical(pgx$versions$annot_lock_sha256, lock$lock_sha256)
+  expect_identical(path$GMT, record$GMT)
+  expect_identical(json$GMT, record$GMT)
+  expect_identical(path$versions$selection_digest, record$versions$selection_digest)
+  expect_identical(json$versions$selection_status, "ok")
+})
+
+test_that("a selection without gene sets is recorded as not applied", {
+  skip_if(is.null(omicspgx::libx_dir()))
+  fixture <- make_symbol_fixture()
+  selection <- symbol_selection(fixture)$record
+  pgx <- create_symbol_pgx(fixture, annot_selection = selection, add.gmt = FALSE)
+
+  expect_identical(pgx$versions$selection_status, "ok")
+  expect_identical(pgx$versions$selection_digest, selection$selection_digest)
   expect_match(pgx$versions$geneset_selection_note, "not applied")
 })
 
-test_that("a stale lock still computes and is recorded as stale", {
+test_that("a stale selection still computes and is recorded as stale", {
   skip_if(is.null(omicspgx::libx_dir()))
   fixture <- make_symbol_fixture()
-  changed <- transform(lock_layers, file_sha256 = strrep("1", 64))
   expect_warning(
-    lock <- read_symbol_lock(fixture, changed),
-    class = "annot_lock_stale"
+    selection <- symbol_selection(fixture, context = list(libx_dir = tempdir()))$record,
+    class = "annot_selection_warning"
   )
-  pgx <- create_symbol_pgx(fixture, annot_lock = lock)
+  pgx <- create_symbol_pgx(fixture, annot_selection = selection)
 
-  expect_identical(pgx$versions$lock_status, "stale")
-  expect_identical(pgx$versions$annot_lock_sha256, lock$lock_sha256)
+  expect_identical(pgx$versions$selection_status, "stale")
+  expect_identical(pgx$versions$selection_digest, selection$selection_digest)
   expect_false(is.null(pgx$X))
 })
 
-test_that("a lock that shows restricted collections selects them at compute", {
+test_that("a selection can show restricted collections", {
   seen <- list()
   local_mocked_bindings(libx_dir = function() tempdir(), .package = "omicspgx")
   local_mocked_bindings(
@@ -914,15 +914,14 @@ test_that("a lock that shows restricted collections selects them at compute", {
     },
     .package = "playbase.annotation"
   )
-  lock <- function(show) list(genesets = list(collections = "TF_TRANSFAC", show_restricted = show))
-  pgx.applyAnnotLock(list(), lock(TRUE))
-  pgx.applyAnnotLock(list(), lock(FALSE))
-  pgx.applyAnnotLock(list(), NULL)
+  selection <- function(show) list(collections = "TF_TRANSFAC", show_restricted = show)
+  pgx.applySelection(list(), selection(TRUE))
+  pgx.applySelection(list(), selection(FALSE))
+  pgx.applySelection(list(), NULL)
   expect_identical(seen, list(TRUE, FALSE, FALSE))
 })
 
-## Selection refusal. pgx.addGMT raises `class` when given collections (the
-## lock's explicit selection) and returns pgx otherwise (legacy path).
+## Explicit selections retain the two classed refusal paths.
 mock_addGMT_raising <- function(class, env = parent.frame()) {
   local_mocked_bindings(libx_dir = function() tempdir(), .package = "omicspgx", .env = env)
   local_mocked_bindings(
@@ -934,12 +933,12 @@ mock_addGMT_raising <- function(class, env = parent.frame()) {
     .env = env
   )
 }
-selection_lock <- list(genesets = list(collections = "GO_BP", selection_digest = "abc123"))
+selection_record <- list(collections = "GO_BP", selection_digest = "abc123")
 
-test_that("a lock without a lib-x release refuses with a classed error", {
+test_that("a selection without a lib-x release refuses with a classed error", {
   mock_addGMT_raising("pgx_error_libx_missing_asset")
   err <- expect_error(
-    pgx.applyAnnotLock(list(), selection_lock, max.genesets = 5000),
+    pgx.applySelection(list(), selection_record, max.genesets = 5000),
     class = "annot_selection_release_missing"
   )
   expect_s3_class(err, "annot_selection_error")
@@ -947,10 +946,10 @@ test_that("a lock without a lib-x release refuses with a classed error", {
   expect_identical(err$selection_digest, "abc123")
 })
 
-test_that("a lock over max.genesets refuses with the limit", {
+test_that("a selection over max.genesets refuses with the limit", {
   mock_addGMT_raising("geneset_library_too_large")
   err <- expect_error(
-    pgx.applyAnnotLock(list(), selection_lock, max.genesets = 1234),
+    pgx.applySelection(list(), selection_record, max.genesets = 1234),
     class = "annot_selection_over_limit"
   )
   expect_s3_class(err, "annot_selection_error")
@@ -958,7 +957,7 @@ test_that("a lock over max.genesets refuses with the limit", {
   expect_match(conditionMessage(err), "max.genesets \\(1234\\).*compute without a selection")
 })
 
-test_that("a lock refuses before the explicit path when no release is set", {
+test_that("a selection refuses before the explicit path when no release is set", {
   withr::local_envvar(LIBX_DIR = NA)
   withr::local_options(omicspgx.libx_dir = NULL)
   called <- FALSE
@@ -970,18 +969,18 @@ test_that("a lock refuses before the explicit path when no release is set", {
     .package = "playbase.annotation"
   )
   expect_error(
-    pgx.applyAnnotLock(list(), selection_lock),
+    pgx.applySelection(list(), selection_record),
     class = "annot_selection_release_missing"
   )
   expect_false(called)
 })
 
-test_that("without a lock the legacy path runs and nothing is refused", {
+test_that("without a selection the legacy path runs and nothing is refused", {
   mock_addGMT_raising("geneset_library_too_large")
   ## no release either: the legacy path does not ask for one
   local_mocked_bindings(libx_dir = function() NULL, .package = "omicspgx")
-  pgx <- pgx.applyAnnotLock(list(a = 1), NULL, max.genesets = 5000)
-  expect_identical(pgx$versions$lock_status, "none")
+  pgx <- pgx.applySelection(list(a = 1), NULL, max.genesets = 5000)
+  expect_identical(pgx$versions$selection_status, "none")
   expect_identical(pgx$a, 1)
 })
 
@@ -996,11 +995,11 @@ test_that("pgx.add_GMT leaves include_restricted out for a pgx.addGMT without it
   expect_identical(pgx.add_GMT(list(a = 1), include_restricted = TRUE), list(a = 1))
 })
 
-test_that("a lock without collections gives no gene sets, random or not", {
+test_that("a selection with empty collections gives no gene sets", {
   skip_if(is.null(omicspgx::libx_dir()))
   fixture <- make_symbol_fixture()
-  lock <- read_symbol_lock(fixture)
-  pgx <- create_symbol_pgx(fixture, annot_lock = lock)
+  selection <- symbol_selection(fixture)$record
+  pgx <- create_symbol_pgx(fixture, annot_selection = selection)
 
   expect_identical(ncol(pgx$GMT), 0L)
   expect_false(any(grepl("^TEST:", colnames(pgx$GMT))))
