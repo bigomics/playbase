@@ -18,7 +18,7 @@ pgx.createPGX(
   name = "Data set",
   datatype = "RNA-seq",
   datatype_subtype = NULL,
-  azimuth_ref = "pbmcref",
+  celltype_ref = "pbmcref",
   probe_type = NULL,
   creator = "unknown",
   description = "No description provided.",

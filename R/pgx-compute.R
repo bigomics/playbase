@@ -203,7 +203,7 @@ pgx.createPGX <- function(counts,
                           name = "Data set",
                           datatype = "RNA-seq",
                           datatype_subtype = NULL,
-                          azimuth_ref = "pbmcref",
+                          celltype_ref = "pbmcref",
                           probe_type = NULL,
                           creator = "unknown",
                           description = "No description provided.",
@@ -262,7 +262,7 @@ pgx.createPGX <- function(counts,
       samples = samples,
       contrasts = contrasts,
       organism = organism,
-      azimuth_ref = azimuth_ref,
+      celltype_ref = celltype_ref,
       batch = NULL,
       sc_compute_settings = sc_compute_settings
     )
@@ -997,7 +997,7 @@ pgx.computePGX <- function(pgx,
   )
   GENESETTEST.METHODS <- c(
     "fisher", "gsva", "ssgsea", "spearman",
-    "camera", "fry", "fgsea"
+    "camera", "fry", "fgsea", "globaltest"
   ) ## no GSEA, too slow...
 
   ## ------------------ gene level tests ---------------------

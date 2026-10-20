@@ -106,12 +106,8 @@ pgx.wgcna <- function(
     layers <- playbase.preprocess::pp.inferLayers(X)
     methods <- ifelse(unique(layers) == "gx", "CPM", "maxMedian")
     names(methods) <- unique(layers)
-    X <- playbase.preprocess::pp.normalize(
-      X,
-      layers = layers,
-      method = methods,
-      prior = stats::setNames(rep(1, length(methods)), names(methods))
-    )
+    ## prior defaults to 1; passing it fails when no layer uses CPM
+    X <- playbase.preprocess::pp.normalize(X, layers = layers, method = methods)
   }
 
   if (!is.null(progress)) progress$set(message = "Calculating WGCNA...", value = 0.2)

@@ -266,10 +266,13 @@ mofa.compute <- function(xdata,
     ## some reason we need to save and reload the model. Please
     ## test. This should not be needed.
     outfile <- file.path(tempdir(), "mofa-model.hdf5")
+    ## options(playbase.mofa.use_basilisk = FALSE) runs mofapy2 in the
+    ## Python reticulate is bound to (e.g. RETICULATE_PYTHON) instead of
+    ## a basilisk-managed conda environment.
     suppressMessages(suppressWarnings(
       model <- MOFA2::run_mofa(obj,
         outfile = outfile, save_data = TRUE,
-        use_basilisk = TRUE
+        use_basilisk = getOption("playbase.mofa.use_basilisk", TRUE)
       )
     ))
     model <- MOFA2::load_model(outfile, remove_inactive_factors = FALSE)
