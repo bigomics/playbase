@@ -581,19 +581,25 @@ pgx.createPGX <- function(counts,
     ii <- match(rownames(pgx$counts), rownames(pgx$genes))
     species_name <- as.character(pgx$genes$species)[ii]    
     species_name <- species_mnemonic(species_name) ## 5-letter mnemonic
-    ff <- paste(rownames(pgx$counts), species_name, sep = "_")
-    pgx$genes <- pgx$genes[ii, , drop = FALSE]
-    rownames(pgx$genes) <- pgx$genes$feature <- ff
-    if ("gene_name" %in% colnames(pgx$genes)) pgx$genes$gene_name <- ff
-    rownames(pgx$counts) <- ff
-    if (!is.null(pgx$X)) rownames(pgx$X) <- ff
+    has.species_suffix <- mean(sub(".*_","",rownames(pgx$counts)) == species_name,
+      na.rm = TRUE) > 0.8
+    if(!has.species_suffix) {
+      ff <- paste(rownames(pgx$counts), species_name, sep = "_")
+      ff <- make.unique(ff)
+      pgx$genes <- pgx$genes[ii, , drop = FALSE]
+      rownames(pgx$genes) <- pgx$genes$feature <- ff
+      if ("gene_name" %in% colnames(pgx$genes)) pgx$genes$gene_name <- ff
+      rownames(pgx$counts) <- ff
+      if (!is.null(pgx$X)) rownames(pgx$X) <- ff
+    }
   }
 
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
   info("[createPGX] infer cell cycle and gender")
-  if( tolower(pgx$organism) %in% c("human","mouse","rat")) {
+  is.human <- any(normalizeOrganism(pgx$organism) == "Homo sapiens")
+  if(is.human) {
     pgx <- compute_cellcycle_gender(pgx, pgx$counts)
   }
   
@@ -620,7 +626,7 @@ pgx.createPGX <- function(counts,
       unknown.organism <- (species[i] %in% c("No organism", "custom", "unknown"))
       unknown.datatype <- (pgx0$datatype %in% c("custom", "unknown"))
       no3 <- unknown.organism && is.null(annot_table) && is.null(custom.geneset)
-      if (no3 || unknown.datatype || !add.gmt) {
+      if (no3 || unknown.datatype) {
         message("[pgx.createPGX] WARNING: empty GMT matrix. No gene sets for ", species[i])
         pgx0$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
       } else {
@@ -1278,6 +1284,9 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   return(G)
 }
 
+#' Add pgx$GMT slot to pgx object.
+#'
+#' 
 pgx.add_GMT <- function(pgx,
                         custom.geneset = NULL,
                         max.genesets = 20000,
@@ -1362,8 +1371,10 @@ pgx.add_GMT <- function(pgx,
     if (nrow(G) == 0 || ncol(G) == 0) G <- NULL
   }
 
+  ##-----------------------------------------------------------
   ## Add organism specific GO gene sets. This is species gene
-  ## symbol. Skip if the GMT has enough (>1000) terms.
+  ## symbol. Skip if the GMT has enough (>1000) GO terms.
+  ##-----------------------------------------------------------  
   num_goterms <- sum(grepl("^GO",colnames(G)))
   info("[pgx.add_GMT] number of GO gene sets in GMT =",num_goterms)
   if(is.null(species_go)) {
@@ -1413,7 +1424,12 @@ pgx.add_GMT <- function(pgx,
     } ## end-if go.genesets
   } ## end-if !metabolics
 
+  num_goterms <- sum(grepl("^GO",colnames(G)))
+  info("[pgx.add_GMT] total number of GO terms = ",num_goterms)
+
+  ##------------------------------------------------
   ## Add custom gene sets if provided
+  ##------------------------------------------------  
   if (!is.null(custom.geneset$gmt)) {
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in columns.
     custom_gmt <- custom.geneset$gmt
@@ -1430,9 +1446,6 @@ pgx.add_GMT <- function(pgx,
     all_genes <- unique(pgx$genes$symbol)
     G <- .append_gmt_to_matrix(custom_gmt, G, all_genes, minsize = 3, maxsize = 9999)
   }
-
-  num_goterms <- sum(grepl("^GO",colnames(G)))
-  info("[pgx.add_GMT] total number of GO terms = ",num_goterms)
   
   ## -----------------------------------------------------------
   ##  Prioritize gene sets by fast rank-correlation
@@ -1543,7 +1556,6 @@ pgx.add_GMT <- function(pgx,
 
   # add random genesets if G is too small
   if (is.null(G) || ncol(G) < 30 || nrow(G) < 3) {
-    add.gmt <- NULL
     rr <- sample(3:400, 50)
     gg <- pgx$genes$symbol
     random.gmt <- lapply(rr, function(n) head(sample(gg), min(n, length(gg) / 2)))
@@ -1575,6 +1587,82 @@ pgx.add_GMT <- function(pgx,
   return(pgx)
 }
 
+
+pgx.add_GMT_multispecies <- function(pgx,
+                                     custom.geneset = NULL,
+                                     max.genesets = 20000,
+                                     include_default_gmt = TRUE,
+                                     include_iea = TRUE, species_go = NULL,
+                                     norm.cols = TRUE) {
+  
+  species <- unique(as.character(pgx$genes$species))
+  if (length(species) == 0) species <- pgx$organism
+  single <- length(species) == 1
+  if(single) {
+    ## Just single species
+    pgx <- pgx.add_GMT(pgx,
+      custom.geneset = custom.geneset,
+      max.genesets = max.genesets,
+      include_default_gmt = include_default_gmt,
+      include_iea = include_iea,
+      species_go = species_go,
+      norm.cols = norm.cols) 
+    return(pgx)
+  }
+
+  ## For multi-species we iterate across all species and assemble an
+  ## integrated GMT matrix.
+  LL <- list()
+  for (i in seq_along(species)) {
+    pgx0 <- pgx
+    jj <- seq_len(nrow(pgx$genes))
+    if (!single) jj <- which(as.character(pgx$genes$species) == species[i])
+    pgx0$organism <- species[i]
+    pgx0$counts <- pgx0$counts[jj, , drop = FALSE]
+    if (!is.null(pgx0$X)) pgx0$X <- pgx0$X[jj, , drop = FALSE]
+    pgx0$genes <- pgx0$genes[jj, , drop = FALSE]
+    
+    ## If no organism, no custom annotation table and no custom geneset,
+    ## then create empty GMT
+    unknown.organism <- (species[i] %in% c("No organism", "custom", "unknown"))
+    unknown.datatype <- (pgx0$datatype %in% c("custom", "unknown"))
+    no3 <- unknown.organism && is.null(annot_table) && is.null(custom.geneset)
+    if (no3 || unknown.datatype) {
+      message("[pgx.createPGX] WARNING: empty GMT matrix. No gene sets for ", species[i])
+      pgx0$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
+    } else {
+      message("[pgx.createPGX] Adding GMT for ", species[i])
+      pgx0 <- pgx.add_GMT(
+        pgx = pgx0,
+        custom.geneset = custom.geneset,
+        max.genesets = max.genesets,
+        include_default_gmt = include_default_gmt,
+        species_go = species_go,
+        norm.cols = single
+        )
+    }
+    LL[[species[i]]] <- list(GMT = pgx0$GMT, custom.geneset = pgx0$custom.geneset)
+  }
+
+  ## Assemble integrated GMT matrix
+  pgx$GMT <- LL[[1]]$GMT
+  pgx$custom.geneset <- LL[[1]]$custom.geneset
+  if (!single) {
+    nfeatures <- unique(unlist(lapply(LL, function(x) rownames(x$GMT)), use.names = FALSE))
+    ngsets <- unique(unlist(lapply(LL, function(x) colnames(x$GMT)), use.names = FALSE))
+    GMT <- Matrix::Matrix(0, nrow = length(nfeatures), ncol = length(ngsets), sparse = TRUE)
+    rownames(GMT) <- nfeatures
+    colnames(GMT) <- ngsets
+    for (i in seq_along(LL)) {
+      ii <- match(rownames(LL[[i]]$GMT), nfeatures)
+      kk <- match(colnames(LL[[i]]$GMT), ngsets)
+      GMT[ii, kk] <- LL[[i]]$GMT
+    }
+    pgx$GMT <- normalize_cols(GMT)
+  }
+
+  return(pgx)
+}
 
 ## ----------------------------------------------------------------------
 ## -------------------------- end of file -------------------------------

@@ -32,6 +32,7 @@ getOrganismGO <- function(organism, features=NULL, minsize=3L, batch_size=2000L,
     gmt2 <- getOrganismGO.GPROFILER(organism, features,
       batch_size=batch_size, include_iea=include_iea)
     message(paste("Got",length(gmt2),"GO terms from Gprofiler"))
+    table(sub(":.*","",names(gmt2)))
   }
 
   ## merge
@@ -41,12 +42,20 @@ getOrganismGO <- function(organism, features=NULL, minsize=3L, batch_size=2000L,
     return(NULL)
   }
   
-  ## check duplicated GO termsyes
-  gmt <- go.merge_duplicates(gmt)
+  ## check duplicated GO terms
+  num.dup <- sum(duplicated(names(gmt)))
+  num.dup
+  if(num.dup>0) {
+    gmt <- go.merge_duplicates(gmt)
+  }
 
   ## convert all id to species symbol
-  if(!is.null(symbol.annot)) {
-    gmt <- gmt.map2symbol(gmt, annot=symbol.annot, target="symbol") 
+  if(!is.null(symbol.annot) && "symbol" %in% colnames(symbol.annot)) {
+    symx <- gmt.map2symbol(gmt, annot=symbol.annot, target="symbol") 
+    if(length(gmt)==0) {
+      message("WARNING: empty gene sets after mapping to symbol")
+      return(NULL)
+    }
   }
   
   ## sort on largest
@@ -199,9 +208,9 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
   gmt <- strsplit(res$intersection, split=",")
 
   ## standardize names (like "GO_BP:uridine kinase activity (GO_0004849)")
-  ss <- sub(":","_",res$source)
+  ss <- gsub(":","_",res$source)
   nn <- res$term_name
-  gg <- sub(":","_",res$term_id)
+  gg <- gsub(":","_",res$term_id)
   gmt.name <- paste0(ss,":",nn," (",gg,")")
   head(gmt.name)
   names(gmt) <- gmt.name
@@ -217,4 +226,35 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
   return(gmt)
 }
 
+#' Get GO gene sets for multiple organisms. Each GO term is prefixed
+#' with species name.
+#' 
+getOrganismGO_multispecies <- function(organism, annot,
+                                       db = c("annothub","gprofiler"),
+                                       include_iea = TRUE)
+{
+  species <- unique(annot$species)
+  go <- list()
+  for(sp in species) {
+    org <- normalizeOrganism(sp)
+    ##organism=org;features=annot$symbol;symbol.annot=annot;include_iea=TRUE
+    go[[sp]] <- getOrganismGO(
+      organism = org,
+      features = annot$symbol,
+      symbol.annot = annot,
+      db = db,
+      include_iea = include_iea)
+  }
 
+  ## add prefix/suffix
+  if(0) {
+    for(sp in names(go)) {
+      names(go[[sp]]) <- paste0("[",sp,"]",names(go[[sp]]))
+    }
+    names(go) <- NULL
+  }
+
+  if(length(species)==1) names(go) <- NULL
+  all.go <- unlist(go, recursive=FALSE)
+  return(all.go)
+}

@@ -55,7 +55,11 @@ species_mnemonic.fun <- function(s) {
 
 #' Vectorized version of species_mnemonic.fun()
 #' 
-species_mnemonic <- Vectorize(species_mnemonic.fun, USE.NAMES=FALSE)
+species_mnemonic <- function(s) {
+  sx <- unique(s)
+  mx <- sapply(sx, species_mnemonic.fun)
+  mx[s]
+}
 
 
 #' Approximate reverse lookup from UNIPROT species mnemonic to full
@@ -140,34 +144,24 @@ merge_annot_table <- function(df, df2, priority = 1) {
 #' @export
 normalizeOrganism <- function(organism) {
   if (is.null(organism)) return(NULL)
-
   # organism can be a vector (multi-species), so loop over elements
   out <- rep(NA, length(organism))
   ol <- tolower(organism)
-  ## for (i in which(!is.na(ol))) {
-  ##   if (ol[i] == "human") out[i] <- "Homo sapiens"
-  ##   else if (ol[i] == "mouse") out[i] <- "Mus musculus"
-  ##   else if (ol[i] == "rat") out[i] <- "Rattus norvegicus"
-  ##   else if (grepl("canis.*familiaris|^dog$", ol[i])) out[i] <- "Canis familiaris"
-  ## }
-  
-  ## lookup in SPECIES_TABLE
   S <- playbase::SPECIES_TABLE
-  xorg <- unique(ol)
-  xout <- c()
-  for(g in xorg) {
+  xout <- rep(NA, length(unique(ol)))
+  names(xout) <- unique(ol)
+  for(g in unique(ol)) {
+    ## match with any column in SPECIES_TABLE
     ii <- which(apply(S, 1, function(x) any(tolower(x) == g)))
     if(length(ii)) {
       xout[g] <- S[ ii[1], "ah_species"]
       if(is.na(xout[g])) xout[g] <- S[ ii[1], "gprofiler_species"]
     }
   }
-  ii <- which(is.na(out))
-  out[ii] <- xout[ol[ii]]
+  out <- xout[ol]
   names(out) <- organism
-  
+  ## fix some species
   out <- sub("canis.*familiaris|^dog$", "Canis familiaris", out, ignore.case=TRUE)
-  
   out
 }
 
