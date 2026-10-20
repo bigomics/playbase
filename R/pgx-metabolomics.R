@@ -25,8 +25,6 @@ mx.check_mapping <- function(probes,
                              all.db = c("playdata", "annothub", "refmet"),
                              check.first = TRUE) {
 
-  dbg("[mx.check_mapping] called!  len.probes=", length(probes))
-
   ## this goes through all databases and checks if there is a match
   src <- rep("", length(probes))
   refmet.alive <- mx.ping_refmet()
@@ -35,8 +33,6 @@ mx.check_mapping <- function(probes,
     all.db <- setdiff(all.db, "refmet")
   }  
   clean.probes <- mx.clean_probe_names(probes)
-
-  dbg("[mx.check_mapping] all.db =", all.db)
   
   db = "refmet"
   for (db in all.db) {
