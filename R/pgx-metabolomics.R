@@ -24,19 +24,24 @@ mx.clean_probe_names <- function(probes) {
 mx.check_mapping <- function(probes,
                              all.db = c("playdata", "annothub", "refmet"),
                              check.first = TRUE) {
+
+  dbg("[mx.check_mapping] called!  len.probes=", length(probes))
+
   ## this goes through all databases and checks if there is a match
   src <- rep("", length(probes))
   refmet.alive <- mx.ping_refmet()
   if (!refmet.alive && "refmet" %in% all.db) {
     message("WARNING: RefMet server is not alive")
     all.db <- setdiff(all.db, "refmet")
-  }
+  }  
   clean.probes <- mx.clean_probe_names(probes)
 
+  dbg("[mx.check_mapping] all.db =", all.db)
+  
   db = "refmet"
   for (db in all.db) {
 
-    message("trying db: ", db)
+    message(">>> trying db: ", db)
     if (check.first) {
       jj <- which(src == "")
     } else {
@@ -64,9 +69,9 @@ mx.check_mapping <- function(probes,
         jj <- jj[ii]
         src[jj] <- paste0(src[jj], "+", annot$source[ii])
       }
-    }
-    
+    }    
   }
+  
   src <- sub("^[+]", "", src) ## remove plus sign at beginning
   src[which(src %in% c("","-"))] <- NA
   src
