@@ -244,7 +244,7 @@ getOrgDb <- function(organism, use.ah = NULL) {
         return(db)
       }
     }
-    if (organism == "Plasmodium falciparum" && require("org.Pf.plasmo.db", quietly = TRUE)) {
+    if (organism == "Plasmodium falciparum" && requireNamespace("org.Pf.plasmo.db", quietly = TRUE)) {
       return(org.Pf.plasmo.db::org.Pf.plasmo.db)
     }
   }

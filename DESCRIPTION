@@ -10,6 +10,7 @@ License: Dual Commercial and Non-Commercial
 Encoding: UTF-8
 LazyData: true
 Suggests: 
+    org.Pf.plasmo.db,
     playbase.epigenetics,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
@@ -93,7 +94,6 @@ Imports:
     omicsai,
     omicspgx (>= 0.3.26),
     org.Hs.eg.db,
-    org.Pf.plasmo.db,
     parallel,
     partykit,
     pcaMethods,
@@ -164,7 +164,6 @@ Imports:
     xgboost,
     xml2,
 Remotes:
-    org.Pf.plasmo.db=url::https://bioconductor.org/packages/3.14/data/annotation/src/contrib/org.Pf.plasmo.db_3.14.0.tar.gz,
     PCSF=url::https://github.com/bigomics/PCSF/archive/HEAD.zip,
     bigomics/omicspgx,
     bigomics/playbase.annotation,
