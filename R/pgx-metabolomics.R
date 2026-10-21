@@ -198,7 +198,62 @@ getLipidAnnotation <- function(probes,
     annot$super_class <- mx.harmonizeSuperclassNames(annot$super_class)
   }
 
+  ## Class, sum composition and fatty acyls parsed from the names
+  ## themselves. These drive the lipid sets (mx.create_lipid_sets).
+  annot <- cbind(annot, mx.lipid_characteristics(annot$feature))
+
   return(annot)
+}
+
+#' Lipid characteristics parsed from shorthand names with rgoslin
+#'
+#' LIPID MAPS category and class, the annotation level, the sum
+#' composition (total carbons and double bonds) and the fatty acyls
+#' when the name resolves them (`PC 16:0_18:1`, not `PC 34:1`). The
+#' parser is local, so this works offline. Names it cannot parse get NA.
+#'
+#' @param name Lipid names, e.g. `PC 34:1`, `Cer 42:1;O2`, `TG 16:0_18:1_18:2`.
+#' @return A data.frame with one row per name: `lipid_category`,
+#'   `lipid_class` (ether lipids as `PE O-`/`PE P-`), `lipid_level`,
+#'   `total_c`, `total_db` and `fa_chains` (e.g. `"16:0, 18:1"`).
+#' @export
+mx.lipid_characteristics <- function(name) {
+  name <- sub("[.][1-9]$", "", iconv2utf8(as.character(name))) ## make_unique suffix
+  n <- length(name)
+  out <- data.frame(
+    lipid_category = rep(NA_character_, n), lipid_class = NA_character_,
+    lipid_level = NA_character_, total_c = NA_integer_, total_db = NA_integer_,
+    fa_chains = NA_character_
+  )
+  ok <- which(!name %in% c(NA, "", "-", "NA"))
+  if (!length(ok)) return(out)
+  aa <- suppressMessages(suppressWarnings(rgoslin::parseLipidNames(name[ok])))
+  col <- function(k) if (k %in% names(aa)) aa[[k]] else rep(NA, nrow(aa))
+  norm <- col("Normalized.Name")
+  parsed <- !is.na(norm)
+  if (!any(parsed)) return(out)
+
+  cls <- col("Lipid.Maps.Main.Class")
+  cls[cls %in% "SE 27:1"] <- "CE" ## rgoslin names cholesteryl esters as sterol esters
+  ether <- grepl(" [OP]-", norm)
+  cls[ether] <- paste0(cls[ether], " ", sub(".* ([OP])-.*", "\\1", norm[ether]), "-")
+
+  fa.c <- sort(grep("^FA[0-9]+\\.C$", names(aa), value = TRUE))
+  chains <- vapply(seq_len(nrow(aa)), function(i) {
+    cc <- suppressWarnings(as.integer(unlist(aa[i, fa.c])))
+    dd <- suppressWarnings(as.integer(unlist(aa[i, sub("C$", "DB", fa.c)])))
+    keep <- !is.na(cc) & cc > 0 ## a lyso lipid's empty position reads 0:0
+    if (any(keep)) paste0(cc[keep], ":", dd[keep], collapse = ", ") else NA_character_
+  }, character(1))
+
+  i <- ok[parsed]
+  out$lipid_category[i] <- mx.harmonizeSuperclassNames(col("Lipid.Maps.Category"))[parsed]
+  out$lipid_class[i] <- cls[parsed]
+  out$lipid_level[i] <- tolower(gsub("_", " ", col("Level")))[parsed]
+  out$total_c[i] <- suppressWarnings(as.integer(col("Total.C")))[parsed]
+  out$total_db[i] <- suppressWarnings(as.integer(col("Total.DB")))[parsed]
+  out$fa_chains[i] <- chains[parsed]
+  out
 }
 
 
@@ -276,10 +331,12 @@ getMetaboliteAnnotation <- function(probes,
     no.name <- any(is.na(metadata$name))
     no.name
 
-    ## Annotate lipids using Refmet and rgoslin
-    if (d == "lipids" && curl::has_internet() && no.name) {
+    ## Annotate lipids using Refmet and rgoslin. rgoslin parses the
+    ## shorthand locally, so it still runs without internet.
+    if (d == "lipids" && no.name) {
       ii <- which(probes != "-" & is.na(metadata$name))
-      aa <- mx.annotateLipids(probes[ii], two.pass = TRUE)
+      lipid.db <- if (curl::has_internet()) c("rgoslin", "refmet", "ramp") else "rgoslin"
+      aa <- mx.annotateLipids(probes[ii], db = lipid.db, two.pass = TRUE)
       aa$definition <- "-"
       sel.col <- c(
         "Input.name", "Input.name", "Standardized.name",
@@ -565,7 +622,8 @@ mx.get_metabolite_mapping <- function(met, method = c("refmet", "playdata", "ann
   id2 <- ifelse(prefix == "CHEBI", paste0("CHEBI:", met), met)
   id2[id2 %in% c(NA, "")] <- "-"
 
-  method
+  ## RefMet is a web API, and AnnotationHub downloads its table.
+  if (!curl::has_internet()) method <- setdiff(method, c("refmet", "annhub"))
   for (m in method) {
     if (m == "refmet") {
       df <- RefMet::refmet_map_df(id2)
@@ -1211,8 +1269,17 @@ mx.create_metabolite_sets <- function(annot, gmin = 0, metmin = 5,
     }
   }
 
+  ## Lipid sets from the names parsed by mx.lipid_characteristics().
+  ## They replace the class sets below, which stay the fallback when no
+  ## lipid name parses.
+  gmt.lipid <- mx.create_lipid_sets(annot, ids = ANNOT_SYMBOL)
+  if (length(gmt.lipid)) {
+    message("[create_metabolite_sets] adding ", length(gmt.lipid), " lipid sets")
+    gmt <- c(gmt, gmt.lipid)
+  }
+
   ## Create class sets from metabolite class annotation.
-  if (any(grepl("_class", colnames(annot)))) {
+  if (!length(gmt.lipid) && any(grepl("_class", colnames(annot)))) {
     classes <- grep("_class", colnames(annot), value = TRUE)
     classes
     gmt1 <- list()
@@ -1270,7 +1337,8 @@ mx.create_metabolite_sets <- function(annot, gmin = 0, metmin = 5,
   i1 <- grepl("CHEBI|LIPID|HMDB|KEGG|REFMET|SHORT|^mx", rownames(G))
   n0 <- Matrix::colSums(G[i0, , drop = FALSE])
   n1 <- Matrix::colSums(G[i1, , drop = FALSE])
-  sel <- which(n0 >= gmin & n1 >= metmin)
+  minsize <- ifelse(grepl("^LIPID_", colnames(G)), 3, metmin)
+  sel <- which(n0 >= gmin & n1 >= minsize)
   G <- G[, sel, drop = FALSE]
 
   # restore original symbols
@@ -1285,6 +1353,46 @@ mx.create_metabolite_sets <- function(annot, gmin = 0, metmin = 5,
   # normalize columns (required for some methods downstream)log2foldchange
   G <- normalize_cols(G) ## ???
   return(G)
+}
+
+#' Lipid sets from the parsed lipid characteristics
+#'
+#' The set families of lipid set enrichment (as in lipidr's LSEA): LIPID
+#' MAPS category and class, total double bonds (0, 1, 2-3, 4+), total
+#' carbons, and each fatty acyl for the names that resolve their chains.
+#'
+#' @param annot Annotation table carrying the `mx.lipid_characteristics()`
+#'   columns.
+#' @param ids Set member ids, one per row of `annot`.
+#' @return A named list of sets; empty when no lipid name parsed.
+#' @export
+mx.create_lipid_sets <- function(annot, ids = annot$symbol) {
+  if (!"lipid_class" %in% colnames(annot)) return(list())
+  ok <- !annot$lipid_class %in% c(NA, "", "-")
+  if (!any(ok)) return(list())
+  a <- annot[ok, , drop = FALSE]
+  ids <- ids[ok]
+
+  family <- function(prefix, members, by) {
+    sets <- lapply(split(members, by), unique) ## split() drops NA
+    if (length(sets)) names(sets) <- paste0(prefix, names(sets))
+    sets
+  }
+  db <- suppressWarnings(as.integer(a$total_db))
+  unsat <- cut(db, c(-Inf, 0, 1, 3, Inf),
+    labels = c("0 double bonds", "1 double bond", "2-3 double bonds", "4+ double bonds")
+  )
+  nc <- suppressWarnings(as.integer(a$total_c))
+  carbons <- ifelse(is.na(nc), NA, paste(nc, "carbons"))
+  fa <- strsplit(ifelse(a$fa_chains %in% c(NA, "", "-"), "", a$fa_chains), ", ")
+
+  c(
+    family("LIPID_CATEGORY:", ids, a$lipid_category),
+    family("LIPID_CLASS:", ids, a$lipid_class),
+    family("LIPID_UNSAT:", ids, as.character(unsat)),
+    family("LIPID_CHAIN:", ids, carbons),
+    family("LIPID_FA:FA ", rep(ids, lengths(fa)), unlist(fa))
+  )
 }
 
 ramp.get_metabolite_sets <- function(id, db = c("pathway", "onto", "class"),
