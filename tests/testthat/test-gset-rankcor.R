@@ -21,3 +21,13 @@ test_that("gset.rankcor constant rho", {
   expect_equal(mean(result$rho), 0, tolerance = 1)
 })
 
+
+test_that("gset.averageFC averages only the members that have a value", {
+  F <- cbind(c1 = c(a = 1, b = NA, c = 3, d = NA))
+  G <- Matrix::Matrix(cbind(s1 = c(1, 1, 1, 0), s2 = c(0, 1, 0, 1)), sparse = TRUE)
+  rownames(G) <- rownames(F)
+  fc <- playbase::gset.averageFC(F, G)
+  expect_equal(fc["s1", "c1"], 2, tolerance = 1e-6)
+  ## a set with no observed member keeps the old empty-set value, 0
+  expect_equal(fc["s2", "c1"], 0, tolerance = 1e-6)
+})
