@@ -402,6 +402,10 @@ pgx.createPGX <- function(counts,
     message("[pgx.createPGX] X has ", sum(is.na(X)), " missing values")
   }
 
+  ## pp.alignCounts() accepts only a base matrix; the single-cell path hands
+  ## in a sparse log-CPM X (pgx.createSingleCellPGX), so densify it first.
+  X <- as.matrix(X)
+
   playbase.preprocess::pp.alignCounts(
     counts,
     preprocess.metadata$alignment,
@@ -412,8 +416,6 @@ pgx.createPGX <- function(counts,
     has.colons <- mean(grepl("[:]", rownames(counts)), na.rm = TRUE) > 0.9
     if (!has.colons) stop("[pgx.createPGX] FATAL: features must have multi-omics prefix\n")
   }
-
-  X <- as.matrix(X)
 
   ## -------------------------------------------------------------------
   ## Auto-scaling (scale down huge values, often in proteomics)
