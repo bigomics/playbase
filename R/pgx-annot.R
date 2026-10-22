@@ -294,22 +294,25 @@ getGeneAnnotation <- function(
         ),
         stop("Unknown method: ", method)
       ))
-
+      
       annot_ok <- !inherits(missing_annot, "try-error") &&
         !is.null(missing_annot) && nrow(missing_annot) > 0
 
       if (annot_ok) {
-        # not all methods have the same columns
-        new_cols <- setdiff(colnames(missing_annot), colnames(annot))
-        if (length(new_cols) > 0) {
-          for (col in new_cols) annot[[col]] <- NA
-        }
         jj <- which(!is.na(missing_annot$symbol))
-        kk <- which(missing)[jj]
-        mm <- merge_annot_table(annot[kk, ], missing_annot[jj,])
-        annot[kk, ] <- mm[, colnames(annot)]
-        missing <- is.na(annot$symbol) | annot$symbol == ""
+        if(length(jj)) {
+          # not all methods have the same columns
+          new_cols <- setdiff(colnames(missing_annot), colnames(annot))
+          if (length(new_cols) > 0) {
+            for (col in new_cols) annot[[col]] <- NA
+          }
+          kk <- which(missing)[jj]
+          mm <- merge_annot_table(annot[kk,], missing_annot[jj,])
+          annot[kk, ] <- mm[, colnames(annot)]
+          missing <- is.na(annot$symbol) | annot$symbol == ""
+        }
       }
+      
     }
   }
 
@@ -475,6 +478,8 @@ getGeneAnnotation.ANNOTHUB <- function(
     probe_type <- "ENTREZID"
   }
 
+  if(!is.null(probe_type)) probe_type <- toupper(probe_type)
+  
   ## Backup probes as probes0, give names of probes the original name.
   probes[is.na(probes) | probes == ""] <- "NA"
   probes0 <- make_unique(probes)
@@ -484,6 +489,19 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## if(clean_probes) {
   ##   probes <- .clean_probe_names(probes)
   ## }
+
+  ## In case probes are uniprot but UNIPROT is not in keytypes, we
+  ## convert to ENTREZID using Gprofiles.
+  if(!is.null(probe_type) && probe_type == "UNIPROT" && !"UNIPROT" %in% keytypes(orgdb)) {
+    dbg("[getGeneAnnotation.ANNOTHUB] bridging with ENTREZ ids...")
+    org_id <- .map_gprofiler_id(organism)
+    ee <- gprofiler2::gconvert(probes, organism = org_id, target = "ENTREZGENE", filter_na=TRUE)
+    if(!is.null(ee)) {
+      probes <- ee$target[match(probes, ee$input)]
+      names(probes) <- probes0
+      probe_type <- "ENTREZID"
+    }
+  }
   
   if (is.null(probe_type)) {
     probe_type <- detect_probetype(organism, probes)
@@ -494,6 +512,7 @@ getGeneAnnotation.ANNOTHUB <- function(
       annot <- cleanupAnnotation(annot)
       annot$symbol <- NA
       annot$gene_title <- NA
+      annot$alias <- NA
       annot$human_ortholog <- NULL
       annot$human_orthologs <- NULL
       annot$ortholog <- NULL
@@ -504,6 +523,11 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   if (probe_type == "GPROFILER") {
     dbg("[getGeneAnnotation.ANNOTHUB] probe_type = GPROFILER; skipping annothub")
+    return(NULL)
+  }
+
+  if (is.null(probe_type) || !probe_type %in% keytypes(orgdb)) {
+    dbg("[getGeneAnnotation.ANNOTHUB] probe_type not supported by annothub")
     return(NULL)
   }
 
@@ -658,7 +682,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   annot$SOURCE <- pkgname[1]
 
   annot.cols <- c(
-    "PROBE", "SYMBOL", "UNIPROT", "GENENAME",
+    "PROBE", "SYMBOL", "UNIPROT", "GENENAME", "ALIAS",
     ## "GENETYPE", "MAP", "CHR", "POS", "TXLEN", "SOURCE"
     "MAP", "SOURCE"
   )
@@ -670,11 +694,11 @@ getGeneAnnotation.ANNOTHUB <- function(
   for (a in missing.cols) genes[[a]] <- NA
   genes <- genes[, annot.cols]
   new.names <- c(
-    "feature", "symbol", "uniprot", "gene_title",
+    "feature", "symbol", "uniprot", "gene_title", "alias",
     "chr", "source"
   )
   colnames(genes) <- new.names
-  genes <- as.data.frame(genes)
+  genes <- as.data.frame(genes, check.names=FALSE)
   if (!all(probes0 %in% genes$feature)) {
     message("WARNING: not all probes could be annotated")
   }
@@ -735,6 +759,7 @@ getGeneAnnotation.GPROFILER <- function(
   if(length(ii)) {
     clean.probes <- .clean_probe_names(probes[ii])
     names(clean.probes) <- probes[ii]
+
     out2 <- try(orthogene::map_genes(
       genes = clean.probes,
       species = species,
@@ -757,6 +782,7 @@ getGeneAnnotation.GPROFILER <- function(
     uniprot = "",
     gene_title = "",
     chr = NA,
+    #alias = "",
     source = NA,
     gene_name = probes
   )
@@ -776,7 +802,7 @@ getGeneAnnotation.GPROFILER <- function(
     }
 
     df$symbol <- out$name
-    df$gene_title <- sub(" \\[.*", "", out$description)
+    df$gene_title <- sub(" \\[.*", "", out$description)  ## strip info
 
     ## NOTE: no ortholog lookup here, and no ortholog/orthologs
     ## columns: getGeneAnnotation() does the lookup once, on the merged
@@ -834,6 +860,9 @@ getGeneAnnotation.UNIPROT <- function(
   ## strip isoform suffix (e.g. P04637-2), common in proteomics data
   query <- sub("-[0-9]+$", "", probes)
 
+  if (!is.null(probe_type)) {
+    probe_type <- sub("uniprot","UniProtKB_AC-ID", tolower(probe_type), fixed=TRUE)
+  }
   if (is.null(probe_type)) probe_type <- detect_probetype.UNIPROT(query)
   if (is.na(probe_type)) {
     message("[getGeneAnnotation.UNIPROT] could not detect probe type; skipping")
@@ -841,7 +870,7 @@ getGeneAnnotation.UNIPROT <- function(
   }
   if (verbose) message("[getGeneAnnotation.UNIPROT] probe_type = ", probe_type)
 
-  cols <- c("accession", "gene_primary", "protein_name", "organism_name")
+  cols <- c("accession", "gene_primary", "protein_name", "gene_names", "organism_name")
   map <- try(UniProt.ws::mapUniProt(
     from = probe_type,
     to = "UniProtKB",
@@ -857,14 +886,25 @@ getGeneAnnotation.UNIPROT <- function(
     return(NULL)
   }
 
+  ## rename
+  colnames(map) <- c("from", cols)
+
+  ## Check if gene_primary if properly filled. If not, fill from gene_names
+  ii <- which( map$gene_primary %in% c("",NA,"NA","-"))
+  if(length(ii)>0) {
+    alt.gene <- sub("[ ;,].*","",map$gene_names) ## first
+    map$gene_primary[ii] <- alt.gene[ii]
+  }
+  
   ## keep only hits matching organism (mapUniProt has no taxId filter,
   ## so a symbol/gene name can come back for the wrong species). Match
   ## on every word so "Canis familiaris" matches "Canis lupus familiaris".
-  organism <- normalizeOrganism(organism)
-  if (!is.null(organism) && "Organism" %in% colnames(map)) {
-    words <- strsplit(organism, "[ _]+")[[1]]
-    keep <- Reduce(`&`, lapply(words, grepl, x = map$Organism, fixed = TRUE))
-    map <- map[keep | !nzchar(map$Organism), , drop = FALSE]
+  nm.organism <- normalizeOrganism(organism)
+  if (!is.null(nm.organism) && !is.na(nm.organism) && "organism_name" %in% colnames(map)) {
+    words <- strsplit(nm.organism, "[ _]+")[[1]]
+    words <- head(words, 2)  ## only main and sub. some species names are cluttered.
+    keep <- Reduce(`&`, lapply(words, grepl, x = map$organism_name, fixed = TRUE))
+    map <- map[keep | !nzchar(map$organism_name), , drop = FALSE]
     if (nrow(map) == 0) {
       message("[getGeneAnnotation.UNIPROT] *WARNING* no hits for organism ", organism)
       return(NULL)
@@ -874,17 +914,19 @@ getGeneAnnotation.UNIPROT <- function(
   ## collapse multiple hits per query key into one ";"-joined row
   collapse <- function(x) paste(unique(x[!is.na(x) & nzchar(x)]), collapse = ";")
   agg <- aggregate(
-    map[, c("Entry", "Gene.Names..primary.", "Protein.names")],
-    by = list(From = map$From),
+    map[, c("accession", "gene_primary", "gene_names", "protein_name")],
+    by = list(from = map$from),
     FUN = collapse
   )
-
+  agg <- agg[match(query, agg$from),,drop=FALSE]
+  
   genes <- data.frame(
     feature = probes,
-    symbol = agg$Gene.Names..primary.[match(query, agg$From)],
-    uniprot = agg$Entry[match(query, agg$From)],
-    gene_title = agg$Protein.names[match(query, agg$From)],
+    symbol = agg$gene_primary,
+    uniprot = agg$accession,
+    gene_title = agg$protein_name,
     chr = NA,
+    #alias = agg$gene_names,
     source = "UniProt.ws",
     stringsAsFactors = FALSE
   )
