@@ -61,7 +61,10 @@ ngs.getGeneAnnotation <- function(...) {
 
 
 #' Get probetype annotation for organism and datatype. For multi-omics
-#' probe names must be prefixed with data type.
+#' probe names must be prefixed with data type. This function handles
+#' multi-species datasets by calling downstream getGeneAnnotation for
+#' each species.
+#' 
 #' @export
 getProbeAnnotation <- function(organism,
                                probes,
@@ -116,8 +119,8 @@ getProbeAnnotation <- function(organism,
 
   annot.list <- list()
   for (i in seq_along(species)) {
-    message("[playbase::getProbeAnnotation] Annotating organism: ", species[i])
-
+    message("[playbase::getProbeAnnotation] >>> annotating organism: ", species[i])
+    
     jj <- seq_along(probes)
     if (length(species) > 1) {
       if (is.null(spcol)) {
@@ -127,8 +130,9 @@ getProbeAnnotation <- function(organism,
       jj <- which(as.character(annot_table[, spcol]) == species[i])
     }
 
+    species.unknown <- is.na(normalizeOrganism(species[i]))    
     genes <- NULL
-    if (annot.unknown) {
+    if (annot.unknown || species.unknown) {
       # annot table is mandatory for 'No organism' (until server side
       # can handle missing genesets)
       info("[getProbeAnnotation] annotating with custom annotation")
@@ -167,7 +171,7 @@ getProbeAnnotation <- function(organism,
       } else {
         is.phospho <- FALSE
       }
-
+      
       genes <- getGeneAnnotation(
         organism = species[i],
         probes = probes[jj],
@@ -188,9 +192,7 @@ getProbeAnnotation <- function(organism,
     if (!is.null(genes) && !is.null(annot_table)) {
       dbg("[getProbeAnnotation] merging custom annotation table")
       colnames(annot_table) <- sub("^Symbol$|^gene$|^gene_name$", "symbol",
-        colnames(annot_table),
-        ignore.case = TRUE
-      )
+        colnames(annot_table), ignore.case = TRUE )
       at <- annot_table[jj, , drop = FALSE]
       at <- at[match(rownames(genes), rownames(at)), , drop = FALSE]
       rownames(at) <- rownames(genes)
@@ -226,7 +228,7 @@ getProbeAnnotation <- function(organism,
 
 
 #' Get feature annotation (for RNAseq and proteomics) data using annothub
-#' or gprofiler.
+#' or gprofiler. Single organism.
 #' 
 #' @export
 getGeneAnnotation <- function(
@@ -239,6 +241,11 @@ getGeneAnnotation <- function(
   verbose = TRUE
 ) {
 
+  if(length(organism)>1) {
+    message("[getGeneAnnotation] WARNING. only 1 organism per call")
+    organism <- organism[1]
+  }
+  
   organism <- normalizeOrganism(organism)
   
   ## clean up probes name. be careful not to 'overclean'.
@@ -326,9 +333,7 @@ getGeneAnnotation <- function(
       verbose = 0
     )
     annot$ortholog <- ortho$ortholog    ## single-valued
-    ##annot$orthologs <- ortho$orthologs  ## all candidates, ";"-joined
     annot$ortholog_description <- ortho$description
-
     annot$description_source <- organism
         
     ## A number of downstream resources (default genesets, TileDB,
@@ -376,8 +381,6 @@ getGeneAnnotation <- function(
       }
       
     }
-
-
 
   }
 
@@ -440,7 +443,7 @@ getGeneAnnotation <- function(
 #' }
 getGeneAnnotation.ANNOTHUB <- function(
   organism,
-  probes,
+  probes = NULL,
   use.ah = NULL,
   probe_type = NULL,
   second.pass = TRUE,
@@ -467,7 +470,10 @@ getGeneAnnotation.ANNOTHUB <- function(
     message(paste0("[getGeneAnnotation.ANNOTHUB] OrgDb for '",organism,"' retrieved..."))
   }
 
-  if (is.null(probes)) probes <- AnnotationDbi::keys(orgdb)
+  if (is.null(probes)) {
+    probes <- AnnotationDbi::keys(orgdb)
+    probe_type <- "ENTREZID"
+  }
 
   ## Backup probes as probes0, give names of probes the original name.
   probes[is.na(probes) | probes == ""] <- "NA"

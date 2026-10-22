@@ -902,7 +902,7 @@ read_annot <- function(file, unique = TRUE) {
   ## extend gene annotation table with prefix/postfix information
   probes <- rownames(df)
   has.ptm_position    <- mean(grepl("_[STYKRNC][0-9]+$|_[0-9]+$",probes)) > 0.33
-  has.uniprot_species <- mean(grepl("_[9A-Z]{5}$",probes)) > 0.88
+  has.uniprot_species <- mean(grepl("_[9A-Z]{3,5}$",probes)) > 0.88
   has.multiomics      <- mean(grepl("[A-Za-z0-9]+:",probes)) > 0.88
   
   prefix <- ifelse(grepl(":",probes), sub(":.*","",probes), "")

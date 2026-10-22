@@ -7,13 +7,14 @@
 ## ====================== GO FUNCTIONS ============================================
 ## ================================================================================
 
+
 #' Get GO gene sets for organism directly from
 #' AnnotationHub/OrgDB. Restrict to genes as background.
 #'
 #' @export
 getOrganismGO <- function(organism, features=NULL, minsize=3L, batch_size=2000L,
                           db = c("annothub","gprofiler"), include_iea=TRUE,
-                          symbol.annot = NULL) {
+                          go.only = TRUE, annot = NULL) {
 
   gmt1=gmt2=NULL
   if(is.null(db) || "annothub" %in% db) {
@@ -27,10 +28,17 @@ getOrganismGO <- function(organism, features=NULL, minsize=3L, batch_size=2000L,
   }
 
   ## fallback if annotHub didn't work. Skip if annothub has done it
-  ## because gprofiler is quite slow
+  ## because gprofiler is quite slow.
   if(!is.null(features) && "gprofiler" %in% db && is.null(gmt1)) {    
-    gmt2 <- getOrganismGO.GPROFILER(organism, features,
-      batch_size=batch_size, include_iea=include_iea)
+    gmt2 <- getOrganismGO.GPROFILER(
+      organism, features,
+      batch_size = batch_size,
+      include_iea = include_iea
+    )
+    if(go.only) {
+      ii <- grep("\\(GO_[0-9]+\\)",names(gmt2))
+      gmt2 <- gmt2[ii]
+    }
     message(paste("Got",length(gmt2),"GO terms from Gprofiler"))
     table(sub(":.*","",names(gmt2)))
   }
@@ -50,10 +58,10 @@ getOrganismGO <- function(organism, features=NULL, minsize=3L, batch_size=2000L,
   }
 
   ## convert all id to species symbol
-  if(!is.null(symbol.annot) && "symbol" %in% colnames(symbol.annot)) {
-    symx <- gmt.map2symbol(gmt, annot=symbol.annot, target="symbol") 
+  if(!is.null(annot) && "symbol" %in% colnames(annot)) {
+    gmt <- gmt.map2symbol(gmt, annot=annot, target="symbol") 
     if(length(gmt)==0) {
-      message("WARNING: empty gene sets after mapping to symbol")
+      message("ERROR: empty gene sets after mapping to symbol")
       return(NULL)
     }
   }
@@ -63,12 +71,10 @@ getOrganismGO <- function(organism, features=NULL, minsize=3L, batch_size=2000L,
   
   ## filter on minimum size
   gmt <- gmt[sapply(gmt,length) >= minsize]
-
-  dbg("[getOrganismGO] done!")
   
   return(gmt)
 }
- 
+
 getOrganismGO.ANNOTHUB <- function(organism, use.ah = NULL, orgdb = NULL) {
   organism <- normalizeOrganism(organism) 
 
@@ -226,35 +232,3 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
   return(gmt)
 }
 
-#' Get GO gene sets for multiple organisms. Each GO term is prefixed
-#' with species name.
-#' 
-getOrganismGO_multispecies <- function(organism, annot,
-                                       db = c("annothub","gprofiler"),
-                                       include_iea = TRUE)
-{
-  species <- unique(annot$species)
-  go <- list()
-  for(sp in species) {
-    org <- normalizeOrganism(sp)
-    ##organism=org;features=annot$symbol;symbol.annot=annot;include_iea=TRUE
-    go[[sp]] <- getOrganismGO(
-      organism = org,
-      features = annot$symbol,
-      symbol.annot = annot,
-      db = db,
-      include_iea = include_iea)
-  }
-
-  ## add prefix/suffix
-  if(0) {
-    for(sp in names(go)) {
-      names(go[[sp]]) <- paste0("[",sp,"]",names(go[[sp]]))
-    }
-    names(go) <- NULL
-  }
-
-  if(length(species)==1) names(go) <- NULL
-  all.go <- unlist(go, recursive=FALSE)
-  return(all.go)
-}

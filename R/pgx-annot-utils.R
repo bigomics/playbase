@@ -50,6 +50,10 @@ species_mnemonic.fun <- function(s) {
     ss <- paste0(substring(ss[1],1,3), substring(ss[2],1,2))
   }
   ss <- toupper(as.character(ss))
+
+  ## exceptions
+  ss <- sub("NOOR","9XXXX",ss, fixed=TRUE)  ## no organism
+
   return(ss)
 }
 
@@ -432,8 +436,10 @@ getOrgDb <- function(organism, use.ah = NULL) {
   #  }
 
   message("querying AnnotationHub for '", organism, "'\n")
+  patt <- c(organism, "OrgDb")
+  patt <- gsub("[\\(\\)]",".",patt)  ## replace regex special characters
   suppressMessages({
-    ahDb <- try(AnnotationHub::query(ah, pattern = c(organism, "OrgDb")))
+    ahDb <- try(AnnotationHub::query(ah, pattern = patt))
   })
 
   if (length(ahDb) == 0 || inherits(ahDb, "try-error")) {
