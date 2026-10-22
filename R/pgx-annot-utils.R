@@ -128,7 +128,6 @@ merge_annot_table <- function(df, df2, priority = 1) {
   return(df)
 }
 
-
 #' Normalize organism name to standard format
 #'
 #' @description Converts common organism name variants to their standard
@@ -232,7 +231,8 @@ strip_prefix <- function(s) {
 #' clean symbol.
 #'
 .clean_symbols <- function(symbols) {
-  strip_prefix(strip_postfix(sub(";.*", "", trimws(symbols))))
+  s <- strip_prefix(strip_postfix(sub(";.*", "", trimws(symbols))))
+  iconv2utf8(s)
 }
 
 #' Cleanup probe names from postfixes or version numbers. Retains
@@ -251,7 +251,8 @@ strip_prefix <- function(s) {
   ## strip away anything postfix after 'underscore' if *not* refseq
   is.refseq <- grepl("^[NXW][MRPCGTWZ]_",probes)
   probes <- ifelse(is.refseq, probes, sub(paste0(sep2,".*"), "", probes))
-  names(probes) <- probes0
+  probes <- iconv2utf8(probes)
+  names(probes) <- iconv2utf8(probes0)
   return(probes)
 }
 
@@ -994,7 +995,9 @@ check_species_probetype <- function(
     return(as.list(out))
   }
 
-  ##probes <- unique(.clean_probe_names(probes))  ## problematic...
+  ## DISABLED: problem when using multi-omics because prefix gets
+  ## removed.
+  #probes <- unique(.clean_probe_names(probes))  
 
   ## report possible probetype per organism
   ptype <- vector("list", length(test_species))
@@ -1012,7 +1015,6 @@ check_species_probetype <- function(
     }
     if (all(is.na(mx.type))) {
       db <- mx.check_mapping(probes, check.first = TRUE)
-      table(db)
       if (!all(is.na(db))) {
         mx.type <- paste(names(table(db[!is.na(db)])),collapse="+")
       }
