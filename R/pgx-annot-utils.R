@@ -637,13 +637,8 @@ annotate_phospho_residue <- function(features, detect.only = FALSE) {
 #'
 #' @export
 convert_probetype <- function(organism, probes, target_id, from_id = NULL,
-                              datatype = NULL, orgdb = NULL, verbose = TRUE) {
+                              orgdb = NULL, verbose = TRUE) {
   organism <- normalizeOrganism(organism)
-
-  if (!is.null(datatype) && datatype == "metabolomics") {
-    new.probes <- mx.convert_probe(probes, target_id = target_id)
-    return(new.probes)
-  }
 
   ## get correct OrgDb database for organism
   if (is.null(orgdb)) {

@@ -9,7 +9,6 @@ convert_probetype(
   probes,
   target_id,
   from_id = NULL,
-  datatype = NULL,
   orgdb = NULL,
   verbose = TRUE
 )

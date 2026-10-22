@@ -17,7 +17,6 @@
   gset_genes = "featuresets/legacy/gset_genes.rds",
   families = "featuresets/legacy/families.parquet",
   msetxmetabolite = "featuresets/legacy/msetxmetabolite",
-  metabolite_id = "annotation/metabolites/id.parquet",
   phosphosite = "annotation/proteins_special/phosphosite.parquet",
   graphite_ppi = "networks/graphite_ppi.parquet",
   signature_immunemeta = "refmat/SIGNATURE_IMMUNEMETA.rds",
