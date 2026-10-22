@@ -2550,6 +2550,7 @@ normalize_cols <- function(G) {
 #' @export
 make_unique <- function(s, sep = ".") {
   s[is.na(s)] <- "NA"
+  s <- iconv2utf8(s)
   make.unique(s, sep = sep)
 }
 
@@ -2558,6 +2559,7 @@ make_unique <- function(s, sep = ".") {
 #' @export
 make_unique_ws <- function(s, sep = "", iter = 10 * length(s)) {
   s[is.na(s)] <- "NA"
+  s <- iconv2utf8(s)  
   num.dup <- sum(duplicated(s), na.rm = TRUE) > 0
   if (!num.dup) {
     return(s)
