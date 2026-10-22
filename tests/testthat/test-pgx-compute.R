@@ -235,6 +235,30 @@ test_that("caller-supplied X keeps identity preprocessing metadata", {
   expect_null(pgx$settings$preprocess$options)
 })
 
+test_that("a sparse caller-supplied X is densified before alignment", {
+  ## pgx.createSingleCellPGX() hands createPGX a sparse log-CPM X.
+  fixture <- make_pgx_fixture()
+  dense <- log2(fixture$counts + 1)
+  X <- Matrix::Matrix(dense, sparse = TRUE)
+  pgx <- suppressMessages(playbase::pgx.createPGX(
+    counts = fixture$counts,
+    X = X,
+    samples = fixture$samples,
+    contrasts = fixture$contrasts,
+    organism = "No organism",
+    datatype = "RNA-seq",
+    preprocess = list(unknown_option = TRUE),
+    filter.genes = FALSE,
+    only.known = FALSE,
+    only.proteincoding = FALSE,
+    convert.hugo = FALSE,
+    add.gmt = FALSE
+  ))
+
+  expect_true(is.matrix(pgx$X))
+  expect_equal(pgx$X, dense)
+})
+
 test_that("single-cell construction remains independent of the leaf", {
   local_mocked_bindings(
     pgx.createSingleCellPGX = function(...) list(route = "single-cell"),
