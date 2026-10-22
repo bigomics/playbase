@@ -19,6 +19,84 @@ getSpeciesAliases <- function(species) {
   unique(as.character(unlist(S[matches, kk])))
 }
 
+#' Return Uniprot 5-letter species mnemonic using 3+2 uppercase
+#' rule. Newer SPECIES_TABLE should have this column. If not recreate
+#' on the fly. Currently not used for lookup but for annotation
+#' postfix.
+#'
+#'
+species_mnemonic.fun <- function(s) {
+  if(grepl("homo sapiens|human",s,ignore.case=TRUE)) return("HUMAN")
+  if(grepl("mus musculus|mouse",s,ignore.case=TRUE)) return("MOUSE")
+  if(grepl("rattus norvegicus|rat",s,ignore.case=TRUE)) return("RAT")
+  if(grepl("saccharomyces cere|yeast",s,ignore.case=TRUE)) return("YEAST")
+  if(grepl("bos taurus|cow",s,ignore.case=TRUE)) return("BOVIN")
+
+  ## lookup in SPECIES_TABLE
+  S <- playbase::SPECIES_TABLE
+  if("uniprot_species" %in% colnames(S)) {
+    ii <- which(apply(S, 1, function(x) any(x == s)))
+    if(length(ii)) {
+      uni <- S[ ii[1], "uniprot_species"]
+      return(uni)
+    }
+  }
+
+  ## else construct manually using 3+2 rule
+  ss <- strsplit(s, split="[ ]")[[1]]
+  if(length(ss)==1) {
+    ss <- substring(s,1,5)
+  } else {
+    ss <- paste0(substring(ss[1],1,3), substring(ss[2],1,2))
+  }
+  ss <- toupper(as.character(ss))
+
+  ## exceptions
+  ss <- sub("NOOR","9XXXX",ss, fixed=TRUE)  ## no organism
+
+  return(ss)
+}
+
+#' Vectorized version of species_mnemonic.fun()
+#' 
+species_mnemonic <- function(s) {
+  sx <- unique(s)
+  mx <- sapply(sx, species_mnemonic.fun)
+  mx[s]
+}
+
+
+#' Approximate reverse lookup from UNIPROT species mnemonic to full
+#' species name.
+#' 
+.mnemonic2species.UNIPROT <- function(m, na.keep=TRUE) {
+  S <- playbase::SPECIES_TABLE
+
+  ## lookup in SPECIES_TABLE
+  if("uniprot_species" %in% colnames(S)) {
+    ii <- which(S[, "uniprot_species"] == m)
+    if(length(ii)) {
+      name <- S[ ii[1], "species_name"]
+      if(na.keep && is.na(name)) name <- m
+      return(name)
+    }
+  }
+
+  ## lookup in using 3+2 rule in SPECIES_TABLE  
+  i0 <- grepl(paste0("^",m), S$species_name, ignore.case=TRUE)
+  rx1 <- paste0("^",substring(m,1,3))
+  rx2 <- paste0("[ ]",substring(m,4,5))
+  i1 <- grepl(rx1, toupper(S$ah_species)) & grepl(rx2, toupper(S$ah_species))
+  i2 <- grepl(rx1, toupper(S$gprofiler_species)) & grepl(rx2, toupper(S$gprofiler_species))  
+  ii <- which(i0 | i1 | i2)
+
+  name <- S[ii[1],"species_name"]
+  if(na.keep && is.na(name)) name <- m
+  return(name)
+}
+
+mnemonic2species.UNIPROT <- Vectorize(.mnemonic2species.UNIPROT, c("m"), USE.NAMES=FALSE)
+
 #' Merges any missing annotation in df with non-missing annotation of
 #' df2.
 #'
@@ -68,23 +146,26 @@ merge_annot_table <- function(df, df2, priority = 1) {
 #'
 #' @export
 normalizeOrganism <- function(organism) {
-  if (is.null(organism) || is.na(organism)) {
-    return(organism)
+  if (is.null(organism)) return(NULL)
+  # organism can be a vector (multi-species), so loop over elements
+  out <- rep(NA, length(organism))
+  ol <- tolower(organism)
+  S <- playbase::SPECIES_TABLE
+  xout <- rep(NA, length(unique(ol)))
+  names(xout) <- unique(ol)
+  for(g in unique(ol)) {
+    ## match with any column in SPECIES_TABLE
+    ii <- which(apply(S, 1, function(x) any(tolower(x) == g)))
+    if(length(ii)) {
+      xout[g] <- S[ ii[1], "ah_species"]
+      if(is.na(xout[g])) xout[g] <- S[ ii[1], "gprofiler_species"]
+    }
   }
-  org_lower <- tolower(organism)
-  if (org_lower == "human") {
-    return("Homo sapiens")
-  }
-  if (org_lower == "mouse") {
-    return("Mus musculus")
-  }
-  if (org_lower == "rat") {
-    return("Rattus norvegicus")
-  }
-  if (grepl("canis.*familiaris|^dog$", org_lower)) {
-    return("Canis familiaris")
-  }
-  organism
+  out <- xout[ol]
+  names(out) <- organism
+  ## fix some species
+  out <- sub("canis.*familiaris|^dog$", "Canis familiaris", out, ignore.case=TRUE)
+  out
 }
 
 #' @export
@@ -356,8 +437,10 @@ getOrgDb <- function(organism, use.ah = NULL) {
   #  }
 
   message("querying AnnotationHub for '", organism, "'\n")
+  patt <- c(organism, "OrgDb")
+  patt <- gsub("[\\(\\)]",".",patt)  ## replace regex special characters
   suppressMessages({
-    ahDb <- try(AnnotationHub::query(ah, pattern = c(organism, "OrgDb")))
+    ahDb <- try(AnnotationHub::query(ah, pattern = patt))
   })
 
   if (length(ahDb) == 0 || inherits(ahDb, "try-error")) {
@@ -410,7 +493,6 @@ collapse_by_humansymbol <- function(obj, annot) {
   map.obj
 }
 
-
 .map_gprofiler_id.SPECIES_TABLE <- function(species) {
   if (is.null(species) || is.na(species) || !nzchar(species)) return(NULL)
   spt <- playbase::SPECIES_TABLE[,c("species_name","ah_species","gprofiler_species")]
@@ -421,9 +503,21 @@ collapse_by_humansymbol <- function(obj, annot) {
   id[1]
 }
 
-#'
+#' Vectorized version of .map_gprofiler_id.ONE
 #' 
 .map_gprofiler_id <- function(species) {
+  if(length(species)==1) return(.map_gprofiler_id.ONE(species))
+  xspecies <- unique(species)
+  id <- c()
+  for(s in xspecies) {
+    id[s] <- .map_gprofiler_id.ONE(s)
+  }
+  as.character(id[species])
+}
+  
+#' Single species lookup for organism to gprofiler id.
+#' 
+.map_gprofiler_id.ONE <- function(species) {
 
   if (is.null(species) || is.na(species) || !nzchar(species)) return(NULL)
 
@@ -589,7 +683,7 @@ detect_probetype <- function(organism, probes, datatype = NULL,
   organism <- normalizeOrganism(organism)
 
   if (is.null(datatype) && all(grepl("[:]", probes))) {
-    dbg("[detect_probetype] datatype is multi-omics?")
+    message("[detect_probetype] datatype is multi-omics?")
     datatype <- "multi-omics"
   }
 
@@ -598,7 +692,14 @@ detect_probetype <- function(organism, probes, datatype = NULL,
     return(probe_type)
   }
 
-  if (!is.null(datatype) && datatype == "multi-omics") {
+  if (!is.null(datatype) && datatype %in% c("methylomics")) {
+    return("cpg_probe")
+  }
+
+  has.prefix <- mean(grepl("[:]", probes)) > 0.88
+  if (!is.null(datatype) && datatype %in% c("multi-omics","multiomics") &&
+        has.prefix ) {
+    ## what about other prefixes/types?
     mx.probes <- sub("^mx:", "", grep("^mx:", probes, value = TRUE))
     px.probes <- sub("^px:", "", grep("^px:", probes, value = TRUE))
     gx.probes <- sub("^gx:", "", grep("^gx:", probes, value = TRUE))

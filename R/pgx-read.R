@@ -876,7 +876,8 @@ read_annot <- function(file, unique = TRUE) {
     message("[read_annot] ERROR: input not valid.")
     return(NULL)
   }
-
+  df <- data.frame(df, check.names = FALSE)
+  
   ## add column title
   if (colnames(df)[1] == "") colnames(df)[1] <- "row.names"
 
@@ -890,11 +891,43 @@ read_annot <- function(file, unique = TRUE) {
   last.charcol <- tail(char.cols, 1)
   last.charcol
 
+  ## drop numerical columns (these can be intensities). We check if we
+  ## have equal or more than two columns. First column are rownames.
+  if (length(char.cols) && last.charcol >= 2) {
+    df <- df[, 1:last.charcol, drop = FALSE]
+  } else {
+    df <- df[, 0, drop = FALSE]
+  }
+
+  ## extend gene annotation table with prefix/postfix information
+  probes <- rownames(df)
+  has.ptm_position    <- mean(grepl("_[STYKRNC][0-9]+$|_[0-9]+$",probes)) > 0.33
+  has.uniprot_species <- mean(grepl("_[9A-Z]{3,5}$",probes)) > 0.88
+  has.multiomics      <- mean(grepl("[A-Za-z0-9]+:",probes)) > 0.88
+  
+  prefix <- ifelse(grepl(":",probes), sub(":.*","",probes), "")
+  postfix <- ifelse(grepl("_",probes), sub(".*_","",probes), "")
+  if(has.multiomics) {
+    message("multi-omics detected in feature names")    
+    df$data_type <- prefix
+  }
+  if(has.uniprot_species) {
+    message("uniprot_species detected in feature names")    
+    df$species <- postfix
+  }
+  if(has.ptm_position) {
+    message("ptm_position detected in feature names")
+    df$ptm_position <- postfix
+  }
+
+  ## if null or empty return NULL
+  if(is.null(df) || NCOL(df)==0) return(NULL)
+
   ## if the rownames are not unique, and some more character columns
   ## exists, then search for best column and paste after rownames
-  ## (first column).
-  if (sum(duplicated(df[, 1])) && length(char.cols) >= 2) {
-    ndup <- sapply(char.cols[-1], function(k) {
+  ## (first column). REALLY??
+  if (sum(duplicated(df[, 1])) && ncol(df) >= 2) {
+    ndup <- sapply(2:ncol(df), function(k) {
       sum(duplicated(paste0(df[, 1], "_", df[, k])))
     })
     ndup
@@ -902,13 +935,6 @@ read_annot <- function(file, unique = TRUE) {
     rownames(df) <- paste0(rownames(df), "_", df[, sel])
   }
 
-  ## drop numerical columns (these can be intensities). We check if we
-  ## have equal or more than two columns. First column are rownames.
-  if (length(char.cols) && last.charcol >= 2) {
-    df <- df[, 1:last.charcol, drop = FALSE]
-  } else {
-    df <- NULL
-  }
   return(df)
 }
 
