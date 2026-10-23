@@ -217,16 +217,36 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         } else {
           time_var <- NULL
         }
-        timings[[cm.mtds[i]]] <- system.time(
-          outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithDESEQ2(
-            counts, group, contr.matrix,
-            design,
-            covariates = covariates,
-            X = X1, genes = genes, test = mdl,
-            prune.samples = prune.samples,
-            conform.output = conform.output, timeseries = time_var
-          )
+        ## DESeq2 cannot fit some data (e.g. single-cell counts where every
+        ## gene has a zero). Skip the method, as for missing values above,
+        ## rather than failing the other methods' results.
+        fitted <- tryCatch(
+          {
+            timings[[cm.mtds[i]]] <- system.time(
+              outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithDESEQ2(
+                counts, group, contr.matrix,
+                design,
+                covariates = covariates,
+                X = X1, genes = genes, test = mdl,
+                prune.samples = prune.samples,
+                conform.output = conform.output, timeseries = time_var
+              )
+            )
+            TRUE
+          },
+          error = function(e) {
+            message(
+              "[ngs.fitContrastsWithAllMethods] ", cm.mtds[i],
+              " failed, skipping it: ", conditionMessage(e)
+            )
+            FALSE
+          }
         )
+        if (!fitted) {
+          outputs[[cm.mtds[i]]] <- NULL
+          timings[[cm.mtds[i]]] <- NULL
+          next
+        }
       }
     }
   }
@@ -1416,7 +1436,9 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
         dds <- try(DESeq2::estimateSizeFactors(dds), silent = TRUE)
         disp.type <- ifelse(test == "glmGamPoi", "glmGamPoi", "DESeq2")
         dds <- try(DESeq2::estimateDispersionsGeneEst(dds, type = disp.type), silent = TRUE)
-        DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
+        ## As in .regress.covs: a failed step leaves a try-error, not a dds.
+        disp.values <- try(GenomicRanges::mcols(dds)$dispGeneEst, silent = TRUE)
+        if (!"try-error" %in% class(disp.values)) DESeq2::dispersions(dds) <- disp.values
         suppressWarnings({
           if (test == "LRT") {
             dds <- try(DESeq2::nbinomLRT(dds), silent = TRUE)
@@ -1426,6 +1448,12 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
             dds <- try(DESeq2::nbinomWaldTest(dds), silent = TRUE)
           }
         })
+      }
+      if ("try-error" %in% class(dds)) {
+        stop(
+          "[.ngs.fitContrastsWithDESEQ2.nodesign] DESeq2 could not fit contrast ",
+          colnames(exp.matrix)[i], ": ", trimws(as.character(dds))
+        )
       }
       ctx <- c("yneg" = -1, "yzero" = 0, "ypos" = 1)[DESeq2::resultsNames(dds)]
       resx <- DESeq2::results(dds, contrast = ctx, cooksCutoff = FALSE, independentFiltering = FALSE)
