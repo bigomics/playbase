@@ -10,7 +10,10 @@ License: Dual Commercial and Non-Commercial
 Encoding: UTF-8
 LazyData: true
 Suggests: 
+    KEGG.db,
+    org.Mm.eg.db,
     org.Pf.plasmo.db,
+    org.Rn.eg.db,
     playbase.epigenetics,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
@@ -75,7 +78,6 @@ Imports:
     irlba,
     isva,
     jsonlite,
-    KEGG.db,
     lazyeval,
     limma,
     magrittr,
@@ -94,8 +96,6 @@ Imports:
     NNLM,
     omicsai,
     org.Hs.eg.db,
-    org.Mm.eg.db,
-    org.Rn.eg.db,
     parallel,
     partykit,
     pcaMethods,

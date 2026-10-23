@@ -884,7 +884,11 @@ getHSGeneInfo.eg <- function(eg, as.link = TRUE) {
     kegg.id <- info[["KEGG"]][[i]]
     kegg.id <- setdiff(kegg.id, NA)
     if (length(kegg.id) > 0) {
-      kegg.name <- AnnotationDbi::mget(kegg.id, envir = KEGG.db::KEGGPATHID2NAME, ifnotfound = NA)[[1]]
+      kegg.name <- if (requireNamespace("KEGG.db", quietly = TRUE)) {
+        AnnotationDbi::mget(kegg.id, envir = KEGG.db::KEGGPATHID2NAME, ifnotfound = NA)[[1]]
+      } else {
+        NA
+      }
       if (!is.na(kegg.name) && as.link) {
         info[["KEGG"]][[i]] <- gsub("KEGGNAME", kegg.name, gsub("KEGGID", kegg.id, kegg.link))
       } else {
@@ -1641,7 +1645,11 @@ extremeCorrelation <- function(query_sig, ref_set, n = 200) {
 alias2hugo <- function(s, org = NULL, na.orig = TRUE) {
   ## determine if we deal with human or mouse
   hs.symbol <- unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
-  mm.symbol <- unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
+  mm.symbol <- if (requireNamespace("org.Mm.eg.db", quietly = TRUE)) {
+    unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
+  } else {
+    character(0)
+  }
   if (is.null(org)) {
     is.human <- mean(s %in% hs.symbol, na.rm = TRUE) >= mean(s %in% mm.symbol, na.rm = TRUE)
     org <- ifelse(is.human, "hs", "mm")
