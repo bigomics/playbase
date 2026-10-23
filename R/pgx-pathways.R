@@ -36,7 +36,10 @@ getPathwayImage <- function(wp, val, sbgn.dir = NULL, as.img = FALSE) {
 #'
 #' @return Named character vector: names are pathway ids, values are diagram ids.
 reactomeDiagramMap <- function() {
-  f <- system.file("extdata", "reactome_diagram_map.tsv", package = "playdata")
+  f <- tryCatch(
+    playdata::get_file("reactome_diagram_map.tsv"),
+    error = function(e) ""
+  )
   if (!nzchar(f) || !file.exists(f)) {
     return(stats::setNames(character(0), character(0)))
   }
@@ -104,9 +107,9 @@ getReactomeSVG <- function(wp, val = NULL, as.img = FALSE,
     return(NULL)
   }
 
-  gz <- system.file(
-    "extdata", "reactome-svg", paste0(diagram.id, ".svg.gz"),
-    package = "playdata"
+  gz <- tryCatch(
+    playdata::get_file(file.path("reactome-svg", paste0(diagram.id, ".svg.gz"))),
+    error = function(e) ""
   )
   if (!nzchar(gz)) {
     return(NULL)
