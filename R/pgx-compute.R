@@ -1452,6 +1452,11 @@ pgx.add_GMT <- function(pgx,
       size.ok <- which(gmt.size >= 10 & gmt.size <= 400)
     }
 
+    # lipid sets: at least 3 members and no upper cap. A lipid category
+    # can hold most of a panel and is still informative.
+    idx_lipid <- which(grepl("^LIPID_", colnames(G)) & gmt.size >= 3)
+    size.ok <- union(size.ok, idx_lipid)
+
     # add all custom genesets to size.ok
     idx_custom_gmt <- grep("CUSTOM", colnames(G))
     # make sure we dont miss CUSTOM genesets due to size.ok exclusion

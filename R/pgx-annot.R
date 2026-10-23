@@ -99,8 +99,11 @@ getProbeAnnotation <- function(organism,
   }
 
   ## only first feature (warning: can make probe not unique). This
-  ## assumes semicolumn is NEVER used for single feature names. 
-  probes <- sub("[;].*","",probes) ## only first probe
+  ## assumes semicolumn is NEVER used for single feature names. Lipid
+  ## shorthand does use it (`Cer 42:1;O2`, `Cer 32:0;2`): keep it whole.
+  if (datatype != "lipidomics") {
+    probes <- sub("[;].*","",probes) ## only first probe
+  }
   probes <- make_unique(probes)
   
   genes <- NULL
