@@ -168,7 +168,7 @@ Imports:
 Remotes:
     KEGG.db=url::https://bioconductor.org/packages/3.11/data/annotation/src/contrib/KEGG.db_3.2.4.tar.gz,
     PCSF=url::https://github.com/bigomics/PCSF/archive/HEAD.zip,
-    bigomics/playbase.annotation/inst/playdata-from-libx/playdata@feat/libx2,
+    bigomics/playbase.annotation/inst/playdata-from-libx/playdata,
     bigomics/playbase.annotation,
     bigomics/playbase.preprocess,
     infercnv=url::https://github.com/broadinstitute/infercnv/archive/refs/tags/infercnv-v1.3.3.zip,
