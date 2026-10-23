@@ -10,6 +10,7 @@ License: Dual Commercial and Non-Commercial
 Encoding: UTF-8
 LazyData: true
 Suggests: 
+    org.Pf.plasmo.db,
     playbase.epigenetics,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
@@ -94,7 +95,6 @@ Imports:
     omicsai,
     org.Hs.eg.db,
     org.Mm.eg.db,
-    org.Pf.plasmo.db,
     org.Rn.eg.db,
     parallel,
     partykit,
@@ -119,7 +119,6 @@ Imports:
     RANN,
     RColorBrewer,
     RcppML,
-    RefMet,
     reshape2,
     reticulate,
     RGCCA,
@@ -168,16 +167,14 @@ Imports:
     xml2,
 Remotes:
     KEGG.db=url::https://bioconductor.org/packages/3.11/data/annotation/src/contrib/KEGG.db_3.2.4.tar.gz,
-    org.Pf.plasmo.db=url::https://bioconductor.org/packages/3.14/data/annotation/src/contrib/org.Pf.plasmo.db_3.14.0.tar.gz,
     PCSF=url::https://github.com/bigomics/PCSF/archive/HEAD.zip,
-    playdata=url::https://github.com/bigomics/playdata/archive/HEAD.zip,
+    bigomics/playbase.annotation/inst/playdata-from-libx/playdata@feat/libx2,
     bigomics/playbase.annotation,
     bigomics/playbase.preprocess,
     infercnv=url::https://github.com/broadinstitute/infercnv/archive/refs/tags/infercnv-v1.3.3.zip,
     EPIC=url::https://github.com/GfellerLab/EPIC/archive/HEAD.zip,
     SuperCell=url::https://github.com/GfellerLab/SuperCell/archive/HEAD.zip,
     NNLM=url::https://github.com/linxihui/NNLM/archive/HEAD.zip,
-    RefMet=url::https://github.com/metabolomicsworkbench/RefMet/archive/refs/tags/v2.zip,
     grimon=github::https://github.com/mkanai/grimon,
     rliger=url::https://github.com/welch-lab/liger/archive/refs/tags/v2.1.0.zip,
     rms=url::https://cran.r-project.org/src/contrib/Archive/rms/rms_6.8-0.tar.gz,

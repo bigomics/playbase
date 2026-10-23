@@ -231,7 +231,7 @@ getOrgDb <- function(organism, use.ah = NULL) {
     if (organism == "Rattus norvegicus" && require("org.Rn.eg.db", quietly = TRUE)) {
       return(org.Rn.eg.db::org.Rn.eg.db)
     }
-    if (organism == "Plasmodium falciparum" && require("org.Pf.plasmo.db", quietly = TRUE)) {
+    if (organism == "Plasmodium falciparum" && requireNamespace("org.Pf.plasmo.db", quietly = TRUE)) {
       return(org.Pf.plasmo.db::org.Pf.plasmo.db)
     }
   }
@@ -621,13 +621,8 @@ annotate_phospho_residue <- function(features, detect.only = FALSE) {
 #'
 #' @export
 convert_probetype <- function(organism, probes, target_id, from_id = NULL,
-                              datatype = NULL, orgdb = NULL, verbose = TRUE) {
+                              orgdb = NULL, verbose = TRUE) {
   organism <- normalizeOrganism(organism)
-
-  if (!is.null(datatype) && datatype == "metabolomics") {
-    new.probes <- mx.convert_probe(probes, target_id = target_id)
-    return(new.probes)
-  }
 
   ## get correct OrgDb database for organism
   if (is.null(orgdb)) {
