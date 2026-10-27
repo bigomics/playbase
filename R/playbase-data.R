@@ -30,14 +30,6 @@
 "EXAMPLE_GMT"
 
 
-#' Table for species ID conversin conversion from scientific name to Ensembl db ID
-#'
-#' @format ## `SPECIES_TABLE`
-#' data.frame with columns "dataset"	"description"	"version"	"species_name"
-#' @source BiomaRt
-"SPECIES_TABLE"
-
-
 #' GENES_TABLE dataset
 #'
 #' A dataset containing the gene annotation table for the example dataset

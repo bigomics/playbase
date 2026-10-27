@@ -7,50 +7,6 @@ MAIN_ORGANISMS = c("Human","Mouse","Rat","Homo sapiens",
   "Rattus norvegicus","Mus musculus","hsapiens","mmusculus","rnorvegicus")
 
 
-#' Show all aliases
-#' 
-getSpeciesAliases <- function(species) {
-  S <- playbase::SPECIES_TABLE
-  matches <- apply(S, 2, function(g) which(tolower(g) %in% tolower(species)))
-  matches <- unique(unlist(matches))
-  kk <- c("species_name","display_name","ah_species","gprofiler_species",
-    "gprofiler_id")
-  kk <- intersect(kk, colnames(S))
-  unique(as.character(unlist(S[matches, kk])))
-}
-
-#' Merges any missing annotation in df with non-missing annotation of
-#' df2.
-#'
-merge_annot_table <- function(df, df2, priority = 1) {
-  #  df2 <- df2[match(rownames(df), rownames(df2)), ]
-  #  rownames(df2) <- rownames(df)
-  if (nrow(df) != nrow(df2)) stop("df and df2 not same size")
-  if (inherits(df2, "matrix")) {
-    df2 <- as.data.frame(df2)
-  }
-  ## add columns by filling missing values in df or df2
-  cols <- union(colnames(df), colnames(df2))
-  for (k in setdiff(cols, colnames(df))) df[[k]] <- NA
-  for (k in setdiff(cols, colnames(df2))) df2[[k]] <- NA
-
-  ## merge common columns by filling missing values in df2
-  for (k in cols) {
-    a <- df[, k]
-    b <- df2[, k]
-    na.chars <- c(NA, "NA", "", "-", "---", "unknown")
-    if (priority == 1) {
-      replace.a <- (a %in% na.chars) & !(b %in% na.chars)
-    } else {
-      replace.a <- !(b %in% na.chars) ## always replace
-    }
-    if (any(replace.a)) df[, k] <- ifelse(replace.a, b, a)
-  }
-
-  return(df)
-}
-
-
 #' Normalize organism name to standard format
 #'
 #' @description Converts common organism name variants to their standard
@@ -130,28 +86,6 @@ strip_postfix <- function(s) {
 }
 
 
-#' non-greedy removal of prefixes. Prefix is defined as any
-#' character substring (no spaces, no special chars) before the
-#' matching colon character :.
-#'
-strip_prefix <- function(s) {
-  stripFUN <- function(s) {
-    sub("^[a-zA-Z]+:", "", s)
-  }
-  ss <- strsplit(s, split = ";")
-  ss <- lapply(ss, function(s) stripFUN(s))
-  sapply(ss, paste, collapse = ";")
-}
-
-
-#' Cleanup symbols names from postfixes and prefixes. Take only first
-#' symbol. This is mostly used for symbol lookup tables that need one
-#' clean symbol.
-#'
-.clean_symbols <- function(symbols) {
-  strip_prefix(strip_postfix(sub(";.*", "", trimws(symbols))))
-}
-
 #' Cleanup probe names from postfixes or version numbers. Retains
 #' prefix needed for multi-omics.
 #'
@@ -166,48 +100,6 @@ strip_prefix <- function(s) {
   names(probes) <- probes0
   return(probes)
 }
-
-#' Match dirty probe names to clean key names
-#'
-#' @export
-match_probe_names <- function(probes, orgdb, probe_type = NULL) {
-  if (is.character(orgdb)) orgdb <- getOrgDb(orgdb)
-  if (is.null(orgdb)) {
-    message("[match_probe_names] ERROR could not get orgdb!")
-    return(NULL)
-  }
-  if (is.null(probe_type)) {
-    probe_type <- detect_probetype.ANNOTHUB(organism = "custom", probes, orgdb = orgdb)
-  }
-  ## bail out if not annothub keytypes
-  if (!probe_type %in% AnnotationDbi::keytypes(orgdb)) {
-    return(probes)
-  }
-
-  probe.names <- names(probes)
-  all.keys <- AnnotationDbi::keys(orgdb, probe_type)
-  tsub <- function(s) gsub("[-:;.]|\\[|\\]", ".", s)
-  ## An exact key first: the loose match takes the first key that is equal up
-  ## to case and punctuation, and that can be another gene's - "SF3B1" matched
-  ## SF3B2's alias "SF3b1", "NKX6-1" the alias "NKX6.1".
-  ii <- match(probes, all.keys)
-  loose <- which(is.na(ii))
-  ii[loose] <- match(toupper(tsub(probes[loose])), toupper(tsub(all.keys)))
-  new.probes <- all.keys[ii]
-  if (sum(is.na(new.probes))) {
-    jj <- which(is.na(new.probes))
-    new.probes[jj] <- probes[jj]
-    jj.probes <- .clean_probe_names(probes[jj], sep = ".-")
-    ii <- match(toupper(tsub(jj.probes)), toupper(tsub(all.keys)))
-    if (any(!is.na(ii))) {
-      k <- which(!is.na(ii))
-      new.probes[jj[k]] <- all.keys[ii[k]]
-    }
-  }
-  names(new.probes) <- probe.names
-  new.probes
-}
-
 
 #' Map probe identifiers to gene symbols
 #'
@@ -339,7 +231,7 @@ getOrgDb <- function(organism, use.ah = NULL) {
     if (organism == "Rattus norvegicus" && require("org.Rn.eg.db", quietly = TRUE)) {
       return(org.Rn.eg.db::org.Rn.eg.db)
     }
-    if (organism == "Plasmodium falciparum" && require("org.Pf.plasmo.db", quietly = TRUE)) {
+    if (organism == "Plasmodium falciparum" && requireNamespace("org.Pf.plasmo.db", quietly = TRUE)) {
       return(org.Pf.plasmo.db::org.Pf.plasmo.db)
     }
   }
@@ -471,164 +363,18 @@ combine_feature_names <- function(annot, target) {
   new.feature
 }
 
-#' Two-pass implemenation of AnnotationDbi::select that checks for
-#' original probe names and then matches clean names.
-#' 
-AnnotationDbi_select_2pass <- function(orgdb, keys, columns, keytype,
-                                       verbose=1) {
-
-  ## First pass: 
-  annot <- try(AnnotationDbi::select(
-    orgdb,
-    keys = keys,
-    columns = columns,
-    keytype = keytype
-  ), silent = TRUE)
-
-  dim(annot)
-  ## determine symbol column
-  symbol.col <- intersect(colnames(annot),c("SYMBOL","GENENAME","ALIAS"))[1]
-
-  if(inherits(annot, "try-error")) {
-    annot <- NULL
-    which.missing <- 1:length(keys)
-  } else {
-    which.missing <- which(is.na(annot[[symbol.col]]))
-  }
-  
-  ## Second pass
-  if(length(which.missing)) {
-    clean.keys <- .clean_probe_names(keys[which.missing])
-    names(clean.keys) <- keys[which.missing]
-    annot2 <- try(AnnotationDbi::select(
-      orgdb,
-      keys = clean.keys,
-      columns = columns,
-      keytype = keytype
-    ), silent = TRUE)
-    if(!inherits(annot2, "try-error")) {
-      jj <- which(!is.na(annot2[[symbol.col]]))
-      if(length(jj)) {
-        pp <- match( annot2[,keytype], clean.keys )
-        annot2[,keytype] <- names(clean.keys)[pp]
-        annot <- rbind(annot, annot2[jj,])
-      }
-    }
-  }
-  dim(annot)
-
-  annot <- resolve_alias_rows(annot, keytype)
-
-  ## collapse to original keys (ordered). There may be duplicates
-  ## from 2-pass matching. Prefer non-NA entries
-  symbol <- annot[[symbol.col]]
-  annot <- annot[order(symbol, na.last=TRUE),]
-  annot <- annot[match(keys, annot[,keytype]),,drop=FALSE]
-  
-  return(annot)
-}
-
-## An ALIAS key can name several genes: "TPO" is thyroid peroxidase's
-## official symbol and also an alias of THPO, "EBF3" is EBF3's symbol and an
-## alias of MAPRE3. Collapsing those rows by sorting on the symbol picked
-## whichever gene sorted first, so a probe got another gene's title and
-## UniProt ids. Keep the gene whose official symbol is the key; with none,
-## keep an alias only when it names exactly one gene. Other keytypes pass
-## through untouched.
-resolve_alias_rows <- function(annot, keytype) {
-  if (is.null(annot) || keytype != "ALIAS" || !"SYMBOL" %in% colnames(annot)) {
-    return(annot)
-  }
-  key <- annot[[keytype]]
-  sym <- annot$SYMBOL
-  exact <- !is.na(sym) & !is.na(key) & sym == key
-  has_exact <- key %in% key[exact]
-  n_genes <- tapply(sym, key, function(x) length(unique(x[!is.na(x)])))
-  unambiguous <- !is.na(key) & n_genes[key] <= 1
-  annot[exact | (!has_exact & unambiguous), , drop = FALSE]
-}
-
-#' Maps a gmt list to symbol using annotation table. We go via
-#' sparsematrix because it is much faster than list filtering.
-#' 
-gmt.map2symbol <- function(gmt, annot, target="symbol") {
-  G1 <- gmt2mat(gmt)
-  as.symbol <- map2symbol(annot=annot, genes=rownames(G1), target=target, na.rm=FALSE)
-  jj <- which(!is.na(as.symbol))
-  G1 <- G1[jj,]
-  rownames(G1) <- as.symbol[jj]
-  mat2gmt(G1)
-}
-
-
-#' Merge duplicated GO sets in a gmt collection by merging the
-#' terms. This is often needed after merging to GO collections if
-#' retrieved by different methods.
-#' 
-go.merge_duplicates <- function(gmt) {
-  gmt.id <- gsub(".*\\(GO_|\\)$","",names(gmt))
-  gmt.names <- names(gmt)
-  names(gmt.names) <- gmt.id
-  ndup <- sum(duplicated(gmt.id))
-  message(paste("merging",ndup,"duplicated GO terms"))
-  if(ndup == 0) return(gmt)
-  id.dup <- gmt.id[which(duplicated(gmt.id))]
-  id.one <- setdiff(gmt.id, id.dup)
-  ## colllapse duplicates by set union  
-  gmt1 <- gmt[which(gmt.id %in% id.one)]
-  jj <- which(gmt.id %in% id.dup)
-  gmt2 <- tapply(gmt[jj], gmt.id[jj], function(g) unique(unlist(g)))
-  names(gmt2) <- gmt.names[names(gmt2)]
-  gmt <- c(gmt1, gmt2)
-  return(gmt)
-}
-
 #' @title Detect probe type from probe set
+#' @description Forwards to `playbase.annotation::detect_probetype()`.
 #' @export
 detect_probetype <- function(organism, probes, datatype = NULL, 
                              nprobe = 1000, verbose = FALSE) {
-
-  organism <- normalizeOrganism(organism)
-
-  if (is.null(datatype) && all(grepl("[:]", probes))) {
-    dbg("[detect_probetype] datatype is multi-omics?")
-    datatype <- "multi-omics"
-  }
-
-  if (!is.null(datatype) && datatype %in% c("metabolomics","lipidomics")) {
-    probe_type <- mx.detect_probetype(probes)
-    return(probe_type)
-  }
-
-  if (!is.null(datatype) && datatype == "multi-omics") {
-    mx.probes <- sub("^mx:", "", grep("^mx:", probes, value = TRUE))
-    px.probes <- sub("^px:", "", grep("^px:", probes, value = TRUE))
-    gx.probes <- sub("^gx:", "", grep("^gx:", probes, value = TRUE))
-    gx.probe_types <- px.probe_types <- mx.probe_types <- NA
-    if (length(gx.probes)) gx.probe_types <- detect_probetype(organism, gx.probes)
-    if (length(px.probes)) px.probe_types <- detect_probetype(organism, px.probes)
-    if (length(mx.probes)) mx.probe_types <- mx.detect_probetype(mx.probes)
-    probe_type <- c(gx = gx.probe_types, px = px.probe_types, mx = mx.probe_types)
-    dtypes <- sort(unique(sub(":.*", "", probes)))
-    probe_type <- probe_type[dtypes]
-    return(probe_type)
-  }
-
-  ptype <- detect_probetype.ANNOTHUB(
-    organism = organism, probes = probes, orgdb = NULL,
-    nprobe = nprobe, use.ah = NULL, datatype = datatype,
-    verbose = verbose) 
-
-  if(is.null(ptype) || is.na(ptype)) {
-    ptype <- detect_probetype.GPROFILER(
-      organism = organism, probes = probes, nprobe = nprobe,
-      datatype = datatype, verbose = verbose) 
-  }
-
-  if(is.null(ptype) || is.na(ptype)) {
-    return(NA)  ## expects NA for fail
-  }
-  return(ptype)
+  playbase.annotation::detect_probetype(
+    organism = organism,
+    probes = probes,
+    datatype = datatype,
+    nprobe = nprobe,
+    verbose = verbose
+  )
 }
 
 #' @title Detect probe type from probe set
@@ -751,78 +497,6 @@ detect_probetype.ANNOTHUB <- function(organism, probes, orgdb = NULL,
   return(top_match)
 }
 
-#' Detect/validate features with gprofiler
-#'
-detect_probetype.GPROFILER <- function(organism, probes, nprobe = 1000,
-                                       datatype = NULL, verbose = TRUE) {
-  gp.organism <- .map_gprofiler_id(organism)    
-
-  if (length(probes) > nprobe) {
-    probes <- sample(probes, nprobe)
-  }
-  probesx <- gsub(";.*|_.*|.*:","",probes)
-  probes <- c(probes, probesx)
-  gp.out <- tryCatch(
-  {
-    gprofiler2::gconvert(probes, organism = gp.organism, target = "UNIPROT_GN_ACC")
-  },
-  error = function(e) {
-    return(NULL)
-  }
-  )
-  return("GPROFILER2")
-}
-
-
-#' @title Get all species in AnnotationHub/OrgDB
-#'
-#' @export
-allSpecies <- function(col = "species_name") {
-  M <- data.frame(playbase::SPECIES_TABLE)
-  col <- intersect(col, colnames(M))[1]
-  if(length(col)==0) return(NULL)
-  species <- as.character(M[, col])
-  names(species) <- M[, "taxonomyid"]
-  species
-}
-
-.getSpeciesTable.GPROFILER <- function() {
-  jsonlite::fromJSON("https://biit.cs.ut.ee/gprofiler/api/util/organisms_list")
-}
-
-#' @title Get species table in AnnotationHub/OrgDB
-#'
-#' @export
-.getSpeciesTable.ANNOTHUB <- function(ah = NULL) {
-  if (is.null(ah)) {
-    ah <- AnnotationHub::AnnotationHub(localHub = FALSE) ## make global??
-  }
-  ah.tables <- AnnotationHub::query(ah, "OrgDb")
-
-  variables <- c(
-    "ah_id", "species", "description", "rdatadateadded", "rdataclass",
-    "title", "taxonomyid", "coordinate_1_based", "preparerclass", "sourceurl",
-    "dataprovider", "genome", "maintainer", "tags", "sourcetype"
-  )
-  variables <- c(
-    "ah_id", "species", "description", "rdatadateadded", "rdataclass",
-    "title", "taxonomyid", ## "coordinate_1_based", "preparerclass", "sourceurl",
-    ## "dataprovider", "genome", "maintainer", "tags",
-    "sourcetype"
-  )
-
-  # Iterate through each variable and store it as a table
-  tables <- lapply(variables, function(var) {
-    table <- eval(parse(text = paste0("ah.tables$", var)))
-  })
-  tables <- do.call(cbind, tables)
-
-  colnames(tables) <- variables
-  names(tables) <- variables
-  return(tables)
-}
-
-
 #' Check if probes can be detected by Orthogene or AnnotHub/OrgDb
 #' annotation engines.
 #'
@@ -863,60 +537,20 @@ check_probetype <- function(organism, probes, verbose=1) {
 #' Automatically detects species by trying to detect probetype from
 #' list of test_species. Warning. bit slow.
 #'
+#' Forwards to `playbase.annotation::check_species_probetype()`.
+#'
 #' @export
 check_species_probetype <- function(
   probes,
   test_species = c("Human", "Mouse", "Rat"),
   datatype = NULL, annot.cols = NULL
 ) {
-  ## No check if custom
-  custom_datatype <- !is.null(datatype) && tolower(datatype) %in% c("custom", "unknown", "")
-  custom_organism <- any(tolower(test_species) %in% c("custom", "unknown", "no organism"))
-
-  if (custom_datatype || custom_organism) {
-    out <- rep("custom", length(test_species))
-    names(out) <- test_species
-    return(as.list(out))
-  }
-
-  probes <- unique(.clean_probe_names(probes))
-  ## report possible probetype per organism
-  ptype <- vector("list", length(test_species))
-  names(ptype) <- test_species
-  if (datatype == "metabolomics") {
-    mx.type <- NA
-    if (!is.null(annot.cols)) {
-      mx.ids <- toupper(colnames(playdata::METABOLITE_ID)[-1])
-      mx.ids <- c(mx.ids, paste0(mx.ids, "_ID"))
-      has.id <- any(toupper(annot.cols) %in% mx.ids)
-      if (has.id) {
-        ids <- intersect(toupper(annot.cols), mx.ids)
-        mx.type <- ids[1]
-      }
-    }
-    if (all(is.na(mx.type))) {
-      db <- mx.check_mapping(probes, check.first = TRUE)
-      table(db)
-      if (!all(is.na(db))) {
-        mx.type <- names(which.max(table(db[!is.na(db)])))
-      }
-    }
-    for (s in test_species) ptype[[s]] <- mx.type
-  } else {
-    s <- "Human"
-    for (s in test_species) {
-      ptype[[s]] <- detect_probetype(
-        organism = s,
-        probes = probes,
-        datatype = datatype,
-        verbose = FALSE
-      )
-    }
-  }
-
-  ## remove NA
-  ptype <- ptype[!sapply(ptype, function(p) all(is.na(p)))]
-  return(ptype)
+  playbase.annotation::check_species_probetype(
+    probes = probes,
+    test_species = test_species,
+    datatype = datatype,
+    annot.cols = annot.cols
+  )
 }
 
 #' Annotate phosphosite with residue symbol. Feature names must be of
@@ -987,13 +621,8 @@ annotate_phospho_residue <- function(features, detect.only = FALSE) {
 #'
 #' @export
 convert_probetype <- function(organism, probes, target_id, from_id = NULL,
-                              datatype = NULL, orgdb = NULL, verbose = TRUE) {
+                              orgdb = NULL, verbose = TRUE) {
   organism <- normalizeOrganism(organism)
-
-  if (!is.null(datatype) && datatype == "metabolomics") {
-    new.probes <- mx.convert_probe(probes, target_id = target_id)
-    return(new.probes)
-  }
 
   ## get correct OrgDb database for organism
   if (is.null(orgdb)) {
@@ -1028,11 +657,3 @@ convert_probetype <- function(organism, probes, target_id, from_id = NULL,
 }
 
 
-#' Sort/dedupe a set of candidate ortholog symbols, dropping empty and
-#' N/A placeholders. Returns a sorted character vector (possibly empty).
-#'
-#' @noRd
-.clean_ortholog_set <- function(x) {
-  x <- unlist(strsplit(as.character(x), ";"))
-  sort(unique(setdiff(x, c("", NA, "NA", "N/A"))))
-}

@@ -69,7 +69,7 @@ scan_packages <- function(path='R') {
   
   ## commented out entries are now in standard CRAN/cBio repo
   add_github("bigomics/PCSF")
-  add_github("bigomics/playdata")
+  add_github("bigomics/playbase.annotation/inst/playdata-from-libx/playdata@feat/libx2")
   add_github("bigomics/playbase.ingest")
   add_github("bigomics/playbase")
   add_github("bigomics/bigdash")

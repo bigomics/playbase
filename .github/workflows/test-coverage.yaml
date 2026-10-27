@@ -26,7 +26,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::covr, github::YuLab-SMU/ggtree, github::bigomics/playdata
+          extra-packages: any::covr, github::YuLab-SMU/ggtree, github::bigomics/playbase.annotation/inst/playdata-from-libx/playdata@feat/libx2
           needs: coverage
 
       - name: Test coverage

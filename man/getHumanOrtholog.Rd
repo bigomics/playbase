@@ -14,7 +14,5 @@ getHumanOrtholog(
 )
 }
 \description{
-Get human ortholog from given symbols of organism by
-  aggregation of multiple methods. This package needs internet
-  connection.
+Forwards to `playbase.annotation::getHumanOrtholog()`.
 }
