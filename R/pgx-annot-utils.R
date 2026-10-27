@@ -167,6 +167,9 @@ strip_prefix <- function(s) {
   probes <- sub(".*[:]", "", probes)
   ## strip away any postfix after a 'dot' or 'dash' (mostly isoforms)
   probes <- sub(paste0("[",sep,"].*"), "", probes)
+  ## strip numeric prefix before a UniProt accession (e.g. '3_Q13257'),
+  ## otherwise the number is taken as ENTREZID below
+  probes <- sub("^[0-9]+_(?=[A-Z][0-9][A-Z0-9]{3}[0-9])", "", probes, perl = TRUE)
   ## strip away anything postfix after 'underscore' if *not* refseq
   is.refseq <- grepl("^[NXW][MRPCGTWZ]_",probes)
   probes <- ifelse(is.refseq, probes, sub(paste0(sep2,".*"), "", probes))
