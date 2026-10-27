@@ -134,7 +134,6 @@ Imports:
     scran,
     Seurat,
     SeuratObject,
-    sf,
     shiny,
     SILGGM,
     SingleR,
