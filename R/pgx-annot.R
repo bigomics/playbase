@@ -174,6 +174,31 @@ getProbeAnnotation <- function(organism,
     kk <- match(rownames(genes), rownames(annot_table))
     annot_table <- annot_table[kk,]
     rownames(annot_table) <- rownames(genes)
+
+    ## Rows whose probe did not map, or mapped to another gene than the
+    ## user symbol (e.g. 'Stearoyl-CoA desaturase_SCD'): annotate on the
+    ## user symbol so gene_title, human_ortholog etc. follow it. Also
+    ## vendor columns: Spectronaut PG.Genes, DIA-NN Genes, MaxQuant Gene names.
+    sym.col <- grep("^symbol$|^(PG[.])?Genes$|^Gene[ .]names$",
+      colnames(annot_table), ignore.case = TRUE, value = TRUE)[1]
+    is.gene <- !annot.unknown && !datatype %in% c("metabolomics", "lipidomics", "multi-omics")
+    if (is.gene && !is.na(sym.col)) {
+      usym <- sub(";.*", "", annot_table[, sym.col])
+      ii <- which(!usym %in% c(NA, "") & usym != genes$symbol)
+      g2 <- NULL
+      if (length(ii)) {
+        info("[getProbeAnnotation] annotating", length(ii), "features on", sym.col)
+        ## probe_type: autodetect picks ALIAS for symbols (TF -> F3)
+        g2 <- getGeneAnnotation(organism, usym[ii],
+          ortholog_species = ortholog_species, probe_type = "SYMBOL")
+      }
+      jj <- which(g2$symbol == usym[ii]) ## only if confirmed official symbol
+      if (length(jj)) {
+        g2$feature <- genes$feature[ii]
+        for (k in setdiff(colnames(g2), colnames(genes))) genes[[k]] <- NA
+        genes[ii[jj], colnames(g2)] <- g2[jj, ]
+      }
+    }
     genes <- merge_annot_table(genes, annot_table, priority = 2)
   }
 
@@ -196,7 +221,8 @@ getGeneAnnotation <- function(
   use.ah = NULL,
   methods = c("annothub", "gprofiler","uniprot"),
   ortholog_species = "Human",
-  verbose = TRUE
+  verbose = TRUE,
+  probe_type = NULL
 ) {
 
   organism <- normalizeOrganism(organism)
@@ -233,6 +259,7 @@ getGeneAnnotation <- function(
           organism = organism,
           probes = missing_probes,
           use.ah = use.ah,
+          probe_type = probe_type,
           verbose = verbose
         ),
         "gprofiler" = getGeneAnnotation.GPROFILER(
