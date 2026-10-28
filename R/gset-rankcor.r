@@ -166,7 +166,10 @@ gset.averageCLR <- function(X, matG, center = TRUE, use.rank = FALSE) {
   tG <- Matrix::t(1 * (matG != 0))
   nobs <- tG %*% (1 * !is.na(X))
   X[is.na(X)] <- 0
-  gsetX <- (tG %*% X) / (1e-8 + nobs)
+  gsetX <- as.matrix((tG %*% X) / (1e-8 + nobs))
+  ## A set whose members are all NA stays NA, as before, so downstream
+  ## NA filters and fallbacks still catch it. Empty sets stay 0.
+  gsetX[as.matrix(nobs) == 0 & Matrix::rowSums(tG) > 0] <- NA
   if (center) gsetX <- gsetX - Matrix::rowMeans(gsetX, na.rm = TRUE)
   as.matrix(gsetX)
 }
