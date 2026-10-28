@@ -160,9 +160,13 @@ gset.averageCLR <- function(X, matG, center = TRUE, use.rank = FALSE) {
     ## not recommended for sparse matrix. will render dense.
     X <- colSignedRanks(X) ## playbase
   }
-  sumG <- 1e-8 + Matrix::colSums(matG != 0, na.rm = TRUE)
-  nG <- Matrix::colScale(1 * (matG != 0), 1 / sumG)
-  gsetX <- Matrix::t(nG) %*% X
+  ## Average over the members that have a value. One NA member (a
+  ## feature with no fold change, common in metabolomics/lipidomics
+  ## panels with missing values) would otherwise make the set NA.
+  tG <- Matrix::t(1 * (matG != 0))
+  nobs <- tG %*% (1 * !is.na(X))
+  X[is.na(X)] <- 0
+  gsetX <- (tG %*% X) / (1e-8 + nobs)
   if (center) gsetX <- gsetX - Matrix::rowMeans(gsetX, na.rm = TRUE)
   as.matrix(gsetX)
 }
