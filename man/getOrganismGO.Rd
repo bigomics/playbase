@@ -10,7 +10,7 @@ getOrganismGO(
   features = NULL,
   minsize = 3L,
   batch_size = 2000L,
-  db = c("annothub", "gprofiler"),
+  db = c("annothub", "gprofiler", "uniprot"),
   include_iea = TRUE,
   go.only = TRUE,
   annot = NULL
