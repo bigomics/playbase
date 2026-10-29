@@ -1,5 +1,8 @@
 # playbase (development version)
 
+* Numeric single-cell feature, mitochondrial, and hemoglobin QC thresholds now
+  activate the corresponding cell filters in `pgx.createSeuratObject()`.
+
 ## Breaking changes
 
 * `is.xxl()` and `mofa.log1s()` removed from the public API. Both were exported

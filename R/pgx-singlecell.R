@@ -452,10 +452,13 @@ pgx.createSeuratObject <- function(counts,
 
   if (filter) {
     message("[pgx.createSeuratObject] Filtering cells")
-    flts <- unlist(lapply(sc_compute_settings, function(x) isTRUE(x)))
+    thresholds <- c("nfeature_threshold", "mt_threshold", "hb_threshold")
+    flts <- thresholds[vapply(thresholds, function(name) {
+      value <- sc_compute_settings[[name]]
+      is.numeric(value) && length(value) > 0L
+    }, logical(1))]
 
-    if (any(flts)) {
-      flts <- names(flts)[which(flts)]
+    if (length(flts) > 0L) {
 
       nfeat_thr <- c(0, 1e200)
       if ("nfeature_threshold" %in% flts) {

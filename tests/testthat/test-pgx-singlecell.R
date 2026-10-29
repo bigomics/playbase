@@ -29,3 +29,34 @@ test_that("rename_by2 maps sparse mouse counts to human symbols without summing 
   ## unmapped gene dropped
   expect_false("novel1" %in% rownames(out))
 })
+
+test_that("numeric single-cell QC thresholds filter cells", {
+  counts <- Matrix::Matrix(
+    rbind(
+      G1 = c(10, 10, 10, 10),
+      G2 = c(10, 0, 0, 0),
+      G3 = c(10, 0, 0, 0),
+      `MT-ND1` = c(0, 10, 0, 0),
+      HBA1 = c(0, 0, 10, 0)
+    ),
+    sparse = TRUE
+  )
+  colnames(counts) <- paste0("cell", 1:4)
+  samples <- data.frame(row.names = colnames(counts))
+  make_object <- function(settings) {
+    pgx.createSeuratObject(
+      counts, samples, batch = NULL, cellcyclescores = FALSE,
+      preprocess = FALSE, sc_compute_settings = settings
+    )
+  }
+
+  expect_equal(ncol(make_object(list())), 4L)
+  expect_equal(ncol(make_object(list(regress_mt = TRUE))), 4L)
+  expect_equal(ncol(make_object(list(mt_threshold = FALSE))), 4L)
+  expect_setequal(colnames(make_object(list(nfeature_threshold = c(1, 4)))),
+                  paste0("cell", 1:3))
+  expect_setequal(colnames(make_object(list(mt_threshold = 10))),
+                  c("cell1", "cell3", "cell4"))
+  expect_setequal(colnames(make_object(list(hb_threshold = 10))),
+                  c("cell1", "cell2", "cell4"))
+})
