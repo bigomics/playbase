@@ -13,10 +13,10 @@
 #'
 #' @export
 getOrganismGO <- function(organism, features=NULL, minsize=3L, batch_size=2000L,
-                          db = c("annothub","gprofiler"), include_iea=TRUE,
+                          db = c("annothub","gprofiler","uniprot"), include_iea=TRUE,
                           go.only = TRUE, annot = NULL) {
 
-  gmt1=gmt2=NULL
+  gmt1=gmt2=gmt3=NULL
   if(is.null(db) || "annothub" %in% db) {
     gmt1 <- getOrganismGO.ANNOTHUB(organism, use.ah=NULL, orgdb=NULL)
     if(is.null(db) && !is.null(gmt1)) db <- "annothub"
@@ -43,8 +43,15 @@ getOrganismGO <- function(organism, features=NULL, minsize=3L, batch_size=2000L,
     table(sub(":.*","",names(gmt2)))
   }
 
+  ## last resort: UniProt. Does not need features but downloads the
+  ## whole proteome, so only if the others gave nothing.
+  if("uniprot" %in% db && is.null(gmt1) && is.null(gmt2)) {
+    gmt3 <- getOrganismGO.UNIPROT(organism, reviewed = FALSE)
+    message(paste("Got",length(gmt3),"GO terms from UniProt"))
+  }
+
   ## merge
-  gmt <- c(gmt1, gmt2)
+  gmt <- c(gmt1, gmt2, gmt3)
   if(length(gmt)==0) {
     message("WARNING: empty gene sets")
     return(NULL)
@@ -232,3 +239,64 @@ getOrganismGO.GPROFILER <- function(organism, features, batch_size=2000,
   return(gmt)
 }
 
+
+
+#' Get GO gene sets for organism from UniProt (via UniProt.ws). Works
+#' for any organism in UniProt, also those without OrgDb or g:Profiler
+#' support. UniProt only gives direct annotations, so terms are
+#' propagated to their GO.db ancestors (like GOALL in AnnotationHub).
+getOrganismGO.UNIPROT <- function(organism, reviewed = FALSE, verbose = 1) {
+  if (!requireNamespace("UniProt.ws", quietly = TRUE)) {
+    message("[getOrganismGO.UNIPROT] UniProt.ws not installed; skipping")
+    return(NULL)
+  }
+  taxid <- getTaxId.UNIPROT(organism)
+  if (is.null(taxid)) {
+    message("[getOrganismGO.UNIPROT] WARNING: unknown organism '", organism, "'")
+    return(NULL)
+  }
+  if (verbose) message("[getOrganismGO.UNIPROT] Getting GO from UniProt for taxId ", taxid)
+
+  query <- paste0("organism_id:", taxid)
+  if (reviewed) query <- c(query, "reviewed:true")
+  res <- try(UniProt.ws::queryUniProt(
+    query = query,
+    fields = c("accession", "gene_primary", "go_p", "go_c", "go_f"),
+    collapse = " AND ",
+    n = Inf,
+    pageSize = 500L
+  ), silent = TRUE)
+  if (inherits(res, "try-error") || is.null(res) || nrow(res) == 0) {
+    message("[getOrganismGO.UNIPROT] WARNING: no results from UniProt")
+    return(NULL)
+  }
+
+  ## use gene symbol, fallback to accession
+  gene <- res[[2]]
+  gene <- ifelse(is.na(gene) | gene == "", res[[1]], gene)
+
+  ancestors <- list(
+    BP = as.list(GO.db::GOBPANCESTOR),
+    CC = as.list(GO.db::GOCCANCESTOR),
+    MF = as.list(GO.db::GOMFANCESTOR)
+  )
+  gmt <- list()
+  for (i in 1:3) {
+    k <- names(ancestors)[i]
+    go <- regmatches(res[[i + 2]], gregexpr("GO:[0-9]{7}", res[[i + 2]]))
+    gg <- rep(gene, sapply(go, length))
+    go <- unlist(go)
+    ## propagate to ancestors
+    anc <- lapply(ancestors[[k]][go], setdiff, "all")
+    gg <- c(gg, rep(gg, sapply(anc, length)))
+    go <- c(go, unlist(anc))
+    sets <- lapply(split(gg, go), unique)
+    sets <- sets[names(sets) %in% AnnotationDbi::keys(GO.db::GOTERM)]
+    term <- sapply(GO.db::GOTERM[names(sets)], AnnotationDbi::Term)
+    names(sets) <- paste0("GO_", k, ":", term, " (", sub("GO:", "GO_", names(sets)), ")")
+    gmt <- c(gmt, sets)
+  }
+
+  if (verbose) message("[getOrganismGO.UNIPROT] got ", length(gmt), " GO terms")
+  gmt
+}

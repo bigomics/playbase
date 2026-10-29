@@ -77,13 +77,30 @@ getProbeAnnotation <- function(organism,
   if (is.null(ortholog_species)) ortholog_species <- "Human"
   if (is.null(probetype)) probetype <- "unknown"
 
+  if(is.null(organism) && is.null(annot_table)) {
+    info("[getProbeAnnotation] ERROR: organism and annot table cannot be both NULL")
+    return(NULL)
+  }
+  
+  if(is.null(organism) && !is.null(annot_table)) {
+    if(!"species" %in% colnames(annot_table)) {
+      info("[getProbeAnnotation] ERROR: missing 'species' column in annot")
+      return(NULL)
+    }
+    organism <- unique(annot_table$species)
+    organism <- setdiff(organism, c(NA,""))
+    info("[getProbeAnnotation] From annotation table: organisms = ",organism)
+  }
+  
   # organism can be a vector (multi-species): all() keeps a mixed table from
   # being treated as unknown
-  unknown.organism <- all(tolower(organism) %in% c("no organism", "custom", "unknown"))
-  unknown.datatype <- (datatype %in% c("custom", "unknown"))
-  unknown.probetype <- (probetype %in% c("custom", "unknown"))
+  unknown.organism = unknown.datatype = unknown.probetype = FALSE
+  ## unknown.organism <- all(tolower(organism) %in% c("no organism", "custom", "unknown"))
+  ## unknown.datatype <- (datatype %in% c("custom", "unknown"))
+  ## unknown.probetype <- (probetype %in% c("custom", "unknown"))
   annot.unknown <- unknown.organism || unknown.datatype || unknown.probetype
   organism <- normalizeOrganism(organism)
+  info("[getProbeAnnotation] normalized organisms = ",paste(organism,collapse=", "))
   
   if (datatype == "methylomics") {
     require_epigenetics()
@@ -91,6 +108,7 @@ getProbeAnnotation <- function(organism,
     if (is.null(meth_type) || !meth_type %in% c("450K array", "EPIC array")) {
       meth_type <- "450K array"
     }
+    organism <- organism[1]  ## only single organism for now
     genes <- playbase.epigenetics::annotate_methylomics(organism, probes, meth_type = meth_type)
     return(genes)
   }
@@ -105,28 +123,33 @@ getProbeAnnotation <- function(organism,
 
   ## only first feature (warning: can make probe not unique). This
   ## assumes semicolumn is NEVER used for single feature names. 
-  probes <- sub("[;].*","",probes) ## only first probe
-  probes <- make_unique(probes)
+  probes <- make_unique(first_feature(probes)) ## only first probe
   
   # Multi-species: annotate each species separately and reassemble. Single
   # species is the same path as before (jj = all probes).
-  species <- organism
-  spcol <- if (is.null(annot_table)) NULL else {
-    x <- intersect(c("organism", "species"), tolower(colnames(annot_table)))
-    if (length(x) > 0) x[1] else NULL
+  spcol <- NULL
+  is.multispecies <- length(organism) > 1
+  if (is.multispecies) {
+    if(is.null(annot_table)) {
+      stop("[getProbeAnnotation] multi-species needs an annotation table ")
+    }
+    spcol <- grep("^organism$|^species$",colnames(annot_table),ignore.case=TRUE)[1]
+    if (length(spcol) == 0) {
+      stop("[getProbeAnnotation] multi-species needs an annotation table ",
+        "with a 'species' or 'organism' column")
+    }
+    species <- as.character(unique(annot_table[, spcol]))
+  } else {
+    ## single species
+    species <- organism
   }
-  if (!is.null(spcol)) species <- as.character(unique(annot_table[, spcol]))
-
+  
   annot.list <- list()
   for (i in seq_along(species)) {
     message("[playbase::getProbeAnnotation] >>> annotating organism: ", species[i])
     
     jj <- seq_along(probes)
     if (length(species) > 1) {
-      if (is.null(spcol)) {
-        stop("[getProbeAnnotation] multi-species needs an annotation table ",
-          "with a 'species' or 'organism' column")
-      }
       jj <- which(as.character(annot_table[, spcol]) == species[i])
     }
 
@@ -171,7 +194,6 @@ getProbeAnnotation <- function(organism,
       } else {
         is.phospho <- FALSE
       }
-      
       genes <- getGeneAnnotation(
         organism = species[i],
         probes = probes[jj],
@@ -180,23 +202,26 @@ getProbeAnnotation <- function(organism,
         is.phospho = is.phospho
       )
     }
-
+    
     ## final fallback is genes==NULL
     if (is.null(genes)) {
-      dbg("[getProbeAnnotation] WARNING: fallback to UNKNOWN probes")
-      genes <- getCustomAnnotation(probes0[jj], custom_annot = NULL)
+      dbg("[getProbeAnnotation] WARNING: fallback to CUSTOM annotation")
+      ##genes <- getCustomAnnotation(probes0[jj], custom_annot = NULL)
+      genes <- getCustomAnnotation2(probes0[jj], annot_table[jj, , drop = FALSE])      
     }
 
     ## if annot_table is provided we (priority) override our annotation
     ## and append any extra columns.
     if (!is.null(genes) && !is.null(annot_table)) {
-      dbg("[getProbeAnnotation] merging custom annotation table")
-      colnames(annot_table) <- sub("^Symbol$|^gene$|^gene_name$", "symbol",
-        colnames(annot_table), ignore.case = TRUE )
+      dbg("[getProbeAnnotation] merging custom annotation table...")
       at <- annot_table[jj, , drop = FALSE]
-      at <- at[match(rownames(genes), rownames(at)), , drop = FALSE]
-      rownames(at) <- rownames(genes)
-      genes <- merge_annot_table(genes, at, priority = 2)
+      ##at <- at[match(rownames(genes), rownames(at)), , drop = FALSE]
+      rownames(at) <- rownames(genes)      
+      colnames(at) <- sub("^gene$|^genes$|^gene_name|^gene_names$", "symbol",
+        colnames(at), ignore.case = TRUE )
+      colnames(at) <- sub(".*description$|.*title$", "gene_title",
+        colnames(at), ignore.case = TRUE )
+      genes <- merge_annot_table(genes, at, priority=2)
     }
 
     ## ensure full dimensions; restore original probe names; clean up
@@ -208,7 +233,8 @@ getProbeAnnotation <- function(organism,
       genes$species <- species[i]
     }
     annot.list[[species[i]]] <- genes
-  }
+
+  }  ## end of seq_along(species)
 
   # Annotation sources return different columns per species; conform before rbind
   cols <- unique(unlist(lapply(annot.list, colnames), use.names = FALSE))
@@ -222,6 +248,12 @@ getProbeAnnotation <- function(organism,
   names(annot.list) <- NULL
   annot <- do.call(rbind, annot.list)
   annot <- annot[match(probes, annot$feature),] 
+  rownames(annot) <- probes0
+
+  # If provided, override any missing values with annotation table.
+  if(!is.null(annot_table)) {
+    annot <- merge_annot_table(annot, annot_table, priority = 2)
+  }
   
   return(annot)
 }
@@ -337,7 +369,6 @@ getGeneAnnotation <- function(
     )
     annot$ortholog <- ortho$ortholog    ## single-valued
     annot$ortholog_description <- ortho$description
-    annot$description_source <- organism
         
     ## A number of downstream resources (default genesets, TileDB,
     ## CMAP, GENE_SUMMARY, Reactome/WikiPathways, GTEx tissue,
@@ -371,7 +402,6 @@ getGeneAnnotation <- function(
       ii <- which( title.missing & has.ortho_description )
       if(length(ii)) {
         annot$gene_title[ii] <- annot$ortholog_description[ii]
-        annot$description_source[ii] <- ortholog_species
       }
 
       title.missing <- annot$gene_title %in% na.strings | grepl(missing.regex,tolower(annot$gene_title))
@@ -380,7 +410,6 @@ getGeneAnnotation <- function(
       ii <- which( title.missing & has.human_description )
       if(length(ii)) {
         annot$gene_title[ii] <- annot$human_description[ii]
-        annot$description_source[ii] <- "human"
       }
       
     }
@@ -989,10 +1018,10 @@ cleanupAnnotation <- function(genes) {
   genes$ortholog[is.na(genes$ortholog)] <- ""
   if (!is.null(genes$human_ortholog)) genes$human_ortholog[is.na(genes$human_ortholog)] <- ""
 
-  # replace NA or empty symbol by "{feature}" so there is always a readable name
+  # replace NA or empty symbol by "{feature}" so there is always a readable symbol name
   ii <- which(genes$symbol %in% c(NA, "", "-"))
   genes$symbol[ii] <- paste0("{", genes$feature[ii], "}")
-  genes$gene_title[ii] <- "Unknown feature"
+  genes$gene_title[ii] <- ""
 
   # if organism is human, ortholog should be NA (matching old
   # playbase annot). NEED RETHINK (this is not very consistent).
@@ -1138,21 +1167,27 @@ getCustomAnnotation <- function(probes, custom_annot) {
 #' implementation. Should eventually replace getCustomAnnotation().
 #'
 #' @export
-getCustomAnnotation2 <- function(probes, custom_annot, feature.col = "feature",
-                                 symbol.col = "symbol", gene_title.col = "gene_title",
+getCustomAnnotation2 <- function(probes, custom_annot,
+                                 feature.col = "feature",
+                                 symbol.col = "symbol",
+                                 gene_title.col = "gene_title",
                                  ortholog.col = "ortholog",
                                  extra.columns = TRUE) {
-  #  feature.col='feature';symbol.col='symbol';gene_title.col='gene_title';ortholog.col='ortholog';extra.columns = TRUE
-
+  ##  feature.col='feature';symbol.col='symbol';gene_title.col='gene_title';ortholog.col='ortholog';extra.columns = TRUE
   message("[getCustomAnnotation2] Adding custom annotation table...")
-  # Create custom gene table from probe names
+
+  ## only first feature! (warning: can make probes non-unique)
+  probes1 <- first_feature(probes) ## only first probe
+
+  ## Create custom gene table from probe names
   message("[getCustomAnnotation2] Creating annotation table from probe names...")
   annot <- data.frame(
-    feature = probes,
-    symbol = probes,
-    gene_name = probes,
+    feature = probes1,
+    symbol = probes1,
+    gene_name = probes1,
     ortholog = NA,
     gene_title = "unknown",
+    ##orig.feature = probes,
     ## chr = NA,
     source = "custom"
   )
@@ -1196,13 +1231,14 @@ getCustomAnnotation2 <- function(probes, custom_annot, feature.col = "feature",
       ), 1)
       if (length(ortholog.col) == 0) ortholog.col <- NA
     }
-
+    
     features <- custom_annot[, feature.col]
     custom_annot <- custom_annot[match(probes, features), ]
 
     # Rename columns
     newcols <- c(
-      "feature" = feature.col, "symbol" = symbol.col,
+      "feature" = feature.col,
+      "symbol" = symbol.col,
       "gene_title" = gene_title.col,
       "ortholog" = ortholog.col
     )
@@ -1213,10 +1249,10 @@ getCustomAnnotation2 <- function(probes, custom_annot, feature.col = "feature",
     }
 
     if ("feature" %in% colnames(custom_annot)) {
-      annot$feature <- custom_annot[, "feature"]
+      annot$feature <- first_feature(custom_annot[, "feature"])
     }
     if ("symbol" %in% colnames(custom_annot)) {
-      annot$symbol <- custom_annot[, "symbol"]
+      annot$symbol <- first_feature(custom_annot[, "symbol"])
     }
     if ("gene_title" %in% colnames(custom_annot)) {
       annot$gene_title <- custom_annot[, "gene_title"]
@@ -1779,6 +1815,23 @@ getExampleFeatures.GPROFILER <- function(organism, n) {
   sample(out$name, n)
 }
 
+#' Taxonomy ID for UniProt.ws queries. Prefer our own species table:
+#' it's exact and sidesteps species_name strings (e.g. "Cricetulus
+#' barabensis_griseus") that don't match UniProt's own species names
+#' for pattern search. Returns NULL if not found.
+getTaxId.UNIPROT <- function(organism) {
+  species_table <- data.frame(playbase::SPECIES_TABLE)
+  taxid <- species_table$taxonomyid[match(organism, species_table$species_name)]
+  taxid <- taxid[!is.na(taxid)]
+  if (length(taxid) == 0) {
+    organism <- normalizeOrganism(organism)
+    sp <- try(UniProt.ws::availableUniprotSpecies(pattern = organism), silent = TRUE)
+    if (inherits(sp, "try-error") || is.null(sp) || nrow(sp) == 0) return(NULL)
+    taxid <- sp[1, "Taxon Node"]
+  }
+  taxid[1]
+}
+
 #' Example features (UniProt accessions) for organisms with no OrgDb
 #' package and no g:Profiler entry. Last-resort fallback: pulls a random
 #' sample of that organism's UniProt.ws keys directly.
@@ -1788,22 +1841,11 @@ getExampleFeatures.UNIPROT <- function(organism, n) {
     return(NULL)
   }
 
-  ## Prefer the taxonomy ID from our own species table: it's exact and
-  ## sidesteps species_name strings (e.g. "Cricetulus barabensis_griseus")
-  ## that don't match UniProt's own species names for pattern search.
-  species_table <- data.frame(playbase::SPECIES_TABLE)
-  taxid <- species_table$taxonomyid[match(organism, species_table$species_name)]
-  taxid <- taxid[!is.na(taxid)]
-  if (length(taxid) == 0) {
-    organism <- normalizeOrganism(organism)
-    sp <- try(UniProt.ws::availableUniprotSpecies(pattern = organism), silent = TRUE)
-    if (inherits(sp, "try-error") || is.null(sp) || nrow(sp) == 0) {
-      message("[getExampleFeatures.UNIPROT] unknown species")
-      return(NULL)
-    }
-    taxid <- sp[1, "Taxon Node"]
+  taxid <- getTaxId.UNIPROT(organism)
+  if (is.null(taxid)) {
+    message("[getExampleFeatures.UNIPROT] unknown species")
+    return(NULL)
   }
-  taxid <- taxid[1]
   up <- try(UniProt.ws::UniProt.ws(taxId = taxid), silent = TRUE)
   if (inherits(up, "try-error")) {
     message("[getExampleFeatures.UNIPROT] could not connect for taxId ", taxid)

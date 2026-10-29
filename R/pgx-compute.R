@@ -1359,7 +1359,7 @@ pgx.add_GMT <- function(pgx,
         organism = pgx$organism,
         annot = pgx$genes,
         features = full_feature_list,
-        db = c("annothub","gprofiler"),
+        db = c("annothub","gprofiler","uniprot"),
         include_iea = include_iea)
     }, error = function(e) {
       message("Error in getOrganismsGO:", e)
@@ -1373,7 +1373,7 @@ pgx.add_GMT <- function(pgx,
           organism = pgx$ortholog_species,
           annot = pgx$genes,
           features = full_feature_list,
-          db = c("annothub","gprofiler"),
+          db = c("annothub","gprofiler","uniprot"),
           include_iea = include_iea)
       }, error = function(e) {
         message("Error in getOrganismsGO:", e)

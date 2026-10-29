@@ -107,6 +107,7 @@ merge_annot_table <- function(df, df2, priority = 1) {
   if (inherits(df2, "matrix")) {
     df2 <- as.data.frame(df2)
   }
+  
   ## add columns by filling missing values in df or df2
   cols <- union(colnames(df), colnames(df2))
   for (k in setdiff(cols, colnames(df))) df[[k]] <- NA
@@ -145,7 +146,7 @@ merge_annot_table <- function(df, df2, priority = 1) {
 #' # Returns: "Canis familiaris"
 #'
 #' @export
-normalizeOrganism <- function(organism) {
+normalizeOrganism <- function(organism, na.unknown=TRUE) {
   if (is.null(organism)) return(NULL)
   # organism can be a vector (multi-species), so loop over elements
   out <- rep(NA, length(organism))
@@ -165,7 +166,8 @@ normalizeOrganism <- function(organism) {
   names(out) <- organism
   ## fix some species
   out <- sub("canis.*familiaris|^dog$", "Canis familiaris", out, ignore.case=TRUE)
-  out
+  if(na.unknown) out[is.na(out)] <- "unknown"
+  return(out)
 }
 
 #' @export
@@ -975,6 +977,47 @@ check_probetype <- function(organism, probes, verbose=1) {
   return(TRUE)
 }
 
+#' Check if a species is supported 
+#' 
+#' @export
+check_species_supported <- function(species, 
+                                    return_type = c("bool","table","list","collapsed")[1]) {
+  S <- playbase::SPECIES_TABLE
+  species <- unique(species)
+  chk <- rep(FALSE, length(species))
+  names(chk) <- species
+  idx <- rep(NA, length(species))
+  names(idx) <- species
+  for(k in seq_along(species)) {
+    i <- which(apply(S, 1, function(a) any(a == species[k])))
+    if(length(i) > 0) {
+      i <- i[1]
+      ah_supported <- !S$ah_species[i] %in% c(NA,"NA","","No organism")
+      gp_supported <- !S$gprofiler_species[i] %in% c(NA,"NA","","No organism")
+      up_supported <- !S$uniprot_species[i] %in% c(NA,"NA","","No organism")
+      chk[k] <- (ah_supported || gp_supported || up_supported)
+      idx[k] <- i
+    }
+  }
+  cols <- c("ah_species","gprofiler_species","uniprot_species")
+  S1 <- S[idx, cols]
+  rownames(S1) <- species
+  return_type <- return_type[1]
+  if(return_type == "table") return(S1)
+  if(return_type %in% c("list","collapsed")) {
+    colnames(S1) <- toupper(sub("_species","",colnames(S1)))
+    id_type <- apply(S1, 1, function(a) colnames(S1)[which(!is.na(a))], simplify=FALSE)
+    if(return_type=="list") {
+      return(id_type)
+    } else {
+      ## collapsed
+      id_type <- sapply(id_type, paste, collapse="+")
+      id_type[which(id_type=="")] <- "error"
+      return(id_type)
+    }
+  }
+  return(chk)
+}
 
 #' Automatically detects species by trying to detect probetype from
 #' list of test_species. Warning. bit slow.
@@ -999,6 +1042,15 @@ check_species_probetype <- function(
   ## removed.
   #probes <- unique(.clean_probe_names(probes))  
 
+  ## Only check if explicitly supported by playbase
+  is.supported <- check_species_supported(test_species, return_type="bool")
+  is.supported
+  test_species <- test_species[which(is.supported)]
+
+  if(length(test_species) == 0 ) {
+    return(NULL)
+  }
+  
   ## report possible probetype per organism
   ptype <- vector("list", length(test_species))
   names(ptype) <- test_species
