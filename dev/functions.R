@@ -32,7 +32,7 @@ scan_packages <- function(path='R') {
   pkg.used <- unique(c(pkg.used, roxygen.pkgs))
 
   ## manually add some missing packages (indirect dependencies needed for remotes)
-  pkg.used <- c(pkg.used, c("sf", "grr"))
+  pkg.used <- c(pkg.used, "grr")
   ## glmGamPoi is only named as a method string (SCTransform, DESeq2), which
   ## the scanner cannot see. Azimuth used to pull it in.
   pkg.used <- c(pkg.used, "glmGamPoi")
