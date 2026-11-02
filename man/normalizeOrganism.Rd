@@ -4,7 +4,7 @@
 \alias{normalizeOrganism}
 \title{Normalize organism name to standard format}
 \usage{
-normalizeOrganism(organism)
+normalizeOrganism(organism, na.unknown = TRUE)
 }
 \arguments{
 \item{organism}{Character string with organism name (e.g., "human", "mouse", "dog")}

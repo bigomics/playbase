@@ -3,7 +3,7 @@
 \name{getGeneAnnotation}
 \alias{getGeneAnnotation}
 \title{Get feature annotation (for RNAseq and proteomics) data using annothub
-or gprofiler.}
+or gprofiler. Single organism.}
 \usage{
 getGeneAnnotation(
   organism,
@@ -17,5 +17,5 @@ getGeneAnnotation(
 }
 \description{
 Get feature annotation (for RNAseq and proteomics) data using annothub
-or gprofiler.
+or gprofiler. Single organism.
 }

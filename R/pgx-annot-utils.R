@@ -19,6 +19,84 @@ getSpeciesAliases <- function(species) {
   unique(as.character(unlist(S[matches, kk])))
 }
 
+#' Return Uniprot 5-letter species mnemonic using 3+2 uppercase
+#' rule. Newer SPECIES_TABLE should have this column. If not recreate
+#' on the fly. Currently not used for lookup but for annotation
+#' postfix.
+#'
+#'
+species_mnemonic.fun <- function(s) {
+  if(grepl("homo sapiens|human",s,ignore.case=TRUE)) return("HUMAN")
+  if(grepl("mus musculus|mouse",s,ignore.case=TRUE)) return("MOUSE")
+  if(grepl("rattus norvegicus|rat",s,ignore.case=TRUE)) return("RAT")
+  if(grepl("saccharomyces cere|yeast",s,ignore.case=TRUE)) return("YEAST")
+  if(grepl("bos taurus|cow",s,ignore.case=TRUE)) return("BOVIN")
+
+  ## lookup in SPECIES_TABLE
+  S <- playbase::SPECIES_TABLE
+  if("uniprot_species" %in% colnames(S)) {
+    ii <- which(apply(S, 1, function(x) any(x == s)))
+    if(length(ii)) {
+      uni <- S[ ii[1], "uniprot_species"]
+      return(uni)
+    }
+  }
+
+  ## else construct manually using 3+2 rule
+  ss <- strsplit(s, split="[ ]")[[1]]
+  if(length(ss)==1) {
+    ss <- substring(s,1,5)
+  } else {
+    ss <- paste0(substring(ss[1],1,3), substring(ss[2],1,2))
+  }
+  ss <- toupper(as.character(ss))
+
+  ## exceptions
+  ss <- sub("NOOR","9XXXX",ss, fixed=TRUE)  ## no organism
+
+  return(ss)
+}
+
+#' Vectorized version of species_mnemonic.fun()
+#' 
+species_mnemonic <- function(s) {
+  sx <- unique(s)
+  mx <- sapply(sx, species_mnemonic.fun)
+  mx[s]
+}
+
+
+#' Approximate reverse lookup from UNIPROT species mnemonic to full
+#' species name.
+#' 
+.mnemonic2species.UNIPROT <- function(m, na.keep=TRUE) {
+  S <- playbase::SPECIES_TABLE
+
+  ## lookup in SPECIES_TABLE
+  if("uniprot_species" %in% colnames(S)) {
+    ii <- which(S[, "uniprot_species"] == m)
+    if(length(ii)) {
+      name <- S[ ii[1], "species_name"]
+      if(na.keep && is.na(name)) name <- m
+      return(name)
+    }
+  }
+
+  ## lookup in using 3+2 rule in SPECIES_TABLE  
+  i0 <- grepl(paste0("^",m), S$species_name, ignore.case=TRUE)
+  rx1 <- paste0("^",substring(m,1,3))
+  rx2 <- paste0("[ ]",substring(m,4,5))
+  i1 <- grepl(rx1, toupper(S$ah_species)) & grepl(rx2, toupper(S$ah_species))
+  i2 <- grepl(rx1, toupper(S$gprofiler_species)) & grepl(rx2, toupper(S$gprofiler_species))  
+  ii <- which(i0 | i1 | i2)
+
+  name <- S[ii[1],"species_name"]
+  if(na.keep && is.na(name)) name <- m
+  return(name)
+}
+
+mnemonic2species.UNIPROT <- Vectorize(.mnemonic2species.UNIPROT, c("m"), USE.NAMES=FALSE)
+
 #' Merges any missing annotation in df with non-missing annotation of
 #' df2.
 #'
@@ -29,6 +107,7 @@ merge_annot_table <- function(df, df2, priority = 1) {
   if (inherits(df2, "matrix")) {
     df2 <- as.data.frame(df2)
   }
+  
   ## add columns by filling missing values in df or df2
   cols <- union(colnames(df), colnames(df2))
   for (k in setdiff(cols, colnames(df))) df[[k]] <- NA
@@ -67,24 +146,28 @@ merge_annot_table <- function(df, df2, priority = 1) {
 #' # Returns: "Canis familiaris"
 #'
 #' @export
-normalizeOrganism <- function(organism) {
-  if (is.null(organism) || is.na(organism)) {
-    return(organism)
+normalizeOrganism <- function(organism, na.unknown=TRUE) {
+  if (is.null(organism)) return(NULL)
+  # organism can be a vector (multi-species), so loop over elements
+  out <- rep(NA, length(organism))
+  ol <- tolower(organism)
+  S <- playbase::SPECIES_TABLE
+  xout <- rep(NA, length(unique(ol)))
+  names(xout) <- unique(ol)
+  for(g in unique(ol)) {
+    ## match with any column in SPECIES_TABLE
+    ii <- which(apply(S, 1, function(x) any(tolower(x) == g)))
+    if(length(ii)) {
+      xout[g] <- S[ ii[1], "ah_species"]
+      if(is.na(xout[g])) xout[g] <- S[ ii[1], "gprofiler_species"]
+    }
   }
-  org_lower <- tolower(organism)
-  if (org_lower == "human") {
-    return("Homo sapiens")
-  }
-  if (org_lower == "mouse") {
-    return("Mus musculus")
-  }
-  if (org_lower == "rat") {
-    return("Rattus norvegicus")
-  }
-  if (grepl("canis.*familiaris|^dog$", org_lower)) {
-    return("Canis familiaris")
-  }
-  organism
+  out <- xout[ol]
+  names(out) <- organism
+  ## fix some species
+  out <- sub("canis.*familiaris|^dog$", "Canis familiaris", out, ignore.case=TRUE)
+  if(na.unknown) out[is.na(out)] <- "unknown"
+  return(out)
 }
 
 #' @export
@@ -356,8 +439,10 @@ getOrgDb <- function(organism, use.ah = NULL) {
   #  }
 
   message("querying AnnotationHub for '", organism, "'\n")
+  patt <- c(organism, "OrgDb")
+  patt <- gsub("[\\(\\)]",".",patt)  ## replace regex special characters
   suppressMessages({
-    ahDb <- try(AnnotationHub::query(ah, pattern = c(organism, "OrgDb")))
+    ahDb <- try(AnnotationHub::query(ah, pattern = patt))
   })
 
   if (length(ahDb) == 0 || inherits(ahDb, "try-error")) {
@@ -410,7 +495,6 @@ collapse_by_humansymbol <- function(obj, annot) {
   map.obj
 }
 
-
 .map_gprofiler_id.SPECIES_TABLE <- function(species) {
   if (is.null(species) || is.na(species) || !nzchar(species)) return(NULL)
   spt <- playbase::SPECIES_TABLE[,c("species_name","ah_species","gprofiler_species")]
@@ -421,9 +505,21 @@ collapse_by_humansymbol <- function(obj, annot) {
   id[1]
 }
 
-#'
+#' Vectorized version of .map_gprofiler_id.ONE
 #' 
 .map_gprofiler_id <- function(species) {
+  if(length(species)==1) return(.map_gprofiler_id.ONE(species))
+  xspecies <- unique(species)
+  id <- c()
+  for(s in xspecies) {
+    id[s] <- .map_gprofiler_id.ONE(s)
+  }
+  as.character(id[species])
+}
+  
+#' Single species lookup for organism to gprofiler id.
+#' 
+.map_gprofiler_id.ONE <- function(species) {
 
   if (is.null(species) || is.na(species) || !nzchar(species)) return(NULL)
 
@@ -589,7 +685,7 @@ detect_probetype <- function(organism, probes, datatype = NULL,
   organism <- normalizeOrganism(organism)
 
   if (is.null(datatype) && all(grepl("[:]", probes))) {
-    dbg("[detect_probetype] datatype is multi-omics?")
+    message("[detect_probetype] datatype is multi-omics?")
     datatype <- "multi-omics"
   }
 
@@ -598,7 +694,14 @@ detect_probetype <- function(organism, probes, datatype = NULL,
     return(probe_type)
   }
 
-  if (!is.null(datatype) && datatype == "multi-omics") {
+  if (!is.null(datatype) && datatype %in% c("methylomics")) {
+    return("cpg_probe")
+  }
+
+  has.prefix <- mean(grepl("[:]", probes)) > 0.88
+  if (!is.null(datatype) && datatype %in% c("multi-omics","multiomics") &&
+        has.prefix ) {
+    ## what about other prefixes/types?
     mx.probes <- sub("^mx:", "", grep("^mx:", probes, value = TRUE))
     px.probes <- sub("^px:", "", grep("^px:", probes, value = TRUE))
     gx.probes <- sub("^gx:", "", grep("^gx:", probes, value = TRUE))
@@ -874,6 +977,47 @@ check_probetype <- function(organism, probes, verbose=1) {
   return(TRUE)
 }
 
+#' Check if a species is supported 
+#' 
+#' @export
+check_species_supported <- function(species, 
+                                    return_type = c("bool","table","list","collapsed")[1]) {
+  S <- playbase::SPECIES_TABLE
+  species <- unique(species)
+  chk <- rep(FALSE, length(species))
+  names(chk) <- species
+  idx <- rep(NA, length(species))
+  names(idx) <- species
+  for(k in seq_along(species)) {
+    i <- which(apply(S, 1, function(a) any(a == species[k])))
+    if(length(i) > 0) {
+      i <- i[1]
+      ah_supported <- !S$ah_species[i] %in% c(NA,"NA","","No organism")
+      gp_supported <- !S$gprofiler_species[i] %in% c(NA,"NA","","No organism")
+      up_supported <- !S$uniprot_species[i] %in% c(NA,"NA","","No organism")
+      chk[k] <- (ah_supported || gp_supported || up_supported)
+      idx[k] <- i
+    }
+  }
+  cols <- c("ah_species","gprofiler_species","uniprot_species")
+  S1 <- S[idx, cols]
+  rownames(S1) <- species
+  return_type <- return_type[1]
+  if(return_type == "table") return(S1)
+  if(return_type %in% c("list","collapsed")) {
+    colnames(S1) <- toupper(sub("_species","",colnames(S1)))
+    id_type <- apply(S1, 1, function(a) colnames(S1)[which(!is.na(a))], simplify=FALSE)
+    if(return_type=="list") {
+      return(id_type)
+    } else {
+      ## collapsed
+      id_type <- sapply(id_type, paste, collapse="+")
+      id_type[which(id_type=="")] <- "error"
+      return(id_type)
+    }
+  }
+  return(chk)
+}
 
 #' Automatically detects species by trying to detect probetype from
 #' list of test_species. Warning. bit slow.
@@ -898,6 +1042,15 @@ check_species_probetype <- function(
   ## removed.
   #probes <- unique(.clean_probe_names(probes))  
 
+  ## Only check if explicitly supported by playbase
+  is.supported <- check_species_supported(test_species, return_type="bool")
+  is.supported
+  test_species <- test_species[which(is.supported)]
+
+  if(length(test_species) == 0 ) {
+    return(NULL)
+  }
+  
   ## report possible probetype per organism
   ptype <- vector("list", length(test_species))
   names(ptype) <- test_species

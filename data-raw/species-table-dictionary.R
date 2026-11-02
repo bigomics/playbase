@@ -70,9 +70,28 @@ SPECIES_TABLE <- .buildSpeciesTable()
 dim(SPECIES_TABLE)
 head(SPECIES_TABLE)
 
-grep("frugiperda",SPECIES_TABLE$species_name)
-grep("falciparum",SPECIES_TABLE$species_name)
-SPECIES_TABLE[1452,]
+ens <- read.csv("data-raw/ensembl_prefix.txt", sep="\t", header=FALSE)
+uni <- read.csv("data-raw/uniprot-speclist.csv", sep=",", header=TRUE)
+head(ens)
+head(uni)
+ens.scientific_name <- sub(" \\(.*","",ens$V2)
+uni.scientific_name <- sub(" \\(.*","",uni$scientific_name)
+
+## fill 5-letter uniprot species mnemonic. If not exists, create 3+2
+## defaults.
+jj <- match( SPECIES_TABLE$taxonomyid, uni$Taxon_ID )
+SPECIES_TABLE$uniprot_species <- uni$Code[jj]
+ii <- which(is.na(SPECIES_TABLE$uniprot_species))
+mn5 <- lapply(strsplit(SPECIES_TABLE$ah_species,split=" "),substring,1,3)
+mn5 <- toupper(substring(sapply(mn5,paste0,collapse=""),1,5))
+SPECIES_TABLE$uniprot_species[ii] <- mn5[ii]
+sum(duplicated(SPECIES_TABLE$uniprot_species))  ## ??
+
+## fill with ENSEMBL mnemonic
+jj <- match( SPECIES_TABLE$ah_species, ens.scientific_name )
+ii <- which(is.na(jj))
+jj[ii] <- match( SPECIES_TABLE$gprofiler_species[ii], ens.scientific_name )
+SPECIES_TABLE$ensembl_species <- ens$V1[jj]
 
 write.table(SPECIES_TABLE, file = "data-raw/SPECIES_TABLE.tsv", sep = "\t",
   quote = FALSE, row.names = FALSE)

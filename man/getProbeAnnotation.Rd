@@ -3,7 +3,9 @@
 \name{getProbeAnnotation}
 \alias{getProbeAnnotation}
 \title{Get probetype annotation for organism and datatype. For multi-omics
-probe names must be prefixed with data type.}
+probe names must be prefixed with data type. This function handles
+multi-species datasets by calling downstream getGeneAnnotation for
+each species.}
 \usage{
 getProbeAnnotation(
   organism,
@@ -17,5 +19,7 @@ getProbeAnnotation(
 }
 \description{
 Get probetype annotation for organism and datatype. For multi-omics
-probe names must be prefixed with data type.
+probe names must be prefixed with data type. This function handles
+multi-species datasets by calling downstream getGeneAnnotation for
+each species.
 }
