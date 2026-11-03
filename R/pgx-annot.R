@@ -221,6 +221,33 @@ getProbeAnnotation <- function(organism,
         colnames(at), ignore.case = TRUE )
       colnames(at) <- sub(".*description$|.*title$", "gene_title",
         colnames(at), ignore.case = TRUE )
+
+      ## Rows whose probe did not map, or mapped to another gene than the
+      ## user symbol (e.g. 'Stearoyl-CoA desaturase_SCD'): annotate on the
+      ## user symbol so gene_title, human_ortholog etc. follow it. Also
+      ## vendor columns: Spectronaut PG.Genes, DIA-NN Genes, MaxQuant Gene names.
+      sym.col <- grep("^symbol$|^(PG[.])?Genes$|^Gene[ .]names$",
+        colnames(at), ignore.case = TRUE, value = TRUE)[1]
+      is.gene <- !(annot.unknown || species.unknown) &&
+        !datatype %in% c("metabolomics", "lipidomics", "multi-omics")
+      if (is.gene && !is.na(sym.col)) {
+        usym <- sub(";.*", "", at[, sym.col])
+        ii <- which(!usym %in% c(NA, "") & usym != genes$symbol)
+        g2 <- NULL
+        if (length(ii)) {
+          info("[getProbeAnnotation] annotating", length(ii), "features on", sym.col)
+          ## probe_type: autodetect picks ALIAS for symbols (TF -> F3)
+          g2 <- getGeneAnnotation(species[i], usym[ii],
+            ortholog_species = ortholog_species, probe_type = "SYMBOL")
+        }
+        ## 'ok', not 'jj': jj holds this species' rows for the loop
+        ok <- which(g2$symbol == usym[ii]) ## only if confirmed official symbol
+        if (length(ok)) {
+          g2$feature <- genes$feature[ii]
+          for (k in setdiff(colnames(g2), colnames(genes))) genes[[k]] <- NA
+          genes[ii[ok], colnames(g2)] <- g2[ok, ]
+        }
+      }
       genes <- merge_annot_table(genes, at, priority=2)
     }
 
@@ -270,7 +297,8 @@ getGeneAnnotation <- function(
   use.ah = NULL,
   methods = c("annothub", "gprofiler","uniprot"),
   ortholog_species = "Human",
-  verbose = TRUE
+  verbose = TRUE,
+  probe_type = NULL
 ) {
 
   if(length(organism)>1) {
@@ -312,6 +340,7 @@ getGeneAnnotation <- function(
           organism = organism,
           probes = missing_probes,
           use.ah = use.ah,
+          probe_type = probe_type,
           verbose = verbose
         ),
         "gprofiler" = getGeneAnnotation.GPROFILER(

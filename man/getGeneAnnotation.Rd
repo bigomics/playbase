@@ -12,7 +12,8 @@ getGeneAnnotation(
   use.ah = NULL,
   methods = c("annothub", "gprofiler", "uniprot"),
   ortholog_species = "Human",
-  verbose = TRUE
+  verbose = TRUE,
+  probe_type = NULL
 )
 }
 \description{
