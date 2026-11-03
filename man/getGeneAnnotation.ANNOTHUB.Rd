@@ -6,7 +6,7 @@
 \usage{
 getGeneAnnotation.ANNOTHUB(
   organism,
-  probes,
+  probes = NULL,
   use.ah = NULL,
   probe_type = NULL,
   second.pass = TRUE,

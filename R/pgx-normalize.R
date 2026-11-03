@@ -131,7 +131,7 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
   if (!m %in% methods) {
     stop("[normalizeExpression]: unknown mormalization method")
   }
-  counts <- 2**X - prior
+  counts <- pmax( 2**X - prior, 0 )  ## force non-negative
   if (m == "CPM") {
     X <- logCPM(counts = counts, total = 1e+06, prior = prior, log = TRUE)
   } else if (m == "quantile") {
