@@ -927,3 +927,116 @@ wgcna.plotPowerAnalysis_multi <- function(exprList,
     title("Dendrogram IQR")
   }
 }
+
+#' Plot module trajectory estimation. The trajectory is estimated as
+#' TSP solution connecting modules with highest cumulative path
+#' correlation or lowest cumulative distance. This may suggest how
+#' eigenmodules are connected/evolve across conditions.
+#'
+#' @param wgcna WGCNA result object containing \code{net$MEs} (module
+#'   eigengenes) and \code{net$colors} (module assignments).
+#' @param start Name of the starting module (e.g. \code{"MEblue"}).
+#' @param k Modules to include. If \code{NULL}, all modules (except grey).
+#'   If numeric, the top \code{k} largest modules. Otherwise a character
+#'   vector of module names.
+#' @param end Optional name of the end module. If given, the tour is
+#'   forced to end at this module.
+#' @param dist Distance used for the TSP: \code{"me.dist"} (euclidean
+#'   distance between eigengenes), \code{"cor"} (1 - correlation) or
+#'   \code{"cor.dist"} (euclidean distance between correlation profiles).
+#' @param posmat Matrix used for the 2D layout: \code{"rho"} (correlation
+#'   matrix) or otherwise the distance matrix.
+#' @param main Plot title. Defaults to \code{"EigenModule Trajectory"}.
+#'
+#' @return Called for its side effect of producing a base R plot.
+#'
+#' @export
+wgcna.plotModuleTrajectory <- function(wgcna, start, k=NULL, end=NULL,
+                                       dist="me.dist", posmat="rho", main=NULL) {
+  ##require(TSP);require(igraph)
+
+  ME <- t(as.matrix(wgcna$net$MEs))
+  ME <- ME[which(rownames(ME)!="MEgrey"),]
+  
+  if(is.null(k)) {
+    k <- rownames(ME)
+  } else if(is.integer(k) || is.numeric(k)) {
+    ord.me <- names(sort(table(wgcna$net$colors),decreasing=TRUE))
+    ord.me <- paste0("ME",ord.me)
+    ord.me <- setdiff(ord.me, c("grey","MEgrey"))    
+    k <- head(ord.me, as.integer(k))
+  } else {
+    k <- intersect(k, rownames(ME))
+  }
+  k <- setdiff(k, c("grey","MEgrey"))
+
+  ##hc=hclust(dist(ME[k,])); plot(hc)
+
+  MErho <- cor(t(ME[k,]))
+  if(dist == "cor") {
+    dist_matrix <- as.dist(1 - MErho)
+  } else if(dist == "cor.dist") {
+    dist_matrix <- dist(MErho)
+  } else if(dist == "me.dist") {
+    dist_matrix <- dist(ME[k,])
+  } else {
+    stop("invalid distance method")
+  }
+  dist_matrix <- as.matrix(dist_matrix)
+  
+  kstart <- which(rownames(MErho) == start)
+  if(!is.null(end)) {
+    kend <- which(rownames(MErho) == end)
+    dist_matrix[,kstart] <- 999
+    dist_matrix[end,kstart] <- 0
+  }
+  
+  # 3. Create a TSP object and solve it
+  tsp_obj <- TSP::ATSP(100*dist_matrix)
+  if(is.null(end)) {
+    tour <- TSP::solve_TSP(tsp_obj, method = "nn", control = list(start=kstart))
+  } else {
+    tour <- TSP::solve_TSP(tsp_obj, method = "repetitive_nn")
+  }
+  
+  # 4. Extract the solution tour and order vertices in igraph
+  sol_indices <- as.integer(tour)
+  istart <- which(sol_indices == kstart)
+  len <- length(sol_indices)
+  if(istart > 1) {
+    sol_indices <- c(sol_indices[istart:len], sol_indices[1:(istart-1)])
+  }
+  ee <- rownames(MErho)[sol_indices]
+  ee
+
+  ## plot modules as PCA
+  if( posmat == "rho") {
+    pos <- svd(MErho)$u[,1:2]
+  } else {
+    pos <- svd(dist_matrix)$u[,1:2]
+  }
+  rownames(pos) <- rownames(MErho)
+  pch1 <- ifelse(rownames(MErho) %in% c(start,end), 19, 1)
+  pch1 = 19
+  cc <- sub("^ME","",rownames(MErho))
+  plot(pos, xlab="PC1", ylab="PC2", cex=2, pch=pch1, col=cc)
+  text(pos, rownames(MErho), pos=3, cex=1.1)
+
+  ## draw trajectory with arrows
+  traj <- cbind( ee[1:(len-1)], ee[2:len] )
+  i=1
+  for(i in 1:nrow(traj)) {
+    a <- traj[i,1]
+    b <- traj[i,2]
+    r <- round(MErho[a,b],2)
+    clr <- sub("^ME","",a)
+    arrows( pos[a,1], pos[a,2], pos[b,1], pos[b,2],
+      col=clr, length=0.4, lwd=6, lty=1)
+    text( mean(c(pos[a,1], pos[b,1])),
+      mean(c(pos[a,2], pos[b,2])),
+      paste0("r=",r), cex=0.8, pos=4)
+      
+  }
+  if(is.null(main)) main <- "EigenModule Trajectory"
+  title(main)
+}
