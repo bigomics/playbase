@@ -169,6 +169,7 @@ pgx.computePCSF <- function(pgx, contrast, datatypes = NULL,
     rm.negedge = rm.negedge,
     dir = dir
   )
+  if (is.null(pcsf)) return(NULL)
 
   ## Reinstate foldchange to actual foldchange
   ## save fc & rho
@@ -305,6 +306,7 @@ pgx.computePCSF_gset <- function(pgx, contrast,
     rm.negedge = rm.negedge,
     dir = dir
   )
+  if (is.null(pcsf)) return(NULL)
 
   ## Reinstate foldchange to actual foldchange
   ## save fc & rho
