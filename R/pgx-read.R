@@ -21,6 +21,13 @@
 #' @export
 read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
                            as.matrix = TRUE, row.names = 1) {
+  ## Excel "CSV" exports on Windows are CP1252, not UTF-8 (e.g. "\u00b5g" in
+  ## sample names). Re-encode once so every read below sees valid UTF-8.
+  utf8 <- utf8_file(file)
+  if (!identical(utf8, file)) {
+    on.exit(unlink(utf8), add = TRUE)
+    file <- utf8
+  }
   ## determine if there are empty lines in header
   x0 <- data.table::fread(
     file = file,
@@ -156,6 +163,25 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
     }
   }
   return(x)
+}
+
+## Re-encode a non-UTF-8 text file to a UTF-8 temp file
+## Windows Excel saves "CSV" as CP1252. A byte like 0xB5 ("\u00b5") is invalid
+## UTF-8 and breaks every regex and string function downstream in a UTF-8
+## locale. Returns `file` unchanged when it is already valid UTF-8.
+utf8_file <- function(file) {
+  if (!is.character(file) || length(file) != 1 || !file.exists(file)) {
+    return(file)
+  }
+  ## ponytail: only the head is checked; a stray byte further down still goes
+  ## through iconv2utf8() on the character columns, as before.
+  if (all(validUTF8(readLines(file, n = 1000, warn = FALSE)))) {
+    return(file)
+  }
+  out <- tempfile(fileext = ".csv")
+  txt <- iconv(readLines(file, warn = FALSE), from = "CP1252", to = "UTF-8", sub = "?")
+  writeLines(txt, out, useBytes = TRUE)
+  out
 }
 
 #' Detect delimiter of text file from header (or first line)
