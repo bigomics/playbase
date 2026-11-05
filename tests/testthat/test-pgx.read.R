@@ -33,3 +33,13 @@ test_that("read.as_matrix works correctly", {
     c(395000000, 895050000, 84760000000, 4760700000, 2390000000, 1290000000, 4680000000, 4680000000)
   )
 })
+
+test_that("read.as_matrix reads a CP1252 (Windows Excel) csv", {
+  ## 0xB5 is "µ" in CP1252 and an invalid byte in UTF-8
+  f <- tempfile(fileext = ".csv")
+  writeBin(charToRaw("Gene;Gd 10 \xb5gL 1;Ctrl 1\r\ntpma;1.5;2\r\n\xb5x;3;4\r\n"), f)
+  x <- read.as_matrix(f, as.char = FALSE)
+  expect_equal(colnames(x), c("Gd 10 µgL 1", "Ctrl 1"))
+  expect_equal(rownames(x), c("tpma", "µx"))
+  expect_equal(as.numeric(x), c(1.5, 3, 2, 4))
+})
