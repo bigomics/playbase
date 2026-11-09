@@ -952,11 +952,13 @@ wgcna.plotPowerAnalysis_multi <- function(exprList,
 #'
 #' @export
 wgcna.plotModuleTrajectory <- function(wgcna, start, k=NULL, end=NULL,
-                                       dist="me.dist", posmat="rho", main=NULL) {
+                                       cex=1, lab.cex = 1, lwd.cex = 1,
+                                       dist="me.dist", posmat="rho",
+                                       plot=TRUE, main=NULL) {
   ##require(TSP);require(igraph)
-
   ME <- t(as.matrix(wgcna$net$MEs))
   ME <- ME[which(rownames(ME)!="MEgrey"),]
+  me.size <- table(paste0("ME",wgcna$net$colors))
   
   if(is.null(k)) {
     k <- rownames(ME)
@@ -971,7 +973,6 @@ wgcna.plotModuleTrajectory <- function(wgcna, start, k=NULL, end=NULL,
   k <- setdiff(k, c("grey","MEgrey"))
 
   ##hc=hclust(dist(ME[k,])); plot(hc)
-
   MErho <- cor(t(ME[k,]))
   if(dist == "cor") {
     dist_matrix <- as.dist(1 - MErho)
@@ -983,6 +984,12 @@ wgcna.plotModuleTrajectory <- function(wgcna, start, k=NULL, end=NULL,
     stop("invalid distance method")
   }
   dist_matrix <- as.matrix(dist_matrix)
+
+  null.start <- FALSE
+  if(is.null(start)) {
+    null.start <- TRUE
+    start <- names(which.max(me.size))
+  }
   
   kstart <- which(rownames(MErho) == start)
   if(!is.null(end)) {
@@ -992,8 +999,8 @@ wgcna.plotModuleTrajectory <- function(wgcna, start, k=NULL, end=NULL,
   }
   
   # 3. Create a TSP object and solve it
-  tsp_obj <- TSP::ATSP(100*dist_matrix)
-  if(is.null(end)) {
+  tsp_obj <- TSP::ATSP(dist_matrix)
+  if(0 && is.null(end)) {
     tour <- TSP::solve_TSP(tsp_obj, method = "nn", control = list(start=kstart))
   } else {
     tour <- TSP::solve_TSP(tsp_obj, method = "repetitive_nn")
@@ -1001,42 +1008,57 @@ wgcna.plotModuleTrajectory <- function(wgcna, start, k=NULL, end=NULL,
   
   # 4. Extract the solution tour and order vertices in igraph
   sol_indices <- as.integer(tour)
-  istart <- which(sol_indices == kstart)
+  start_idx <- which(sol_indices == kstart)
   len <- length(sol_indices)
-  if(istart > 1) {
-    sol_indices <- c(sol_indices[istart:len], sol_indices[1:(istart-1)])
+  if(start_idx > 1) {
+    sol_indices <- c(sol_indices[start_idx:len], sol_indices[1:(start_idx-1)])
   }
   ee <- rownames(MErho)[sol_indices]
-  ee
 
-  ## plot modules as PCA
-  if( posmat == "rho") {
-    pos <- svd(MErho)$u[,1:2]
-  } else {
-    pos <- svd(dist_matrix)$u[,1:2]
+  if(plot) {
+    ## plot modules as PCA
+    if( posmat == "rho") {
+      pos <- svd(MErho)$u[,1:2]
+    } else {
+      pos <- svd(dist_matrix)$u[,1:2]
+    }
+    rownames(pos) <- rownames(MErho)
+    pch1 <- ifelse(rownames(MErho) %in% c(start,end), 19, 1)
+    pch1 = 19
+    cc <- sub("^ME","",rownames(MErho))
+    cx <- me.size[rownames(MErho)]
+    cx <- 4 * cex * (0.15 + cx / max(cx))**0.5
+    plot(pos, xlab="PC1", ylab="PC2", cex=cx, pch=pch1, col=cc)
+    
+    ## draw trajectory with arrows
+    traj <- cbind(ee[1:(len-1)], ee[2:len])
+    
+    ## If no start is given, do a closed tour
+    if(null.start) {
+      traj <- rbind(traj, c(ee[len], ee[1]))
+    }
+    
+    i=1
+    for(i in 1:nrow(traj)) {
+      a <- traj[i,1]
+      b <- traj[i,2]
+      r <- round(MErho[a,b],2)
+      clr <- sub("^ME","",a)
+      lwd <- 8 * lwd.cex * (0.5 + r/2.0)**2
+      arrows( pos[a,1], pos[a,2], pos[b,1], pos[b,2],
+        col=clr, length=0.2, lwd=lwd, lty=1)
+      text( mean(c(pos[a,1], pos[b,1])),
+        mean(c(pos[a,2], pos[b,2])),
+        ##paste0("r=",r), cex=0.8, pos=4)
+        paste0("",r), cex=0.8, pos=4)      
+    }
+    
+    ## labels
+    text(pos, rownames(MErho), pos=3, cex=lab.cex)
+    
+    if(is.null(main)) main <- "EigenModule Trajectory"
+    title(main)
   }
-  rownames(pos) <- rownames(MErho)
-  pch1 <- ifelse(rownames(MErho) %in% c(start,end), 19, 1)
-  pch1 = 19
-  cc <- sub("^ME","",rownames(MErho))
-  plot(pos, xlab="PC1", ylab="PC2", cex=2, pch=pch1, col=cc)
-  text(pos, rownames(MErho), pos=3, cex=1.1)
 
-  ## draw trajectory with arrows
-  traj <- cbind( ee[1:(len-1)], ee[2:len] )
-  i=1
-  for(i in 1:nrow(traj)) {
-    a <- traj[i,1]
-    b <- traj[i,2]
-    r <- round(MErho[a,b],2)
-    clr <- sub("^ME","",a)
-    arrows( pos[a,1], pos[a,2], pos[b,1], pos[b,2],
-      col=clr, length=0.4, lwd=6, lty=1)
-    text( mean(c(pos[a,1], pos[b,1])),
-      mean(c(pos[a,2], pos[b,2])),
-      paste0("r=",r), cex=0.8, pos=4)
-      
-  }
-  if(is.null(main)) main <- "EigenModule Trajectory"
-  title(main)
+  return(ee)
 }

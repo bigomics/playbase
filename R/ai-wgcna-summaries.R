@@ -257,6 +257,7 @@ pgx.update_wgcna_summaries <- function(pgx, ai = NULL) {
   if (is.null(ai)) return(pgx)
   ai <- .ai_resolve_defaults(ai)
   if (is.null(pgx$ai)) pgx$ai <- list()
+  llm_model <- ai$llm_model
 
   if (!is.null(pgx$wgcna)) {
     info("[pgx.update_wgcna_summaries] summarising standard WGCNA modules...")
@@ -264,6 +265,14 @@ pgx.update_wgcna_summaries <- function(pgx, ai = NULL) {
       pgx, pgx$wgcna, ai,
       existing = pgx$ai$wgcna$extras
     )
+
+    ## add short module descriptions (note: perhaps we should add in summary)
+    descr <- wgcna.create_module_titles(
+      pgx$wgcna, llm_model, pgx=pgx, from="extras")
+    for(m in names(descr)) {
+      pgx$ai$wgcna$extras[[m]]$title <- descr[[m]]
+    }
+    
   }
 
   if (!is.null(pgx$wgcna_mox)) {
@@ -272,7 +281,55 @@ pgx.update_wgcna_summaries <- function(pgx, ai = NULL) {
       pgx, pgx$wgcna_mox, ai,
       existing = pgx$ai$wgcna_mox$extras
     )
+
+    ## add short module descriptions (note: perhaps we should add in summary)
+    descr <- wgcna.create_module_titles(
+      pgx$wgcna_mox, llm_model, pgx=pgx, from="extras")
+    for(m in names(descr)) {
+      pgx$ai$wgcna_mox$extras[[m]]$title <- descr[[m]]
+    }
+    
   }
 
   pgx
 }
+
+#' Create 3-6 word AI-generated descriptions of WGCNA modules using
+#' available summary or from GSEA analysis. Note: this is not a module
+#' summary, just a short description of the module (e.g. to use as
+#' title).
+#'
+#'
+wgcna.create_module_titles <- function(wgcna, model, pgx=NULL, from="extras") {
+  modules <- names(wgcna$me.genes)
+  desc <- c()
+  m = "MEyellow"
+  has.extras <- FALSE
+  if(!is.null(pgx)) has.extras <- !is.null(pgx$ai$wgcna$extras)
+
+  cc <- "Create a title describing the overall biological function in 3-6 words. Just in plain text, no markup. Just title. Input:"
+  if(!is.null(pgx) && from == "extras" && has.extras) {
+    message("creating titles using summaries in ai$wgcna$extras")
+    for(m in modules) {
+      summ <- pgx$ai$wgcna$extras[[m]]$summary
+      q <- paste(cc, summ)
+      desc[m] <- ai.ask(q, model=model)
+    }
+  } else if(!is.null(wgcna$gsea))  {
+    message("creating titles using gsea results")
+    for(m in modules) {
+      gsea <- wgcna$gsea[[m]]
+      topsets <- head(rownames(gsea),100)
+      topsets <- gsub(".*[:]|\\(.*","",topsets)
+      topsets <- paste0(trimws(topsets), collapse="; ")
+      q <- paste(cc, topsets)
+      desc[m] <- ai.ask(q, model=model)
+    }
+  } else {
+    message("[wgcna.create_module_titles] ERROR. No module summaries found.")
+    return(NULL)
+  }
+  
+  return(desc)
+}
+

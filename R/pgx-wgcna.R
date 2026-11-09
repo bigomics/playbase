@@ -406,6 +406,11 @@ wgcna.init <- function(wgcna, sv.tom = 40, progress = NULL) {
     wgcna$graph <- wgcna$lasagna$graph
   }
 
+  if (is.null(wgcna$graph)) {
+
+
+  }
+
   wgcna
 }
 
@@ -1261,3 +1266,4 @@ wgcna.getTopMEfeatures <- function(wgcna, n=10, k=NULL, sortby="mm") {
   }
   topF
 }
+
