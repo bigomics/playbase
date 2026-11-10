@@ -2,10 +2,10 @@
 % Please edit documentation in R/pgx-wgcna.R
 \name{wgcna.init}
 \alias{wgcna.init}
-\title{Init/update function}
+\title{Init/update function. Update older version of wgcna results object.}
 \usage{
-wgcna.init(wgcna, annot = NULL, sv.tom = 40, progress = NULL)
+wgcna.init(wgcna, sv.tom = 40, progress = NULL)
 }
 \description{
-Init/update function
+Init/update function. Update older version of wgcna results object.
 }
