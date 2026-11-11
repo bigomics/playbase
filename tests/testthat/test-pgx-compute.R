@@ -896,3 +896,49 @@ test_that("the annotation source pgx.annotate reports is recorded", {
 
   expect_identical(run$pgx$versions$annotation_source, "annot_table")
 })
+
+## Peptide-level (PTM) proteomics keeps its own label but runs the proteomics
+## pipeline unchanged.
+
+test_that(".pgx_pipeline_datatype maps only peptide-level proteomics", {
+  expect_identical(.pgx_pipeline_datatype("proteomics-peptide-level"), "proteomics")
+  for (dt in c("proteomics", "RNA-seq", "metabolomics", "methylomics", "scRNA-seq")) {
+    expect_identical(.pgx_pipeline_datatype(dt), dt)
+  }
+  expect_null(.pgx_pipeline_datatype(NULL))
+})
+
+test_that("createPGX stores peptide-level proteomics under its label, runs it as proteomics", {
+  fixture <- make_pgx_fixture()
+  ## TrEMBL before Swiss-Prot, so the proteomics-only reordering shows.
+  ids <- seq_len(nrow(fixture$counts))
+  rownames(fixture$counts) <- paste0("A0A0", sprintf("%05d", ids), ";P", 10000 + ids)
+  annotated <- character()
+  local_mocked_bindings(
+    pgx.annotate = function(probes, datatype, ...) {
+      annotated <<- c(annotated, datatype)
+      list(genes = data.frame(feature = probes, symbol = probes, row.names = probes))
+    },
+    .package = "playbase.annotation"
+  )
+  create <- function(datatype) {
+    suppressWarnings(suppressMessages(playbase::pgx.createPGX(
+      counts = fixture$counts, samples = fixture$samples,
+      contrasts = fixture$contrasts, organism = "No organism",
+      datatype = datatype, preprocess = list(normalize = FALSE),
+      add.gmt = FALSE, filter.genes = FALSE, only.known = FALSE,
+      only.proteincoding = FALSE, convert.hugo = FALSE
+    )))
+  }
+  rna <- create("RNA-seq")
+  prot <- create("proteomics")
+  peptide <- create("proteomics-peptide-level")
+
+  expect_identical(annotated, c("RNA-seq", "proteomics", "proteomics"))
+  expect_identical(peptide$datatype, "proteomics-peptide-level")
+  expect_identical(prot$datatype, "proteomics")
+  expect_false(identical(rownames(prot$X), rownames(rna$X)))
+  expect_identical(rownames(peptide$X), rownames(prot$X))
+  same <- setdiff(names(prot), c("datatype", "date"))
+  expect_identical(peptide[same], prot[same])
+})

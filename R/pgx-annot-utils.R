@@ -371,7 +371,7 @@ detect_probetype <- function(organism, probes, datatype = NULL,
   playbase.annotation::detect_probetype(
     organism = organism,
     probes = probes,
-    datatype = datatype,
+    datatype = .pgx_pipeline_datatype(datatype),
     nprobe = nprobe,
     verbose = verbose
   )

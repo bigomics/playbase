@@ -116,6 +116,13 @@ pgx.createFromFiles <- function(counts.file,
   pgx
 }
 
+## Datatype the pipeline branches on. Peptide-level (PTM) proteomics is
+## stored under its own label but has no pipeline of its own yet: for now it
+## runs the proteomics pipeline.
+.pgx_pipeline_datatype <- function(datatype) {
+  if (identical(datatype, "proteomics-peptide-level")) "proteomics" else datatype
+}
+
 #' Create a PGX object
 #' This function creates a pgx object, which is the core object in the
 #' OmicsPlayground.
@@ -124,6 +131,9 @@ pgx.createFromFiles <- function(counts.file,
 #' @param organism Default "Human", it indicates the species used
 #' for the gene annotation table and the probe to symbol conversion.
 #' @param contrasts Data frame defining sample contrasts.
+#' @param datatype Data type, e.g. "RNA-seq", "proteomics", "metabolomics".
+#'   "proteomics-peptide-level" is accepted and stored under its own label;
+#'   it currently runs the proteomics pipeline.
 #' @param X (Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.
 #' @param preprocess (Optional) Named list of preprocessing options. Whenever
 #'   `X` is NULL, `X` is built from `counts` via
@@ -230,6 +240,7 @@ pgx.createPGX <- function(counts,
   message("[pgx.createPGX]=========== pgx.createPGX =================")
   message("[pgx.createPGX]===========================================")
   message("\n")
+  pipeline_datatype <- .pgx_pipeline_datatype(datatype)
   message("[pgx.createPGX] datatype = ", datatype, "\n")
   if (!is.null(datatype_subtype)) {
     message("[pgx.createPGX] datatype_subtype = ", datatype_subtype, "\n")
@@ -243,7 +254,7 @@ pgx.createPGX <- function(counts,
   message("[pgx.createPGX] class.counts: ", class(counts))
   message("[pgx.createPGX] counts has ", sum(is.na(counts)), " missing values")
 
-  if (datatype == "scRNA-seq") {
+  if (pipeline_datatype == "scRNA-seq") {
     pgx <- pgx.createSingleCellPGX(
       counts = counts,
       samples = samples,
@@ -267,7 +278,7 @@ pgx.createPGX <- function(counts,
   ## have several replicate probes. Keep the recommended replicate per CpG,
   ## renamed to the bare id, so the pgx only ever holds bare ids - the ids the
   ## annotation, clocks, cell references, EWAS catalog and masks key on.
-  if (identical(datatype, "methylomics") &&
+  if (identical(pipeline_datatype, "methylomics") &&
     any(grepl(EPICV2_SUFFIX, rownames(counts)))) {
     source.ids <- rownames(counts)
     counts <- .pgx_collapse_epicv2(counts)
@@ -422,7 +433,7 @@ pgx.createPGX <- function(counts,
     X = X
   )
 
-  if (datatype == "multi-omics") {
+  if (pipeline_datatype == "multi-omics") {
     has.colons <- mean(grepl("[:]", rownames(counts)), na.rm = TRUE) > 0.9
     if (!has.colons) stop("[pgx.createPGX] FATAL: features must have multi-omics prefix\n")
   }
@@ -445,7 +456,7 @@ pgx.createPGX <- function(counts,
   ## Special case for PTM phospho-proteomics.
   ## -------------------------------------------------------------------
   is.phospho <- annotate_phospho_residue(rownames(counts), detect.only = TRUE)
-  if (datatype == "proteomics" && is.phospho) {
+  if (pipeline_datatype == "proteomics" && is.phospho) {
     info("[createPGX] annotating rownames with phospho residue...")
     xrows <- .pgx_first_source_rows(preprocess.metadata)
     newnames <- annotate_phospho_residue(rownames(counts))
@@ -477,7 +488,7 @@ pgx.createPGX <- function(counts,
   ## methylation lookup keys on the bare probe ID: the epigenetic clocks come
   ## back with zero coverage and no ages at all. Off for methylomics whatever
   ## the caller asked for, and corrected here so settings record what happened.
-  if (identical(datatype, "methylomics") && isTRUE(convert.hugo)) {
+  if (identical(pipeline_datatype, "methylomics") && isTRUE(convert.hugo)) {
     message("[pgx.createPGX] methylomics: not appending symbols to probe IDs")
     convert.hugo <- FALSE
   }
@@ -497,7 +508,7 @@ pgx.createPGX <- function(counts,
   versions$playdata_version <- packageVersion("playdata")
 
   ## Reorder uniprots
-  if (datatype == "proteomics") {
+  if (pipeline_datatype == "proteomics") {
     message("[pgx.createPGX] Reordering uniprots in counts, X, annot_table")
     feature.lengths <- NULL
     if (!is.null(annot_table)) {
@@ -547,7 +558,7 @@ pgx.createPGX <- function(counts,
   pgx$genes <- playbase.annotation::pgx.annotate(
     organism = pgx$organism,
     probes = rownames(pgx$counts),
-    datatype = pgx$datatype,
+    datatype = pipeline_datatype,
     meth_type = meth_type,
     probetype = pgx$probe_type,
     ortholog_species = pgx$ortholog_species,    
@@ -558,7 +569,7 @@ pgx.createPGX <- function(counts,
 
   ## Array and genome build, so consumers never re-guess them from probe ids.
   ## 450K and EPIC annotate against hg19, EPIC v2 against hg38.
-  if (identical(datatype, "methylomics")) {
+  if (identical(pipeline_datatype, "methylomics")) {
     array <- if (isTRUE(meth_type %in% c("EPIC array", "EPIC v2 array"))) meth_type else "450K array"
     pgx$meth$array <- array
     pgx$meth$genome <- attr(pgx$genes, "genome") %||%
@@ -656,7 +667,7 @@ pgx.createPGX <- function(counts,
   }
 
   ## Methylomics arrays: if user-specified, remove X- & Y-linked CpG probes.
-  if (pgx$datatype == "methylomics" & remove.xy.probes) {
+  if (pipeline_datatype == "methylomics" & remove.xy.probes) {
     kk <- intersect(c("chr", "map"), colnames(pgx$genes))[1]
     if (length(kk) > 0) {
       jj <- grep("chrX|chrY|^X|^Y", pgx$genes[, kk], ignore.case = TRUE)
@@ -715,7 +726,7 @@ pgx.createPGX <- function(counts,
   ## If no organism, no custom annotation table and no custom geneset,
   ## then create empty GMT
   unknown.organism <- (pgx$organism %in% c("No organism", "custom", "unkown"))
-  unknown.datatype <- (pgx$datatype %in% c("custom", "unkown"))
+  unknown.datatype <- (pipeline_datatype %in% c("custom", "unkown"))
   no3 <- unknown.organism && is.null(annot_table) && is.null(custom.geneset)
   if (no3 || unknown.datatype || !add.gmt) {
     message("[pgx.createPGX] WARNING: empty GMT matrix. No gene sets. ")

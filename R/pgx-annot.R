@@ -18,7 +18,7 @@ getProbeAnnotation <- function(organism,
   playbase.annotation::getProbeAnnotation(
     organism = organism,
     probes = probes,
-    datatype = datatype,
+    datatype = .pgx_pipeline_datatype(datatype),
     meth_type = meth_type,
     probetype = probetype,
     ortholog_species = ortholog_species,

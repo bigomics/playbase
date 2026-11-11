@@ -24,3 +24,17 @@ test_that("detect_probetype gives the playbase.annotation result", {
     playbase.annotation::detect_probetype("Human", probes)
   )
 })
+
+test_that("forwarders hand peptide-level proteomics on as proteomics", {
+  seen <- character()
+  local_mocked_bindings(
+    getProbeAnnotation = function(..., datatype) seen <<- c(seen, datatype),
+    detect_probetype = function(..., datatype) seen <<- c(seen, datatype),
+    .package = "playbase.annotation"
+  )
+  for (dt in c("proteomics-peptide-level", "proteomics")) {
+    getProbeAnnotation("Human", "P04637", datatype = dt)
+    detect_probetype("Human", "P04637", datatype = dt)
+  }
+  expect_identical(seen, rep("proteomics", 4))
+})

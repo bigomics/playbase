@@ -66,6 +66,10 @@ for the gene annotation table and the probe to symbol conversion.}
 
 \item{max.genesets}{Maximum number of gene sets to test. Default is 5000.}
 
+\item{datatype}{Data type, e.g. "RNA-seq", "proteomics", "metabolomics".
+"proteomics-peptide-level" is accepted and stored under its own label;
+it currently runs the proteomics pipeline.}
+
 \item{X}{(Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.}
 
 \item{preprocess}{(Optional) Named list of preprocessing options. Whenever
