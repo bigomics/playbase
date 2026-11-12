@@ -72,3 +72,55 @@ test_that("fit() restores train mode after get_gradients()", {
   capture.output(s$net$fit(niter = 5))
   expect_true(s$net$model$training)
 })
+
+test_that("history records every loss component and continues across fit() calls", {
+  s <- make_sae()
+  capture.output(s$net$fit(niter = 5))
+  capture.output(s$net$fit(niter = 3))
+  h <- s$net$history
+  expect_named(h, c("iteration", "split", "component", "value"))
+  expect_type(h$iteration, "integer")
+  expect_true(all(is.finite(h$value)))
+
+  train <- h[h$split == "train", ]
+  expect_equal(sort(unique(train$iteration)), 1:8)
+  components <- c("classification", paste0("reconstruction:", c("gx", "px", "mx")), "l1", "l2", "total")
+  for (i in 1:8) {
+    expect_setequal(train$component[train$iteration == i], components)
+  }
+
+  test <- h[h$split == "test", ]
+  expect_equal(test$iteration[test$component == "classification"], 1:8)
+})
+
+test_that("legacy loss_history/val_history are derived from history", {
+  s <- make_sae()
+  capture.output(s$net$fit(niter = 4))
+  h <- s$net$history
+  expect_equal(s$net$loss_history, h$value[h$split == "train" & h$component == "classification"])
+  expect_equal(s$net$val_history, h$value[h$split == "test" & h$component == "classification"])
+  expect_length(s$net$val_history, 4)
+  pdf(NULL)
+  on.exit(dev.off())
+  expect_no_error(s$net$plot_loss())
+})
+
+test_that("validation does not touch BatchNorm running stats and keeps train mode", {
+  s <- make_sae()
+  capture.output(s$net$fit(niter = 2))
+  s$net$model$train(TRUE)
+  bufs <- function() lapply(s$net$model$buffers, as.numeric)
+  before <- bufs()
+  expect_true(any(grepl("running_mean", names(before))))
+  v <- s$net$validate()
+  expect_identical(bufs(), before)
+  expect_true(s$net$model$training)
+  expect_true(all(c("classification", "reconstruction:gx") %in% names(v)))
+})
+
+test_that("validate() returns NULL without a validation split", {
+  s <- make_sae(validation_ratio = 0)
+  expect_null(s$net$validate())
+  capture.output(s$net$fit(niter = 2))
+  expect_false(any(s$net$history$split == "test"))
+})

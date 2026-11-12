@@ -15,7 +15,44 @@
 #' @export
 MultiOmicsSAE <- R6::R6Class(
   "MultiOmicsSAE",
-  private = list(),
+  private = list(
+    ## Loss terms of one forward pass: cross-entropy summed over targets
+    ## (NA labels ignored) and the reconstruction MSE of each view.
+    split_losses = function(output, xx, yy) {
+      ce <- function(a, b) {
+        ii <- which(!is.na(as.numeric(b)))
+        torch::nnf_cross_entropy(a[ii], b[ii])
+      }
+      list(
+        classification = Reduce("+", mapply(ce, output$y_pred, yy)),
+        reconstruction = mapply(torch::nnf_mse_loss, output$ae, xx, SIMPLIFY = FALSE)
+      )
+    },
+    ## named numeric with components classification, reconstruction:<view>
+    loss_values = function(losses) {
+      recon <- vapply(losses$reconstruction, function(l) l$item(), numeric(1))
+      names(recon) <- paste0("reconstruction:", names(losses$reconstruction))
+      c(classification = losses$classification$item(), recon)
+    },
+    history_rows = function(iteration, split, values) {
+      data.frame(
+        iteration = iteration, split = split, component = names(values),
+        value = unname(values), stringsAsFactors = FALSE
+      )
+    },
+    history_trace = function(split, component = "classification") {
+      h <- self$history
+      if (is.null(h)) {
+        return(NULL)
+      }
+      h$value[h$split == split & h$component == component]
+    }
+  ),
+  active = list(
+    ## legacy per-iteration classification loss vectors, derived from history
+    loss_history = function() private$history_trace("train"),
+    val_history = function() private$history_trace("test")
+  ),
   public = list(
     X = NULL,
     Y = NULL,
@@ -30,8 +67,10 @@ MultiOmicsSAE <- R6::R6Class(
     sdx = NULL,
     loss_weights = NULL,
     sd_weight = NULL,
-    loss_history = NULL,
-    val_history = NULL,
+    ## long data.frame: iteration (continues across fit calls), split
+    ## (train|test), component (classification, reconstruction:<view>, l1,
+    ## l2, total), value
+    history = NULL,
     initialize = function(X, Y,
                           model = "MT", ntop = 1000,
                           num_layers = list(c(0.5, 40), c(0.5, 0.25), c(0.5)),
@@ -159,51 +198,56 @@ MultiOmicsSAE <- R6::R6Class(
 
       xx <- self$x_train
       yy <- self$y_train
-      vx <- self$x_test
-      vy <- self$y_test
 
+      train_values <- NULL
       calc_loss <- function() {
-        ## forward compute
-        output <- model(xx)
-
-        ## compute fit loss
-        nnf_cross_entropy.NA <- function(a, b) {
-          ii <- which(!is.na(as.numeric(b)))
-          torch::nnf_cross_entropy(a[ii], b[ii])
-        }
-        y_loss <- Reduce("+", mapply(nnf_cross_entropy.NA, output$y_pred, yy))
-
-        if (!is.null(vx)) {
-          ## compute validation loss
-          voutput <- model(vx)
-          val_loss <- Reduce("+", mapply(nnf_cross_entropy.NA, voutput$y_pred, vy))
-        } else {
-          val_loss <- 0
-        }
-
-        ae_loss <- Reduce("+", mapply(torch::nnf_mse_loss, output$ae, xx))
+        losses <- private$split_losses(model(xx), xx, yy)
+        ae_loss <- Reduce("+", losses$reconstruction)
         enc_weights <- lapply(model$encoder, function(m) m$parameters[[1]])
         l1_loss <- Reduce("+", sapply(enc_weights, function(w) torch::torch_norm(w, 1)))
         l2_loss <- Reduce("+", sapply(enc_weights, function(w) torch::torch_norm(w, 2)))
-        ## loss <- 1*y_loss + 1e1*ae_loss + 0.1*l1_loss + 0.01*l2_loss
         w <- self$loss_weights
-        loss <- w["y"] * y_loss + w["ae"] * ae_loss + w["l1"] * l1_loss + w["l2"] * l2_loss
+        loss <- w["y"] * losses$classification + w["ae"] * ae_loss + w["l1"] * l1_loss + w["l2"] * l2_loss
 
-        # Store loss for plotting
-        self$loss_history <- c(self$loss_history, y_loss$item())
-        self$val_history <- c(self$val_history, val_loss$item())
+        ## lbfgs evaluates the closure several times per step: keep the last
+        train_values <<- c(
+          private$loss_values(losses),
+          l1 = l1_loss$item(), l2 = l2_loss$item(), total = loss$item()
+        )
 
         optimizer$zero_grad()
         loss$backward()
         loss
       }
 
+      last <- if (is.null(self$history)) 0L else max(self$history$iteration)
+      rows <- vector("list", niter)
       for (t in 1:niter) {
         if (t %% (niter / 10) == 0) cat(".")
         optimizer$step(calc_loss)
-        # calc_loss()
-        # optimizer$step()
+        val_values <- self$validate()
+        rows[[t]] <- rbind(
+          private$history_rows(last + t, "train", train_values),
+          if (!is.null(val_values)) private$history_rows(last + t, "test", val_values)
+        )
       }
+      self$history <- rbind(self$history, do.call(rbind, rows))
+    },
+    ## Loss components on the held-out split. Runs in eval mode without
+    ## gradients so BatchNorm running statistics are left untouched, then
+    ## restores the previous training mode. NULL without a validation split.
+    validate = function() {
+      if (length(self$x_test) == 0) {
+        return(NULL)
+      }
+      model <- self$model
+      was_training <- model$training
+      on.exit(model$train(was_training))
+      model$eval()
+      torch::with_no_grad({
+        losses <- private$split_losses(model(self$x_test), self$x_test, self$y_test)
+        private$loss_values(losses)
+      })
     },
     predict = function(X = NULL) {
       if (is.null(X)) {
