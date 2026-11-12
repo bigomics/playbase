@@ -124,3 +124,59 @@ test_that("validate() returns NULL without a validation split", {
   capture.output(s$net$fit(niter = 2))
   expect_false(any(s$net$history$split == "test"))
 })
+
+## mofa.augment lives with the MOFA code; source it when playbase is not loaded
+if (!exists("mofa.augment")) {
+  sys.source(file.path("..", "..", "R", "pgx-mofa.R"), envir = globalenv())
+}
+
+test_that("augment = 0 keeps the previous train/test column counts", {
+  s <- make_sae()
+  expect_equal(nrow(s$net$x_train[[1]]), 19)
+  expect_equal(nrow(s$net$x_test[[1]]), 5)
+  expect_equal(nrow(s$net$xx[[1]]), 24)
+  expect_named(s$net$split, c("sample", "label", "split"))
+  expect_equal(s$net$split$sample, colnames(s$fx$X[[1]]))
+  expect_equal(s$net$split$label, as.character(s$fx$Y$class))
+  expect_equal(sum(s$net$split$split == "test"), 5)
+})
+
+test_that("test split is stratified by class", {
+  s <- make_sae()
+  sp <- s$net$split
+  ntest <- table(factor(sp$label[sp$split == "test"], levels = unique(sp$label)))
+  expected <- 5 * table(sp$label) / nrow(sp)
+  expect_true(all(abs(ntest - expected[names(ntest)]) < 1))
+  expect_true(all(ntest >= 1))
+  expect_equal(as.numeric(s$net$y_test[[1]]), as.integer(factor(sp$label[sp$split == "test"], levels = s$net$labels$class)))
+})
+
+test_that("augmentation copies only training samples and tests on clean originals", {
+  s <- make_sae(augment = 10, augment_z = 0.1, validation_ratio = 0.25)
+  sp <- s$net$split
+  is_test <- sp$split == "test"
+  expect_equal(nrow(s$net$x_train[[1]]), 10 * sum(!is_test))
+  expect_equal(nrow(s$net$x_test[[1]]), sum(is_test))
+  expect_equal(as.numeric(s$net$y_train[[1]]), rep(as.numeric(factor(sp$label[!is_test], levels = s$net$labels$class)), 10))
+  ## test rows are exactly the scaled originals (no noise)
+  xs <- t(scale(t(s$net$X$gx)))
+  expect_equal(as.matrix(s$net$x_test$gx), t(xs[, is_test]), ignore_attr = TRUE, tolerance = 1e-6)
+  ## no training row is a noisy copy of a test sample: each training row is
+  ## closer to some training original than to every test original
+  xtr <- as.matrix(s$net$x_train$gx)
+  d <- as.matrix(dist(rbind(t(xs), xtr)))[-(1:24), 1:24]
+  nearest <- apply(d, 1, which.min)
+  expect_false(any(is_test[nearest]))
+  expect_equal(nearest, rep(which(!is_test), 10), ignore_attr = TRUE)
+  capture.output(s$net$fit(niter = 2))
+  expect_true(any(s$net$history$split == "test"))
+})
+
+test_that("singleton classes stay in training", {
+  fx <- make_sae_fixture()
+  fx$Y$class <- factor(c(as.character(fx$Y$class[-24]), "lonely"))
+  net <- suppressMessages(MultiOmicsSAE$new(fx$X, fx$Y, ntop = 0))
+  expect_equal(net$split$split[net$split$label == "lonely"], "train")
+  tab <- table(net$split$label[net$split$split == "test"])
+  expect_true(all(tab[paste0("class", 1:3)] >= 1))
+})

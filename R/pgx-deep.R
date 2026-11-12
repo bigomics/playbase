@@ -40,6 +40,30 @@ MultiOmicsSAE <- R6::R6Class(
         value = unname(values), stringsAsFactors = FALSE
       )
     },
+    ## Logical test indicator over samples, stratified by label `y`. The test
+    ## size matches an unstratified split (n - floor((1 - ratio) * n)) and is
+    ## allotted to classes by largest remainder; every class with >= 2 samples
+    ## gets at least one test sample and keeps at least one for training,
+    ## singleton classes stay in training.
+    stratified_split = function(y, validation_ratio) {
+      n <- length(y)
+      is_test <- rep(FALSE, n)
+      if (validation_ratio <= 0) {
+        return(is_test)
+      }
+      groups <- split(seq_len(n), addNA(y, ifany = TRUE))
+      groups <- groups[lengths(groups) > 0]
+      sizes <- lengths(groups)
+      quota <- (n - floor((1 - validation_ratio) * n)) * sizes / n
+      k <- pmin(pmax(floor(quota), 1), sizes - 1)
+      extra <- round(sum(quota)) - sum(k)
+      room <- which(k < sizes - 1)
+      add <- head(room[order(k[room] - quota[room])], max(extra, 0))
+      k[add] <- k[add] + 1
+      test <- unlist(mapply(function(g, m) g[sample.int(length(g), m)], groups, k, SIMPLIFY = FALSE))
+      is_test[test] <- TRUE
+      is_test
+    },
     history_trace = function(split, component = "classification") {
       h <- self$history
       if (is.null(h)) {
@@ -71,6 +95,9 @@ MultiOmicsSAE <- R6::R6Class(
     ## (train|test), component (classification, reconstruction:<view>, l1,
     ## l2, total), value
     history = NULL,
+    ## data.frame of the original samples: sample, label (first target),
+    ## split (train|test). Augmented copies are not listed.
+    split = NULL,
     initialize = function(X, Y,
                           model = "MT", ntop = 1000,
                           num_layers = list(c(0.5, 40), c(0.5, 0.25), c(0.5)),
@@ -78,7 +105,8 @@ MultiOmicsSAE <- R6::R6Class(
                           loss_weights = c(y = 1, ae = 10, l1 = 0.1, l2 = 0.01),
                           actfun = c("relu", "leaky", "gelu", "silu")[1],
                           use_glu = 1, use_bn = TRUE, add_noise = 0,
-                          sd_weight = TRUE, device = "cpu") {
+                          sd_weight = TRUE, augment = 0, augment_z = 1,
+                          device = "cpu") {
       if (!is.null(ntop) && ntop > 0) {
         message("reducing to maximum ", ntop, " features")
         X <- lapply(X, function(x) head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)), , drop = FALSE], ntop))
@@ -118,23 +146,28 @@ MultiOmicsSAE <- R6::R6Class(
       ## normalized torch input. This is the input the network sees.
       self$xx <- lapply(X, function(x) torch::torch_tensor(t(x)))
 
-      ## split in train and validation
-      if (validation_ratio > 0) {
-        r <- (1 - validation_ratio)
-        xdim <- ncol(X[[1]])
-        ii <- sample(1:xdim, r * xdim)
-        self$x_train <- lapply(X, function(x) t(x[, ii, drop = FALSE]))
-        self$x_test <- lapply(X, function(x) t(x[, -ii, drop = FALSE]))
-        self$y_train <- lapply(Y, function(y) torch::torch_tensor(y[ii]))
-        self$y_test <- lapply(Y, function(y) torch::torch_tensor(y[-ii]))
-      } else {
-        self$x_train <- lapply(X, function(x) t(x))
-        self$x_test <- NULL
-        self$y_train <- lapply(Y, function(y) torch::torch_tensor(y))
-        self$y_test <- NULL
+      ## Split the original samples, stratified by the first target, then
+      ## augment only the training part so that no noisy copy of a
+      ## validation sample is ever trained on.
+      is_test <- private$stratified_split(Y[[1]], validation_ratio)
+      self$split <- data.frame(
+        sample = if (is.null(colnames(X[[1]]))) seq_along(is_test) else colnames(X[[1]]),
+        label = as.character(Y[[1]]),
+        split = ifelse(is_test, "test", "train"),
+        stringsAsFactors = FALSE
+      )
+      x_train <- lapply(X, function(x) x[, !is_test, drop = FALSE])
+      y_train <- lapply(Y, function(y) y[!is_test])
+      if (augment > 0) {
+        x_train <- mofa.augment(x_train, n = augment, z = augment_z)
+        y_train <- lapply(y_train, rep, times = augment)
       }
-      self$x_train <- lapply(self$x_train, torch::torch_tensor)
-      self$x_test <- lapply(self$x_test, torch::torch_tensor)
+      self$x_train <- lapply(x_train, function(x) torch::torch_tensor(t(x)))
+      self$y_train <- lapply(y_train, torch::torch_tensor)
+      if (any(is_test)) {
+        self$x_test <- lapply(X, function(x) torch::torch_tensor(t(x[, is_test, drop = FALSE])))
+        self$y_test <- lapply(Y, function(y) torch::torch_tensor(y[is_test]))
+      }
 
       self$Y <- lapply(Y, factor)
       self$labels <- lapply(self$Y, levels)
