@@ -238,3 +238,22 @@ test_that("restore() refuses a checkpoint built with different arguments", {
   other <- make_sae(dropout = 0.1)
   expect_error(other$net$restore(ckpt), "different arguments: dropout")
 })
+
+test_that("augmentation noise is on the raw scale, as the legacy board added it", {
+  fx <- make_sae_fixture()
+  ## one view with a low- and a high-variance feature block
+  fx$X$gx[1:15, ] <- fx$X$gx[1:15, ] * 0.1
+  fx$X$gx[16:30, ] <- fx$X$gx[16:30, ] * 10
+  set.seed(3)
+  net <- suppressMessages(MultiOmicsSAE$new(fx$X, fx$Y, ntop = 0, augment = 5, augment_z = 1))
+  ntr <- sum(net$split$split == "train")
+  xtr <- as.matrix(net$x_train$gx)
+  ## every copy is noisy (mofa.augment), so compare against copy 1
+  first <- xtr[seq_len(ntr), , drop = FALSE]
+  noise <- xtr - first[rep(seq_len(ntr), 5), , drop = FALSE]
+  sd_low <- mean(apply(noise[, 1:15], 2, sd))
+  sd_high <- mean(apply(noise[, 16:30], 2, sd))
+  ## one view-wide raw noise level => relatively much more noise on the
+  ## low-variance features once scaled by their own SD
+  expect_gt(sd_low, 10 * sd_high)
+})

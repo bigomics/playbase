@@ -168,9 +168,14 @@ MultiOmicsSAE <- R6::R6Class(
       self$sdx <- lapply(X, matrixStats::rowSds, na.rm = TRUE)
       self$sd_weight <- sd_weight
 
+      ## raw values are kept for augmentation: noisy copies are made on the
+      ## raw scale (as the legacy board did) and then scaled with the
+      ## originals' centre and SD.
+      X_raw <- X
+      mux <- lapply(X, rowMeans, na.rm = TRUE)
       if (scale) {
         for (i in 1:length(X)) {
-          X[[i]] <- X[[i]] - rowMeans(X[[i]], na.rm = TRUE)
+          X[[i]] <- X[[i]] - mux[[i]]
           X[[i]] <- X[[i]] / self$sdx[[i]]
         }
       }
@@ -191,7 +196,13 @@ MultiOmicsSAE <- R6::R6Class(
       x_train <- lapply(X, function(x) x[, !is_test, drop = FALSE])
       y_train <- lapply(Y, function(y) y[!is_test])
       if (augment > 0) {
+        x_train <- lapply(X_raw, function(x) x[, !is_test, drop = FALSE])
         x_train <- mofa.augment(x_train, n = augment, z = augment_z)
+        if (scale) {
+          for (i in seq_along(x_train)) {
+            x_train[[i]] <- (x_train[[i]] - mux[[i]]) / self$sdx[[i]]
+          }
+        }
         y_train <- lapply(y_train, rep, times = augment)
       }
       self$x_train <- lapply(x_train, function(x) torch::torch_tensor(t(x)))
