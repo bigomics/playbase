@@ -139,6 +139,7 @@ MultiOmicsSAE <- R6::R6Class(
     },
     fit = function(niter = 200, optim = c("adam", "adamw", "sgd", "lbfgs")[1]) {
       model <- self$model
+      model$train(TRUE) ## gradient helpers leave the model in eval mode
       optim <- optim[1]
 
       if (optim == "adam") {
@@ -372,6 +373,7 @@ nn_gaussian_noise <- torch::nn_module(
     self$device <- device
   },
   forward = function(x) {
+    if (!self$training) return(x)
     rx <- self$sd * torch::torch_randn(c(dim(x)[1], dim(x)[2]))
     if (self$device == "gpu") rx <- rx$cuda()
     x + rx

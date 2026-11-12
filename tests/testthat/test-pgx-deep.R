@@ -47,3 +47,28 @@ test_that("predict() returns an n x K matrix per target", {
   expect_equal(colnames(p[[1]]), paste0("class", 1:3))
   expect_equal(rownames(p[[1]]), colnames(s$fx$X[[1]]))
 })
+
+test_that("predict() is deterministic in eval mode even with input noise", {
+  s <- make_sae(add_noise = 0.5)
+  capture.output(s$net$fit(niter = 5))
+  s$net$model$train(FALSE)
+  expect_identical(s$net$predict(), s$net$predict())
+})
+
+test_that("input noise is active in train mode", {
+  s <- make_sae(add_noise = 0.5)
+  s$net$model$train(TRUE)
+  xx <- lapply(s$net$X, function(x) torch::torch_tensor(scale(t(x))))
+  a <- as.matrix(s$net$model(xx)$y_pred[[1]])
+  b <- as.matrix(s$net$model(xx)$y_pred[[1]])
+  expect_false(isTRUE(all.equal(a, b)))
+})
+
+test_that("fit() restores train mode after get_gradients()", {
+  s <- make_sae()
+  capture.output(s$net$fit(niter = 5))
+  s$net$get_gradients()
+  expect_false(s$net$model$training)
+  capture.output(s$net$fit(niter = 5))
+  expect_true(s$net$model$training)
+})
