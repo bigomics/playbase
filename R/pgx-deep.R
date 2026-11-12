@@ -64,6 +64,29 @@ MultiOmicsSAE <- R6::R6Class(
       is_test[test] <- TRUE
       is_test
     },
+    ## name of the method self$optimizer was built with (adam, adamw, ...)
+    optim_method = NULL,
+    new_optimizer = function(optim) {
+      params <- self$model$parameters
+      switch(optim,
+        adam = torch::optim_adam(params, lr = 0.001),
+        adamw = torch::optim_adamw(params, lr = 0.001, weight_decay = self$loss_weights["l2"]),
+        sgd = torch::optim_sgd(params, lr = 0.001),
+        lbfgs = torch::optim_lbfgs(params, lr = 1),
+        stop("unknown optimization method ", optim)
+      )
+    },
+    ## copy of a (nested) state dict, so that later training steps, which
+    ## update tensors in place, do not alter a checkpoint
+    clone_state = function(x) {
+      if (inherits(x, "torch_tensor")) {
+        return(x$detach()$clone())
+      }
+      if (is.list(x)) {
+        return(lapply(x, private$clone_state))
+      }
+      x
+    },
     history_trace = function(split, component = "classification") {
       h <- self$history
       if (is.null(h)) {
@@ -75,7 +98,11 @@ MultiOmicsSAE <- R6::R6Class(
   active = list(
     ## legacy per-iteration classification loss vectors, derived from history
     loss_history = function() private$history_trace("train"),
-    val_history = function() private$history_trace("test")
+    val_history = function() private$history_trace("test"),
+    ## last completed training iteration (0 before the first fit)
+    iteration = function() {
+      if (is.null(self$history)) 0L else max(self$history$iteration)
+    }
   ),
   public = list(
     X = NULL,
@@ -98,6 +125,10 @@ MultiOmicsSAE <- R6::R6Class(
     ## data.frame of the original samples: sample, label (first target),
     ## split (train|test). Augmented copies are not listed.
     split = NULL,
+    ## optimizer kept across fit() calls so training resumes with its state
+    optimizer = NULL,
+    ## construction arguments other than the data; restore() requires a match
+    args = NULL,
     initialize = function(X, Y,
                           model = "MT", ntop = 1000,
                           num_layers = list(c(0.5, 40), c(0.5, 0.25), c(0.5)),
@@ -107,6 +138,7 @@ MultiOmicsSAE <- R6::R6Class(
                           use_glu = 1, use_bn = TRUE, add_noise = 0,
                           sd_weight = TRUE, augment = 0, augment_z = 1,
                           device = "cpu") {
+      self$args <- mget(setdiff(names(formals(sys.function())), c("X", "Y")))
       if (!is.null(ntop) && ntop > 0) {
         message("reducing to maximum ", ntop, " features")
         X <- lapply(X, function(x) head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)), , drop = FALSE], ntop))
@@ -213,21 +245,14 @@ MultiOmicsSAE <- R6::R6Class(
       model <- self$model
       model$train(TRUE) ## gradient helpers leave the model in eval mode
       optim <- optim[1]
-
-      if (optim == "adam") {
-        optimizer <- torch::optim_adam(model$parameters, lr = 0.001)
-      } else if (optim == "adamw") {
-        optimizer <- torch::optim_adamw(
-          model$parameters,
-          lr = 0.001, weight_decay = self$loss_weights["l2"]
-        )
-      } else if (optim == "sgd") {
-        optimizer <- torch::optim_sgd(model$parameters, lr = 0.001)
-      } else if (optim == "lbfgs") {
-        optimizer <- torch::optim_lbfgs(model$parameters, lr = 1)
-      } else {
-        stop("unknown optimization method ", optim)
+      if (!identical(optim, private$optim_method)) {
+        if (!is.null(self$optimizer)) {
+          message("switching optimizer from ", private$optim_method, " to ", optim, ": its state is reset")
+        }
+        self$optimizer <- private$new_optimizer(optim)
+        private$optim_method <- optim
       }
+      optimizer <- self$optimizer
 
       xx <- self$x_train
       yy <- self$y_train
@@ -253,7 +278,7 @@ MultiOmicsSAE <- R6::R6Class(
         loss
       }
 
-      last <- if (is.null(self$history)) 0L else max(self$history$iteration)
+      last <- self$iteration
       rows <- vector("list", niter)
       for (t in 1:niter) {
         if (t %% (niter / 10) == 0) cat(".")
@@ -265,6 +290,38 @@ MultiOmicsSAE <- R6::R6Class(
         )
       }
       self$history <- rbind(self$history, do.call(rbind, rows))
+    },
+    ## Training state as a plain list that round-trips through
+    ## torch::torch_save()/torch_load(). The torch RNG state is not included:
+    ## resuming replays training exactly only without noise or dropout.
+    checkpoint = function() {
+      list(
+        model = private$clone_state(self$model$state_dict()),
+        optimizer = if (!is.null(self$optimizer)) private$clone_state(self$optimizer$state_dict()),
+        optim = private$optim_method,
+        iteration = self$iteration,
+        history = self$history,
+        args = self$args
+      )
+    },
+    ## Load a checkpoint() into an object constructed with the same
+    ## arguments; the next fit() continues where the checkpoint left off.
+    restore = function(ckpt) {
+      keys <- union(names(self$args), names(ckpt$args))
+      differ <- keys[!vapply(keys, function(k) identical(self$args[[k]], ckpt$args[[k]]), logical(1))]
+      if (length(differ) > 0) {
+        stop("checkpoint was created with different arguments: ", paste(differ, collapse = ", "))
+      }
+      self$model$load_state_dict(ckpt$model)
+      self$optimizer <- NULL
+      private$optim_method <- NULL
+      if (!is.null(ckpt$optimizer)) {
+        self$optimizer <- private$new_optimizer(ckpt$optim)
+        self$optimizer$load_state_dict(ckpt$optimizer)
+        private$optim_method <- ckpt$optim
+      }
+      self$history <- ckpt$history
+      invisible(self)
     },
     ## Loss components on the held-out split. Runs in eval mode without
     ## gradients so BatchNorm running statistics are left untouched, then

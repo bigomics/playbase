@@ -180,3 +180,61 @@ test_that("singleton classes stay in training", {
   tab <- table(net$split$label[net$split$split == "test"])
   expect_true(all(tab[paste0("class", 1:3)] >= 1))
 })
+
+test_that("fit() keeps one optimizer across calls and recreates it on a method change", {
+  s <- make_sae()
+  expect_null(s$net$optimizer)
+  capture.output(s$net$fit(niter = 2))
+  opt <- s$net$optimizer
+  expect_s3_class(opt, "optim_adam")
+  capture.output(s$net$fit(niter = 2))
+  expect_identical(s$net$optimizer, opt)
+  expect_message(capture.output(s$net$fit(niter = 2, optim = "sgd")), "switching optimizer")
+  expect_s3_class(s$net$optimizer, "optim_sgd")
+})
+
+## noise and dropout draw from the torch RNG, which a checkpoint does not
+## carry, so exact resumption is checked without them
+test_that("training resumed from a saved checkpoint matches uninterrupted training", {
+  weights <- function(net) lapply(net$model$state_dict(), as.array)
+
+  a <- make_sae(add_noise = FALSE)
+  capture.output(a$net$fit(niter = 10))
+
+  b <- make_sae(add_noise = FALSE)
+  capture.output(b$net$fit(niter = 5))
+  ckpt <- b$net$checkpoint()
+  expect_named(ckpt, c("model", "optimizer", "optim", "iteration", "history", "args"))
+  expect_equal(ckpt$iteration, 5L)
+  f <- tempfile(fileext = ".pt")
+  on.exit(unlink(f))
+  torch::torch_save(ckpt, f)
+  capture.output(b$net$fit(niter = 2)) ## must not alter the saved state
+
+  c <- make_sae(add_noise = FALSE)
+  c$net$restore(torch::torch_load(f))
+  expect_equal(c$net$iteration, 5L)
+  capture.output(c$net$fit(niter = 5))
+
+  expect_equal(weights(c$net), weights(a$net), tolerance = 1e-6)
+  h <- c$net$history
+  expect_equal(unique(h$iteration[h$split == "train"]), 1:10)
+  expect_equal(c$net$loss_history, a$net$loss_history, tolerance = 1e-6)
+})
+
+test_that("checkpoint() copies tensors so later training leaves it unchanged", {
+  s <- make_sae()
+  capture.output(s$net$fit(niter = 2))
+  ckpt <- s$net$checkpoint()
+  before <- lapply(ckpt$model, as.array)
+  capture.output(s$net$fit(niter = 2))
+  expect_identical(lapply(ckpt$model, as.array), before)
+})
+
+test_that("restore() refuses a checkpoint built with different arguments", {
+  s <- make_sae()
+  capture.output(s$net$fit(niter = 2))
+  ckpt <- s$net$checkpoint()
+  other <- make_sae(dropout = 0.1)
+  expect_error(other$net$restore(ckpt), "different arguments: dropout")
+})
