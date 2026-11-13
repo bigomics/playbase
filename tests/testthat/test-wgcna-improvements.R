@@ -45,6 +45,51 @@ test_that("wgcna.plotModuleTrajectory default start skips grey even when it is t
   expect_true(all(ee %in% c("MEblue", "MEyellow", "MEturquoise")))
 })
 
+test_that("wgcna.plotModuleTrajectory can be called without start at all", {
+  set.seed(1)
+  MEs <- matrix(rnorm(4 * 6), nrow = 6, ncol = 4)
+  colnames(MEs) <- c("MEgrey", "MEblue", "MEyellow", "MEturquoise")
+  rownames(MEs) <- paste0("s", 1:6)
+  colors <- c(rep("grey", 20), rep("blue", 3), rep("yellow", 2), rep("turquoise", 1))
+  wgcna <- list(net = list(MEs = MEs, colors = colors))
+
+  ## start has no default in R unless the signature gives it one -- this must
+  ## not error with "argument \"start\" is missing, with no default"
+  ee <- wgcna.plotModuleTrajectory(wgcna, plot = FALSE)
+  expect_false("MEgrey" %in% ee)
+})
+
+test_that("wgcna.plotModuleTrajectory with end does not distort the non-rho layout", {
+  set.seed(1)
+  MEs <- matrix(rnorm(4 * 6), nrow = 6, ncol = 4)
+  colnames(MEs) <- c("MEgrey", "MEblue", "MEyellow", "MEturquoise")
+  rownames(MEs) <- paste0("s", 1:6)
+  colors <- c(rep("grey", 20), rep("blue", 3), rep("yellow", 2), rep("turquoise", 1))
+  wgcna <- list(net = list(MEs = MEs, colors = colors))
+
+  ## the layout positions (passed to plot()) must come from the UNMODIFIED
+  ## distance matrix, not the one forced-to-999 for the TSP "end" constraint
+  ME <- t(MEs)[c("MEblue", "MEyellow", "MEturquoise"), ]
+  expected_pos <- svd(dist(ME))$u[, 1:2]
+
+  captured <- NULL
+  testthat::local_mocked_bindings(
+    plot.default = function(x, ...) {
+      captured <<- x
+      graphics::plot.new()
+      graphics::plot.window(range(x[, 1]), range(x[, 2]))
+    },
+    .package = "graphics"
+  )
+  grDevices::pdf(NULL)
+  on.exit(grDevices::dev.off(), add = TRUE)
+
+  wgcna.plotModuleTrajectory(wgcna, start = "MEblue", end = "MEyellow",
+                              posmat = "dist", plot = TRUE)
+
+  expect_equal(unname(captured), unname(expected_pos))
+})
+
 test_that("wgcna.plotModuleTrajectory errors clearly when start/end is not in the selected modules", {
   set.seed(1)
   MEs <- matrix(rnorm(4 * 6), nrow = 6, ncol = 4)

@@ -941,17 +941,21 @@ wgcna.plotPowerAnalysis_multi <- function(exprList,
 #'   vector of module names.
 #' @param end Optional name of the end module. If given, the tour is
 #'   forced to end at this module.
+#' @param cex Overall point/size scaling for the plot.
+#' @param lab.cex Label text size scaling.
+#' @param lwd.cex Trajectory arrow line width scaling.
 #' @param dist Distance used for the TSP: \code{"me.dist"} (euclidean
 #'   distance between eigengenes), \code{"cor"} (1 - correlation) or
 #'   \code{"cor.dist"} (euclidean distance between correlation profiles).
 #' @param posmat Matrix used for the 2D layout: \code{"rho"} (correlation
 #'   matrix) or otherwise the distance matrix.
+#' @param plot If \code{TRUE} (default), draw the base R plot as a side effect.
 #' @param main Plot title. Defaults to \code{"EigenModule Trajectory"}.
 #'
 #' @return Called for its side effect of producing a base R plot.
 #'
 #' @export
-wgcna.plotModuleTrajectory <- function(wgcna, start, k=NULL, end=NULL,
+wgcna.plotModuleTrajectory <- function(wgcna, start=NULL, k=NULL, end=NULL,
                                        cex=1, lab.cex = 1, lwd.cex = 1,
                                        dist="me.dist", posmat="rho",
                                        plot=TRUE, main=NULL) {
@@ -997,6 +1001,10 @@ wgcna.plotModuleTrajectory <- function(wgcna, start, k=NULL, end=NULL,
   if(length(kstart) == 0) {
     stop(sprintf("start module '%s' not found among selected modules (k)", start))
   }
+  ## kept unmodified for the 2D layout below -- the forced-tour mutation just
+  ## below must not leak into the plotted module positions
+  layout_matrix <- dist_matrix
+
   if(!is.null(end)) {
     kend <- which(rownames(MErho) == end)
     if(length(kend) == 0) {
@@ -1005,7 +1013,7 @@ wgcna.plotModuleTrajectory <- function(wgcna, start, k=NULL, end=NULL,
     dist_matrix[,kstart] <- 999
     dist_matrix[end,kstart] <- 0
   }
-  
+
   # 3. Create a TSP object and solve it
   tsp_obj <- TSP::ATSP(dist_matrix)
   tour <- TSP::solve_TSP(tsp_obj, method = "repetitive_nn")
@@ -1024,7 +1032,7 @@ wgcna.plotModuleTrajectory <- function(wgcna, start, k=NULL, end=NULL,
     if( posmat == "rho") {
       pos <- svd(MErho)$u[,1:2]
     } else {
-      pos <- svd(dist_matrix)$u[,1:2]
+      pos <- svd(layout_matrix)$u[,1:2]
     }
     rownames(pos) <- rownames(MErho)
     pch1 <- ifelse(rownames(MErho) %in% c(start,end), 19, 1)

@@ -9,6 +9,13 @@ wgcna.getTopMEfeatures(wgcna, n = 10, k = NULL, sortby = "mm")
 }
 \arguments{
 \item{wgcna}{WGCNA result object with stats.}
+
+\item{n}{Number of top features to return per module.}
+
+\item{k}{Number of largest modules to include (\code{NULL} for all).}
+
+\item{sortby}{Rank features by \code{"mm"} (module membership, default)
+or by standard deviation of expression.}
 }
 \value{
 list of length k of n features

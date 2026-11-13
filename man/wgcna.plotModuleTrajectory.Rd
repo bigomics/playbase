@@ -9,7 +9,7 @@ eigenmodules are connected/evolve across conditions.}
 \usage{
 wgcna.plotModuleTrajectory(
   wgcna,
-  start,
+  start = NULL,
   k = NULL,
   end = NULL,
   cex = 1,
@@ -34,12 +34,20 @@ vector of module names.}
 \item{end}{Optional name of the end module. If given, the tour is
 forced to end at this module.}
 
+\item{cex}{Overall point/size scaling for the plot.}
+
+\item{lab.cex}{Label text size scaling.}
+
+\item{lwd.cex}{Trajectory arrow line width scaling.}
+
 \item{dist}{Distance used for the TSP: \code{"me.dist"} (euclidean
 distance between eigengenes), \code{"cor"} (1 - correlation) or
 \code{"cor.dist"} (euclidean distance between correlation profiles).}
 
 \item{posmat}{Matrix used for the 2D layout: \code{"rho"} (correlation
 matrix) or otherwise the distance matrix.}
+
+\item{plot}{If \code{TRUE} (default), draw the base R plot as a side effect.}
 
 \item{main}{Plot title. Defaults to \code{"EigenModule Trajectory"}.}
 }

@@ -1231,6 +1231,10 @@ wgcna.calculateSignificanceScore <- function(wgcna, collapse = TRUE, sort.by = "
 #' membership.
 #' 
 #' @param wgcna WGCNA result object with stats.
+#' @param n Number of top features to return per module.
+#' @param k Number of largest modules to include (\code{NULL} for all).
+#' @param sortby Rank features by \code{"mm"} (module membership, default)
+#'   or by standard deviation of expression.
 #' @return list of length k of n features
 #' @export
 wgcna.getTopMEfeatures <- function(wgcna, n=10, k=NULL, sortby="mm") {
