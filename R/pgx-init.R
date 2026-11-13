@@ -374,6 +374,11 @@ pgx.initialize <- function(pgx, progress=NULL) {
     }
     pgx <- pgx.update_drugs_results(pgx)
   }
+
+  if(!is.null(pgx$wgcna)) {
+    message("[pgx.initialize] Updating wgcna results...")
+    pgx$wgcna <- wgcna.init(pgx$wgcna)
+  }
   
   ## ----------------------------------------------------------------
   ## Must haves
