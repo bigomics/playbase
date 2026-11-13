@@ -7,7 +7,7 @@ available summary or from GSEA analysis. Note: this is not a module
 summary, just a short description of the module (e.g. to use as
 title).}
 \usage{
-wgcna.create_module_titles(wgcna, model, pgx = NULL, from = "extras")
+wgcna.create_module_titles(wgcna, model, extras = NULL, from = "extras")
 }
 \description{
 Create 3-6 word AI-generated descriptions of WGCNA modules using

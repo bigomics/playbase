@@ -988,24 +988,28 @@ wgcna.plotModuleTrajectory <- function(wgcna, start, k=NULL, end=NULL,
   null.start <- FALSE
   if(is.null(start)) {
     null.start <- TRUE
-    start <- names(which.max(me.size))
+    ## largest module *within the selected k*, so grey (usually the overall
+    ## largest but excluded from k) is never picked as start
+    start <- names(which.max(me.size[k]))
   }
-  
+
   kstart <- which(rownames(MErho) == start)
+  if(length(kstart) == 0) {
+    stop(sprintf("start module '%s' not found among selected modules (k)", start))
+  }
   if(!is.null(end)) {
     kend <- which(rownames(MErho) == end)
+    if(length(kend) == 0) {
+      stop(sprintf("end module '%s' not found among selected modules (k)", end))
+    }
     dist_matrix[,kstart] <- 999
     dist_matrix[end,kstart] <- 0
   }
   
   # 3. Create a TSP object and solve it
   tsp_obj <- TSP::ATSP(dist_matrix)
-  if(0 && is.null(end)) {
-    tour <- TSP::solve_TSP(tsp_obj, method = "nn", control = list(start=kstart))
-  } else {
-    tour <- TSP::solve_TSP(tsp_obj, method = "repetitive_nn")
-  }
-  
+  tour <- TSP::solve_TSP(tsp_obj, method = "repetitive_nn")
+
   # 4. Extract the solution tour and order vertices in igraph
   sol_indices <- as.integer(tour)
   start_idx <- which(sol_indices == kstart)

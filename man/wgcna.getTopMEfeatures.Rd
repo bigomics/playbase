@@ -11,7 +11,7 @@ wgcna.getTopMEfeatures(wgcna, n = 10, k = NULL, sortby = "mm")
 \item{wgcna}{WGCNA result object with stats.}
 }
 \value{
-list of length k of n feateres
+list of length k of n features
 }
 \description{
 Return top-n ME features for k-largest ME clusters based on module

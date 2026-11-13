@@ -268,11 +268,11 @@ pgx.update_wgcna_summaries <- function(pgx, ai = NULL) {
 
     ## add short module descriptions (note: perhaps we should add in summary)
     descr <- wgcna.create_module_titles(
-      pgx$wgcna, llm_model, pgx=pgx, from="extras")
+      pgx$wgcna, llm_model, extras=pgx$ai$wgcna$extras, from="extras")
     for(m in names(descr)) {
       pgx$ai$wgcna$extras[[m]]$title <- descr[[m]]
     }
-    
+
   }
 
   if (!is.null(pgx$wgcna_mox)) {
@@ -284,11 +284,11 @@ pgx.update_wgcna_summaries <- function(pgx, ai = NULL) {
 
     ## add short module descriptions (note: perhaps we should add in summary)
     descr <- wgcna.create_module_titles(
-      pgx$wgcna_mox, llm_model, pgx=pgx, from="extras")
+      pgx$wgcna_mox, llm_model, extras=pgx$ai$wgcna_mox$extras, from="extras")
     for(m in names(descr)) {
       pgx$ai$wgcna_mox$extras[[m]]$title <- descr[[m]]
     }
-    
+
   }
 
   pgx
@@ -300,23 +300,21 @@ pgx.update_wgcna_summaries <- function(pgx, ai = NULL) {
 #' title).
 #'
 #'
-wgcna.create_module_titles <- function(wgcna, model, pgx=NULL, from="extras") {
-  modules <- names(wgcna$me.genes)
+wgcna.create_module_titles <- function(wgcna, model, extras=NULL, from="extras") {
   desc <- c()
-  m = "MEyellow"
-  has.extras <- FALSE
-  if(!is.null(pgx)) has.extras <- !is.null(pgx$ai$wgcna$extras)
+  has.extras <- !is.null(extras)
 
   cc <- "Create a title describing the overall biological function in 3-6 words. Just in plain text, no markup. Just title. Input:"
-  if(!is.null(pgx) && from == "extras" && has.extras) {
-    message("creating titles using summaries in ai$wgcna$extras")
-    for(m in modules) {
-      summ <- pgx$ai$wgcna$extras[[m]]$summary
+  if(from == "extras" && has.extras) {
+    message("creating titles using summaries in extras")
+    for(m in names(extras)) {
+      summ <- extras[[m]]$summary
       q <- paste(cc, summ)
       desc[m] <- ai.ask(q, model=model)
     }
   } else if(!is.null(wgcna$gsea))  {
     message("creating titles using gsea results")
+    modules <- names(wgcna$me.genes)
     for(m in modules) {
       gsea <- wgcna$gsea[[m]]
       topsets <- head(rownames(gsea),100)

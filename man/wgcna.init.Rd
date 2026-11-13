@@ -4,7 +4,10 @@
 \alias{wgcna.init}
 \title{Init/update function. Update older version of wgcna results object.}
 \usage{
-wgcna.init(wgcna, sv.tom = 40, progress = NULL)
+wgcna.init(wgcna, annot = NULL, sv.tom = 40, progress = NULL)
+}
+\arguments{
+\item{annot}{Unused, kept for backward compatibility with older callers.}
 }
 \description{
 Init/update function. Update older version of wgcna results object.

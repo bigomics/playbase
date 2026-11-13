@@ -346,8 +346,10 @@ wgcna.create_lasagna_model <- function(wgcna, layers = NULL) {
 
 #' Init/update function. Update older version of wgcna results object.
 #'
+#' @param annot Unused, kept for backward compatibility with older callers.
+#'
 #' @export
-wgcna.init <- function(wgcna, sv.tom = 40, progress = NULL) {
+wgcna.init <- function(wgcna, annot = NULL, sv.tom = 40, progress = NULL) {
   if(is.null(wgcna)) return(NULL)
   is.multi <- ("layers" %in% names(wgcna))
 
@@ -357,15 +359,15 @@ wgcna.init <- function(wgcna, sv.tom = 40, progress = NULL) {
     if (is.null(wgcna$tomtype)) wgcna$tomtype <- "signed"
     if (is.null(wgcna$power)) wgcna$power <- 6
   }
-  
-  if (is.null(wgcna$svTOM)) {
+
+  if (!is.multi && is.null(wgcna$svTOM)) {
     message("[wgcna.init] computing reduced svTOM")
     ## sv.tom <- ceiling(min(sv.tom,dim(datExpr)/2))
     if (!is.null(progress)) progress$inc(0.1, "computing reduced svTOM...")
     if(is.null(wgcna$TOM)) {
       adjacency <- WGCNA::adjacency(wgcna$datExpr, power = wgcna$power,
         type = wgcna$networktype)
-      TOM <- fastTOMsimilarity(adjacency, lowrank = sv.tom, tomtype = "signed")
+      TOM <- fastTOMsimilarity(adjacency, lowrank = sv.tom, tomtype = wgcna$tomtype)
     } else {
       TOM <- wgcna$TOM
     }
@@ -404,11 +406,6 @@ wgcna.init <- function(wgcna, sv.tom = 40, progress = NULL) {
     if (!is.null(progress)) progress$inc(0.1, "computing graph...")
     wgcna$lasagna <- wgcna.create_lasagna_model(wgcna)
     wgcna$graph <- wgcna$lasagna$graph
-  }
-
-  if (is.null(wgcna$graph)) {
-
-
   }
 
   wgcna
@@ -1234,7 +1231,7 @@ wgcna.calculateSignificanceScore <- function(wgcna, collapse = TRUE, sort.by = "
 #' membership.
 #' 
 #' @param wgcna WGCNA result object with stats.
-#' @return list of length k of n feateres
+#' @return list of length k of n features
 #' @export
 wgcna.getTopMEfeatures <- function(wgcna, n=10, k=NULL, sortby="mm") {
   if(is.null(wgcna)) return(NULL)
@@ -1255,6 +1252,7 @@ wgcna.getTopMEfeatures <- function(wgcna, n=10, k=NULL, sortby="mm") {
   topF <- list()
   M <- wgcna$stats[["moduleMembership"]]
   sdx <- matrixStats::colSds(wgcna$datExpr)
+  names(sdx) <- colnames(wgcna$datExpr)
   for(e in ordME) {
     ff <- names(cc)[which(cc == e)]
     if(sortby == "mm") {
