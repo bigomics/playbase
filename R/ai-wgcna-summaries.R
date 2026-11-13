@@ -299,7 +299,12 @@ pgx.update_wgcna_summaries <- function(pgx, ai = NULL) {
 #' summary, just a short description of the module (e.g. to use as
 #' title).
 #'
-#'
+#' @param wgcna WGCNA result object (used for the GSEA fallback only).
+#' @param model LLM model id passed to \code{ai.ask()}.
+#' @param extras Named list of module summaries (e.g. \code{pgx$ai$wgcna$extras}
+#'   or \code{pgx$ai$wgcna_mox$extras}), each with a \code{$summary} field.
+#' @param from Either \code{"extras"} (use \code{extras}) or anything else to
+#'   fall back to \code{wgcna$gsea}.
 wgcna.create_module_titles <- function(wgcna, model, extras=NULL, from="extras") {
   desc <- c()
   has.extras <- !is.null(extras)

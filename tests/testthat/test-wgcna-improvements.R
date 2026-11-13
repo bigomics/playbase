@@ -45,6 +45,32 @@ test_that("wgcna.plotModuleTrajectory default start skips grey even when it is t
   expect_true(all(ee %in% c("MEblue", "MEyellow", "MEturquoise")))
 })
 
+test_that("wgcna.plotModuleTrajectory accepts plain color names in k, not just ME-prefixed", {
+  set.seed(1)
+  MEs <- matrix(rnorm(4 * 6), nrow = 6, ncol = 4)
+  colnames(MEs) <- c("MEgrey", "MEblue", "MEyellow", "MEturquoise")
+  rownames(MEs) <- paste0("s", 1:6)
+  colors <- c(rep("grey", 20), rep("blue", 3), rep("yellow", 2), rep("turquoise", 1))
+  wgcna <- list(net = list(MEs = MEs, colors = colors))
+
+  ee <- wgcna.plotModuleTrajectory(wgcna, start = "MEblue", k = c("blue", "yellow"), plot = FALSE)
+  expect_setequal(ee, c("MEblue", "MEyellow"))
+})
+
+test_that("wgcna.plotModuleTrajectory errors clearly instead of an opaque matrix error when k leaves <2 modules", {
+  set.seed(1)
+  MEs <- matrix(rnorm(4 * 6), nrow = 6, ncol = 4)
+  colnames(MEs) <- c("MEgrey", "MEblue", "MEyellow", "MEturquoise")
+  rownames(MEs) <- paste0("s", 1:6)
+  colors <- c(rep("grey", 20), rep("blue", 3), rep("yellow", 2), rep("turquoise", 1))
+  wgcna <- list(net = list(MEs = MEs, colors = colors))
+
+  expect_error(
+    wgcna.plotModuleTrajectory(wgcna, start = NULL, k = "typo_module", plot = FALSE),
+    "need at least 2 valid modules"
+  )
+})
+
 test_that("wgcna.plotModuleTrajectory can be called without start at all", {
   set.seed(1)
   MEs <- matrix(rnorm(4 * 6), nrow = 6, ncol = 4)

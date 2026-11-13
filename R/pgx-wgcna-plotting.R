@@ -972,9 +972,15 @@ wgcna.plotModuleTrajectory <- function(wgcna, start=NULL, k=NULL, end=NULL,
     ord.me <- setdiff(ord.me, c("grey","MEgrey"))    
     k <- head(ord.me, as.integer(k))
   } else {
+    ## accept plain WGCNA color names (e.g. "blue") as well as "ME"-prefixed
+    ## eigengene names (e.g. "MEblue")
+    k <- ifelse(grepl("^ME", k), k, paste0("ME", k))
     k <- intersect(k, rownames(ME))
   }
   k <- setdiff(k, c("grey","MEgrey"))
+  if(length(k) < 2) {
+    stop("need at least 2 valid modules in k to build a trajectory")
+  }
 
   ##hc=hclust(dist(ME[k,])); plot(hc)
   MErho <- cor(t(ME[k,]))
@@ -1036,7 +1042,6 @@ wgcna.plotModuleTrajectory <- function(wgcna, start=NULL, k=NULL, end=NULL,
     }
     rownames(pos) <- rownames(MErho)
     pch1 <- ifelse(rownames(MErho) %in% c(start,end), 19, 1)
-    pch1 = 19
     cc <- sub("^ME","",rownames(MErho))
     cx <- me.size[rownames(MErho)]
     cx <- 4 * cex * (0.15 + cx / max(cx))**0.5
