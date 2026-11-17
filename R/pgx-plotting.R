@@ -4203,7 +4203,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       ) +
       labelFUN(
         data = subset(df, name %in% hilight2),
-        ggplot2::aes(label = label),
+        ggplot2::aes(x = x, y = y, label = label),
         inherit.aes = FALSE,
         size = 5.0 * cex.lab,
         color = "black",
