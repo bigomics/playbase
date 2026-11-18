@@ -1345,7 +1345,7 @@ pgx.add_GMT <- function(pgx,
   info("[pgx.add_GMT] number of GO gene sets in GMT =",num_goterms)
   if(is.null(species_go)) {
     ##species_go <- (num_goterms < 1000)
-    species_go <- !(normalizeOrganism(pgx$organism) %in% c("Homo sapiens","Mus musculus","Rattus norvegicus"))
+    species_go <- !all(normalizeOrganism(pgx$organism) %in% c("Homo sapiens","Mus musculus","Rattus norvegicus"))
   }
 
   if (has.px2 && species_go) {
