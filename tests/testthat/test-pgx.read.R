@@ -43,3 +43,18 @@ test_that("read.as_matrix reads a CP1252 (Windows Excel) csv", {
   expect_equal(rownames(x), c("tpma", "µx"))
   expect_equal(as.numeric(x), c(1.5, 3, 2, 4))
 })
+
+test_that("playbase:::utf8_file only re-encodes the invalid lines", {
+  ## a mostly-UTF-8 file ("café", valid multibyte) with one stray CP1252
+  ## byte on another line must not get its valid line mangled
+  f <- tempfile(fileext = ".csv")
+  writeBin(c(
+    charToRaw("Gene;Sample\n"),
+    charToRaw("tp53;caf"), as.raw(0xC3), as.raw(0xA9), charToRaw("\n"),
+    charToRaw("brca1;x"), as.raw(0xb5), charToRaw("y\n")
+  ), f)
+  out <- playbase:::utf8_file(f)
+  lines <- readLines(out, warn = FALSE)
+  expect_equal(lines[2], "tp53;café")
+  expect_equal(lines[3], "brca1;xµy")
+})

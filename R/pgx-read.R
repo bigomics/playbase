@@ -168,19 +168,24 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
 ## Re-encode a non-UTF-8 text file to a UTF-8 temp file
 ## Windows Excel saves "CSV" as CP1252. A byte like 0xB5 ("\u00b5") is invalid
 ## UTF-8 and breaks every regex and string function downstream in a UTF-8
-## locale. Returns `file` unchanged when it is already valid UTF-8.
+## locale. Returns `file` unchanged when it is already valid UTF-8. Only the
+## individual lines that are invalid UTF-8 get re-encoded from CP1252, so a
+## mostly-UTF-8 file with one stray bad byte doesn't get its valid multibyte
+## characters (e.g. "\u00e9") mangled by a blanket CP1252 reinterpretation.
+## ponytail: only the first 1000 lines are scanned for validity; a bad byte
+## further down goes undetected and the file is passed through unconverted.
 utf8_file <- function(file) {
   if (!is.character(file) || length(file) != 1 || !file.exists(file)) {
     return(file)
   }
-  ## ponytail: only the head is checked; a stray byte further down still goes
-  ## through iconv2utf8() on the character columns, as before.
   if (all(validUTF8(readLines(file, n = 1000, warn = FALSE)))) {
     return(file)
   }
+  lines <- readLines(file, warn = FALSE)
+  invalid <- !validUTF8(lines)
+  lines[invalid] <- iconv(lines[invalid], from = "CP1252", to = "UTF-8", sub = "?")
   out <- tempfile(fileext = ".csv")
-  txt <- iconv(readLines(file, warn = FALSE), from = "CP1252", to = "UTF-8", sub = "?")
-  writeLines(txt, out, useBytes = TRUE)
+  writeLines(lines, out, useBytes = TRUE)
   out
 }
 
