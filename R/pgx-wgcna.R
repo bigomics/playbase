@@ -168,7 +168,7 @@ pgx.wgcna <- function(
   }
 
   ## update
-  wgcna <- wgcna.init(wgcna, annot=pgx$genes)
+  wgcna <- wgcna.init(wgcna)
   
   ## save setting in object
   settings <- list(
@@ -344,24 +344,40 @@ wgcna.create_lasagna_model <- function(wgcna, layers = NULL) {
   return(lasagna)
 }
 
-#' Init/update function
+#' Init/update function. Update older version of wgcna results object.
+#'
+#' @param annot Unused, kept for backward compatibility with older callers.
 #'
 #' @export
-wgcna.init <- function(wgcna, annot = NULL,
-                       sv.tom = 40, progress = NULL) {
+wgcna.init <- function(wgcna, annot = NULL, sv.tom = 40, progress = NULL) {
   if(is.null(wgcna)) return(NULL)
   is.multi <- ("layers" %in% names(wgcna))
 
-  if (is.null(wgcna$svTOM) && !is.null(wgcna$TOM)) {
-    ## sv.tom <- ceiling(min(sv.tom,dim(datExpr)/2))
+  if(!is.multi) {
+    ## old style had these missing settings
+    if (is.null(wgcna$networktype)) wgcna$networktype <- "unsigned"
+    if (is.null(wgcna$tomtype)) wgcna$tomtype <- "signed"
+    if (is.null(wgcna$power)) wgcna$power <- 6
+  }
+
+  if (!is.multi && is.null(wgcna$svTOM)) {
     message("[wgcna.init] computing reduced svTOM")
+    ## sv.tom <- ceiling(min(sv.tom,dim(datExpr)/2))
     if (!is.null(progress)) progress$inc(0.1, "computing reduced svTOM...")
+    if(is.null(wgcna$TOM)) {
+      adjacency <- WGCNA::adjacency(wgcna$datExpr, power = wgcna$power,
+        type = wgcna$networktype)
+      TOM <- fastTOMsimilarity(adjacency, lowrank = sv.tom, tomtype = wgcna$tomtype)
+    } else {
+      TOM <- wgcna$TOM
+    }
     sv.tom <- min(sv.tom, ncol(TOM) - 1)
-    sv <- irlba::irlba(wgcna$TOM, nv = sv.tom)
+    sv <- irlba::irlba(TOM, nv = sv.tom)
     svTOM <- sv$v %*% diag(sqrt(sv$d))
-    rownames(svTOM) <- colnames(datExpr)
+    rownames(svTOM) <- colnames(wgcna$datExpr)
     wgcna$svTOM <- svTOM
     wgcna$TOM <- NULL
+    remove(TOM)
   }
 
   if (is.null(wgcna$modTraits) && !is.multi) {
@@ -1209,3 +1225,47 @@ wgcna.calculateSignificanceScore <- function(wgcna, collapse = TRUE, sort.by = "
 
   return(Q)
 }
+
+
+#' Return top-n ME features for k-largest ME clusters based on module
+#' membership.
+#' 
+#' @param wgcna WGCNA result object with stats.
+#' @param n Number of top features to return per module.
+#' @param k Number of largest modules to include (\code{NULL} for all).
+#' @param sortby Rank features by \code{"mm"} (module membership, default)
+#'   or by standard deviation of expression.
+#' @return list of length k of n features
+#' @export
+wgcna.getTopMEfeatures <- function(wgcna, n=10, k=NULL, sortby="mm") {
+  if(is.null(wgcna)) return(NULL)
+  if(is.null(wgcna$net)) {
+    message("[wgcna.getTopMEfeatures] missing wgcna$net")
+    return(NULL)
+  }
+  if(is.null(wgcna$stats)) {
+    message("[wgcna.getTopMEfeatures] missing wgcna$stats")
+    return(NULL)
+  }
+  cc <- paste0("ME",wgcna$net$colors)
+  names(cc) <- names(wgcna$net$colors)
+  numcol <- table(cc)
+  ordME <- names(sort(numcol,decreasing=TRUE))
+  ordME <- setdiff(ordME, c("grey","MEgrey"))
+  if(!is.null(k)) ordME <- head(ordME, k)
+  topF <- list()
+  M <- wgcna$stats[["moduleMembership"]]
+  sdx <- matrixStats::colSds(wgcna$datExpr)
+  names(sdx) <- colnames(wgcna$datExpr)
+  for(e in ordME) {
+    ff <- names(cc)[which(cc == e)]
+    if(sortby == "mm") {
+      ii <- order(-M[ff,e])
+    } else {
+      ii <- order(-sdx[ff])
+    }
+    topF[[e]] <- head(ff[ii],n)
+  }
+  topF
+}
+
