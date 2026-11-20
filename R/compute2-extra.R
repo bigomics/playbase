@@ -507,7 +507,7 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
     X <- ref.db[[i]]
     # organism can be a vector (multi-species); all() keeps a mixed object on
     # the mapping path, where human_ortholog is per-gene anyway
-    if (!all(pgx$organism %in% c("Human", "human"))) {
+    if (!all(normalizeOrganism(pgx$organism) == "Homo sapiens")) {
       ## L1000/CMAP reference profiles are human gene symbols
       rowid <- data.table::chmatch(rownames(X), pgx$genes$human_ortholog, nomatch = NA)
       rownames(X) <- pgx$genes$human_ortholog[rowid]

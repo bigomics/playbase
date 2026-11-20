@@ -258,7 +258,7 @@ pgx.initialize <- function(pgx, progress=NULL) {
   )
 
   # multispecies: organism is a vector, so test with any()
-  if (any(pgx$organism %in% c("Human", "human")) | !is.null(pgx$version)) {
+  if (any(normalizeOrganism(pgx$organism) == "Homo sapiens") | !is.null(pgx$version)) {
     pgx$families <- lapply(playdata::FAMILIES, function(x) {
       intersect(x, genes)
     })
