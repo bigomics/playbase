@@ -33,3 +33,28 @@ test_that("read.as_matrix works correctly", {
     c(395000000, 895050000, 84760000000, 4760700000, 2390000000, 1290000000, 4680000000, 4680000000)
   )
 })
+
+test_that("read.as_matrix reads a CP1252 (Windows Excel) csv", {
+  ## 0xB5 is "µ" in CP1252 and an invalid byte in UTF-8
+  f <- tempfile(fileext = ".csv")
+  writeBin(charToRaw("Gene;Gd 10 \xb5gL 1;Ctrl 1\r\ntpma;1.5;2\r\n\xb5x;3;4\r\n"), f)
+  x <- read.as_matrix(f, as.char = FALSE)
+  expect_equal(colnames(x), c("Gd 10 µgL 1", "Ctrl 1"))
+  expect_equal(rownames(x), c("tpma", "µx"))
+  expect_equal(as.numeric(x), c(1.5, 3, 2, 4))
+})
+
+test_that("playbase:::utf8_file only re-encodes the invalid lines", {
+  ## a mostly-UTF-8 file ("café", valid multibyte) with one stray CP1252
+  ## byte on another line must not get its valid line mangled
+  f <- tempfile(fileext = ".csv")
+  writeBin(c(
+    charToRaw("Gene;Sample\n"),
+    charToRaw("tp53;caf"), as.raw(0xC3), as.raw(0xA9), charToRaw("\n"),
+    charToRaw("brca1;x"), as.raw(0xb5), charToRaw("y\n")
+  ), f)
+  out <- playbase:::utf8_file(f)
+  lines <- readLines(out, warn = FALSE)
+  expect_equal(lines[2], "tp53;café")
+  expect_equal(lines[3], "brca1;xµy")
+})
