@@ -172,17 +172,21 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
 ## individual lines that are invalid UTF-8 get re-encoded from CP1252, so a
 ## mostly-UTF-8 file with one stray bad byte doesn't get its valid multibyte
 ## characters (e.g. "\u00e9") mangled by a blanket CP1252 reinterpretation.
-## ponytail: only the first 1000 lines are scanned for validity; a bad byte
-## further down goes undetected and the file is passed through unconverted.
 utf8_file <- function(file) {
   if (!is.character(file) || length(file) != 1 || !file.exists(file)) {
     return(file)
   }
-  if (all(validUTF8(readLines(file, n = 1000, warn = FALSE)))) {
-    return(file)
-  }
   lines <- readLines(file, warn = FALSE)
   invalid <- !validUTF8(lines)
+  if (!any(invalid)) {
+    return(file)
+  }
+  warning(
+    "Invalid UTF-8 in ", basename(file), "; assuming Windows-1252 (CP1252) for affected lines. ",
+    "If the file mixes encodings, names on those lines may change. ",
+    "Normalize the original file to UTF-8 and reimport it.",
+    call. = FALSE
+  )
   lines[invalid] <- iconv(lines[invalid], from = "CP1252", to = "UTF-8", sub = "?")
   out <- tempfile(fileext = ".csv")
   writeLines(lines, out, useBytes = TRUE)
