@@ -21,6 +21,13 @@
 #' @export
 read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
                            as.matrix = TRUE, row.names = 1) {
+  ## Excel "CSV" exports on Windows are CP1252, not UTF-8 (e.g. "\u00b5g" in
+  ## sample names). Re-encode once so every read below sees valid UTF-8.
+  utf8 <- utf8_file(file)
+  if (!identical(utf8, file)) {
+    on.exit(unlink(utf8), add = TRUE)
+    file <- utf8
+  }
   ## determine if there are empty lines in header
   x0 <- data.table::fread(
     file = file,
@@ -156,6 +163,34 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
     }
   }
   return(x)
+}
+
+## Re-encode a non-UTF-8 text file to a UTF-8 temp file
+## Windows Excel saves "CSV" as CP1252. A byte like 0xB5 ("\u00b5") is invalid
+## UTF-8 and breaks every regex and string function downstream in a UTF-8
+## locale. Returns `file` unchanged when it is already valid UTF-8. Only the
+## individual lines that are invalid UTF-8 get re-encoded from CP1252, so a
+## mostly-UTF-8 file with one stray bad byte doesn't get its valid multibyte
+## characters (e.g. "\u00e9") mangled by a blanket CP1252 reinterpretation.
+utf8_file <- function(file) {
+  if (!is.character(file) || length(file) != 1 || !file.exists(file)) {
+    return(file)
+  }
+  lines <- readLines(file, warn = FALSE)
+  invalid <- !validUTF8(lines)
+  if (!any(invalid)) {
+    return(file)
+  }
+  warning(
+    "Invalid UTF-8 in ", basename(file), "; assuming Windows-1252 (CP1252) for affected lines. ",
+    "If the file mixes encodings, names on those lines may change. ",
+    "Normalize the original file to UTF-8 and reimport it.",
+    call. = FALSE
+  )
+  lines[invalid] <- iconv(lines[invalid], from = "CP1252", to = "UTF-8", sub = "?")
+  out <- tempfile(fileext = ".csv")
+  writeLines(lines, out, useBytes = TRUE)
+  out
 }
 
 #' Detect delimiter of text file from header (or first line)
