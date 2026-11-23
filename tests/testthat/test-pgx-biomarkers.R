@@ -224,7 +224,9 @@ test_that("biomarker_cv validates a planted signal on held-out samples", {
   expect_lt(cv$null[cv$null$method == "consensus", "auc"], 0.7)
 
   expect_equal(nrow(cv$roc), cells * 101)
+  expect_true(all(cv$roc$class == "class1"))
   expect_true(all(diff(cv$roc$tpr[1:101]) >= 0))
+  expect_equal(cv$auc_class$auc, cv$auc$auc)
   expect_equal(nrow(cv$confusion), cells * 4)
   ## mean counts per repeat: every row adds up to its class size
   sums <- tapply(cv$confusion$count, cv$confusion[c("method", "k", "truth")], sum)
@@ -318,8 +320,18 @@ test_that("biomarker_cv on three classes reports macro AUC and argmax calls", {
     k_grid = c(5, 10), repeats = 2, n_perm = 2, seed = 1
   )
   expect_identical(cv$positive_class, NA_character_)
-  expect_null(cv$roc)
   expect_gt(cv$auc[cv$auc$method == "consensus" & cv$auc$k == 5, "auc"], 0.8)
+
+  ## one-vs-rest curve per class plus the macro average (class NA)
+  expect_equal(nrow(cv$roc), nrow(cv$auc) * 4 * 101)
+  expect_setequal(unique(cv$roc$class), c(levels(fx$y), NA))
+  one <- cv$roc[cv$roc$method == "consensus" & cv$roc$k == 5, ]
+  per_class <- sapply(levels(fx$y), function(cl) one$tpr[one$class %in% cl])
+  expect_equal(one$tpr[is.na(one$class)], unname(rowMeans(per_class)))
+  ## per-class AUCs average to the macro AUC
+  ac <- cv$auc_class
+  macro <- tapply(ac$auc, ac[c("method", "k")], mean)
+  expect_equal(as.vector(macro[cbind(cv$auc$method, as.character(cv$auc$k))]), cv$auc$auc)
   expect_equal(nrow(cv$confusion), 2 * 2 * 9)
   expect_setequal(cv$confusion$predicted, levels(fx$y))
 })
