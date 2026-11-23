@@ -435,12 +435,27 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
     a <- vapply(passes, function(p) .biomarker_prob_auc(p$prob[, , m, k], y), 0)
     data.frame(method = m, k = as.integer(k), auc = mean(a), lo = interval(a)[1], hi = interval(a)[2])
   })
-  roc <- if (binary) {
-    per_cell(function(m, k) {
-      score <- unlist(lapply(passes, function(p) p$prob[, 1, m, k]))
-      data.frame(method = m, k = as.integer(k), .biomarker_roc(score, rep(y == levels(y)[1], repeats)))
+  ## one-vs-rest per class (two classes: the positive class only)
+  classes <- if (binary) levels(y)[1] else levels(y)
+  auc_class <- per_cell(function(m, k) {
+    do.call(rbind, lapply(classes, function(cl) {
+      a <- vapply(passes, function(p) .biomarker_auc(p$prob[, cl, m, k], y == cl), 0)
+      data.frame(method = m, k = as.integer(k), class = cl, auc = mean(a), lo = interval(a)[1], hi = interval(a)[2])
+    }))
+  })
+  ## curves pool the repeats' held-out probabilities; more than two classes
+  ## add the macro average (class NA): the mean TPR over the shared FPR grid
+  roc <- per_cell(function(m, k) {
+    curves <- lapply(classes, function(cl) {
+      score <- unlist(lapply(passes, function(p) p$prob[, cl, m, k]))
+      data.frame(class = cl, .biomarker_roc(score, rep(y == cl, repeats)))
     })
-  }
+    if (!binary) {
+      tpr <- rowMeans(vapply(curves, `[[`, numeric(nrow(curves[[1]])), "tpr"))
+      curves <- c(curves, list(data.frame(class = NA_character_, fpr = curves[[1]]$fpr, tpr = tpr)))
+    }
+    data.frame(method = m, k = as.integer(k), do.call(rbind, curves))
+  })
   ## held-out calls summed over repeats, then the mean per repeat
   confusion_of <- function(m, k) {
     Reduce(`+`, lapply(passes, function(p) {
@@ -464,7 +479,8 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
   list(
     folds = K, repeats = repeats, n_perm = n_perm, k_grid = k_grid, null_k = null_k,
     positive_class = if (binary) levels(y)[1] else NA_character_,
-    auc = auc, roc = roc, confusion = confusion, metrics = metrics, null = null
+    auc = auc, auc_class = auc_class, roc = roc, confusion = confusion,
+    metrics = metrics, null = null
   )
 }
 
@@ -688,7 +704,10 @@ biomarker_cv <- function(X, y, methods, k_grid = c(5, 10, 20, 50), folds = 5L,
 #'   frequency, rank_median, rank_iqr_lo, rank_iqr_hi; index per column.}
 #' \item{cv}{\code{NULL} unless \code{validate}: folds, repeats, n_perm,
 #'   k_grid, null_k (the null's panel size), positive_class, and data frames
-#'   auc, roc (two classes only), confusion (integer mean counts per repeat,
+#'   auc (macro one-vs-rest beyond two classes), auc_class (one-vs-rest AUC
+#'   per class; two classes: the positive class), roc (method, k, class, fpr,
+#'   tpr: one-vs-rest curve per class, plus the macro average as class
+#'   \code{NA} beyond two classes), confusion (integer mean counts per repeat,
 #'   each row adding up to its class size), metrics and null.}
 #' \item{single_auc}{data frame of feature, all-sample AUC and the class the
 #'   feature is highest in (descriptive, not validated).}
