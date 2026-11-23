@@ -15,7 +15,95 @@
 #' @export
 MultiOmicsSAE <- R6::R6Class(
   "MultiOmicsSAE",
-  private = list(),
+  private = list(
+    ## Loss terms of one forward pass: cross-entropy summed over targets
+    ## (NA labels ignored) and the reconstruction MSE of each view.
+    split_losses = function(output, xx, yy) {
+      ce <- function(a, b) {
+        ii <- which(!is.na(as.numeric(b)))
+        torch::nnf_cross_entropy(a[ii], b[ii])
+      }
+      list(
+        classification = Reduce("+", mapply(ce, output$y_pred, yy)),
+        reconstruction = mapply(torch::nnf_mse_loss, output$ae, xx, SIMPLIFY = FALSE)
+      )
+    },
+    ## named numeric with components classification, reconstruction:<view>
+    loss_values = function(losses) {
+      recon <- vapply(losses$reconstruction, function(l) l$item(), numeric(1))
+      names(recon) <- paste0("reconstruction:", names(losses$reconstruction))
+      c(classification = losses$classification$item(), recon)
+    },
+    history_rows = function(iteration, split, values) {
+      data.frame(
+        iteration = iteration, split = split, component = names(values),
+        value = unname(values), stringsAsFactors = FALSE
+      )
+    },
+    ## Logical test indicator over samples, stratified by label `y`. The test
+    ## size matches an unstratified split (n - floor((1 - ratio) * n)) and is
+    ## allotted to classes by largest remainder; every class with >= 2 samples
+    ## gets at least one test sample and keeps at least one for training,
+    ## singleton classes stay in training.
+    stratified_split = function(y, validation_ratio) {
+      n <- length(y)
+      is_test <- rep(FALSE, n)
+      if (validation_ratio <= 0) {
+        return(is_test)
+      }
+      groups <- split(seq_len(n), addNA(y, ifany = TRUE))
+      groups <- groups[lengths(groups) > 0]
+      sizes <- lengths(groups)
+      quota <- (n - floor((1 - validation_ratio) * n)) * sizes / n
+      k <- pmin(pmax(floor(quota), 1), sizes - 1)
+      extra <- round(sum(quota)) - sum(k)
+      room <- which(k < sizes - 1)
+      add <- head(room[order(k[room] - quota[room])], max(extra, 0))
+      k[add] <- k[add] + 1
+      test <- unlist(mapply(function(g, m) g[sample.int(length(g), m)], groups, k, SIMPLIFY = FALSE))
+      is_test[test] <- TRUE
+      is_test
+    },
+    ## name of the method self$optimizer was built with (adam, adamw, ...)
+    optim_method = NULL,
+    new_optimizer = function(optim) {
+      params <- self$model$parameters
+      switch(optim,
+        adam = torch::optim_adam(params, lr = 0.001),
+        adamw = torch::optim_adamw(params, lr = 0.001, weight_decay = self$loss_weights["l2"]),
+        sgd = torch::optim_sgd(params, lr = 0.001),
+        lbfgs = torch::optim_lbfgs(params, lr = 1),
+        stop("unknown optimization method ", optim)
+      )
+    },
+    ## copy of a (nested) state dict, so that later training steps, which
+    ## update tensors in place, do not alter a checkpoint
+    clone_state = function(x) {
+      if (inherits(x, "torch_tensor")) {
+        return(x$detach()$clone())
+      }
+      if (is.list(x)) {
+        return(lapply(x, private$clone_state))
+      }
+      x
+    },
+    history_trace = function(split, component = "classification") {
+      h <- self$history
+      if (is.null(h)) {
+        return(NULL)
+      }
+      h$value[h$split == split & h$component == component]
+    }
+  ),
+  active = list(
+    ## legacy per-iteration classification loss vectors, derived from history
+    loss_history = function() private$history_trace("train"),
+    val_history = function() private$history_trace("test"),
+    ## last completed training iteration (0 before the first fit)
+    iteration = function() {
+      if (is.null(self$history)) 0L else max(self$history$iteration)
+    }
+  ),
   public = list(
     X = NULL,
     Y = NULL,
@@ -30,8 +118,17 @@ MultiOmicsSAE <- R6::R6Class(
     sdx = NULL,
     loss_weights = NULL,
     sd_weight = NULL,
-    loss_history = NULL,
-    val_history = NULL,
+    ## long data.frame: iteration (continues across fit calls), split
+    ## (train|test), component (classification, reconstruction:<view>, l1,
+    ## l2, total), value
+    history = NULL,
+    ## data.frame of the original samples: sample, label (first target),
+    ## split (train|test). Augmented copies are not listed.
+    split = NULL,
+    ## optimizer kept across fit() calls so training resumes with its state
+    optimizer = NULL,
+    ## construction arguments other than the data; restore() requires a match
+    args = NULL,
     initialize = function(X, Y,
                           model = "MT", ntop = 1000,
                           num_layers = list(c(0.5, 40), c(0.5, 0.25), c(0.5)),
@@ -39,7 +136,9 @@ MultiOmicsSAE <- R6::R6Class(
                           loss_weights = c(y = 1, ae = 10, l1 = 0.1, l2 = 0.01),
                           actfun = c("relu", "leaky", "gelu", "silu")[1],
                           use_glu = 1, use_bn = TRUE, add_noise = 0,
-                          sd_weight = TRUE, device = "cpu") {
+                          sd_weight = TRUE, augment = 0, augment_z = 1,
+                          device = "cpu") {
+      self$args <- mget(setdiff(names(formals(sys.function())), c("X", "Y")))
       if (!is.null(ntop) && ntop > 0) {
         message("reducing to maximum ", ntop, " features")
         X <- lapply(X, function(x) head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)), , drop = FALSE], ntop))
@@ -69,9 +168,14 @@ MultiOmicsSAE <- R6::R6Class(
       self$sdx <- lapply(X, matrixStats::rowSds, na.rm = TRUE)
       self$sd_weight <- sd_weight
 
+      ## raw values are kept for augmentation: noisy copies are made on the
+      ## raw scale (as the legacy board did) and then scaled with the
+      ## originals' centre and SD.
+      X_raw <- X
+      mux <- lapply(X, rowMeans, na.rm = TRUE)
       if (scale) {
         for (i in 1:length(X)) {
-          X[[i]] <- X[[i]] - rowMeans(X[[i]], na.rm = TRUE)
+          X[[i]] <- X[[i]] - mux[[i]]
           X[[i]] <- X[[i]] / self$sdx[[i]]
         }
       }
@@ -79,23 +183,34 @@ MultiOmicsSAE <- R6::R6Class(
       ## normalized torch input. This is the input the network sees.
       self$xx <- lapply(X, function(x) torch::torch_tensor(t(x)))
 
-      ## split in train and validation
-      if (validation_ratio > 0) {
-        r <- (1 - validation_ratio)
-        xdim <- ncol(X[[1]])
-        ii <- sample(1:xdim, r * xdim)
-        self$x_train <- lapply(X, function(x) t(x[, ii, drop = FALSE]))
-        self$x_test <- lapply(X, function(x) t(x[, -ii, drop = FALSE]))
-        self$y_train <- lapply(Y, function(y) torch::torch_tensor(y[ii]))
-        self$y_test <- lapply(Y, function(y) torch::torch_tensor(y[-ii]))
-      } else {
-        self$x_train <- lapply(X, function(x) t(x))
-        self$x_test <- NULL
-        self$y_train <- lapply(Y, function(y) torch::torch_tensor(y))
-        self$y_test <- NULL
+      ## Split the original samples, stratified by the first target, then
+      ## augment only the training part so that no noisy copy of a
+      ## validation sample is ever trained on.
+      is_test <- private$stratified_split(Y[[1]], validation_ratio)
+      self$split <- data.frame(
+        sample = if (is.null(colnames(X[[1]]))) seq_along(is_test) else colnames(X[[1]]),
+        label = as.character(Y[[1]]),
+        split = ifelse(is_test, "test", "train"),
+        stringsAsFactors = FALSE
+      )
+      x_train <- lapply(X, function(x) x[, !is_test, drop = FALSE])
+      y_train <- lapply(Y, function(y) y[!is_test])
+      if (augment > 0) {
+        x_train <- lapply(X_raw, function(x) x[, !is_test, drop = FALSE])
+        x_train <- mofa.augment(x_train, n = augment, z = augment_z)
+        if (scale) {
+          for (i in seq_along(x_train)) {
+            x_train[[i]] <- (x_train[[i]] - mux[[i]]) / self$sdx[[i]]
+          }
+        }
+        y_train <- lapply(y_train, rep, times = augment)
       }
-      self$x_train <- lapply(self$x_train, torch::torch_tensor)
-      self$x_test <- lapply(self$x_test, torch::torch_tensor)
+      self$x_train <- lapply(x_train, function(x) torch::torch_tensor(t(x)))
+      self$y_train <- lapply(y_train, torch::torch_tensor)
+      if (any(is_test)) {
+        self$x_test <- lapply(X, function(x) torch::torch_tensor(t(x[, is_test, drop = FALSE])))
+        self$y_test <- lapply(Y, function(y) torch::torch_tensor(y[is_test]))
+      }
 
       self$Y <- lapply(Y, factor)
       self$labels <- lapply(self$Y, levels)
@@ -139,70 +254,101 @@ MultiOmicsSAE <- R6::R6Class(
     },
     fit = function(niter = 200, optim = c("adam", "adamw", "sgd", "lbfgs")[1]) {
       model <- self$model
+      model$train(TRUE) ## gradient helpers leave the model in eval mode
       optim <- optim[1]
-
-      if (optim == "adam") {
-        optimizer <- torch::optim_adam(model$parameters, lr = 0.001)
-      } else if (optim == "adamw") {
-        optimizer <- torch::optim_adamw(
-          model$parameters,
-          lr = 0.001, weight_decay = self$loss_weights["l2"]
-        )
-      } else if (optim == "sgd") {
-        optimizer <- torch::optim_sgd(model$parameters, lr = 0.001)
-      } else if (optim == "lbfgs") {
-        optimizer <- torch::optim_lbfgs(model$parameters, lr = 1)
-      } else {
-        stop("unknown optimization method ", optim)
+      if (!identical(optim, private$optim_method)) {
+        if (!is.null(self$optimizer)) {
+          message("switching optimizer from ", private$optim_method, " to ", optim, ": its state is reset")
+        }
+        self$optimizer <- private$new_optimizer(optim)
+        private$optim_method <- optim
       }
+      optimizer <- self$optimizer
 
       xx <- self$x_train
       yy <- self$y_train
-      vx <- self$x_test
-      vy <- self$y_test
 
+      train_values <- NULL
       calc_loss <- function() {
-        ## forward compute
-        output <- model(xx)
-
-        ## compute fit loss
-        nnf_cross_entropy.NA <- function(a, b) {
-          ii <- which(!is.na(as.numeric(b)))
-          torch::nnf_cross_entropy(a[ii], b[ii])
-        }
-        y_loss <- Reduce("+", mapply(nnf_cross_entropy.NA, output$y_pred, yy))
-
-        if (!is.null(vx)) {
-          ## compute validation loss
-          voutput <- model(vx)
-          val_loss <- Reduce("+", mapply(nnf_cross_entropy.NA, voutput$y_pred, vy))
-        } else {
-          val_loss <- 0
-        }
-
-        ae_loss <- Reduce("+", mapply(torch::nnf_mse_loss, output$ae, xx))
+        losses <- private$split_losses(model(xx), xx, yy)
+        ae_loss <- Reduce("+", losses$reconstruction)
         enc_weights <- lapply(model$encoder, function(m) m$parameters[[1]])
         l1_loss <- Reduce("+", sapply(enc_weights, function(w) torch::torch_norm(w, 1)))
         l2_loss <- Reduce("+", sapply(enc_weights, function(w) torch::torch_norm(w, 2)))
-        ## loss <- 1*y_loss + 1e1*ae_loss + 0.1*l1_loss + 0.01*l2_loss
         w <- self$loss_weights
-        loss <- w["y"] * y_loss + w["ae"] * ae_loss + w["l1"] * l1_loss + w["l2"] * l2_loss
+        loss <- w["y"] * losses$classification + w["ae"] * ae_loss + w["l1"] * l1_loss + w["l2"] * l2_loss
 
-        # Store loss for plotting
-        self$loss_history <- c(self$loss_history, y_loss$item())
-        self$val_history <- c(self$val_history, val_loss$item())
+        ## lbfgs evaluates the closure several times per step: keep the last
+        train_values <<- c(
+          private$loss_values(losses),
+          l1 = l1_loss$item(), l2 = l2_loss$item(), total = loss$item()
+        )
 
         optimizer$zero_grad()
         loss$backward()
         loss
       }
 
+      last <- self$iteration
+      rows <- vector("list", niter)
       for (t in 1:niter) {
         if (t %% (niter / 10) == 0) cat(".")
         optimizer$step(calc_loss)
-        # calc_loss()
-        # optimizer$step()
+        val_values <- self$validate()
+        rows[[t]] <- rbind(
+          private$history_rows(last + t, "train", train_values),
+          if (!is.null(val_values)) private$history_rows(last + t, "test", val_values)
+        )
       }
+      self$history <- rbind(self$history, do.call(rbind, rows))
+    },
+    ## Training state as a plain list that round-trips through
+    ## torch::torch_save()/torch_load(). The torch RNG state is not included:
+    ## resuming replays training exactly only without noise or dropout.
+    checkpoint = function() {
+      list(
+        model = private$clone_state(self$model$state_dict()),
+        optimizer = if (!is.null(self$optimizer)) private$clone_state(self$optimizer$state_dict()),
+        optim = private$optim_method,
+        iteration = self$iteration,
+        history = self$history,
+        args = self$args
+      )
+    },
+    ## Load a checkpoint() into an object constructed with the same
+    ## arguments; the next fit() continues where the checkpoint left off.
+    restore = function(ckpt) {
+      keys <- union(names(self$args), names(ckpt$args))
+      differ <- keys[!vapply(keys, function(k) identical(self$args[[k]], ckpt$args[[k]]), logical(1))]
+      if (length(differ) > 0) {
+        stop("checkpoint was created with different arguments: ", paste(differ, collapse = ", "))
+      }
+      self$model$load_state_dict(ckpt$model)
+      self$optimizer <- NULL
+      private$optim_method <- NULL
+      if (!is.null(ckpt$optimizer)) {
+        self$optimizer <- private$new_optimizer(ckpt$optim)
+        self$optimizer$load_state_dict(ckpt$optimizer)
+        private$optim_method <- ckpt$optim
+      }
+      self$history <- ckpt$history
+      invisible(self)
+    },
+    ## Loss components on the held-out split. Runs in eval mode without
+    ## gradients so BatchNorm running statistics are left untouched, then
+    ## restores the previous training mode. NULL without a validation split.
+    validate = function() {
+      if (length(self$x_test) == 0) {
+        return(NULL)
+      }
+      model <- self$model
+      was_training <- model$training
+      on.exit(model$train(was_training))
+      model$eval()
+      torch::with_no_grad({
+        losses <- private$split_losses(model(self$x_test), self$x_test, self$y_test)
+        private$loss_values(losses)
+      })
     },
     predict = function(X = NULL) {
       if (is.null(X)) {
@@ -372,6 +518,7 @@ nn_gaussian_noise <- torch::nn_module(
     self$device <- device
   },
   forward = function(x) {
+    if (!self$training) return(x)
     rx <- self$sd * torch::torch_randn(c(dim(x)[1], dim(x)[2]))
     if (self$device == "gpu") rx <- rx$cuda()
     x + rx
