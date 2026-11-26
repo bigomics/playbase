@@ -13,6 +13,8 @@
 #' @param design The experimental design matrix.
 #' @param contr.matrix The contrast matrix.
 #' @param methods A character vector specifying the gene set enrichment methods to use.
+#'   An empty vector (such as methods = character(0)) runs no tests and returns
+#'   empty gene-set results. NULL or "*" means: all supported methods.
 #' @param mc.threads The number of threads to use for parallel computing.
 #' @param mc.cores The number of CPU cores to use for parallel computing.
 #' @param batch.correct Logical indicating whether to correct for batch effects.
@@ -44,11 +46,26 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   message("using ", mc.cores, " number of cores")
   message("using ", mc.threads, " number of threads")
 
-  if (is.null(methods) || methods[1] == "*") {
+  if (is.null(methods) || (length(methods) > 0 && methods[1] == "*")) {
     methods <- ALL.GENESET.METHODS
   }
   methods <- intersect(methods, ALL.GENESET.METHODS)
   message("calculating methods:", paste(methods, collapse = " "))
+
+  ## Nothing to test (methods = character(0), or none of the given methods
+  ## are supported)? Return empty results instead of failing on the first
+  ## empty result list below. NULL and "*" still mean: all methods.
+  if (length(methods) == 0) {
+    message("[gset.fitContrastsWithAllMethods] no gene-set methods to test. Skipping")
+    res <- list(
+      meta = list(),
+      sig.counts = list(),
+      outputs = list(),
+      matrices = list(),
+      timings = matrix(numeric(0), nrow = 0, ncol = 5)
+    )
+    return(res)
+  }
 
   ## If degenerate set design to NULL
   if (!is.null(design) && ncol(design) >= ncol(X)) {

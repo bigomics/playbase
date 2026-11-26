@@ -11,7 +11,8 @@
 #' @param pgx A data object representing multi-omics data.
 #' @param custom.geneset Custom geneset object.
 #' @param test.methods Character vector with the methods to use for testing.
-#'  Currently supported: "gsva", "camera", "fgsea".
+#'  Currently supported: "gsva", "camera", "fgsea". An empty vector skips the
+#'  gene-set testing and returns the object unchanged.
 #' @param remove.outputs Logical indicating whether to remove large outputs.
 #'
 #' @return The updated \code{pgx} object with computed test genesets.
@@ -24,6 +25,14 @@ compute_testGenesets <- function(pgx,
                                  remove.outputs = TRUE) {
   if (!"X" %in% names(pgx)) {
     stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
+  }
+
+  ## No gene-set test methods configured (e.g. gset.methods: [])? Skip the
+  ## gene-set testing and leave the gene-set results empty. NULL still means:
+  ## run all default methods.
+  if (!is.null(test.methods) && length(test.methods) == 0) {
+    message("[compute_testGenesets] no gene-set test methods given. Skipping genesets test")
+    return(pgx)
   }
 
   if (is.null(pgx$genes$ortholog)) {
@@ -116,6 +125,13 @@ compute_testGenesets <- function(pgx,
     mc.cores = NULL,
     batch.correct = TRUE
   )
+
+  ## None of the requested methods is supported, so nothing was tested? Keep
+  ## the gene-set results empty instead of failing on the empty output below.
+  if (length(gset.meta$meta) == 0) {
+    message("[compute_testGenesets] WARNING : no gene-set results to store")
+    return(pgx)
+  }
 
   rownames(gset.meta$timings) <- paste("[test.genesets]", rownames(gset.meta$timings))
   pgx$timings <- rbind(pgx$timings, gset.meta$timings)
