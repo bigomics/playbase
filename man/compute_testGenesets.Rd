@@ -18,7 +18,8 @@ compute_testGenesets(
 \item{custom.geneset}{Custom geneset object.}
 
 \item{test.methods}{Character vector with the methods to use for testing.
-Currently supported: "gsva", "camera", "fgsea".}
+Currently supported: "gsva", "camera", "fgsea". An empty vector skips the
+gene-set testing and returns the object unchanged.}
 
 \item{remove.outputs}{Logical indicating whether to remove large outputs.}
 }

@@ -28,7 +28,9 @@ gset.fitContrastsWithAllMethods(
 
 \item{contr.matrix}{The contrast matrix.}
 
-\item{methods}{A character vector specifying the gene set enrichment methods to use.}
+\item{methods}{A character vector specifying the gene set enrichment methods to use.
+An empty vector (such as methods = character(0)) runs no tests and returns
+empty gene-set results. NULL or "*" means: all supported methods.}
 
 \item{mc.threads}{The number of threads to use for parallel computing.}
 
