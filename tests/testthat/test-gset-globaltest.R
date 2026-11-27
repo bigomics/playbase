@@ -37,3 +37,12 @@ test_that("gset.globaltest output and edge cases", {
   expect_equal(out$SIZE, c(5, 14, 30, 1, 1, 2, NA, 1, 5))
   expect_equal(nrow(playbase::gset.globaltest(X, y, list())), 0)
 })
+
+test_that("generalised F terminates when the series underflows", {
+  ## Spectrum from a strong lipidomics contrast (n = 317): Imhof is too coarse,
+  ## genF's series underflows and rest sat just above eps forever.
+  lams <- readRDS(test_path("fixtures", "gt-underflow-lams.rds"))
+  setTimeLimit(elapsed = 120, transient = TRUE)
+  p <- tryCatch(playbase:::.gt.getP(lams), finally = setTimeLimit(elapsed = Inf))
+  expect_equal(p, 5.2377304088156344e-10, tolerance = 1e-8)
+})

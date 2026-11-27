@@ -186,27 +186,42 @@ gset.globaltest <- function(X, y, gmt, standardize = FALSE) {
 ## Ruben series coefficients; NULL if not a valid (non-negative) mixture.
 .gt.getC <- function(lams, beta, eps = 1e-10) {
   lams <- sort(lams)
-  cc <- prod(sqrt(beta / lams))
-  if (cc == 0 || cc > 1) {
+  c0 <- prod(sqrt(beta / lams))
+  if (c0 == 0 || c0 > 1) {
     return(NULL)
   }
-  rest <- 1 - cc
-  mx <- cc
+  rest <- 1 - c0
+  mx <- c0
   db <- 1 - beta / lams
-  d <- NULL
+  ## grown in chunks: c() per term made this loop quadratic in copies
+  N <- 1024
+  cc <- numeric(N + 1)
+  d <- numeric(N)
+  cc[1] <- c0
   ix <- 1
+  zeros <- 0
   repeat {
-    d <- c(d, 0.5 * sum(db^ix))
-    cc <- c(cc, mean(cc[1:ix] * d[ix:1]))
+    if (ix > N) {
+      cc <- c(cc, numeric(N))
+      d <- c(d, numeric(N))
+      N <- 2 * N
+    }
+    d[ix] <- 0.5 * sum(db^ix)
+    ## mean.default skips S3 dispatch; same bits as mean()
+    cc[ix + 1] <- mean.default(cc[1:ix] * d[ix:1])
     rest <- if (rest > 100 * .Machine$double.neg.eps) {
       rest - cc[ix + 1]
     } else {
       rest * lams[1] / lams[length(lams)]
     }
     mx <- max(mx, cc[ix + 1])
-    if (rest / mx < eps || cc[ix + 1] < 0) break
+    ## Once the terms underflow to 0, rest stops shrinking and can sit just
+    ## above eps forever (upstream hangs too); a long run of zeros ends it.
+    zeros <- if (cc[ix + 1] == 0) zeros + 1 else 0
+    if (rest / mx < eps || cc[ix + 1] < 0 || zeros >= 50) break
     ix <- ix + 1
   }
+  cc <- cc[seq_len(ix + 1)]
   if (rest > 0) cc <- c(cc, rest)
   if (any(cc < 0)) NULL else cc
 }
